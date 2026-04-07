@@ -1,0 +1,118 @@
+"""HirePort AI — FastAPI application entry point."""
+import time
+from contextlib import asynccontextmanager
+from typing import AsyncIterator
+
+from fastapi import FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from app.api.routes import analyze, cover_letter, interview, rewrite, tracker
+from app.api.v1.routes import (
+    analyze as v1_analyze,
+    auth as v1_auth,
+    billing as v1_billing,
+    cover_letter as v1_cover_letter,
+    interview as v1_interview,
+    resume as v1_resume,
+    rewrite as v1_rewrite,
+    tracker as v1_tracker,
+)
+from app.core.config import get_settings
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Application startup and shutdown lifecycle."""
+    settings = get_settings()
+
+    # Initialize legacy SQLite database if tracker is enabled
+    if settings.enable_sqlite_tracker:
+        from app.db.database import init_db
+        await init_db()
+
+    # Create SQLAlchemy ORM tables (dev convenience)
+    from app.db.session import create_tables
+    await create_tables()
+
+    yield
+    # Cleanup on shutdown (nothing needed currently)
+
+
+def create_app() -> FastAPI:
+    """Create and configure the FastAPI application."""
+    settings = get_settings()
+
+    app = FastAPI(
+        title="HirePort AI",
+        description="AI-powered resume intelligence platform — ATS scoring, keyword analysis, and resume optimization.",
+        version="1.0.0",
+        lifespan=lifespan,
+        docs_url="/docs",
+        redoc_url="/redoc",
+    )
+
+    # CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.allowed_origins_list,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Request size limit middleware
+    @app.middleware("http")
+    async def limit_upload_size(request: Request, call_next) -> Response:
+        """Reject requests that exceed the configured upload size limit."""
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > settings.max_upload_size_bytes:
+            return JSONResponse(
+                status_code=413,
+                content={
+                    "error": "Payload too large",
+                    "code": "FILE_TOO_LARGE",
+                    "detail": f"Maximum upload size is {settings.max_upload_size_mb}MB.",
+                },
+            )
+        return await call_next(request)
+
+    # Global exception handler for unhandled errors
+    @app.exception_handler(Exception)
+    async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": "Internal server error",
+                "code": "INTERNAL_ERROR",
+                "detail": str(exc),
+            },
+        )
+
+    # Health check
+    @app.get("/health", tags=["Health"])
+    async def health_check():
+        """Check that the API is running."""
+        return {"status": "healthy", "service": "hireport-ai"}
+
+    # Legacy routers — /api/* (kept for backward compat)
+    app.include_router(analyze.router, prefix="/api", tags=["Analysis"])
+    app.include_router(rewrite.router, prefix="/api", tags=["Rewrite"])
+    app.include_router(cover_letter.router, prefix="/api", tags=["Cover Letter"])
+    app.include_router(interview.router, prefix="/api", tags=["Interview Prep"])
+    app.include_router(tracker.router, prefix="/api", tags=["Tracker"])
+
+    # v1 routers — /api/v1/*
+    app.include_router(v1_auth.router, prefix="/api/v1", tags=["v1 Auth"])
+    app.include_router(v1_billing.router, prefix="/api/v1", tags=["v1 Billing"])
+    app.include_router(v1_analyze.router, prefix="/api/v1", tags=["v1 Analysis"])
+    app.include_router(v1_rewrite.router, prefix="/api/v1", tags=["v1 Rewrite"])
+    app.include_router(v1_cover_letter.router, prefix="/api/v1", tags=["v1 Cover Letter"])
+    app.include_router(v1_interview.router, prefix="/api/v1", tags=["v1 Interview Prep"])
+    app.include_router(v1_tracker.router, prefix="/api/v1", tags=["v1 Tracker"])
+    app.include_router(v1_resume.router, prefix="/api/v1", tags=["v1 Resume"])
+
+    return app
+
+
+app = create_app()
