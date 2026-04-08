@@ -12,11 +12,12 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.0-flash"
     allowed_origins: str = "http://localhost:5173,http://localhost:5199"
-    enable_sqlite_tracker: bool = True
     max_upload_size_mb: int = 5
 
     # --- Database ---
-    database_url: str = "sqlite+aiosqlite:///data/hirelens.db"
+    database_url: str = (
+        "postgresql+asyncpg://hireport:dev_password@localhost:5432/hireport"
+    )
 
     # --- Google OAuth ---
     google_client_id: str = ""

@@ -24,17 +24,7 @@ from app.core.config import get_settings
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application startup and shutdown lifecycle."""
-    settings = get_settings()
-
-    # Initialize legacy SQLite database if tracker is enabled
-    if settings.enable_sqlite_tracker:
-        from app.db.database import init_db
-        await init_db()
-
-    # Create SQLAlchemy ORM tables (dev convenience)
-    from app.db.session import create_tables
-    await create_tables()
-
+    # Schema is managed by Alembic migrations (`alembic upgrade head`).
     yield
     # Cleanup on shutdown (nothing needed currently)
 

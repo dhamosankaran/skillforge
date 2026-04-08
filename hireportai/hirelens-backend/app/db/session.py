@@ -1,5 +1,4 @@
-"""Async SQLAlchemy engine and session factory."""
-import os
+"""Async SQLAlchemy engine and session factory (PostgreSQL + asyncpg)."""
 from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -14,16 +13,12 @@ def _get_engine():
     global _engine
     if _engine is None:
         settings = get_settings()
-        db_url = settings.database_url
-        # Ensure the data directory exists for SQLite
-        if "sqlite" in db_url:
-            db_path = db_url.split("///")[-1]
-            os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
         _engine = create_async_engine(
-            db_url,
+            settings.database_url,
             echo=False,
-            # SQLite needs check_same_thread=False for async
-            connect_args={"check_same_thread": False} if "sqlite" in db_url else {},
+            pool_pre_ping=True,
+            pool_size=5,
+            max_overflow=10,
         )
     return _engine
 

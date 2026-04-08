@@ -1,5 +1,16 @@
-"""Alembic env.py — async-compatible for SQLAlchemy + aiosqlite."""
+"""Alembic env.py — async-compatible for SQLAlchemy + asyncpg (PostgreSQL).
+
+Targets PostgreSQL 16 + pgvector. SQLite-era ``render_as_batch`` mode has
+been removed; future migrations may use normal ``ALTER TABLE``.
+
+DATABASE_URL is injected from the environment rather than hardcoded in
+alembic.ini.  Set it before invoking alembic, e.g.:
+
+    export DATABASE_URL=postgresql+asyncpg://hireport:dev_password@localhost:5432/hireport
+    alembic upgrade head
+"""
 import asyncio
+import os
 from logging.config import fileConfig
 
 from sqlalchemy import pool
@@ -12,6 +23,15 @@ config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
+
+# Inject DATABASE_URL from the environment.  Falls back to the dev default so
+# `alembic upgrade head` works out of the box on a freshly cloned repo with a
+# local PostgreSQL instance set up per CLAUDE.md.
+_DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql+asyncpg://hireport:dev_password@localhost:5432/hireport",
+)
+config.set_main_option("sqlalchemy.url", _DATABASE_URL)
 
 # Import all models so autogenerate can detect them
 from app.models.base import Base  # noqa: E402
@@ -33,7 +53,6 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        render_as_batch=True,  # Required for SQLite ALTER TABLE support
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -43,7 +62,6 @@ def do_run_migrations(connection):
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
-        render_as_batch=True,
     )
     with context.begin_transaction():
         context.run_migrations()
