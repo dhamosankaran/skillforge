@@ -1,80 +1,110 @@
 /**
- * AuthContext — Google Sign-In via @react-oauth/google
+ * AuthContext — backend JWT auth.
  *
- * Usage: wrap app with <AuthProvider> (inside <GoogleOAuthProvider>)
- * then call useAuth() in any component.
+ * Flow:
+ *   1. Google One Tap fires → signIn(credential) POSTs to /api/v1/auth/google
+ *   2. Backend returns {access_token, refresh_token, user}
+ *   3. Tokens stored in localStorage; React state updated.
+ *   4. On every page load, GET /api/v1/auth/me re-validates the stored token.
+ *      If it returns 401 the stale tokens are cleared (no refresh attempted
+ *      at hydration time — user re-signs-in next visit).
  *
- * The Google client ID comes from VITE_GOOGLE_CLIENT_ID in .env.
- * If the key is missing the provider still renders; the sign-in button
- * will fail gracefully with a console warning.
+ * Raw axios (not the intercepted api instance) is used here to avoid
+ * circular dependency with services/api.ts.
  */
 import {
   createContext,
   useContext,
   useState,
   useCallback,
+  useEffect,
   type ReactNode,
 } from 'react'
+import axios from 'axios'
 
 export interface AuthUser {
-  name: string
+  id: string
   email: string
-  picture: string
-  googleId: string
+  name: string
+  avatar_url: string | null
 }
 
 interface AuthContextValue {
   user: AuthUser | null
-  signIn: (credential: string) => void
-  signOut: () => void
+  isLoading: boolean
+  signIn: (credential: string) => Promise<void>
+  signOut: () => Promise<void>
 }
 
-const STORAGE_KEY = 'hireport_user'
+export const STORAGE_KEY_ACCESS = 'hireport_access_token'
+export const STORAGE_KEY_REFRESH = 'hireport_refresh_token'
+const STORAGE_KEY_USER = 'hireport_user'
 
-function loadUser(): AuthUser | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as AuthUser) : null
-  } catch {
-    return null
-  }
-}
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
-/** Decode the JWT credential returned by Google One Tap / Sign-In button */
-function decodeGoogleJwt(token: string): AuthUser | null {
-  try {
-    const payload = token.split('.')[1]
-    const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')))
-    return {
-      name: decoded.name || decoded.email,
-      email: decoded.email,
-      picture: decoded.picture || '',
-      googleId: decoded.sub,
-    }
-  } catch {
-    return null
-  }
+function clearStorage() {
+  localStorage.removeItem(STORAGE_KEY_ACCESS)
+  localStorage.removeItem(STORAGE_KEY_REFRESH)
+  localStorage.removeItem(STORAGE_KEY_USER)
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(loadUser)
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const signIn = useCallback((credential: string) => {
-    const decoded = decodeGoogleJwt(credential)
-    if (!decoded) return
-    setUser(decoded)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(decoded))
+  // Hydration: re-validate stored token on every page load.
+  // Uses raw axios (not the intercepted api instance) so the refresh
+  // interceptor in api.ts is not triggered during initial load.
+  useEffect(() => {
+    const token = localStorage.getItem(STORAGE_KEY_ACCESS)
+    if (!token) {
+      setIsLoading(false)
+      return
+    }
+    axios
+      .get<AuthUser>(`${BASE_URL}/api/v1/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        setUser(res.data)
+        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(res.data))
+      })
+      .catch(() => clearStorage())
+      .finally(() => setIsLoading(false))
   }, [])
 
-  const signOut = useCallback(() => {
+  const signIn = useCallback(async (credential: string): Promise<void> => {
+    const res = await axios.post<{
+      access_token: string
+      refresh_token: string
+      user: AuthUser
+    }>(`${BASE_URL}/api/v1/auth/google`, { credential })
+    const { access_token, refresh_token, user: backendUser } = res.data
+    localStorage.setItem(STORAGE_KEY_ACCESS, access_token)
+    localStorage.setItem(STORAGE_KEY_REFRESH, refresh_token)
+    localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(backendUser))
+    setUser(backendUser)
+  }, [])
+
+  const signOut = useCallback(async (): Promise<void> => {
+    const token = localStorage.getItem(STORAGE_KEY_ACCESS)
+    if (token) {
+      // Best-effort — errors are swallowed; logout is always local.
+      await axios
+        .post(`${BASE_URL}/api/v1/auth/logout`, null, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .catch(() => {})
+    }
+    clearStorage()
     setUser(null)
-    localStorage.removeItem(STORAGE_KEY)
+    window.location.href = '/'
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, isLoading, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   )

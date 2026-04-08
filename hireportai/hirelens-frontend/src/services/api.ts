@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios'
+import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import toast from 'react-hot-toast'
 import type {
   AnalysisResponse,
@@ -7,7 +7,12 @@ import type {
   RewriteResponse,
   TrackerApplication,
 } from '@/types'
+import {
+  STORAGE_KEY_ACCESS,
+  STORAGE_KEY_REFRESH,
+} from '@/context/AuthContext'
 
+const STORAGE_KEY_USER = 'hireport_user'
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
 const api = axios.create({
@@ -15,19 +20,100 @@ const api = axios.create({
   timeout: 120000, // 2 min for analysis
 })
 
-// Global error interceptor
+// ─── Request interceptor: inject Bearer token ─────────────────────────────
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem(STORAGE_KEY_ACCESS)
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// ─── Refresh state (module-level, not per-render) ─────────────────────────
+let isRefreshing = false
+let pendingQueue: Array<{
+  resolve: (token: string) => void
+  reject: (err: unknown) => void
+}> = []
+
+function processQueue(error: unknown, token: string | null = null) {
+  pendingQueue.forEach((p) => {
+    if (error) p.reject(error)
+    else p.resolve(token!)
+  })
+  pendingQueue = []
+}
+
+function clearAuthAndRedirect() {
+  localStorage.removeItem(STORAGE_KEY_ACCESS)
+  localStorage.removeItem(STORAGE_KEY_REFRESH)
+  localStorage.removeItem(STORAGE_KEY_USER)
+  window.location.href = '/'
+}
+
+// ─── Response interceptor: silent refresh on 401, toast other errors ──────
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ error?: string; detail?: string }>) => {
-    const message =
-      error.response?.data?.error ||
-      error.response?.data?.detail ||
-      error.message ||
-      'An unexpected error occurred'
-    toast.error(message)
+  async (error: AxiosError<{ error?: string; detail?: string }>) => {
+    const original = error.config as InternalAxiosRequestConfig & {
+      _retry?: boolean
+    }
+
+    if (error.response?.status === 401 && original && !original._retry) {
+      if (isRefreshing) {
+        // Another refresh is already in flight — queue this request.
+        return new Promise<string>((resolve, reject) => {
+          pendingQueue.push({ resolve, reject })
+        }).then((newToken) => {
+          original.headers['Authorization'] = `Bearer ${newToken}`
+          return api(original)
+        })
+      }
+
+      original._retry = true
+      isRefreshing = true
+
+      const refreshToken = localStorage.getItem(STORAGE_KEY_REFRESH)
+      if (!refreshToken) {
+        processQueue(error)
+        isRefreshing = false
+        clearAuthAndRedirect()
+        return Promise.reject(error)
+      }
+
+      try {
+        const { data } = await axios.post<{ access_token: string }>(
+          `${BASE_URL}/api/v1/auth/refresh`,
+          { refresh_token: refreshToken }
+        )
+        const newToken = data.access_token
+        localStorage.setItem(STORAGE_KEY_ACCESS, newToken)
+        processQueue(null, newToken)
+        isRefreshing = false
+        original.headers['Authorization'] = `Bearer ${newToken}`
+        return api(original)
+      } catch (refreshErr) {
+        processQueue(refreshErr)
+        isRefreshing = false
+        clearAuthAndRedirect()
+        return Promise.reject(refreshErr)
+      }
+    }
+
+    // Non-401 (or already-retried 401) — show toast.
+    if (error.response?.status !== 401) {
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.detail ||
+        error.message ||
+        'An unexpected error occurred'
+      toast.error(message)
+    }
     return Promise.reject(error)
   }
 )
+
+// ─── Feature API calls ─────────────────────────────────────────────────────
 
 export async function analyzeResume(
   file: File,

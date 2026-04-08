@@ -115,9 +115,9 @@ export function Navbar() {
                 onClick={() => setShowUserMenu((v) => !v)}
                 className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/[0.03] transition-all"
               >
-                {user.picture ? (
+                {user.avatar_url ? (
                   <img
-                    src={user.picture}
+                    src={user.avatar_url}
                     alt={user.name}
                     className="w-6 h-6 rounded-full border border-white/10 ring-2 ring-accent-primary/20"
                     referrerPolicy="no-referrer"
@@ -173,7 +173,7 @@ export function Navbar() {
             <div className="hidden sm:block">
               <GoogleLogin
                 onSuccess={(cred) => {
-                  if (cred.credential) signIn(cred.credential)
+                  if (cred.credential) signIn(cred.credential).catch(() => {})
                 }}
                 onError={() => {/* silent – no client ID configured */}}
                 theme="filled_black"
