@@ -7,6 +7,7 @@ import type {
   CoverLetterResponse,
   DailyQueueResponse,
   InterviewPrepResponse,
+  OnboardingRecommendationsResponse,
   ReviewRequest,
   ReviewResponse,
   RewriteResponse,
@@ -236,6 +237,42 @@ export async function fetchCard(id: string): Promise<Card> {
 
 export async function submitReview(req: ReviewRequest): Promise<ReviewResponse> {
   const response = await api.post<ReviewResponse>('/api/v1/study/review', req)
+  return response.data
+}
+
+// ─── Onboarding — ATS gap → card bridge ───────────────────────────────────────
+
+/**
+ * Fetch recommended card categories for a list of ATS skill gaps.
+ *
+ * Sends `gaps` as repeated query params (`?gaps=a&gaps=b`) to match the
+ * FastAPI `list[str] = Query(...)` contract. Axios's default array
+ * serializer uses `gaps[]=a`, which FastAPI will NOT parse as a list,
+ * so we override `paramsSerializer` inline.
+ */
+export async function fetchOnboardingRecommendations(
+  gaps: string[],
+  scanId?: string,
+): Promise<OnboardingRecommendationsResponse> {
+  const response = await api.get<OnboardingRecommendationsResponse>(
+    '/api/v1/onboarding/recommendations',
+    {
+      params: { gaps, ...(scanId ? { scan_id: scanId } : {}) },
+      paramsSerializer: (params) => {
+        const parts: string[] = []
+        for (const [key, value] of Object.entries(params)) {
+          if (Array.isArray(value)) {
+            for (const v of value) {
+              parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(v))}`)
+            }
+          } else if (value != null) {
+            parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          }
+        }
+        return parts.join('&')
+      },
+    },
+  )
   return response.data
 }
 

@@ -21,7 +21,14 @@ export function useAnalysis() {
       const result = await analyzeResume(resumeFile, jobDescription)
       dispatch({ type: 'SET_RESULT', payload: result })
       incrementScan()
-      navigate('/results')
+      // Post-scan lands on the onboarding bridge (spec #09). A client-side
+      // scan_id is used purely for PostHog correlation — the backend doesn't
+      // persist scans yet.
+      const scanId =
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+      navigate(`/onboarding?scan_id=${encodeURIComponent(scanId)}`)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Analysis failed'
       dispatch({ type: 'SET_ERROR', payload: message })

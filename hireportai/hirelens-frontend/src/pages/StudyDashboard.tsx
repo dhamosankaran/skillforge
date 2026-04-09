@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useMemo } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BookOpen, Play, RefreshCw, Lock, ArrowRight, X, AlertCircle } from 'lucide-react'
+import { BookOpen, Play, RefreshCw, Lock, ArrowRight, X, AlertCircle, Filter } from 'lucide-react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { GlowButton } from '@/components/ui/GlowButton'
 import { CategoryCard, CategoryCardSkeleton } from '@/components/study/CategoryCard'
@@ -98,6 +98,20 @@ export default function StudyDashboard() {
   const { usage } = useUsage()
   const { categories, isLoading, error, refetch } = useStudyDashboard()
   const [lockedCategory, setLockedCategory] = useState<Category | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Spec #09: when arriving from the onboarding bridge, the URL carries
+  // `?category=<id>`. Filter the grid down to that single category so the
+  // user lands directly on what they just clicked. A "Show all" pill clears
+  // the filter without dropping navigation history.
+  const filteredCategoryId = searchParams.get('category')
+  const visibleCategories = useMemo(() => {
+    if (!filteredCategoryId) return categories
+    return categories.filter((c) => c.id === filteredCategoryId)
+  }, [categories, filteredCategoryId])
+  const filteredCategoryName = visibleCategories[0]?.name
+  const filterMatchedNothing =
+    !!filteredCategoryId && !isLoading && visibleCategories.length === 0
 
   // AC-9: fire study_dashboard_viewed once data has loaded
   useEffect(() => {
@@ -181,10 +195,32 @@ export default function StudyDashboard() {
           </motion.div>
         )}
 
+        {/* ── Onboarding filter pill ────────────────────────────────────── */}
+        {filteredCategoryId && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-5 flex items-center gap-2 flex-wrap"
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent-primary/10 border border-accent-primary/20 text-xs">
+              <Filter size={11} className="text-accent-primary" />
+              <span className="text-text-primary font-medium">
+                Filtered: {filteredCategoryName ?? 'category'}
+              </span>
+            </div>
+            <button
+              onClick={() => setSearchParams({})}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-white/[0.08] text-xs text-text-muted hover:text-text-secondary hover:border-white/[0.15] transition-colors"
+            >
+              Show all categories
+            </button>
+          </motion.div>
+        )}
+
         {/* ── Category grid ─────────────────────────────────────────────── */}
         {!error && (
           <>
-            {/* Empty state (data loaded, no categories) */}
+            {/* Empty state (data loaded, no categories at all) */}
             {!isLoading && categories.length === 0 && (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -196,10 +232,27 @@ export default function StudyDashboard() {
               </motion.div>
             )}
 
+            {/* Filtered to a category that isn't in the visible set (likely locked) */}
+            {filterMatchedNothing && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center gap-3 py-16 text-center"
+              >
+                <BookOpen size={36} className="text-text-muted opacity-40" />
+                <p className="text-sm text-text-muted">
+                  That category isn't available on your current plan.
+                </p>
+                <GlowButton variant="ghost" size="sm" onClick={() => setSearchParams({})}>
+                  Show all categories
+                </GlowButton>
+              </motion.div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {isLoading
                 ? [...Array(skeletonCount)].map((_, i) => <CategoryCardSkeleton key={i} />)
-                : categories.map((cat, i) => (
+                : visibleCategories.map((cat, i) => (
                     <CategoryCard
                       key={cat.id}
                       category={cat}

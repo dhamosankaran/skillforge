@@ -180,6 +180,28 @@ export interface DailyQueueResponse {
   session_id: string
 }
 
+// ─── Onboarding (ATS gap → cards bridge) ─────────────────────────────────────
+
+export interface RecommendedCategory {
+  category_id: string
+  name: string
+  icon: string
+  color: string
+  matched_card_count: number
+  similarity_score: number | null
+}
+
+export interface GapMapping {
+  gap: string
+  match_type: 'tag' | 'semantic' | 'none'
+  matching_categories: RecommendedCategory[]
+}
+
+export interface OnboardingRecommendationsResponse {
+  scan_id: string | null
+  results: GapMapping[]
+}
+
 // ─── Analysis ─────────────────────────────────────────────────────────────────
 
 export interface AnalysisState {
