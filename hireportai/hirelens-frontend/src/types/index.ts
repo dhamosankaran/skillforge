@@ -127,6 +127,38 @@ export interface CategoriesResponse {
   categories: Category[]
 }
 
+export interface Card {
+  id: string
+  category_id: string
+  category_name: string
+  question: string
+  answer: string
+  difficulty: 'easy' | 'medium' | 'hard'
+  tags: string[]
+  created_at: string
+  updated_at: string
+}
+
+export type FsrsRating = 1 | 2 | 3 | 4
+
+export interface ReviewRequest {
+  card_id: string
+  rating: FsrsRating
+  session_id: string
+  time_spent_ms?: number
+}
+
+export interface ReviewResponse {
+  card_id: string
+  fsrs_state: 'new' | 'learning' | 'review' | 'relearning'
+  stability: number
+  difficulty: number
+  due_date: string
+  reps: number
+  lapses: number
+  scheduled_days: number
+}
+
 // ─── Analysis ─────────────────────────────────────────────────────────────────
 
 export interface AnalysisState {

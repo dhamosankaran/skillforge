@@ -10,6 +10,7 @@ import Tracker from '@/pages/Tracker'
 import Pricing from '@/pages/Pricing'
 import Interview from '@/pages/Interview'
 import StudyDashboard from '@/pages/StudyDashboard'
+import CardViewer from '@/pages/CardViewer'
 
 /** Redirects unauthenticated users to /. Renders nothing while auth hydrates. */
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -46,7 +47,8 @@ export default function App() {
           <Route path="/rewrite"   element={<ProtectedRoute><Rewrite /></ProtectedRoute>} />
           <Route path="/tracker"   element={<ProtectedRoute><Tracker /></ProtectedRoute>} />
           <Route path="/interview" element={<ProtectedRoute><Interview /></ProtectedRoute>} />
-          <Route path="/study"     element={<ProtectedRoute><StudyDashboard /></ProtectedRoute>} />
+          <Route path="/study"          element={<ProtectedRoute><StudyDashboard /></ProtectedRoute>} />
+          <Route path="/study/card/:id" element={<ProtectedRoute><CardViewer /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

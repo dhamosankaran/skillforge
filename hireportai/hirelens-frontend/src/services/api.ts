@@ -2,9 +2,12 @@ import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import toast from 'react-hot-toast'
 import type {
   AnalysisResponse,
+  Card,
   CategoriesResponse,
   CoverLetterResponse,
   InterviewPrepResponse,
+  ReviewRequest,
+  ReviewResponse,
   RewriteResponse,
   TrackerApplication,
 } from '@/types'
@@ -217,6 +220,16 @@ export async function deleteApplication(id: string): Promise<void> {
  */
 export async function fetchCategories(): Promise<CategoriesResponse> {
   const response = await api.get<CategoriesResponse>('/api/v1/cards')
+  return response.data
+}
+
+export async function fetchCard(id: string): Promise<Card> {
+  const response = await api.get<Card>(`/api/v1/cards/${id}`)
+  return response.data
+}
+
+export async function submitReview(req: ReviewRequest): Promise<ReviewResponse> {
+  const response = await api.post<ReviewResponse>('/api/v1/study/review', req)
   return response.data
 }
 
