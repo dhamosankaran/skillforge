@@ -27,6 +27,8 @@ class CardProgress(Base, UUIDPrimaryKeyMixin):
     scheduled_days: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     reps: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     lapses: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # py-fsrs v6 learning/relearning step index (None when in Review state)
+    fsrs_step: Mapped[int | None] = mapped_column(Integer, nullable=True)
     last_reviewed: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
