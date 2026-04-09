@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 WORKDIR /app
 
@@ -18,9 +18,5 @@ RUN python -m spacy download en_core_web_sm
 # Copy application code
 COPY . .
 
-# Create data directory for SQLite
-RUN mkdir -p data
-
+# PORT is injected by Railway; start command is set in railway.toml.
 EXPOSE 8000
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

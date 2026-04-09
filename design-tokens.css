@@ -1,0 +1,178 @@
+/* ═══════════════════════════════════════════════════════════════
+   SKILLFORGE DESIGN SYSTEM v2 — "Midnight Forge" Theme
+   
+   Philosophy: Dark, premium, high-contrast. Think Linear meets 
+   Stripe meets a premium coding bootcamp. The dark base says 
+   "serious engineers use this." The electric accents say 
+   "but it's alive and intelligent."
+   
+   This file goes in: hirelens-frontend/src/styles/design-tokens.css
+   Import it in main.tsx: import './styles/design-tokens.css'
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── DESIGN TOKENS ── */
+
+:root {
+  /* ── Base ── */
+  --sf-bg-primary: #06060A;         /* Deep void — main background */
+  --sf-bg-secondary: #0C0C14;      /* Slightly lifted surfaces */
+  --sf-bg-tertiary: #12121E;       /* Cards, modals */
+  --sf-bg-elevated: #1A1A2E;       /* Hover states, active cards */
+  --sf-bg-glass: rgba(18, 18, 30, 0.7); /* Glassmorphism panels */
+
+  /* ── Brand Accent: Electric Cyan → Warm Amber gradient ── */
+  --sf-accent-primary: #00D4FF;    /* Electric cyan — CTAs, links, focus */
+  --sf-accent-secondary: #7B61FF;  /* Purple — secondary actions, badges */
+  --sf-accent-warm: #FF8A50;       /* Warm amber — urgency, streaks, fire */
+  --sf-accent-success: #00E68A;    /* Green — completed, mastered */
+  --sf-accent-danger: #FF4D6A;     /* Red-pink — errors, streak broken */
+
+  /* ── Gradient Combos (use sparingly — hero, CTAs, feature highlights) ── */
+  --sf-gradient-hero: linear-gradient(135deg, #00D4FF 0%, #7B61FF 50%, #FF8A50 100%);
+  --sf-gradient-cta: linear-gradient(135deg, #00D4FF 0%, #7B61FF 100%);
+  --sf-gradient-warm: linear-gradient(135deg, #FF8A50 0%, #FF4D6A 100%);
+  --sf-gradient-subtle: linear-gradient(180deg, rgba(0,212,255,0.08) 0%, transparent 60%);
+
+  /* ── Text ── */
+  --sf-text-primary: #F0F0F5;      /* Headlines, primary copy */
+  --sf-text-secondary: #9494A8;    /* Body text, descriptions */
+  --sf-text-tertiary: #5A5A72;     /* Muted labels, timestamps */
+  --sf-text-on-accent: #06060A;    /* Text on bright accent backgrounds */
+
+  /* ── Borders ── */
+  --sf-border-subtle: rgba(148, 148, 168, 0.12);   /* Default borders */
+  --sf-border-medium: rgba(148, 148, 168, 0.25);   /* Hover borders */
+  --sf-border-accent: rgba(0, 212, 255, 0.3);      /* Focus/accent borders */
+
+  /* ── Typography ── */
+  --sf-font-display: 'Cabinet Grotesk', 'Satoshi', system-ui, sans-serif;
+  --sf-font-body: 'General Sans', 'Switzer', system-ui, sans-serif;
+  --sf-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* ── Spacing ── */
+  --sf-space-xs: 4px;
+  --sf-space-sm: 8px;
+  --sf-space-md: 16px;
+  --sf-space-lg: 24px;
+  --sf-space-xl: 32px;
+  --sf-space-2xl: 48px;
+  --sf-space-3xl: 64px;
+  --sf-space-4xl: 96px;
+
+  /* ── Radius ── */
+  --sf-radius-sm: 6px;
+  --sf-radius-md: 10px;
+  --sf-radius-lg: 16px;
+  --sf-radius-xl: 24px;
+  --sf-radius-full: 999px;
+
+  /* ── Shadows (dark mode optimized — use glow, not drop shadow) ── */
+  --sf-glow-accent: 0 0 20px rgba(0, 212, 255, 0.15), 0 0 60px rgba(0, 212, 255, 0.05);
+  --sf-glow-warm: 0 0 20px rgba(255, 138, 80, 0.15), 0 0 60px rgba(255, 138, 80, 0.05);
+  --sf-glow-card: 0 0 0 1px var(--sf-border-subtle), 0 4px 24px rgba(0, 0, 0, 0.4);
+
+  /* ── Animation ── */
+  --sf-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --sf-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --sf-duration-fast: 150ms;
+  --sf-duration-normal: 300ms;
+  --sf-duration-slow: 500ms;
+}
+
+/* ── GLOBAL RESETS ── */
+
+body {
+  background: var(--sf-bg-primary);
+  color: var(--sf-text-primary);
+  font-family: var(--sf-font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── UTILITY CLASSES ── */
+
+.sf-gradient-text {
+  background: var(--sf-gradient-hero);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.sf-card {
+  background: var(--sf-bg-tertiary);
+  border: 1px solid var(--sf-border-subtle);
+  border-radius: var(--sf-radius-lg);
+  transition: all var(--sf-duration-normal) var(--sf-ease-out);
+}
+
+.sf-card:hover {
+  border-color: var(--sf-border-medium);
+  transform: translateY(-2px);
+  box-shadow: var(--sf-glow-card);
+}
+
+.sf-btn-primary {
+  background: var(--sf-gradient-cta);
+  color: var(--sf-text-on-accent);
+  font-weight: 600;
+  padding: 12px 28px;
+  border-radius: var(--sf-radius-full);
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  transition: all var(--sf-duration-fast) var(--sf-ease-out);
+  box-shadow: var(--sf-glow-accent);
+}
+
+.sf-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 30px rgba(0, 212, 255, 0.3), 0 0 80px rgba(0, 212, 255, 0.1);
+}
+
+.sf-btn-secondary {
+  background: transparent;
+  color: var(--sf-text-primary);
+  font-weight: 500;
+  padding: 12px 28px;
+  border-radius: var(--sf-radius-full);
+  border: 1px solid var(--sf-border-medium);
+  cursor: pointer;
+  font-size: 15px;
+  transition: all var(--sf-duration-fast) var(--sf-ease-out);
+}
+
+.sf-btn-secondary:hover {
+  border-color: var(--sf-accent-primary);
+  background: rgba(0, 212, 255, 0.06);
+}
+
+.sf-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--sf-radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sf-badge-cyan {
+  background: rgba(0, 212, 255, 0.12);
+  color: var(--sf-accent-primary);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+}
+
+.sf-badge-purple {
+  background: rgba(123, 97, 255, 0.12);
+  color: var(--sf-accent-secondary);
+  border: 1px solid rgba(123, 97, 255, 0.2);
+}
+
+.sf-badge-warm {
+  background: rgba(255, 138, 80, 0.12);
+  color: var(--sf-accent-warm);
+  border: 1px solid rgba(255, 138, 80, 0.2);
+}

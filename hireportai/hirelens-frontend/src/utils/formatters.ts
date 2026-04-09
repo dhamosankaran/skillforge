@@ -1,4 +1,4 @@
-// Utility formatting functions for HirePort AI
+// Utility formatting functions for SkillForge
 
 export function formatDate(dateStr: string): string {
   try {

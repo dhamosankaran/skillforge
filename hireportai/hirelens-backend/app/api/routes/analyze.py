@@ -13,6 +13,7 @@ from app.models.response_models import (
     SkillGap,
     SkillOverlapData,
 )
+from app.core.analytics import track as analytics_track
 from app.services.bullet_analyzer import analyze_bullets
 from app.services.formatter_check import check_formatting
 from app.services.gap_detector import detect_gaps, get_skills_overlap_data
@@ -174,6 +175,18 @@ async def analyze_resume(
         )
         top_strengths = matched_keywords[:3] if matched_keywords else ["Relevant experience present"]
         top_gaps = missing_keywords[:3] if missing_keywords else ["Add more role-specific keywords"]
+
+    analytics_track(
+        user_id=None,
+        event="ats_scanned",
+        properties={
+            "score": score_result["total"],
+            "grade": score_result["grade"],
+            "gaps_found": len(skill_gaps),
+            "matched_keywords": len(matched_keywords),
+            "missing_keywords": len(missing_keywords),
+        },
+    )
 
     return AnalysisResponse(
         ats_score=score_result["total"],

@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     stripe_enterprise_price_id: str = ""
     frontend_url: str = "http://localhost:5199"
 
+    # --- Analytics ---
+    posthog_api_key: str = ""
+    posthog_host: str = "https://us.i.posthog.com"
+
     # --- LLM ---
     llm_provider: str = "gemini"  # "gemini" or "claude"
     anthropic_api_key: str = ""
@@ -45,6 +49,22 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
         extra = "ignore"
+
+    @property
+    def async_database_url(self) -> str:
+        """Return a database URL with the postgresql+asyncpg:// scheme.
+
+        Railway injects DATABASE_URL as postgres:// or postgresql:// (no driver
+        prefix). asyncpg requires the +asyncpg driver qualifier, and the legacy
+        'postgres://' alias is not accepted. This property normalises all three
+        forms so local dev and Railway both work without code changes.
+        """
+        url = self.database_url
+        # Normalise legacy 'postgres://' alias first.
+        url = url.replace("postgres://", "postgresql://", 1)
+        if not url.startswith("postgresql+asyncpg://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
 
     @property
     def allowed_origins_list(self) -> List[str]:

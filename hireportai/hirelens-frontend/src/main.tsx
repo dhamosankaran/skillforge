@@ -8,6 +8,9 @@ import { AnalysisProvider } from '@/context/AnalysisContext'
 import { UsageProvider } from '@/context/UsageContext'
 import { UpgradeModal } from '@/components/ui/UpgradeModal'
 import App from '@/App'
+// Eager-import to run PostHog init side-effect before the first render,
+// so capture() calls during initial route mount are not dropped.
+import '@/utils/posthog'
 import '@/index.css'
 import '@/styles/design-tokens.css'
 

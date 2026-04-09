@@ -36,9 +36,9 @@ interface AuthContextValue {
   signOut: () => Promise<void>
 }
 
-export const STORAGE_KEY_ACCESS = 'hireport_access_token'
-export const STORAGE_KEY_REFRESH = 'hireport_refresh_token'
-const STORAGE_KEY_USER = 'hireport_user'
+export const STORAGE_KEY_ACCESS = 'skillforge_access_token'
+export const STORAGE_KEY_REFRESH = 'skillforge_refresh_token'
+const STORAGE_KEY_USER = 'skillforge_user'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 

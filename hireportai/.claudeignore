@@ -1,0 +1,8 @@
+# .claudeignore
+node_modules/
+venv/
+.git/
+dist/
+build/
+__pycache__/
+*.sqlite

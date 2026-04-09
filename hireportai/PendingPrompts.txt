@@ -1,0 +1,40 @@
+Environment variables to set in Railway dashboard         
+
+  ┌──────────────────────┬────────────────────────────────────┬──────────────────────────────────────────────────────────┐
+  │       Variable       │               Value                │                          Notes                           │
+  ├──────────────────────┼────────────────────────────────────┼──────────────────────────────────────────────────────────┤
+  │ DATABASE_URL         │ auto-injected by Railway PG plugin │ Add the plugin; Railway sets this automatically          │
+  ├──────────────────────┼────────────────────────────────────┼──────────────────────────────────────────────────────────┤
+  │ SECRET_KEY           │ 64-char random hex                 │ python -c "import secrets; print(secrets.token_hex(32))" │                                                                                                    
+  ├──────────────────────┼────────────────────────────────────┼──────────────────────────────────────────────────────────┤                                                                                                    
+  │ JWT_SECRET_KEY       │ same value as SECRET_KEY           │ config uses jwt_secret_key field                         │                                                                                                    
+  ├──────────────────────┼────────────────────────────────────┼──────────────────────────────────────────────────────────┤                                                                                                    
+  │ ALLOWED_ORIGINS      │ https://your-app.vercel.app        │ exact Vercel URL, no trailing slash                      │
+  ├──────────────────────┼────────────────────────────────────┼──────────────────────────────────────────────────────────┤                                                                                                    
+  │ GOOGLE_CLIENT_ID     │ from Google Cloud Console          │                                                          │
+  ├──────────────────────┼────────────────────────────────────┼──────────────────────────────────────────────────────────┤                                                                                                    
+  │ GOOGLE_CLIENT_SECRET │ from Google Cloud Console          │                                                          │
+  ├──────────────────────┼────────────────────────────────────┼──────────────────────────────────────────────────────────┤                                                                                                    
+  │ GEMINI_API_KEY       │ from Google AI Studio              │ required for LLM features                                │
+  ├──────────────────────┼────────────────────────────────────┼──────────────────────────────────────────────────────────┤                                                                                                    
+  │ ENVIRONMENT          │ production                         │                                                          │
+  └──────────────────────┴────────────────────────────────────┴──────────────────────────────────────────────────────────┘                                                                                                    
+  
+
+
+P0-S8: Verify Production
+Start with this
+
+## --- NEW SESSION --- Phase 1F: Analytics + Stripe + Gating (Tasks 1.10–1.12)
+
+New features
+
+Set Content Feed Flow
+
+
+Business Development
+- Social MEdia
+- Small Consulting companies to train them
+- Start collecting all the learnings for building flashcards
+- Show links to courseera, youtube, udemy, linkedin learning, etc and capture the link click through rate
+- Small animation videos explaning the concepts

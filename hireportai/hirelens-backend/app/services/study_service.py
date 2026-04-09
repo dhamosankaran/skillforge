@@ -25,6 +25,7 @@ from fsrs import Card as FsrsCard, Rating, Scheduler, State
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.analytics import track as analytics_track
 from app.models.card import Card
 from app.models.card_progress import CardProgress
 from app.models.category import Category
@@ -325,6 +326,19 @@ async def review_card(
     _apply_fsrs_result(progress, updated_card, elapsed_days, now)
 
     await db.flush()
+
+    analytics_track(
+        user_id=user_id,
+        event="card_reviewed",
+        properties={
+            "card_id": card_id,
+            "rating": rating,
+            "time_spent_ms": time_spent_ms,
+            "fsrs_state": progress.state,
+            "reps": progress.reps,
+            "lapses": progress.lapses,
+        },
+    )
 
     return ReviewResponse(
         card_id=card_id,

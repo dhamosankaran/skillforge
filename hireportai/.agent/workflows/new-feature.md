@@ -28,20 +28,29 @@ description: How to add a new feature to SkillForge end-to-end
 // turbo
 9. Run `cd hirelens-backend && python -m pytest tests/ -v`
 
-10. **Implement frontend page/component**
+10. **Add PostHog events** in the service layer
+    - Track key user actions
+    - Include relevant properties
+
+11. **Implement frontend page/component**
     - Create page in `src/pages/FeatureName.tsx`
     - Add route in `App.tsx`
     - Add API client method in `services/api.ts`
+    - Add PostHog `capture()` calls on user interactions
 
 // turbo
-11. Run `cd hirelens-frontend && npx vitest run`
+12. Run `cd hirelens-frontend && npx vitest run`
 
-12. **Manual verification**
+13. **Manual verification**
     - Open browser, test the feature end-to-end
     - Test on mobile viewport
+    - Verify PostHog events fire in the dashboard
+    - Verify it works on the deployed URL (CI/CD auto-deploys)
 
-13. **Git commit**
+14. **Git commit**
     ```bash
     git add -A
     git commit -m "feat(feature): add feature_name — closes spec #NN"
+    git push origin main
+    # CI/CD auto-deploys to production
     ```

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import './index.css';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -51,9 +52,18 @@ export default function App() {
       <Sidebar page={page} setPage={setPage} stats={userStats} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="main-content">
         <TopBar onMenuClick={() => setSidebarOpen(!sidebarOpen)} onLanding={() => setIsLoggedIn(false)} />
-        <div className="page-content fade-in" key={page}>
-          {renderPage()}
-        </div>
+        <AnimatePresence mode="wait">
+          <motion.div 
+            className="page-content" 
+            key={page}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+          >
+            {renderPage()}
+          </motion.div>
+        </AnimatePresence>
       </div>
       {xpPopup && <div className="xp-popup">{xpPopup}</div>}
     </div>

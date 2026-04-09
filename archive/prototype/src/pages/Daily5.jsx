@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { getAllCards } from '../data/cards';
 
 export default function Daily5({ showXp }) {
@@ -44,21 +45,36 @@ export default function Daily5({ showXp }) {
         <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>{completed.length} of 5 complete</div>
       </div>
 
-      <div className="flip-card-container" onClick={() => setFlipped(f => !f)}>
-        <div className={`flip-card ${flipped ? 'flipped' : ''}`}>
-          <div className="flip-card-front">
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
-              {card.categoryIcon} {card.category}
+      <AnimatePresence mode="wait">
+        <motion.div 
+          key={current} 
+          initial={{ opacity: 0, x: 50 }} 
+          animate={{ opacity: 1, x: 0 }} 
+          exit={{ opacity: 0, x: -50 }} 
+          transition={{ duration: 0.3 }}
+          className="flip-card-container" 
+          onClick={() => setFlipped(f => !f)}
+        >
+          <motion.div 
+            className="flip-card" 
+            initial={false}
+            animate={{ rotateY: flipped ? 180 : 0 }}
+            transition={{ duration: 0.6, type: 'spring', stiffness: 260, damping: 20 }}
+          >
+            <div className="flip-card-front">
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>
+                {card.categoryIcon} {card.category}
+              </div>
+              <span className={`card-difficulty ${card.difficulty}`}>{card.difficulty}</span>
+              <div className="card-question">{card.q}</div>
+              <div className="card-hint">Click to reveal answer</div>
             </div>
-            <span className={`card-difficulty ${card.difficulty}`}>{card.difficulty}</span>
-            <div className="card-question">{card.q}</div>
-            <div className="card-hint">Click to reveal answer</div>
-          </div>
-          <div className="flip-card-back" onClick={e => e.stopPropagation()}>
-            <div className="card-answer">{card.a}</div>
-          </div>
-        </div>
-      </div>
+            <div className="flip-card-back" onClick={e => e.stopPropagation()}>
+              <div className="card-answer">{card.a}</div>
+            </div>
+          </motion.div>
+        </motion.div>
+      </AnimatePresence>
 
       {flipped && (
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24 }}>

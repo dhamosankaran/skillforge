@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { CATEGORIES, getAllCards } from '../data/cards';
 
 export default function StudyEngine({ category, showXp }) {
@@ -58,21 +59,37 @@ export default function StudyEngine({ category, showXp }) {
       </div>
 
       {/* Flip Card */}
-      <div className="flip-card-container" onClick={() => setFlipped(f => !f)}>
-        <div className={`flip-card ${flipped ? 'flipped' : ''}`} style={{ minHeight: flipped ? 'auto' : 400 }}>
-          <div className="flip-card-front">
-            <span className={`card-difficulty ${card.difficulty}`}>{card.difficulty}</span>
-            <div className="card-question">{card.q}</div>
-            <div className="card-hint">Click to flip →</div>
-          </div>
-          <div className="flip-card-back" onClick={e => e.stopPropagation()}>
-            <div className="card-answer">{card.a}</div>
-            <div className="card-tags">
-              {card.tags.map(t => <span key={t} className="tag">{t}</span>)}
+      <AnimatePresence mode="wait">
+        <motion.div 
+          key={cardId} 
+          initial={{ opacity: 0, x: 50 }} 
+          animate={{ opacity: 1, x: 0 }} 
+          exit={{ opacity: 0, x: -50 }} 
+          transition={{ duration: 0.3 }}
+          className="flip-card-container" 
+          onClick={() => setFlipped(f => !f)}
+        >
+          <motion.div 
+            className="flip-card" 
+            initial={false}
+            animate={{ rotateY: flipped ? 180 : 0 }}
+            transition={{ duration: 0.6, type: 'spring', stiffness: 260, damping: 20 }}
+            style={{ minHeight: flipped ? 'auto' : 400 }}
+          >
+            <div className="flip-card-front">
+              <span className={`card-difficulty ${card.difficulty}`}>{card.difficulty}</span>
+              <div className="card-question">{card.q}</div>
+              <div className="card-hint">Click to flip →</div>
             </div>
-          </div>
-        </div>
-      </div>
+            <div className="flip-card-back" onClick={e => e.stopPropagation()}>
+              <div className="card-answer">{card.a}</div>
+              <div className="card-tags">
+                {card.tags.map(t => <span key={t} className="tag">{t}</span>)}
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      </AnimatePresence>
 
       {/* Experience Tabs */}
       <div className="exp-tabs">
