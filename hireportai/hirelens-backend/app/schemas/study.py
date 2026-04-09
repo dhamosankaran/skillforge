@@ -60,3 +60,12 @@ class ReviewResponse(BaseModel):
     reps: int
     lapses: int
     scheduled_days: float
+
+
+class StudyProgressResponse(BaseModel):
+    """Response for GET /api/v1/study/progress — aggregate stats for the caller."""
+
+    total_reviewed: int  # cards with at least one review (state != 'new')
+    by_state: dict[str, int]  # {"new": n, "learning": n, "review": n, "relearning": n}
+    total_reps: int  # cumulative successful reviews across all cards
+    total_lapses: int  # cumulative Again ratings across all cards

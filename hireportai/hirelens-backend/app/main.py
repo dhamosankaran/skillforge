@@ -13,10 +13,12 @@ from app.api.v1.routes import (
     analyze as v1_analyze,
     auth as v1_auth,
     billing as v1_billing,
+    cards as v1_cards,
     cover_letter as v1_cover_letter,
     interview as v1_interview,
     resume as v1_resume,
     rewrite as v1_rewrite,
+    study as v1_study,
     tracker as v1_tracker,
 )
 from app.core.config import get_settings
@@ -103,6 +105,8 @@ def create_app() -> FastAPI:
     app.include_router(v1_interview.router, prefix="/api/v1", tags=["v1 Interview Prep"])
     app.include_router(v1_tracker.router, prefix="/api/v1", tags=["v1 Tracker"])
     app.include_router(v1_resume.router, prefix="/api/v1", tags=["v1 Resume"])
+    app.include_router(v1_cards.router, prefix="/api/v1", tags=["v1 Cards"])
+    app.include_router(v1_study.router, prefix="/api/v1", tags=["v1 Study"])
 
     return app
 

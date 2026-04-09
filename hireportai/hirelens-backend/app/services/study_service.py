@@ -28,7 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.card import Card
 from app.models.card_progress import CardProgress
 from app.models.category import Category
-from app.schemas.study import DailyCardItem, DailyReviewResponse, ReviewResponse
+from app.schemas.study import DailyCardItem, DailyReviewResponse, ReviewResponse, StudyProgressResponse
 
 # Module-level scheduler — stateless, safe to share
 _scheduler = Scheduler()
@@ -335,4 +335,48 @@ async def review_card(
         reps=progress.reps,
         lapses=progress.lapses,
         scheduled_days=progress.scheduled_days,
+    )
+
+
+async def get_progress(
+    user_id: str,
+    db: AsyncSession,
+) -> StudyProgressResponse:
+    """Return aggregate study statistics for the caller.
+
+    Counts card_progress rows by state, and sums reps and lapses.
+    Cards the user has never touched have no card_progress row and are not
+    counted here (they show up as "unreviewed" in the daily queue instead).
+    """
+    from sqlalchemy import func as sa_func
+
+    rows = (
+        await db.execute(
+            select(
+                CardProgress.state,
+                sa_func.count(CardProgress.id).label("cnt"),
+                sa_func.coalesce(sa_func.sum(CardProgress.reps), 0).label("reps"),
+                sa_func.coalesce(sa_func.sum(CardProgress.lapses), 0).label("lapses"),
+            )
+            .where(CardProgress.user_id == user_id)
+            .group_by(CardProgress.state)
+        )
+    ).all()
+
+    by_state: dict[str, int] = {"new": 0, "learning": 0, "review": 0, "relearning": 0}
+    total_reps = 0
+    total_lapses = 0
+
+    for row in rows:
+        by_state[row.state] = row.cnt
+        total_reps += row.reps
+        total_lapses += row.lapses
+
+    total_reviewed = by_state["learning"] + by_state["review"] + by_state["relearning"]
+
+    return StudyProgressResponse(
+        total_reviewed=total_reviewed,
+        by_state=by_state,
+        total_reps=total_reps,
+        total_lapses=total_lapses,
     )
