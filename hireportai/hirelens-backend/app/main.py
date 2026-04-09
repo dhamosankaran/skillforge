@@ -7,7 +7,15 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import analyze, cover_letter, interview, onboarding, rewrite, tracker
+from app.api.routes import (
+    analyze,
+    cover_letter,
+    interview,
+    onboarding,
+    payments,
+    rewrite,
+    tracker,
+)
 from app.api.v1.routes import (
     admin as v1_admin,
     analyze as v1_analyze,
@@ -108,6 +116,7 @@ def create_app() -> FastAPI:
     app.include_router(v1_cards.router, prefix="/api/v1", tags=["v1 Cards"])
     app.include_router(v1_study.router, prefix="/api/v1", tags=["v1 Study"])
     app.include_router(onboarding.router, prefix="/api/v1", tags=["v1 Onboarding"])
+    app.include_router(payments.router, prefix="/api/v1", tags=["v1 Payments"])
 
     return app
 
