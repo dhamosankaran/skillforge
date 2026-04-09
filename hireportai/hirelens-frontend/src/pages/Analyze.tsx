@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Cpu, ChevronRight, Shield } from 'lucide-react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
@@ -23,12 +23,12 @@ const LOADING_MESSAGES = [
 function LoadingOverlay() {
   const [msgIdx, setMsgIdx] = useState(0)
 
-  useState(() => {
+  useEffect(() => {
     const interval = setInterval(() => {
       setMsgIdx((i) => (i + 1) % LOADING_MESSAGES.length)
     }, 1800)
     return () => clearInterval(interval)
-  })
+  }, [])
 
   return (
     <motion.div

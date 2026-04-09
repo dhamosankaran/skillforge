@@ -2,19 +2,19 @@ import { createContext, useContext, useState, useCallback } from 'react'
 import type { ReactNode } from 'react'
 import toast from 'react-hot-toast'
 
-export type PlanType = 'free' | 'pro' | 'premium'
+export type PlanType = 'free' | 'pro'
 
 interface UsageState {
   plan: PlanType
   scansUsed: number
-  maxScans: number  // 3 for free, Infinity for pro/premium
+  maxScans: number  // 3 for free, Infinity for pro
 }
 
 interface UsageContextValue {
   usage: UsageState
   canScan: boolean
-  canUsePro: boolean       // true for pro + premium
-  canUsePremium: boolean   // true for premium only
+  canUsePro: boolean       // true for pro
+  canUsePremium: boolean   // alias for canUsePro (pro includes all features)
   incrementScan: () => void
   upgradePlan: (plan: PlanType) => void
   showUpgradeModal: boolean
@@ -22,12 +22,11 @@ interface UsageContextValue {
   checkAndPromptUpgrade: () => boolean
 }
 
-const STORAGE_KEY = 'hireport_usage'
+const STORAGE_KEY = 'skillforge_usage'
 
 const PLAN_LABELS: Record<PlanType, string> = {
   free: 'Free',
   pro: 'Pro',
-  premium: 'Premium',
 }
 
 function loadUsage(): UsageState {
@@ -61,8 +60,8 @@ export function UsageProvider({ children }: { children: ReactNode }) {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
   const canScan = usage.plan !== 'free' || usage.scansUsed < usage.maxScans
-  const canUsePro = usage.plan === 'pro' || usage.plan === 'premium'
-  const canUsePremium = usage.plan === 'premium'
+  const canUsePro = usage.plan === 'pro'
+  const canUsePremium = canUsePro  // pro tier includes all features
 
   const incrementScan = useCallback(() => {
     setUsage((prev) => {
@@ -77,7 +76,7 @@ export function UsageProvider({ children }: { children: ReactNode }) {
       const next: UsageState = {
         plan,
         scansUsed: prev.scansUsed,
-        maxScans: plan === 'free' ? 3 : Infinity,
+        maxScans: plan === 'pro' ? Infinity : 3,
       }
       saveUsage(next)
       return next

@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react'
 import { motion, useMotionValue, useSpring } from 'framer-motion'
-import { Check, X, Sparkles, Zap, Crown, CheckCircle2 } from 'lucide-react'
+import { Check, X, Sparkles, Zap, CheckCircle2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import clsx from 'clsx'
 import { PageWrapper } from '@/components/layout/PageWrapper'
@@ -67,28 +67,30 @@ const plans: PlanConfig[] = [
     planKey: 'free',
     price: 0,
     period: '',
-    description: 'Try the platform with 3 free resume analyses.',
+    description: 'Try SkillForge with 3 free resume analyses. No card required.',
     icon: Zap,
     accent: 'text-text-secondary',
     cta: 'Start Free',
     features: [
       { text: '3 resume analyses', included: true },
       { text: 'ATS match score', included: true },
-      { text: 'Matched keywords', included: true },
-      { text: 'Missing keywords', included: true },
+      { text: 'Matched & missing keywords', included: true },
       { text: 'Basic dashboard results', included: true },
       { text: 'Unlimited scans', included: false },
+      { text: 'Full skill gap analysis', included: false },
       { text: 'AI resume rewriting', included: false },
       { text: 'Cover letter generation', included: false },
-      { text: 'Optimized resume download', included: false },
+      { text: 'Interview prep (Mission mode)', included: false },
+      { text: 'Resume PDF export', included: false },
+      { text: 'Application tracker', included: false },
     ],
   },
   {
     name: 'Pro',
     planKey: 'pro',
-    price: 10,
+    price: 49,
     period: '/mo',
-    description: 'Unlimited ATS scans with full analytics dashboard.',
+    description: 'Full platform access — scan, rewrite, prep, and track. Everything you need to land the role.',
     icon: Sparkles,
     accent: 'text-accent-primary',
     cta: 'Upgrade to Pro',
@@ -96,35 +98,14 @@ const plans: PlanConfig[] = [
     features: [
       { text: 'Unlimited ATS scans', included: true },
       { text: 'Full ATS compatibility score', included: true },
-      { text: 'Keyword match analysis', included: true },
-      { text: 'Missing skills detection', included: true },
-      { text: 'Skill gap insights', included: true },
-      { text: 'ATS pass probability rating', included: true },
-      { text: 'Detailed dashboard analytics', included: true },
+      { text: 'Keyword & skill gap analysis', included: true },
       { text: 'AI bullet point suggestions', included: true },
-      { text: 'Full AI resume rewrite', included: false },
-      { text: 'Formatted resume download', included: false },
-      { text: 'Cover letter generation', included: false },
-    ],
-  },
-  {
-    name: 'Premium',
-    planKey: 'premium',
-    price: 15,
-    period: '/mo',
-    description: 'Full automation — rewrite, cover letter, and export.',
-    icon: Crown,
-    accent: 'text-accent-secondary',
-    cta: 'Get Premium',
-    features: [
-      { text: 'Everything in Pro', included: true },
-      { text: 'AI resume rewriting', included: true },
-      { text: 'Optimized bullet generation', included: true },
-      { text: 'Auto-tailored resume for JD', included: true },
-      { text: 'Export improved resume as PDF', included: true },
-      { text: 'Professional resume formatting', included: true },
-      { text: 'AI-generated cover letter', included: true },
-      { text: 'Multiple cover letter tones', included: true },
+      { text: 'AI resume rewriting (all templates)', included: true },
+      { text: 'Auto-tailored resume for each JD', included: true },
+      { text: 'Resume PDF & DOCX export', included: true },
+      { text: 'AI cover letter generation', included: true },
+      { text: 'Interview prep — Mission mode', included: true },
+      { text: 'Application tracker (Kanban)', included: true },
       { text: 'Priority processing', included: true },
     ],
   },
@@ -132,7 +113,7 @@ const plans: PlanConfig[] = [
 
 const containerVariants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.1 } },
+  show: { transition: { staggerChildren: 0.12 } },
 }
 
 const cardVariants = {
@@ -164,7 +145,7 @@ export default function Pricing() {
         <div className="absolute inset-0 grid-pattern opacity-20" />
       </div>
 
-      <div className="max-w-5xl mx-auto px-5 py-20 relative z-10">
+      <div className="max-w-3xl mx-auto px-5 py-20 relative z-10">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -187,7 +168,7 @@ export default function Pricing() {
             <span className="shimmer-text">plan</span>
           </h1>
           <p className="text-text-secondary text-base max-w-lg mx-auto leading-relaxed">
-            Start free with 3 scans. Upgrade for unlimited analysis, AI rewriting, and full automation.
+            Start free with 3 scans. Go Pro for unlimited access to every SkillForge tool.
           </p>
           {/* Current plan indicator */}
           <motion.div
@@ -206,7 +187,7 @@ export default function Pricing() {
           variants={containerVariants}
           initial="hidden"
           animate="show"
-          className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start"
+          className="grid grid-cols-1 sm:grid-cols-2 gap-5 items-start"
         >
           {plans.map((plan) => {
             const isCurrentPlan = usage.plan === plan.planKey
@@ -217,7 +198,7 @@ export default function Pricing() {
                     className={clsx(
                       'relative rounded-2xl border transition-all duration-300 h-full overflow-hidden',
                       plan.popular
-                        ? 'border-accent-primary/25 md:-mt-4 md:mb-0'
+                        ? 'border-accent-primary/25 sm:-mt-4'
                         : 'border-white/[0.06] hover:border-white/[0.12]',
                       isCurrentPlan && 'ring-2 ring-accent-primary/30'
                     )}
@@ -277,9 +258,7 @@ export default function Pricing() {
                           'w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300',
                           plan.popular
                             ? 'bg-accent-primary/10 border border-accent-primary/20'
-                            : plan.name === 'Premium'
-                              ? 'bg-accent-secondary/10 border border-accent-secondary/20'
-                              : 'bg-white/[0.04] border border-white/[0.08]'
+                            : 'bg-white/[0.04] border border-white/[0.08]'
                         )}>
                           <plan.icon size={16} className={plan.accent} strokeWidth={1.8} />
                         </div>
@@ -324,21 +303,16 @@ export default function Pricing() {
                         <button
                           onClick={() => handleCta(plan)}
                           disabled={isCurrentPlan}
-                          className={clsx(
-                            'relative block w-full text-center py-3 rounded-xl text-sm font-semibold transition-all duration-300 disabled:opacity-60 disabled:cursor-default overflow-hidden',
-                            plan.popular
-                              ? 'text-white'
-                              : 'bg-accent-secondary/10 border border-accent-secondary/20 text-accent-secondary hover:bg-accent-secondary/18 glow-hover'
-                          )}
-                          style={plan.popular ? {
+                          className="relative block w-full text-center py-3 rounded-xl text-sm font-semibold transition-all duration-300 disabled:opacity-60 disabled:cursor-default overflow-hidden text-white"
+                          style={{
                             background: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)',
                             boxShadow: '0 4px 20px rgba(220,38,38,0.25)',
-                          } : undefined}
+                          }}
                         >
                           <span className="relative z-10">
                             {isCurrentPlan ? 'Currently Active' : plan.cta}
                           </span>
-                          {plan.popular && !isCurrentPlan && (
+                          {!isCurrentPlan && (
                             <div className="absolute inset-0 -translate-x-full hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                           )}
                         </button>
@@ -366,18 +340,12 @@ export default function Pricing() {
                             {feature.included ? (
                               <div className={clsx(
                                 'mt-0.5 flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center',
-                                plan.popular
-                                  ? 'bg-accent-primary/15'
-                                  : plan.name === 'Premium'
-                                    ? 'bg-accent-secondary/15'
-                                    : 'bg-white/[0.06]'
+                                plan.popular ? 'bg-accent-primary/15' : 'bg-white/[0.06]'
                               )}>
                                 <Check
                                   size={10}
                                   strokeWidth={3}
-                                  className={clsx(
-                                    plan.popular ? 'text-accent-primary' : plan.name === 'Premium' ? 'text-accent-secondary' : 'text-text-muted'
-                                  )}
+                                  className={plan.popular ? 'text-accent-primary' : 'text-text-muted'}
                                 />
                               </div>
                             ) : (
