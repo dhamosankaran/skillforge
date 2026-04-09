@@ -1,4 +1,4 @@
-// All TypeScript interfaces for HirePort AI
+// All TypeScript interfaces for SkillForge
 
 export interface ATSScoreBreakdown {
   keyword_match: number
@@ -108,6 +108,26 @@ export interface TrackerApplication {
   status: ApplicationStatus
   created_at: string
 }
+
+// ─── Study / Cards ────────────────────────────────────────────────────────────
+
+export interface Category {
+  id: string
+  name: string
+  icon: string
+  color: string           // Tailwind gradient classes, e.g. "from-purple-500 to-indigo-600"
+  display_order: number
+  source: 'foundation' | 'premium'
+  card_count: number
+  studied_count: number   // cards with reps > 0 for the current user (0 until dashboard endpoint)
+  locked: boolean         // true when source !== 'foundation' and user is on free plan
+}
+
+export interface CategoriesResponse {
+  categories: Category[]
+}
+
+// ─── Analysis ─────────────────────────────────────────────────────────────────
 
 export interface AnalysisState {
   isLoading: boolean

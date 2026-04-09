@@ -2,6 +2,7 @@ import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import toast from 'react-hot-toast'
 import type {
   AnalysisResponse,
+  CategoriesResponse,
   CoverLetterResponse,
   InterviewPrepResponse,
   RewriteResponse,
@@ -12,7 +13,7 @@ import {
   STORAGE_KEY_REFRESH,
 } from '@/context/AuthContext'
 
-const STORAGE_KEY_USER = 'hireport_user'
+const STORAGE_KEY_USER = 'skillforge_user'
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
 const api = axios.create({
@@ -201,6 +202,22 @@ export async function updateApplication(
 
 export async function deleteApplication(id: string): Promise<void> {
   await api.delete(`/api/tracker/${id}`)
+}
+
+// ─── Study / Cards ────────────────────────────────────────────────────────────
+
+/**
+ * Fetch all categories visible to the authenticated user with per-user
+ * progress counts.
+ *
+ * Currently calls GET /api/v1/cards which plan-gates the response
+ * (free users only receive foundation categories). When the dashboard
+ * endpoint (GET /api/v1/study/dashboard) is deployed, swap the URL here
+ * to receive all categories with locked flags and studied_count data.
+ */
+export async function fetchCategories(): Promise<CategoriesResponse> {
+  const response = await api.get<CategoriesResponse>('/api/v1/cards')
+  return response.data
 }
 
 export default api
