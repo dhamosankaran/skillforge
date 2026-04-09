@@ -7,3 +7,4 @@ from app.models.usage_log import UsageLog  # noqa: F401
 from app.models.tracker import TrackerApplicationModel  # noqa: F401
 from app.models.category import Category  # noqa: F401
 from app.models.card import Card  # noqa: F401
+from app.models.card_progress import CardProgress  # noqa: F401
