@@ -14,4 +14,10 @@ export default defineConfig({
       '/api': 'http://localhost:8000',
     },
   },
+  test: {
+    globals: true,
+    // passWithNoTests: CI flag --passWithNoTests handles this; setting it here
+    // also prevents the "no tests found" error when running locally pre-Phase-1.
+    passWithNoTests: true,
+  },
 })
