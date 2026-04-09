@@ -41,6 +41,8 @@ import app.models.payment  # noqa: E402, F401
 import app.models.resume_model  # noqa: E402, F401
 import app.models.usage_log  # noqa: E402, F401
 import app.models.tracker  # noqa: E402, F401
+import app.models.category  # noqa: E402, F401
+import app.models.card  # noqa: E402, F401
 
 target_metadata = Base.metadata
 
