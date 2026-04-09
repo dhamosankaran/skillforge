@@ -9,6 +9,7 @@ import { UsageProvider } from '@/context/UsageContext'
 import { UpgradeModal } from '@/components/ui/UpgradeModal'
 import App from '@/App'
 import '@/index.css'
+import '@/styles/design-tokens.css'
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
@@ -31,7 +32,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 border: '1px solid rgba(255,255,255,0.06)',
                 borderRadius: '14px',
                 fontSize: '13px',
-                fontFamily: '"DM Sans", sans-serif',
+                fontFamily: 'var(--sf-font-body)',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
               },
               success: {

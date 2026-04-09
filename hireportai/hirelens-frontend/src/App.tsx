@@ -2,7 +2,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { Navbar } from '@/components/layout/Navbar'
 import { useAuth } from '@/context/AuthContext'
-import Landing from '@/pages/Landing'
+import LandingPage from '@/pages/LandingPage'
 import Analyze from '@/pages/Analyze'
 import Results from '@/pages/Results'
 import Rewrite from '@/pages/Rewrite'
@@ -18,6 +18,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+/** "/" shows landing page for guests; redirects logged-in users to /analyze. */
+function HomeRoute() {
+  const { user, isLoading } = useAuth()
+  if (isLoading) return null
+  if (user) return <Navigate to="/analyze" replace />
+  return <LandingPage />
+}
+
 export default function App() {
   const location = useLocation()
   const isLanding = location.pathname === '/'
@@ -28,7 +36,7 @@ export default function App() {
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           {/* Public routes */}
-          <Route path="/" element={<Landing />} />
+          <Route path="/" element={<HomeRoute />} />
           <Route path="/pricing" element={<Pricing />} />
 
           {/* Protected routes — require sign-in */}
