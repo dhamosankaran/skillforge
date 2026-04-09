@@ -111,6 +111,7 @@ async def get_me(user: User = Depends(get_current_user), db: AsyncSession = Depe
         "email": user.email,
         "name": user.name,
         "avatar_url": user.avatar_url,
+        "role": user.role,
         "created_at": str(user.created_at),
         "subscription": {
             "plan": sub.plan if sub else "free",

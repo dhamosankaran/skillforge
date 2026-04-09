@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.routes import analyze, cover_letter, interview, rewrite, tracker
 from app.api.v1.routes import (
+    admin as v1_admin,
     analyze as v1_analyze,
     auth as v1_auth,
     billing as v1_billing,
@@ -94,6 +95,7 @@ def create_app() -> FastAPI:
 
     # v1 routers — /api/v1/*
     app.include_router(v1_auth.router, prefix="/api/v1", tags=["v1 Auth"])
+    app.include_router(v1_admin.router, prefix="/api/v1", tags=["v1 Admin"])
     app.include_router(v1_billing.router, prefix="/api/v1", tags=["v1 Billing"])
     app.include_router(v1_analyze.router, prefix="/api/v1", tags=["v1 Analysis"])
     app.include_router(v1_rewrite.router, prefix="/api/v1", tags=["v1 Rewrite"])

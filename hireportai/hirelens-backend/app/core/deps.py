@@ -82,6 +82,19 @@ async def get_current_user_optional(
     return result.scalar_one_or_none()
 
 
+async def require_admin(user: User = Depends(get_current_user)) -> User:
+    """Dependency that restricts access to admin users only.
+
+    Raises 403 if the authenticated user's role is not 'admin'.
+    """
+    if user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required.",
+        )
+    return user
+
+
 def require_plan(minimum: str):
     """Dependency factory that checks the user's subscription plan.
 
