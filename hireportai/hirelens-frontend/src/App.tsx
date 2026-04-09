@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion'
 import { Navbar } from '@/components/layout/Navbar'
 import { useAuth } from '@/context/AuthContext'
 import LandingPage from '@/pages/LandingPage'
+import LoginPage from '@/pages/LoginPage'
 import Analyze from '@/pages/Analyze'
 import Results from '@/pages/Results'
 import Rewrite from '@/pages/Rewrite'
@@ -10,6 +11,7 @@ import Tracker from '@/pages/Tracker'
 import Pricing from '@/pages/Pricing'
 import Interview from '@/pages/Interview'
 import StudyDashboard from '@/pages/StudyDashboard'
+import CategoryDetail from '@/pages/CategoryDetail'
 import CardViewer from '@/pages/CardViewer'
 import DailyReview from '@/pages/DailyReview'
 import Onboarding from '@/pages/Onboarding'
@@ -41,6 +43,7 @@ export default function App() {
         <Routes location={location} key={location.pathname}>
           {/* Public routes */}
           <Route path="/" element={<HomeRoute />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/pricing" element={<Pricing />} />
 
           {/* Protected routes — require sign-in */}
@@ -50,9 +53,10 @@ export default function App() {
           <Route path="/tracker"   element={<ProtectedRoute><Tracker /></ProtectedRoute>} />
           <Route path="/interview" element={<ProtectedRoute><Interview /></ProtectedRoute>} />
           <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-          <Route path="/study"            element={<ProtectedRoute><StudyDashboard /></ProtectedRoute>} />
-          <Route path="/study/daily"     element={<ProtectedRoute><DailyReview /></ProtectedRoute>} />
-          <Route path="/study/card/:id"  element={<ProtectedRoute><CardViewer /></ProtectedRoute>} />
+          <Route path="/study"               element={<ProtectedRoute><StudyDashboard /></ProtectedRoute>} />
+          <Route path="/study/daily"         element={<ProtectedRoute><DailyReview /></ProtectedRoute>} />
+          <Route path="/study/category/:id"  element={<ProtectedRoute><CategoryDetail /></ProtectedRoute>} />
+          <Route path="/study/card/:id"      element={<ProtectedRoute><CardViewer /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

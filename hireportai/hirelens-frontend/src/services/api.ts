@@ -235,6 +235,28 @@ export async function fetchCard(id: string): Promise<Card> {
   return response.data
 }
 
+export interface CategoryCardsResponse {
+  category: {
+    id: string
+    name: string
+    icon: string
+    color: string
+    display_order: number
+    source: 'foundation' | 'premium'
+  }
+  cards: Card[]
+  total: number
+}
+
+export async function fetchCardsByCategory(
+  categoryId: string,
+): Promise<CategoryCardsResponse> {
+  const response = await api.get<CategoryCardsResponse>(
+    `/api/v1/cards/category/${categoryId}`,
+  )
+  return response.data
+}
+
 export async function submitReview(req: ReviewRequest): Promise<ReviewResponse> {
   const response = await api.post<ReviewResponse>('/api/v1/study/review', req)
   return response.data
