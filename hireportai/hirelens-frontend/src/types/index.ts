@@ -159,6 +159,27 @@ export interface ReviewResponse {
   scheduled_days: number
 }
 
+/** Card as returned by GET /api/v1/study/daily */
+export interface DailyCard {
+  card_id: string
+  question: string
+  answer: string
+  difficulty: 'easy' | 'medium' | 'hard'
+  tags: string[]
+  category_id: string
+  category_name: string
+  fsrs_state: 'new' | 'learning' | 'review' | 'relearning'
+  due_date: string | null
+  reps: number
+  lapses: number
+}
+
+export interface DailyQueueResponse {
+  cards: DailyCard[]
+  total_due: number
+  session_id: string
+}
+
 // ─── Analysis ─────────────────────────────────────────────────────────────────
 
 export interface AnalysisState {

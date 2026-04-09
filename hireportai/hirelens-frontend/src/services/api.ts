@@ -5,6 +5,7 @@ import type {
   Card,
   CategoriesResponse,
   CoverLetterResponse,
+  DailyQueueResponse,
   InterviewPrepResponse,
   ReviewRequest,
   ReviewResponse,
@@ -220,6 +221,11 @@ export async function deleteApplication(id: string): Promise<void> {
  */
 export async function fetchCategories(): Promise<CategoriesResponse> {
   const response = await api.get<CategoriesResponse>('/api/v1/cards')
+  return response.data
+}
+
+export async function fetchDailyQueue(): Promise<DailyQueueResponse> {
+  const response = await api.get<DailyQueueResponse>('/api/v1/study/daily')
   return response.data
 }
 
