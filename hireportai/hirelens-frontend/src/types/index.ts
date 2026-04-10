@@ -180,6 +180,64 @@ export interface DailyQueueResponse {
   session_id: string
 }
 
+// ─── Mission Mode ────────────────────────────────────────────────────────────
+
+export interface MissionDayView {
+  day_number: number
+  date: string
+  cards_target: number
+  cards_completed: number
+}
+
+export interface MissionResponse {
+  id: string
+  title: string
+  target_date: string
+  category_ids: string[]
+  daily_target: number
+  total_cards: number
+  days_remaining: number
+  status: 'active' | 'completed' | 'abandoned'
+  progress_pct: number
+  created_at: string
+}
+
+export interface MissionDetailResponse extends MissionResponse {
+  days: MissionDayView[]
+}
+
+export interface MissionDailyCard {
+  id: string
+  question: string
+  answer: string
+  category: string
+  difficulty: 'easy' | 'medium' | 'hard'
+}
+
+export interface MissionDailyResponse {
+  mission_id: string
+  day_number: number
+  date: string
+  cards_target: number
+  cards_completed: number
+  cards: MissionDailyCard[]
+}
+
+export interface MissionDayCompleteResponse {
+  mission_id: string
+  day_number: number
+  cards_completed: number
+  cards_target: number
+  xp_awarded: number
+  mission_status: string
+}
+
+export interface MissionCreateRequest {
+  title: string
+  target_date: string
+  category_ids: string[]
+}
+
 // ─── Onboarding (ATS gap → cards bridge) ─────────────────────────────────────
 
 export interface RecommendedCategory {

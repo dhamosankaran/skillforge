@@ -16,6 +16,7 @@ import CardViewer from '@/pages/CardViewer'
 import DailyReview from '@/pages/DailyReview'
 import Onboarding from '@/pages/Onboarding'
 import Profile from '@/pages/Profile'
+import MissionMode from '@/pages/MissionMode'
 
 /** Redirects unauthenticated users to /. Renders nothing while auth hydrates. */
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -58,6 +59,7 @@ export default function App() {
           <Route path="/study/daily"         element={<ProtectedRoute><DailyReview /></ProtectedRoute>} />
           <Route path="/study/category/:id"  element={<ProtectedRoute><CategoryDetail /></ProtectedRoute>} />
           <Route path="/study/card/:id"      element={<ProtectedRoute><CardViewer /></ProtectedRoute>} />
+          <Route path="/mission"             element={<ProtectedRoute><MissionMode /></ProtectedRoute>} />
           <Route path="/profile"             element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />

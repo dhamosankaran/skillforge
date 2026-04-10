@@ -8,6 +8,11 @@ import type {
   DailyQueueResponse,
   GamificationStats,
   InterviewPrepResponse,
+  MissionCreateRequest,
+  MissionDailyResponse,
+  MissionDayCompleteResponse,
+  MissionDetailResponse,
+  MissionResponse,
   OnboardingRecommendationsResponse,
   ReviewRequest,
   ReviewResponse,
@@ -260,6 +265,28 @@ export async function fetchCardsByCategory(
 
 export async function submitReview(req: ReviewRequest): Promise<ReviewResponse> {
   const response = await api.post<ReviewResponse>('/api/v1/study/review', req)
+  return response.data
+}
+
+// ─── Mission Mode ────────────────────────────────────────────────────────────
+
+export async function createMission(req: MissionCreateRequest): Promise<MissionResponse> {
+  const response = await api.post<MissionResponse>('/api/v1/missions/create', req)
+  return response.data
+}
+
+export async function fetchActiveMission(): Promise<MissionDetailResponse> {
+  const response = await api.get<MissionDetailResponse>('/api/v1/missions/active')
+  return response.data
+}
+
+export async function fetchMissionDaily(): Promise<MissionDailyResponse> {
+  const response = await api.get<MissionDailyResponse>('/api/v1/missions/daily')
+  return response.data
+}
+
+export async function completeMissionDay(): Promise<MissionDayCompleteResponse> {
+  const response = await api.post<MissionDayCompleteResponse>('/api/v1/missions/complete-day')
   return response.data
 }
 
