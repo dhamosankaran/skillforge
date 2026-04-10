@@ -2,7 +2,7 @@
 import json
 from typing import List, Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
 from app.models.response_models import (
     AnalysisResponse,
@@ -14,6 +14,8 @@ from app.models.response_models import (
     SkillOverlapData,
 )
 from app.core.analytics import track as analytics_track
+from app.core.deps import get_current_user_optional
+from app.models.user import User
 from app.services.bullet_analyzer import analyze_bullets
 from app.services.formatter_check import check_formatting
 from app.services.gap_detector import detect_gaps, get_skills_overlap_data
@@ -40,6 +42,7 @@ async def analyze_resume(
     job_description: str = Form(..., description="Job description text"),
     run_rewrite: bool = Form(default=False),
     run_cover_letter: bool = Form(default=False),
+    current_user: User | None = Depends(get_current_user_optional),
 ) -> AnalysisResponse:
     """Analyze a resume against a job description and return full ATS analysis.
 
@@ -177,7 +180,7 @@ async def analyze_resume(
         top_gaps = missing_keywords[:3] if missing_keywords else ["Add more role-specific keywords"]
 
     analytics_track(
-        user_id=None,
+        user_id=current_user.id if current_user else None,
         event="ats_scanned",
         properties={
             "score": score_result["total"],

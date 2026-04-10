@@ -108,12 +108,10 @@ export function QuizPanel({
         session_id: sessionId,
         time_spent_ms: Date.now() - startTimeMs,
       })
-      capture('card_reviewed', {
-        card_id: cardId,
-        rating,
-        fsrs_state_after: res.fsrs_state,
-        scheduled_days: res.scheduled_days,
-      })
+      // `card_reviewed` is fired server-side from study_service.review_card
+      // — see Spec #10. The backend is the single source of truth so the
+      // event can't be blocked by adblock and rating/state come straight
+      // from the FSRS scheduler.
       setResult(res)
       setState('done')
       onRated(rating, res)
