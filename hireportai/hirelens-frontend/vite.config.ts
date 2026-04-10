@@ -16,6 +16,8 @@ export default defineConfig({
   },
   test: {
     globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
     // passWithNoTests: CI flag --passWithNoTests handles this; setting it here
     // also prevents the "no tests found" error when running locally pre-Phase-1.
     passWithNoTests: true,
