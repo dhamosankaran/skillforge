@@ -1,11 +1,13 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { motion, useMotionValue, useSpring } from 'framer-motion'
 import { Check, X, Sparkles, Zap, CheckCircle2 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { useUsage } from '@/context/UsageContext'
 import type { PlanType } from '@/context/UsageContext'
+import { capture } from '@/utils/posthog'
 
 // ─── 3D Tilt Card ───
 function TiltCard({ children, className = '', intensity = 6 }: { children: React.ReactNode; className?: string; intensity?: number }) {
@@ -123,6 +125,31 @@ const cardVariants = {
 
 export default function Pricing() {
   const { usage, upgradePlan } = useUsage()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Post-checkout return from Stripe. Backend webhook flips the
+  // Subscription row asynchronously — we optimistically flip the local
+  // plan and fire `payment_completed` so PostHog sees the conversion.
+  // (Server-side webhook also fires the canonical event; the client
+  // event is the user-attributed mirror.)
+  useEffect(() => {
+    const upgradeStatus = searchParams.get('upgrade')
+    if (upgradeStatus !== 'success') return
+
+    upgradePlan('pro')
+    capture('payment_completed', {
+      plan: 'pro',
+      amount_usd: 49,
+      source: 'stripe_checkout_return',
+    })
+    toast.success('Welcome to Pro! Full library unlocked.', { duration: 5000 })
+
+    // Strip the query params so a refresh doesn't refire the toast.
+    const next = new URLSearchParams(searchParams)
+    next.delete('upgrade')
+    next.delete('session_id')
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams, upgradePlan])
 
   const handleCta = (plan: PlanConfig) => {
     if (plan.planKey === 'free') return

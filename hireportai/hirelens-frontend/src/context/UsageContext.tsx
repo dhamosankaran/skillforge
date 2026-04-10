@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useCallback } from 'react'
 import type { ReactNode } from 'react'
 import toast from 'react-hot-toast'
-import { capture } from '@/utils/posthog'
 
 export type PlanType = 'free' | 'pro'
 
@@ -87,16 +86,13 @@ export function UsageProvider({ children }: { children: ReactNode }) {
 
   const checkAndPromptUpgrade = useCallback((): boolean => {
     if (!canScan) {
+      // PaywallModal fires `paywall_hit` itself on open, so we don't
+      // duplicate it here.
       setShowUpgradeModal(true)
-      capture('paywall_hit', {
-        trigger: 'scan_limit',
-        scans_used: usage.scansUsed,
-        plan: usage.plan,
-      })
       return false
     }
     return true
-  }, [canScan, usage.scansUsed, usage.plan])
+  }, [canScan])
 
   return (
     <UsageContext.Provider

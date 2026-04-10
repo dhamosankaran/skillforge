@@ -21,6 +21,40 @@ Environment variables to set in Railway dashboard
   └──────────────────────┴────────────────────────────────────┴──────────────────────────────────────────────────────────┘                                                                                                    
   
 
+   High — real correctness issues                                                                                                                                                                                                                 
+                                                                                                                                                                                                                                                 
+  1. card_reviewed is now double-firing. QuizPanel.tsx:111 was already calling capture('card_reviewed', …) client-side. My spec #10 work also added a server-side fire in study_service.review_card. PostHog will record 2× every review, skewing
+   the core retention metric. Fix: drop one side. Server-side is more trustworthy (can't be blocked by adblock), so I'd delete the client capture.                                                                                               
+  2. ats_scanned fires with user_id=None. I wired it into app/api/routes/analyze.py, which is the legacy unauthenticated /api/analyze route — there's no Depends(get_current_user) and scans land as distinct_id="anonymous". The funnel scan →  
+  card → paywall → pay defined in .agent/skills/analytics.md can't be built without a user identity on step 1. Fix: either move the capture to the v1 auth'd analyze route (if it exists) or gate legacy analyze behind get_current_user_optional
+   and pass user.id through.
+  3. Duplicate billing surface. /api/v1/billing/create-checkout-session (existing, via stripe_service.py) and /api/v1/payments/checkout (new, via payment_service.py) now both exist and both call Stripe. Two code paths, two webhook handlers  
+  (billing/webhook handles extra events like invoice.payment_*, payments/webhook handles only the two in spec #11). This will rot fast. Fix: pick one, delete the other, point the frontend at it. payments/* matches the spec I wrote, but      
+  billing/* is more complete — happy to reconcile either direction.
+  4. Webhook idempotency not implemented. Spec #11 promises it (AC-5 — replay the same event, no double state mutation / double analytics). Real impl has none. Stripe retries aggressively; payment_completed will fire multiple times per      
+  purchase. Fix: small stripe_events table keyed on event.id with a unique constraint, early-return if already seen.                                                                                                                             
+   
+  Medium                                                                                                                                                                                                                                         
+                                                            
+  5. PaywallModal component not built. Spec #11 describes it in detail; the impl task only asked for backend + tests, so I didn't touch the frontend. UsageContext still opens the old generic UpgradeModal with no Stripe CTA wired up — the    
+  checkout endpoint has no caller from the UI yet.
+  6. PostHog backend SDK may drop events in request handlers. The Python client buffers and flushes on a background thread; short-lived FastAPI workers (e.g. during deploy, or one-off scripts) can exit before the queue drains. Either call   
+  posthog.flush() at the end of request handling, or init with sync_mode=True (blocks request, simpler). Worth verifying with a real key before trusting the dashboard.                                                                          
+  7. Naive datetime footgun. Subscription.updated_at is DateTime (no timezone), which bit me during the spec #11 tests — assigning datetime.now(timezone.utc) crashed asyncpg with "can't subtract offset-naive and offset-aware." I worked
+  around it by not touching updated_at, but every model in app/models/ has the same shape. One mistake away from the same crash elsewhere. Fix: migrate to DateTime(timezone=True) across the board, or at least adopt a convention and lint for 
+  it.                                                       
+                                                                                                                                                                                                                                                 
+  Low / nice-to-have                                        
+
+  8. Spec #11 acceptance criteria that weren't built: price ID allowlist, 409 on already-Pro user, /payments/config endpoint, 10s poll on /pricing?upgrade=success. All deferred implicitly — worth deciding whether to track them or rewrite the
+   spec to match reality.
+  9. Test hygiene: test_create_checkout_session reaches into get_settings.cache_clear() and mutates the cached Settings object in place. Works, but fragile — a proper fixture that patches app.services.payment_service.get_settings would be   
+  cleaner.                                                                                                                                                                                                                                       
+   
+  ---                                                                                                                                                                                                                                            
+  My recommendation for a single next PR: #1 + #2 + #4 together as "analytics correctness" — they're small, related, and unblock real funnel data. #3 and #5 are a separate, bigger "unify billing + wire paywall" PR. Which do you want to start
+   with?      
+
 
 P0-S8: Verify Production
 Start with this

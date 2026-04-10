@@ -272,6 +272,20 @@ export async function submitReview(req: ReviewRequest): Promise<ReviewResponse> 
  * serializer uses `gaps[]=a`, which FastAPI will NOT parse as a list,
  * so we override `paramsSerializer` inline.
  */
+// ─── Payments — Stripe Checkout ──────────────────────────────────────────────
+
+export interface CheckoutSessionResponse {
+  url: string
+}
+
+/** Create a Stripe Checkout Session for Pro and return the redirect URL. */
+export async function createCheckoutSession(): Promise<CheckoutSessionResponse> {
+  const response = await api.post<CheckoutSessionResponse>(
+    '/api/v1/payments/checkout',
+  )
+  return response.data
+}
+
 export async function fetchOnboardingRecommendations(
   gaps: string[],
   scanId?: string,

@@ -22,6 +22,7 @@ import clsx from 'clsx'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { FlipCard } from '@/components/study/FlipCard'
 import { QuizPanel } from '@/components/study/QuizPanel'
+import { PaywallModal } from '@/components/PaywallModal'
 import { useCardViewer } from '@/hooks/useCardViewer'
 import { capture } from '@/utils/posthog'
 import type { FsrsRating, ReviewResponse } from '@/types'
@@ -172,7 +173,7 @@ function TabBody({ activeTab, answer, cardId, question, sessionId, startTimeMs, 
 export default function CardViewer() {
   const { id = '' } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { card, isLoading, error } = useCardViewer(id)
+  const { card, isLoading, error, forbidden } = useCardViewer(id)
 
   const [isFlipped, setIsFlipped]   = useState(false)
   const [activeTab, setActiveTab]   = useState<TabId>('concept')
@@ -211,6 +212,39 @@ export default function CardViewer() {
           <div className="h-4 w-40 rounded-full bg-bg-elevated animate-pulse mb-8" />
           <div className="rounded-2xl border border-white/[0.06] bg-bg-surface/50 animate-pulse" style={{ minHeight: 420 }} />
         </div>
+      </PageWrapper>
+    )
+  }
+
+  // ── Pro-gated card (free user hit a non-foundation card) ─────────────
+  if (forbidden) {
+    return (
+      <PageWrapper className="min-h-screen bg-bg-base">
+        <div className="max-w-2xl mx-auto px-4 py-20 sm:px-6 flex flex-col items-center gap-5 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center">
+            <AlertCircle size={24} className="text-accent-primary" />
+          </div>
+          <div>
+            <p className="text-base font-semibold text-text-primary mb-1">
+              This card is Pro-only
+            </p>
+            <p className="text-sm text-text-muted">
+              Upgrade to unlock the full library.
+            </p>
+          </div>
+          <Link
+            to="/study"
+            className="flex items-center gap-1.5 text-sm text-accent-primary hover:text-accent-primary/80 transition-colors"
+          >
+            <ChevronLeft size={14} />
+            Back to Dashboard
+          </Link>
+        </div>
+        <PaywallModal
+          open
+          onClose={() => navigate('/study')}
+          trigger="card_limit"
+        />
       </PageWrapper>
     )
   }
