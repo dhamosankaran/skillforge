@@ -24,6 +24,7 @@ import { FlipCard } from '@/components/study/FlipCard'
 import { QuizPanel } from '@/components/study/QuizPanel'
 import { PaywallModal } from '@/components/PaywallModal'
 import { useCardViewer } from '@/hooks/useCardViewer'
+import { useGamification } from '@/context/GamificationContext'
 import { capture } from '@/utils/posthog'
 import type { FsrsRating, ReviewResponse } from '@/types'
 
@@ -174,6 +175,7 @@ export default function CardViewer() {
   const { id = '' } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { card, isLoading, error, forbidden } = useCardViewer(id)
+  const { refresh: refreshGamification } = useGamification()
 
   const [isFlipped, setIsFlipped]   = useState(false)
   const [activeTab, setActiveTab]   = useState<TabId>('concept')
@@ -199,6 +201,9 @@ export default function CardViewer() {
   }
 
   function handleRated(rating: FsrsRating, res: ReviewResponse) {
+    // Refresh gamification stats so the navbar StreakBadge / Profile show
+    // the new XP and streak immediately after the review.
+    void refreshGamification()
     // After a successful rating, wait 1.2s then navigate back to dashboard
     setTimeout(() => navigate('/study'), 1200)
     void rating; void res // used by QuizPanel, acknowledged here

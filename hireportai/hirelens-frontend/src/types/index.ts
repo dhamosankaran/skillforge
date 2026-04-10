@@ -202,6 +202,24 @@ export interface OnboardingRecommendationsResponse {
   results: GapMapping[]
 }
 
+// ─── Gamification — XP, streaks, badges (spec phase-2/10) ────────────────────
+
+export interface BadgeView {
+  badge_id: string
+  name: string
+  earned_at: string // ISO datetime
+}
+
+export interface GamificationStats {
+  user_id: string
+  current_streak: number
+  longest_streak: number
+  total_xp: number
+  last_active_date: string | null // ISO date (YYYY-MM-DD)
+  freezes_available: number
+  badges: BadgeView[]
+}
+
 // ─── Analysis ─────────────────────────────────────────────────────────────────
 
 export interface AnalysisState {

@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link, useLocation } from 'react-router-dom'
 import { GoogleLogin } from '@react-oauth/google'
-import { Sparkles, ChevronDown, CreditCard, Menu, X } from 'lucide-react'
+import { Sparkles, ChevronDown, CreditCard, Menu, X, User } from 'lucide-react'
 import clsx from 'clsx'
 import { useUsage } from '@/context/UsageContext'
 import { useAuth } from '@/context/AuthContext'
+import { StreakBadge } from '@/components/profile/StreakBadge'
 
 const navLinks = [
   { href: '/analyze', label: 'Analyze' },
@@ -87,8 +88,11 @@ export function Navbar() {
             })}
           </nav>
 
-          {/* ── Right: plan + auth + hamburger ── */}
+          {/* ── Right: streak + plan + auth + hamburger ── */}
           <div className="flex items-center gap-3 flex-shrink-0">
+            {/* Streak badge (signed-in users only; component renders null otherwise) */}
+            {user && <StreakBadge />}
+
             {/* Plan badge (hidden on mobile) */}
             <Link
               to="/pricing"
@@ -143,6 +147,14 @@ export function Navbar() {
                           <p className="text-[10px] text-text-muted truncate mt-0.5">{user.email}</p>
                         </div>
                         <div className="p-1.5">
+                          <Link
+                            to="/profile"
+                            onClick={() => setShowUserMenu(false)}
+                            className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-[11px] tracking-wide uppercase text-text-muted hover:bg-white/[0.03] hover:text-text-secondary transition-all"
+                          >
+                            <User size={12} />
+                            Profile
+                          </Link>
                           <Link
                             to="/pricing"
                             onClick={() => setShowUserMenu(false)}

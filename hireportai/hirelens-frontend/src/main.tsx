@@ -6,6 +6,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import { AuthProvider } from '@/context/AuthContext'
 import { AnalysisProvider } from '@/context/AnalysisContext'
 import { UsageProvider } from '@/context/UsageContext'
+import { GamificationProvider } from '@/context/GamificationContext'
 import { UpgradeModal } from '@/components/ui/UpgradeModal'
 import App from '@/App'
 // Eager-import to run PostHog init side-effect before the first render,
@@ -22,6 +23,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <AuthProvider>
           <UsageProvider>
+            <GamificationProvider>
             <AnalysisProvider>
               <App />
               <UpgradeModal />
@@ -47,6 +49,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             }}
               />
             </AnalysisProvider>
+            </GamificationProvider>
           </UsageProvider>
         </AuthProvider>
       </BrowserRouter>

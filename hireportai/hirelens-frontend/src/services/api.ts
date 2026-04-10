@@ -6,6 +6,7 @@ import type {
   CategoriesResponse,
   CoverLetterResponse,
   DailyQueueResponse,
+  GamificationStats,
   InterviewPrepResponse,
   OnboardingRecommendationsResponse,
   ReviewRequest,
@@ -259,6 +260,16 @@ export async function fetchCardsByCategory(
 
 export async function submitReview(req: ReviewRequest): Promise<ReviewResponse> {
   const response = await api.post<ReviewResponse>('/api/v1/study/review', req)
+  return response.data
+}
+
+// ─── Gamification — XP, streaks, badges ──────────────────────────────────────
+
+/** Fetch the caller's gamification stats: streak, XP, badges. */
+export async function fetchGamificationStats(): Promise<GamificationStats> {
+  const response = await api.get<GamificationStats>(
+    '/api/v1/gamification/stats',
+  )
   return response.data
 }
 

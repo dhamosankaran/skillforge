@@ -24,6 +24,7 @@ import { GlowButton } from '@/components/ui/GlowButton'
 import { FlipCard } from '@/components/study/FlipCard'
 import { QuizPanel } from '@/components/study/QuizPanel'
 import { fetchDailyQueue } from '@/services/api'
+import { useGamification } from '@/context/GamificationContext'
 import { capture } from '@/utils/posthog'
 import type { DailyCard, FsrsRating, ReviewResponse } from '@/types'
 
@@ -188,6 +189,7 @@ function ProgressBar({ completed, total }: { completed: number; total: number })
 
 export default function DailyReview() {
   const navigate = useNavigate()
+  const { refresh: refreshGamification } = useGamification()
 
   const [phase, setPhase]               = useState<Phase>('loading')
   const [cards, setCards]               = useState<DailyCard[]>([])
@@ -235,6 +237,9 @@ export default function DailyReview() {
   // ── Rating handler: advance or complete ─────────────────────────────────
   function handleRated(rating: FsrsRating, _res: ReviewResponse) {
     void rating
+    // Refresh gamification stats so navbar StreakBadge / Profile reflect the
+    // new XP and streak immediately.
+    void refreshGamification()
     const newCompleted = completedCount + 1
     setCompleted(newCompleted)
 
