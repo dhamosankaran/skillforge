@@ -1,6 +1,6 @@
 # SPEC: Skeleton Deploy — Vercel (FE) + Railway (BE + Managed PG)
 
-## Status: Planned
+## Status: Done
 
 ## Problem
 Deferring deployment until features are built guarantees a painful launch day:

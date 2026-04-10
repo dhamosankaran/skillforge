@@ -1,6 +1,6 @@
 # SPEC: Frontend ↔ Backend Auth Unification
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 The frontend and backend auth systems are completely disconnected.

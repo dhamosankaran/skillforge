@@ -1,6 +1,6 @@
 # SPEC: User Role & Admin RBAC
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 All authenticated users have identical access. There is no mechanism to

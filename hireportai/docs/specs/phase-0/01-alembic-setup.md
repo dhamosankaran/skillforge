@@ -1,6 +1,6 @@
 # SPEC: Alembic Migration Framework
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 <!-- What user problem does this solve? -->
