@@ -18,7 +18,7 @@ export function Skeleton({ className }: { className?: string }) {
 
 export function SkeletonCard({ lines = 3 }: SkeletonProps) {
   return (
-    <div className="bg-bg-surface border border-white/[0.06] rounded-xl p-6 space-y-4">
+    <div className="bg-bg-surface border border-contrast/[0.06] rounded-xl p-6 space-y-4">
       <Skeleton className="h-5 w-1/3" />
       {Array.from({ length: lines }).map((_, i) => (
         <Skeleton key={i} className={clsx('h-3', i === lines - 1 ? 'w-2/3' : 'w-full')} />

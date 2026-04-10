@@ -33,7 +33,7 @@ export function ScoreBreakdown({ breakdown }: ScoreBreakdownProps) {
               <span
                 className="text-sm font-mono font-semibold"
                 style={{
-                  color: value >= 80 ? '#00ffc8' : value >= 60 ? '#f0a500' : '#f85149',
+                  color: value >= 80 ? 'var(--success)' : value >= 60 ? 'var(--warning)' : 'var(--danger)',
                 }}
               >
                 {Math.round(value)}

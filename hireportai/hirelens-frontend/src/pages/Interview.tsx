@@ -50,7 +50,7 @@ function QuestionCard({ question, starFramework, index }: QuestionCardProps) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.06, duration: 0.4 }}
-      className="rounded-xl border border-white/[0.06] bg-bg-surface/50 hover:border-white/[0.1] transition-colors"
+      className="rounded-xl border border-contrast/[0.06] bg-bg-surface/50 hover:border-contrast/[0.1] transition-colors"
     >
       <button
         className="w-full text-left p-5 flex items-start gap-4"
@@ -58,7 +58,7 @@ function QuestionCard({ question, starFramework, index }: QuestionCardProps) {
         aria-expanded={expanded}
       >
         {/* Number badge */}
-        <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-xs font-mono text-text-muted font-semibold">
+        <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-contrast/[0.04] border border-contrast/[0.08] flex items-center justify-center text-xs font-mono text-text-muted font-semibold">
           {index + 1}
         </span>
 
@@ -87,7 +87,7 @@ function QuestionCard({ question, starFramework, index }: QuestionCardProps) {
             transition={{ duration: 0.25 }}
             className="overflow-hidden"
           >
-            <div className="px-5 pb-5 border-t border-white/[0.04] pt-4">
+            <div className="px-5 pb-5 border-t border-contrast/[0.04] pt-4">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-5 h-5 rounded bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center">
                   <BookOpen size={10} className="text-accent-primary" />
@@ -211,7 +211,7 @@ export default function Interview() {
                 onChange={(e) => setManualResume(e.target.value)}
                 placeholder="Paste your resume text here..."
                 rows={6}
-                className="w-full bg-bg-elevated/60 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted resize-none focus:outline-none focus:border-accent-primary/30 transition-colors"
+                className="w-full bg-bg-elevated/60 border border-contrast/[0.08] rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted resize-none focus:outline-none focus:border-accent-primary/30 transition-colors"
               />
             </AnimatedCard>
             <AnimatedCard className="p-5">
@@ -223,7 +223,7 @@ export default function Interview() {
                 onChange={(e) => setManualJD(e.target.value)}
                 placeholder="Paste the job description here..."
                 rows={5}
-                className="w-full bg-bg-elevated/60 border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted resize-none focus:outline-none focus:border-accent-primary/30 transition-colors"
+                className="w-full bg-bg-elevated/60 border border-contrast/[0.08] rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted resize-none focus:outline-none focus:border-accent-primary/30 transition-colors"
               />
             </AnimatedCard>
           </motion.div>
@@ -253,7 +253,7 @@ export default function Interview() {
         {isLoading && (
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="rounded-xl border border-white/[0.04] bg-bg-surface/40 p-5">
+              <div key={i} className="rounded-xl border border-contrast/[0.04] bg-bg-surface/40 p-5">
                 <div className="flex gap-4">
                   <div className="w-7 h-7 rounded-lg bg-bg-elevated animate-pulse" />
                   <div className="flex-1 space-y-2">
@@ -286,7 +286,7 @@ export default function Interview() {
                       className={clsx(
                         'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all',
                         activeFilter === f
-                          ? 'bg-white/[0.07] text-text-primary border border-white/[0.1]'
+                          ? 'bg-contrast/[0.07] text-text-primary border border-contrast/[0.1]'
                           : 'text-text-muted hover:text-text-secondary'
                       )}
                     >

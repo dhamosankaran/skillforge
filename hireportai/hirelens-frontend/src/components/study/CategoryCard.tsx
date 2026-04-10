@@ -15,7 +15,7 @@ function ProgressBar({ studied, total, locked }: { studied: number; total: numbe
 
   return (
     <div className="mt-3">
-      <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+      <div className="h-1.5 rounded-full bg-contrast/[0.06] overflow-hidden">
         {!locked && (
           <motion.div
             className="h-full rounded-full bg-gradient-to-r from-accent-primary to-accent-secondary"
@@ -42,19 +42,19 @@ export function CategoryCard({ category, index, onClick }: CategoryCardProps) {
       transition={{ duration: 0.4, delay: index * 0.06, ease: [0.25, 0.46, 0.45, 0.94] }}
       whileHover={
         locked
-          ? { borderColor: 'rgba(255,255,255,0.08)' }
-          : { y: -3, borderColor: 'rgba(255,255,255,0.12)', boxShadow: '0 12px 36px rgba(0,0,0,0.35)' }
+          ? { borderColor: 'var(--border)' }
+          : { y: -3, borderColor: 'var(--border)', boxShadow: '0 12px 36px rgba(0,0,0,0.35)' }
       }
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       className={clsx(
-        'relative cursor-pointer rounded-2xl border border-white/[0.06] bg-bg-surface/60 p-5 min-h-[160px] flex flex-col transition-colors duration-200',
+        'relative cursor-pointer rounded-2xl border border-contrast/[0.06] bg-bg-surface/60 p-5 min-h-[160px] flex flex-col transition-colors duration-200',
         locked && 'opacity-60'
       )}
     >
       {/* Lock badge */}
       {locked && (
-        <div className="absolute top-3 right-3 w-6 h-6 rounded-lg bg-white/[0.06] border border-white/[0.08] flex items-center justify-center">
+        <div className="absolute top-3 right-3 w-6 h-6 rounded-lg bg-contrast/[0.06] border border-contrast/[0.08] flex items-center justify-center">
           <Lock size={11} className="text-text-muted" />
         </div>
       )}
@@ -85,7 +85,7 @@ export function CategoryCard({ category, index, onClick }: CategoryCardProps) {
 /** Pulsing skeleton tile that matches CategoryCard dimensions. */
 export function CategoryCardSkeleton() {
   return (
-    <div className="rounded-2xl border border-white/[0.04] bg-bg-surface/40 p-5 min-h-[160px] flex flex-col animate-pulse">
+    <div className="rounded-2xl border border-contrast/[0.04] bg-bg-surface/40 p-5 min-h-[160px] flex flex-col animate-pulse">
       <div className="flex items-center gap-3 mb-3">
         <div className="w-8 h-8 rounded-xl bg-bg-elevated" />
         <div className="h-3.5 w-28 rounded-full bg-bg-elevated" />

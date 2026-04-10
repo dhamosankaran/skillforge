@@ -122,7 +122,7 @@ export function PaywallModal({
             aria-modal="true"
             aria-labelledby="paywall-title"
           >
-            <div className="relative w-full max-w-md bg-bg-surface border border-white/[0.08] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] overflow-hidden">
+            <div className="relative w-full max-w-md bg-bg-surface border border-contrast/[0.08] rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] overflow-hidden">
               {/* Top glow accent */}
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-px bg-gradient-to-r from-transparent via-accent-primary/50 to-transparent" />
 
@@ -130,7 +130,7 @@ export function PaywallModal({
               <button
                 onClick={onClose}
                 disabled={isLoading}
-                className="absolute top-4 right-4 p-1.5 rounded-lg text-text-muted hover:text-text-secondary hover:bg-white/[0.04] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="absolute top-4 right-4 p-1.5 rounded-lg text-text-muted hover:text-text-secondary hover:bg-contrast/[0.04] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 aria-label="Close paywall"
               >
                 <X size={16} />

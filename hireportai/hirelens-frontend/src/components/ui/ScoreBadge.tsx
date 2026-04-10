@@ -8,7 +8,7 @@ interface ScoreBadgeProps {
 }
 
 export function ScoreBadge({ score, grade, size = 'md' }: ScoreBadgeProps) {
-  const color = grade ? getGradeColor(grade) : score !== undefined ? getScoreColor(score) : '#8b949e'
+  const hexColor = grade ? getGradeColor(grade) : score !== undefined ? getScoreColor(score) : null
   const label = grade || (score !== undefined ? `${score}` : '–')
 
   const sizeClasses = {
@@ -17,14 +17,24 @@ export function ScoreBadge({ score, grade, size = 'md' }: ScoreBadgeProps) {
     lg: 'text-base px-4 py-1.5 rounded-lg font-semibold',
   }
 
+  // When we have a hex color (from grade/score), use hex+alpha for bg/border.
+  // For the fallback (no grade, no score), use CSS variables directly.
+  const style = hexColor
+    ? {
+        color: hexColor,
+        backgroundColor: `${hexColor}18`,
+        border: `1px solid ${hexColor}30`,
+      }
+    : {
+        color: 'var(--text-muted)',
+        backgroundColor: 'rgba(var(--color-contrast), 0.06)',
+        border: '1px solid rgba(var(--color-contrast), 0.12)',
+      }
+
   return (
     <span
       className={clsx('inline-flex items-center font-mono font-medium', sizeClasses[size])}
-      style={{
-        color,
-        backgroundColor: `${color}18`,
-        border: `1px solid ${color}30`,
-      }}
+      style={style}
     >
       {label}
     </span>

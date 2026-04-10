@@ -41,7 +41,7 @@ export function Countdown({ title, daysRemaining, totalDays, progressPct }: Coun
             cy={RING_SIZE / 2}
             r={RADIUS}
             fill="none"
-            stroke="rgba(255,255,255,0.06)"
+            stroke="var(--border)"
             strokeWidth={STROKE_WIDTH}
           />
           {/* Progress arc */}
@@ -60,8 +60,8 @@ export function Countdown({ title, daysRemaining, totalDays, progressPct }: Coun
           />
           <defs>
             <linearGradient id="mission-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="var(--color-accent-primary, #DC2626)" />
-              <stop offset="100%" stopColor="var(--color-accent-secondary, #EF4444)" />
+              <stop offset="0%" stopColor="var(--accent-primary)" />
+              <stop offset="100%" stopColor="var(--accent-secondary)" />
             </linearGradient>
           </defs>
         </svg>

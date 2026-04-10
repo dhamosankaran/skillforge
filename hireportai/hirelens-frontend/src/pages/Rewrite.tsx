@@ -49,7 +49,7 @@ function PremiumGate() {
         </Link>
         <Link
           to="/results"
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-text-secondary text-sm font-medium hover:text-text-primary transition-all"
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-contrast/[0.04] border border-contrast/[0.08] text-text-secondary text-sm font-medium hover:text-text-primary transition-all"
         >
           View Results
         </Link>
@@ -417,7 +417,7 @@ export default function Rewrite() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
-              className="flex items-center gap-1 mb-8 border-b border-white/[0.06]"
+              className="flex items-center gap-1 mb-8 border-b border-contrast/[0.06]"
             >
               {tabs.map(({ id, label, icon: Icon }) => (
                 <button
@@ -427,7 +427,7 @@ export default function Rewrite() {
                     'flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all border-b-2 -mb-px',
                     activeTab === id
                       ? 'text-accent-primary border-accent-primary'
-                      : 'text-text-secondary border-transparent hover:text-text-primary hover:border-white/10'
+                      : 'text-text-secondary border-transparent hover:text-text-primary hover:border-contrast/10'
                   )}
                   aria-label={label}
                 >

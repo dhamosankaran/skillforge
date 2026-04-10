@@ -80,7 +80,7 @@ export function EmailPreferences() {
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-white/[0.08] bg-bg-surface/60 p-5">
+      <div className="rounded-2xl border border-contrast/[0.08] bg-bg-surface/60 p-5">
         <p className="text-[11px] text-text-muted">Loading email preferences...</p>
       </div>
     )
@@ -88,14 +88,14 @@ export function EmailPreferences() {
 
   if (error && !prefs) {
     return (
-      <div className="rounded-2xl border border-white/[0.08] bg-bg-surface/60 p-5">
+      <div className="rounded-2xl border border-contrast/[0.08] bg-bg-surface/60 p-5">
         <p className="text-[11px] text-danger">{error}</p>
       </div>
     )
   }
 
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-bg-surface/60 p-5 space-y-4">
+    <div className="rounded-2xl border border-contrast/[0.08] bg-bg-surface/60 p-5 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -131,7 +131,7 @@ export function EmailPreferences() {
             'relative w-11 h-6 rounded-full transition-colors duration-200 ' +
             (prefs?.daily_reminder
               ? 'bg-accent-primary'
-              : 'bg-white/[0.12]')
+              : 'bg-contrast/[0.12]')
           }
           aria-label="Toggle daily reminders"
         >
@@ -163,7 +163,7 @@ export function EmailPreferences() {
             value={prefs.timezone}
             onChange={(e) => handleTimezoneChange(e.target.value)}
             disabled={saving}
-            className="w-full rounded-lg border border-white/[0.08] bg-bg-elevated px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-accent-primary/50"
+            className="w-full rounded-lg border border-contrast/[0.08] bg-bg-elevated px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-accent-primary/50"
           >
             {COMMON_TIMEZONES.map((tz) => (
               <option key={tz} value={tz}>

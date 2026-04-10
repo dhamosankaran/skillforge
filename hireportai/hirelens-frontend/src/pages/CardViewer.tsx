@@ -135,7 +135,7 @@ function TabBody({ activeTab, answer, cardId, question, sessionId, startTimeMs, 
               {codeBlocks.map((block, i) => (
                 <pre
                   key={i}
-                  className="text-[12px] font-mono bg-bg-base/60 border border-white/[0.06] rounded-xl p-4 overflow-x-auto text-text-secondary leading-relaxed"
+                  className="text-[12px] font-mono bg-bg-base/60 border border-contrast/[0.06] rounded-xl p-4 overflow-x-auto text-text-secondary leading-relaxed"
                 >
                   {block}
                 </pre>
@@ -215,7 +215,7 @@ export default function CardViewer() {
       <PageWrapper className="min-h-screen bg-bg-base">
         <div className="max-w-2xl mx-auto px-4 py-10 sm:px-6">
           <div className="h-4 w-40 rounded-full bg-bg-elevated animate-pulse mb-8" />
-          <div className="rounded-2xl border border-white/[0.06] bg-bg-surface/50 animate-pulse" style={{ minHeight: 420 }} />
+          <div className="rounded-2xl border border-contrast/[0.06] bg-bg-surface/50 animate-pulse" style={{ minHeight: 420 }} />
         </div>
       </PageWrapper>
     )
@@ -284,7 +284,7 @@ export default function CardViewer() {
   const backContent = (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Tab bar */}
-      <div className="flex shrink-0 border-b border-white/[0.06] px-4 pt-3 gap-1">
+      <div className="flex shrink-0 border-b border-contrast/[0.06] px-4 pt-3 gap-1">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -292,7 +292,7 @@ export default function CardViewer() {
             className={clsx(
               'px-3 py-1.5 text-xs font-medium rounded-t-lg transition-colors',
               activeTab === tab.id
-                ? 'text-text-primary bg-white/[0.05] border-b-2 border-accent-primary'
+                ? 'text-text-primary bg-contrast/[0.05] border-b-2 border-accent-primary'
                 : 'text-text-muted hover:text-text-secondary'
             )}
           >
@@ -375,7 +375,7 @@ export default function CardViewer() {
             {card.tags.map((tag) => (
               <span
                 key={tag}
-                className="text-[11px] px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06] text-text-muted"
+                className="text-[11px] px-2 py-0.5 rounded-full bg-contrast/[0.04] border border-contrast/[0.06] text-text-muted"
               >
                 {tag}
               </span>

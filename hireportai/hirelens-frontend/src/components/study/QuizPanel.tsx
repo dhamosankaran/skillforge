@@ -125,7 +125,7 @@ export function QuizPanel({
     <div className="h-full flex flex-col gap-5 py-4 px-1">
 
       {/* ── Question recap ────────────────────────────────────────── */}
-      <div className="rounded-xl bg-white/[0.03] border border-white/[0.05] p-4">
+      <div className="rounded-xl bg-contrast/[0.03] border border-contrast/[0.05] p-4">
         <p className="text-[10px] uppercase tracking-widest text-text-muted font-semibold mb-2">
           Question
         </p>
@@ -298,14 +298,14 @@ function CardFeedbackRow({ cardId }: { cardId: string }) {
           <span className="text-[11px] text-text-muted">Rate this card:</span>
           <button
             onClick={() => handleVote('up')}
-            className="p-1.5 rounded-lg border border-white/[0.08] hover:border-accent-primary/30 hover:bg-accent-primary/[0.06] transition-all text-text-muted hover:text-accent-primary"
+            className="p-1.5 rounded-lg border border-contrast/[0.08] hover:border-accent-primary/30 hover:bg-accent-primary/[0.06] transition-all text-text-muted hover:text-accent-primary"
             aria-label="Thumbs up"
           >
             <ThumbsUp size={14} />
           </button>
           <button
             onClick={() => handleVote('down')}
-            className="p-1.5 rounded-lg border border-white/[0.08] hover:border-red-500/30 hover:bg-red-500/[0.06] transition-all text-text-muted hover:text-red-400"
+            className="p-1.5 rounded-lg border border-contrast/[0.08] hover:border-red-500/30 hover:bg-red-500/[0.06] transition-all text-text-muted hover:text-red-400"
             aria-label="Thumbs down"
           >
             <ThumbsDown size={14} />
@@ -324,7 +324,7 @@ function CardFeedbackRow({ cardId }: { cardId: string }) {
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             rows={2}
-            className="w-full px-3 py-2 rounded-lg border border-white/[0.08] bg-white/[0.03] text-xs text-text-secondary placeholder:text-text-muted resize-none focus:outline-none focus:border-accent-primary/30"
+            className="w-full px-3 py-2 rounded-lg border border-contrast/[0.08] bg-contrast/[0.03] text-xs text-text-secondary placeholder:text-text-muted resize-none focus:outline-none focus:border-accent-primary/30"
           />
           <div className="flex gap-2 justify-end">
             <button

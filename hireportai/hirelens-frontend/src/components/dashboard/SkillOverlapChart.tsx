@@ -14,6 +14,13 @@ interface SkillOverlapChartProps {
 }
 
 export function SkillOverlapChart({ data }: SkillOverlapChartProps) {
+  const s = getComputedStyle(document.documentElement)
+  const textMuted = s.getPropertyValue('--text-muted').trim()
+  const bgElevated = s.getPropertyValue('--bg-elevated').trim()
+  const textPrimary = s.getPropertyValue('--text-primary').trim()
+  const accent = s.getPropertyValue('--accent-primary').trim()
+  const success = s.getPropertyValue('--success').trim()
+
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-text-muted text-sm">
@@ -28,30 +35,30 @@ export function SkillOverlapChart({ data }: SkillOverlapChartProps) {
         <PolarGrid stroke="rgba(255,255,255,0.06)" />
         <PolarAngleAxis
           dataKey="subject"
-          tick={{ fill: '#8b949e', fontSize: 11 }}
+          tick={{ fill: textMuted, fontSize: 11 }}
         />
         <RechartsTooltip
           contentStyle={{
-            background: '#1c2333',
+            background: bgElevated,
             border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: '8px',
-            color: '#f0f6ff',
+            color: textPrimary,
             fontSize: '12px',
           }}
         />
         <Radar
           name="Job Description"
           dataKey="jd"
-          stroke="#7c3aed"
-          fill="#7c3aed"
+          stroke={accent}
+          fill={accent}
           fillOpacity={0.15}
           strokeWidth={2}
         />
         <Radar
           name="Your Resume"
           dataKey="resume"
-          stroke="#00ffc8"
-          fill="#00ffc8"
+          stroke={success}
+          fill={success}
           fillOpacity={0.2}
           strokeWidth={2}
         />

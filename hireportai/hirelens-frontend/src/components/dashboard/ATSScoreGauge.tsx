@@ -76,7 +76,7 @@ export function ATSScoreGauge({ score, grade }: ATSScoreGaugeProps) {
           <path
             d={bgArcPath}
             fill="none"
-            stroke="rgba(255,255,255,0.06)"
+            stroke="var(--border)"
             strokeWidth={strokeWidth}
             strokeLinecap="round"
           />
@@ -126,7 +126,7 @@ export function ATSScoreGauge({ score, grade }: ATSScoreGaugeProps) {
             x={cx}
             y={cy + 38}
             textAnchor="middle"
-            fill="rgba(255,255,255,0.4)"
+            fill="var(--text-muted)"
             fontSize="11"
             fontFamily="DM Sans"
           >

@@ -8,6 +8,7 @@ import { AuthProvider } from '@/context/AuthContext'
 import { AnalysisProvider } from '@/context/AnalysisContext'
 import { UsageProvider } from '@/context/UsageContext'
 import { GamificationProvider } from '@/context/GamificationContext'
+import { ThemeProvider, applyInitialTheme } from '@/context/ThemeContext'
 import { UpgradeModal } from '@/components/ui/UpgradeModal'
 import App from '@/App'
 // Eager-import to run PostHog init side-effect before the first render,
@@ -15,6 +16,10 @@ import App from '@/App'
 import '@/utils/posthog'
 import '@/index.css'
 import '@/styles/design-tokens.css'
+
+// Apply the persisted theme's CSS variables synchronously BEFORE React renders
+// so the first paint already has the correct colours (no flash).
+applyInitialTheme()
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN || ''
@@ -35,13 +40,13 @@ function SentryFallback() {
       alignItems: 'center',
       justifyContent: 'center',
       minHeight: '100vh',
-      background: '#060810',
-      color: '#f0f6ff',
+      background: 'var(--bg-base)',
+      color: 'var(--text-primary)',
       fontFamily: 'system-ui, sans-serif',
       gap: '16px',
     }}>
       <h1 style={{ fontSize: '24px', fontWeight: 600 }}>Something went wrong</h1>
-      <p style={{ color: '#8b95a5', fontSize: '14px' }}>
+      <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
         An unexpected error occurred. Please try reloading the page.
       </p>
       <button
@@ -49,9 +54,9 @@ function SentryFallback() {
         style={{
           padding: '10px 24px',
           borderRadius: '10px',
-          border: '1px solid rgba(255,255,255,0.1)',
-          background: '#141a24',
-          color: '#f0f6ff',
+          border: '1px solid var(--border)',
+          background: 'var(--bg-elevated)',
+          color: 'var(--text-primary)',
           cursor: 'pointer',
           fontSize: '14px',
         }}
@@ -67,6 +72,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <Sentry.ErrorBoundary fallback={<SentryFallback />}>
     <GoogleOAuthProvider clientId={googleClientId}>
       <BrowserRouter>
+        <ThemeProvider>
         <AuthProvider>
           <UsageProvider>
             <GamificationProvider>
@@ -78,19 +84,19 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             toastOptions={{
               duration: 4000,
               style: {
-                background: '#141a24',
-                color: '#f0f6ff',
-                border: '1px solid rgba(255,255,255,0.06)',
+                background: 'var(--bg-elevated)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border)',
                 borderRadius: '14px',
                 fontSize: '13px',
                 fontFamily: 'var(--sf-font-body)',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
               },
               success: {
-                iconTheme: { primary: '#00ffc8', secondary: '#060810' },
+                iconTheme: { primary: 'var(--success)', secondary: 'var(--bg-base)' },
               },
               error: {
-                iconTheme: { primary: '#f85149', secondary: '#060810' },
+                iconTheme: { primary: 'var(--danger)', secondary: 'var(--bg-base)' },
               },
             }}
               />
@@ -98,6 +104,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             </GamificationProvider>
           </UsageProvider>
         </AuthProvider>
+        </ThemeProvider>
       </BrowserRouter>
     </GoogleOAuthProvider>
     </Sentry.ErrorBoundary>

@@ -18,11 +18,11 @@ interface HeatmapResponse {
 }
 
 const INTENSITY_CLASSES = [
-  'bg-white/[0.04]',                     // 0 reviews
-  'bg-violet-500/30',                     // 1–2
-  'bg-violet-500/50',                     // 3–4
-  'bg-violet-500/70',                     // 5–7
-  'bg-violet-500',                        // 8+
+  'bg-contrast/[0.04]',                   // 0 reviews
+  'bg-accent-primary/30',                 // 1–2
+  'bg-accent-primary/50',                 // 3–4
+  'bg-accent-primary/70',                 // 5–7
+  'bg-accent-primary',                    // 8+
 ]
 
 function getIntensity(count: number): string {
@@ -116,7 +116,7 @@ export function ActivityHeatmap() {
       {/* Tooltip */}
       {tooltip && (
         <div
-          className="fixed z-50 px-2 py-1 rounded bg-bg-surface border border-white/10 text-[10px] text-text-secondary pointer-events-none -translate-x-1/2 -translate-y-full"
+          className="fixed z-50 px-2 py-1 rounded bg-bg-surface border border-contrast/10 text-[10px] text-text-secondary pointer-events-none -translate-x-1/2 -translate-y-full"
           style={{ left: tooltip.x, top: tooltip.y }}
         >
           {tooltip.text}

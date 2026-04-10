@@ -1,5 +1,14 @@
 import type { Config } from 'tailwindcss'
 
+/**
+ * Helper: returns a Tailwind color value that reads from a CSS variable
+ * (space-separated RGB) and supports the <alpha-value> placeholder so
+ * opacity modifiers like bg-accent-primary/10 work correctly.
+ */
+function rgb(varName: string) {
+  return `rgb(var(--color-${varName}) / <alpha-value>)`
+}
+
 const config: Config = {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
@@ -12,35 +21,39 @@ const config: Config = {
         mono: ['"JetBrains Mono"', 'monospace'],
       },
       colors: {
-        'bg-base': '#0A0A0B',
-        'bg-surface': '#111113',
-        'bg-elevated': '#1A1A1D',
-        'bg-overlay': '#242428',
-        'accent-primary': '#DC2626',
-        'accent-secondary': '#EF4444',
-        'text-primary': '#FAFAFA',
-        'text-secondary': '#A3A3A3',
-        'text-muted': '#525252',
-        success: '#22c55e',
-        warning: '#eab308',
-        danger: '#ef4444',
-        'score-high': '#22c55e',
-        'score-mid': '#eab308',
-        'score-low': '#ef4444',
+        // ── Theme-aware colors (driven by CSS variables) ──
+        'bg-base': rgb('bg-base'),
+        'bg-surface': rgb('bg-surface'),
+        'bg-elevated': rgb('bg-elevated'),
+        'bg-overlay': rgb('bg-overlay'),
+        'accent-primary': rgb('accent-primary'),
+        'accent-secondary': rgb('accent-secondary'),
+        'text-primary': rgb('text-primary'),
+        'text-secondary': rgb('text-secondary'),
+        'text-muted': rgb('text-muted'),
+        success: rgb('success'),
+        warning: rgb('warning'),
+        danger: rgb('danger'),
+        'score-high': rgb('score-high'),
+        'score-mid': rgb('score-mid'),
+        'score-low': rgb('score-low'),
+        // "contrast" = white on dark themes, black on light themes.
+        // Replaces hardcoded white/[0.xx] & black/[0.xx] patterns.
+        contrast: rgb('contrast'),
       },
       boxShadow: {
-        glow: '0 0 20px rgba(220,38,38,0.15)',
-        'glow-lg': '0 0 40px rgba(220,38,38,0.22)',
-        'glow-xl': '0 0 60px rgba(220,38,38,0.28)',
+        glow: '0 0 20px rgb(var(--color-accent-primary) / 0.15)',
+        'glow-lg': '0 0 40px rgb(var(--color-accent-primary) / 0.22)',
+        'glow-xl': '0 0 60px rgb(var(--color-accent-primary) / 0.28)',
         'glow-violet': '0 0 20px rgba(124,58,237,0.2)',
-        'glow-red': '0 0 24px rgba(220,38,38,0.4)',
-        'glow-green': '0 0 20px rgba(34,197,94,0.2)',
-        'glow-yellow': '0 0 20px rgba(234,179,8,0.2)',
+        'glow-red': '0 0 24px rgb(var(--color-accent-primary) / 0.4)',
+        'glow-green': '0 0 20px rgb(var(--color-success) / 0.2)',
+        'glow-yellow': '0 0 20px rgb(var(--color-warning) / 0.2)',
         card: '0 1px 2px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.3)',
         'card-hover': '0 2px 4px rgba(0,0,0,0.5), 0 8px 24px rgba(0,0,0,0.4)',
         modal: '0 16px 48px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4)',
-        'depth': '0 8px 30px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)',
-        'depth-hover': '0 16px 50px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.4), 0 0 30px rgba(220,38,38,0.08)',
+        'depth': '0 8px 30px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgb(var(--color-contrast) / 0.04)',
+        'depth-hover': '0 16px 50px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.4), 0 0 30px rgb(var(--color-accent-primary) / 0.08)',
       },
       borderRadius: {
         xl: '12px',
@@ -76,8 +89,8 @@ const config: Config = {
           to: { opacity: '1', transform: 'translateY(0)' },
         },
         glowPulse: {
-          '0%, 100%': { boxShadow: '0 0 16px rgba(220,38,38,0.1)' },
-          '50%': { boxShadow: '0 0 36px rgba(220,38,38,0.28)' },
+          '0%, 100%': { boxShadow: '0 0 16px rgb(var(--color-accent-primary) / 0.1)' },
+          '50%': { boxShadow: '0 0 36px rgb(var(--color-accent-primary) / 0.28)' },
         },
         scanLine: {
           '0%': { transform: 'translateX(-100%)' },
@@ -130,7 +143,7 @@ const config: Config = {
       },
       backgroundImage: {
         'gradient-mesh':
-          'radial-gradient(ellipse at 20% 50%, rgba(220,38,38,0.07) 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, rgba(220,38,38,0.04) 0%, transparent 50%)',
+          'radial-gradient(ellipse at 20% 50%, rgb(var(--color-accent-primary) / 0.07) 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, rgb(var(--color-accent-primary) / 0.04) 0%, transparent 50%)',
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
       },

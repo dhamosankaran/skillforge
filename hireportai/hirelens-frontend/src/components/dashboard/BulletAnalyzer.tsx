@@ -14,7 +14,7 @@ function BulletCard({ bullet }: { bullet: BulletAnalysis }) {
   const color = getBulletScoreColor(bullet.score)
 
   return (
-    <div className="bg-bg-elevated border border-white/[0.06] rounded-xl overflow-hidden">
+    <div className="bg-bg-elevated border border-contrast/[0.06] rounded-xl overflow-hidden">
       <div className="p-4">
         <div className="flex items-start gap-3">
           <span

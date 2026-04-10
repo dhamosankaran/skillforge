@@ -28,6 +28,7 @@ import api, { generateExperience } from '@/services/api'
 import { SkillRadar } from '@/components/progress/SkillRadar'
 import { ActivityHeatmap } from '@/components/progress/ActivityHeatmap'
 import { EmailPreferences } from '@/components/settings/EmailPreferences'
+import { ThemePicker } from '@/components/settings/ThemePicker'
 
 // ── Badge catalog (mirror of backend BADGES tuple) ───────────────────────────
 
@@ -99,7 +100,7 @@ export default function Profile() {
             <img
               src={user.avatar_url}
               alt={user.name}
-              className="w-14 h-14 rounded-full border border-white/10 ring-2 ring-accent-primary/20"
+              className="w-14 h-14 rounded-full border border-contrast/10 ring-2 ring-accent-primary/20"
               referrerPolicy="no-referrer"
             />
           ) : (
@@ -116,7 +117,7 @@ export default function Profile() {
         {/* ── Streak + XP cards ────────────────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Streak */}
-          <div className="rounded-2xl border border-white/[0.08] bg-bg-surface/60 p-5">
+          <div className="rounded-2xl border border-contrast/[0.08] bg-bg-surface/60 p-5">
             <div className="flex items-center gap-2 mb-3">
               <Flame size={14} className="text-orange-400" fill="currentColor" />
               <span className="text-[11px] uppercase tracking-[0.15em] text-text-secondary font-semibold">
@@ -136,7 +137,7 @@ export default function Profile() {
           </div>
 
           {/* XP */}
-          <div className="rounded-2xl border border-white/[0.08] bg-bg-surface/60 p-5">
+          <div className="rounded-2xl border border-contrast/[0.08] bg-bg-surface/60 p-5">
             <XPBar totalXp={stats?.total_xp ?? 0} />
           </div>
         </div>
@@ -160,8 +161,8 @@ export default function Profile() {
                   className={
                     'rounded-xl border p-3 transition-all duration-200 ' +
                     (earned
-                      ? 'border-accent-primary/30 bg-accent-primary/5 shadow-[0_0_24px_rgba(220,38,38,0.08)]'
-                      : 'border-white/[0.06] bg-bg-surface/40 opacity-60')
+                      ? 'border-accent-primary/30 bg-accent-primary/5 shadow-glow'
+                      : 'border-contrast/[0.06] bg-bg-surface/40 opacity-60')
                   }
                 >
                   <div className="flex items-center gap-2 mb-1">
@@ -216,7 +217,7 @@ export default function Profile() {
               My Experience
             </h2>
           </div>
-          <div className="rounded-2xl border border-white/[0.08] bg-bg-surface/60 p-5">
+          <div className="rounded-2xl border border-contrast/[0.08] bg-bg-surface/60 p-5">
             {experienceText ? (
               <div className="space-y-3">
                 <p className="text-sm text-text-secondary leading-relaxed">{experienceText}</p>
@@ -226,7 +227,7 @@ export default function Profile() {
                     setExperienceCopied(true)
                     setTimeout(() => setExperienceCopied(false), 2000)
                   }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.08] text-[11px] text-text-muted hover:text-text-secondary hover:border-white/[0.15] transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-contrast/[0.08] text-[11px] text-text-muted hover:text-text-secondary hover:border-contrast/[0.15] transition-colors"
                 >
                   {experienceCopied ? <Check size={12} /> : <Copy size={12} />}
                   {experienceCopied ? 'Copied!' : 'Copy to clipboard'}
@@ -284,7 +285,7 @@ export default function Profile() {
               Skill coverage
             </h2>
           </div>
-          <div className="rounded-2xl border border-white/[0.08] bg-bg-surface/60 p-5">
+          <div className="rounded-2xl border border-contrast/[0.08] bg-bg-surface/60 p-5">
             <SkillRadar />
           </div>
         </section>
@@ -297,9 +298,14 @@ export default function Profile() {
               Activity
             </h2>
           </div>
-          <div className="rounded-2xl border border-white/[0.08] bg-bg-surface/60 p-5 overflow-x-auto">
+          <div className="rounded-2xl border border-contrast/[0.08] bg-bg-surface/60 p-5 overflow-x-auto">
             <ActivityHeatmap />
           </div>
+        </section>
+
+        {/* ── Theme ─────────────────────────────────────────────── */}
+        <section>
+          <ThemePicker />
         </section>
 
         {/* ── Settings ──────────────────────────────────────────── */}
@@ -323,7 +329,7 @@ export default function Profile() {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-bg-surface/40 p-4">
+    <div className="rounded-xl border border-contrast/[0.06] bg-bg-surface/40 p-4">
       <p className="text-[10px] uppercase tracking-[0.15em] text-text-muted mb-1">{label}</p>
       <p className="text-xl font-semibold text-text-primary tabular-nums">{value}</p>
     </div>

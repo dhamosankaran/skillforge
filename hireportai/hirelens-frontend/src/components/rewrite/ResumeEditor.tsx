@@ -94,7 +94,7 @@ export function ResumeEditor({ original, rewrite, isLoading, onDownloadPDF, onDo
       <div className="space-y-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {[1, 2].map((i) => (
-            <div key={i} className="space-y-3 p-6 bg-bg-surface/50 rounded-2xl border border-white/[0.06]">
+            <div key={i} className="space-y-3 p-6 bg-bg-surface/50 rounded-2xl border border-contrast/[0.06]">
               <div className="h-5 w-32 bg-bg-elevated rounded-full animate-pulse" />
               <div className="h-px bg-bg-elevated" />
               {[...Array(10)].map((_, j) => (
@@ -175,7 +175,7 @@ export function ResumeEditor({ original, rewrite, isLoading, onDownloadPDF, onDo
             <div className="w-2 h-2 rounded-full bg-text-muted" />
             <h3 className="text-xs font-medium text-text-muted uppercase tracking-wider">Original</h3>
           </div>
-          <div className="p-5 bg-bg-surface/50 border border-white/[0.06] rounded-2xl shadow-card min-h-[400px]">
+          <div className="p-5 bg-bg-surface/50 border border-contrast/[0.06] rounded-2xl shadow-card min-h-[400px]">
             <pre className="font-mono text-[11px] text-text-secondary whitespace-pre-wrap leading-relaxed">
               {original.slice(0, 3000) || 'Original resume text not available.'}
             </pre>

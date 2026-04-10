@@ -63,7 +63,7 @@ export function KanbanBoard({ applications, onMoveStatus, onDelete }: KanbanBoar
                       'min-h-[200px] p-2 rounded-xl border transition-colors',
                       snapshot.isDraggingOver
                         ? 'bg-accent-primary/5 border-accent-primary/20'
-                        : 'bg-bg-surface/50 border-white/[0.04]'
+                        : 'bg-bg-surface/50 border-contrast/[0.04]'
                     )}
                   >
                     <AnimatePresence>

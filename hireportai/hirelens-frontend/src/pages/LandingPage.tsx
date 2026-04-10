@@ -81,7 +81,7 @@ function LandingNavbar({ ctaTo }: { ctaTo: string }) {
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
-      background: scrolled ? "rgba(6,6,10,0.85)" : "transparent",
+      background: scrolled ? "var(--sf-bg-glass)" : "transparent",
       backdropFilter: scrolled ? "blur(20px) saturate(180%)" : "none",
       borderBottom: scrolled ? "1px solid var(--sf-border-subtle)" : "1px solid transparent",
       transition: "all 300ms ease",

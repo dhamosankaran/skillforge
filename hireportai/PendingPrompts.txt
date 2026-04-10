@@ -71,19 +71,45 @@ PaywallModal tests → Phase 4 (hardening)
 Webhook idempotency table → Phase 4 (hardening)
 CORS + auth header verification on createCheckoutSession → your manual test checklist when you test Stripe in test mode
 
+The important ones to note for future prompts:
+
+XP for quiz (25 XP) is defined but never actually awarded anywhere in the code yet. When P2-S3 wires gamification into the study flow, you may want to decide whether to wire it up or leave it for later.
+Streak freeze is stubbed, not implemented. P2-S2 will build the gamification service — decide if you want freeze logic now or deferred.
+invoice.payment_failed webhook handling doesn't exist. This is fine for now — it's a Phase 4 hardening item.
 
 
-### P1-S23: Phase 1 Final Verification
+
+When you open http://localhost:8000/sentry-debug/ with your browser, a transaction in the Performance section of Sentry will be created.
+Additionally, an error event will be sent to Sentry and will be connected to the transaction.
+It takes a couple of moments for the data to appear in Sentry.
+
+Back
+Waiting for this project's first error
+
+
+
+
+Next steps 
+- Same design and look and feel accross. Allow users to change their look and feel themes
+- Post login for any users show the dashboard with 3 options and later they should able to find them in the dashboard
+- Check for the IP address and if the user is from US, show the US pricing, if from India, show the INR pricing
+- Check if users trying to register using different google account but from same IP address, then block them
+- 
+
 
 New features
 
 Set Content Feed Flow
-
+Which model to use for what purpose (Gemini 2.5 Pro for reasoning, Flash for speed tasks)
 
 Business Development
-- Social MEdia
+- Marketing
 - Small Consulting companies to train them
 - Start collecting all the learnings for building flashcards
 - Show links to courseera, youtube, udemy, linkedin learning, etc and capture the link click through rate
 - Small animation videos explaning the concepts
 - Gemini Interview Prep 
+- Do we need to integrate with Linked to analyse and hekp customers to share the feedback about their profile
+- Edcuate users on the best timing to take interviews
+
+

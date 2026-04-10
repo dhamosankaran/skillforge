@@ -23,7 +23,7 @@ export function DailyTarget({ cardsTarget, cardsCompleted, onStudy, dayComplete 
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.15 }}
-      className="rounded-2xl border border-white/[0.07] bg-bg-surface/60 p-5"
+      className="rounded-2xl border border-contrast/[0.07] bg-bg-surface/60 p-5"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
@@ -45,7 +45,7 @@ export function DailyTarget({ cardsTarget, cardsCompleted, onStudy, dayComplete 
       </div>
 
       {/* Progress bar */}
-      <div className="h-2 rounded-full bg-white/[0.06] overflow-hidden mb-4">
+      <div className="h-2 rounded-full bg-contrast/[0.06] overflow-hidden mb-4">
         <motion.div
           className="h-full rounded-full bg-gradient-to-r from-accent-primary to-accent-secondary"
           initial={{ width: 0 }}

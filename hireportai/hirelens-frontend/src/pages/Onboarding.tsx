@@ -162,7 +162,7 @@ export default function Onboarding() {
 
           {/* Empty: no gaps at all */}
           {gaps.length === 0 && (
-            <div className="rounded-xl border border-white/[0.06] bg-bg-surface/50 p-6 text-center">
+            <div className="rounded-xl border border-contrast/[0.06] bg-bg-surface/50 p-6 text-center">
               <p className="text-sm text-text-secondary mb-4">
                 Your resume already covers all the skills we scanned for — nice work.
               </p>
@@ -179,7 +179,7 @@ export default function Onboarding() {
               {gaps.slice(0, Math.min(5, gaps.length)).map((_, i) => (
                 <div
                   key={i}
-                  className="h-20 rounded-xl border border-white/[0.06] bg-bg-surface/50 animate-pulse"
+                  className="h-20 rounded-xl border border-contrast/[0.06] bg-bg-surface/50 animate-pulse"
                 />
               ))}
             </div>
@@ -230,7 +230,7 @@ export default function Onboarding() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4 border-t border-white/[0.05]"
+          className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4 border-t border-contrast/[0.05]"
         >
           <button
             onClick={handleSkip}
@@ -272,7 +272,7 @@ function GapRow({ mapping, index, onStartStudying }: GapRowProps) {
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.05 * index }}
-      className="flex items-center gap-4 rounded-xl border border-white/[0.06] bg-bg-surface/50 p-4 sm:p-5 hover:border-white/[0.12] transition-colors"
+      className="flex items-center gap-4 rounded-xl border border-contrast/[0.06] bg-bg-surface/50 p-4 sm:p-5 hover:border-contrast/[0.12] transition-colors"
     >
       {/* Gap label */}
       <div className="flex-1 min-w-0">

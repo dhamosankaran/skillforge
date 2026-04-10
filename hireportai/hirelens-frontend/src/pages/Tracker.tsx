@@ -69,7 +69,7 @@ export default function Tracker() {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               onSubmit={handleSubmit}
-              className="mb-8 p-6 bg-bg-surface border border-white/[0.06] rounded-xl overflow-hidden"
+              className="mb-8 p-6 bg-bg-surface border border-contrast/[0.06] rounded-xl overflow-hidden"
             >
               <h3 className="font-display font-semibold text-text-primary mb-4">
                 New Application
@@ -81,7 +81,7 @@ export default function Tracker() {
                     type="text"
                     value={formData.company}
                     onChange={(e) => setFormData((p) => ({ ...p, company: e.target.value }))}
-                    className="w-full px-3 py-2.5 bg-bg-elevated border border-white/[0.06] rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary/30 transition-colors"
+                    className="w-full px-3 py-2.5 bg-bg-elevated border border-contrast/[0.06] rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary/30 transition-colors"
                     placeholder="e.g. Google"
                     required
                   />
@@ -92,7 +92,7 @@ export default function Tracker() {
                     type="text"
                     value={formData.role}
                     onChange={(e) => setFormData((p) => ({ ...p, role: e.target.value }))}
-                    className="w-full px-3 py-2.5 bg-bg-elevated border border-white/[0.06] rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary/30 transition-colors"
+                    className="w-full px-3 py-2.5 bg-bg-elevated border border-contrast/[0.06] rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary/30 transition-colors"
                     placeholder="e.g. Senior SWE"
                     required
                   />
@@ -103,7 +103,7 @@ export default function Tracker() {
                     type="date"
                     value={formData.date_applied}
                     onChange={(e) => setFormData((p) => ({ ...p, date_applied: e.target.value }))}
-                    className="w-full px-3 py-2.5 bg-bg-elevated border border-white/[0.06] rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent-primary/30 transition-colors"
+                    className="w-full px-3 py-2.5 bg-bg-elevated border border-contrast/[0.06] rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent-primary/30 transition-colors"
                   />
                 </div>
                 <div>
@@ -114,7 +114,7 @@ export default function Tracker() {
                     max={100}
                     value={formData.ats_score}
                     onChange={(e) => setFormData((p) => ({ ...p, ats_score: parseInt(e.target.value) || 0 }))}
-                    className="w-full px-3 py-2.5 bg-bg-elevated border border-white/[0.06] rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent-primary/30 transition-colors"
+                    className="w-full px-3 py-2.5 bg-bg-elevated border border-contrast/[0.06] rounded-lg text-sm text-text-primary focus:outline-none focus:border-accent-primary/30 transition-colors"
                   />
                 </div>
               </div>

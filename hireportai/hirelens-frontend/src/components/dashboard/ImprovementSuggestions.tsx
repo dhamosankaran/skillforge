@@ -56,9 +56,9 @@ export function ImprovementSuggestions({
   ]
 
   const priorityColors = {
-    high: '#f85149',
-    medium: '#f0a500',
-    low: '#8b949e',
+    high: 'var(--danger)',
+    medium: 'var(--warning)',
+    low: 'var(--text-muted)',
   }
 
   return (
@@ -69,7 +69,7 @@ export function ImprovementSuggestions({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: i * 0.07 }}
-          className="flex gap-3 p-4 rounded-xl bg-bg-elevated border border-white/[0.06]"
+          className="flex gap-3 p-4 rounded-xl bg-bg-elevated border border-contrast/[0.06]"
         >
           <div
             className="w-1 flex-shrink-0 rounded-full"

@@ -60,7 +60,7 @@ export default function LoginPage() {
         </Link>
 
         {/* Card */}
-        <div className="rounded-2xl border border-white/[0.08] bg-bg-surface/70 backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] p-8">
+        <div className="rounded-2xl border border-contrast/[0.08] bg-bg-surface/70 backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.5)] p-8">
           {/* Brand */}
           <div className="flex flex-col items-center text-center mb-7">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent-primary/10 border border-accent-primary/20 text-[10px] tracking-[0.18em] uppercase font-mono text-accent-primary mb-5">

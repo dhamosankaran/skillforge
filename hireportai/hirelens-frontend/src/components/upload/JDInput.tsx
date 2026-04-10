@@ -27,7 +27,7 @@ export function JDInput({ value, onChange }: JDInputProps) {
           placeholder="Paste the full job description here...
 
 Include the complete posting — responsibilities, requirements, preferred qualifications, and company description. The more context you provide, the more accurate the analysis."
-          className="flex-1 min-h-[280px] w-full bg-bg-elevated border border-white/[0.06] rounded-xl p-4 text-text-primary placeholder-text-muted text-sm leading-relaxed resize-none transition-all duration-200 focus:outline-none focus:border-accent-primary/40 focus:shadow-glow font-body"
+          className="flex-1 min-h-[280px] w-full bg-bg-elevated border border-contrast/[0.06] rounded-xl p-4 text-text-primary placeholder-text-muted text-sm leading-relaxed resize-none transition-all duration-200 focus:outline-none focus:border-accent-primary/40 focus:shadow-glow font-body"
           aria-label="Job description text"
         />
         <div className="flex items-center justify-between mt-2 px-1">

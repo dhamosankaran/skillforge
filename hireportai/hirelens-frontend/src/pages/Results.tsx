@@ -80,8 +80,8 @@ export default function Results() {
   }
 
   const scoreColor =
-    result.ats_score >= 75 ? '#00ffc8' :
-    result.ats_score >= 60 ? '#f0a500' : '#f85149'
+    result.ats_score >= 75 ? 'var(--success)' :
+    result.ats_score >= 60 ? 'var(--warning)' : 'var(--danger)'
 
   return (
     <PageWrapper className="min-h-screen bg-bg-base">
@@ -159,7 +159,7 @@ export default function Results() {
                   <button
                     key={id}
                     onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] text-text-muted hover:text-text-primary hover:bg-white/[0.04] transition-all text-left"
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] text-text-muted hover:text-text-primary hover:bg-contrast/[0.04] transition-all text-left"
                   >
                     <Icon size={12} />
                     {label}

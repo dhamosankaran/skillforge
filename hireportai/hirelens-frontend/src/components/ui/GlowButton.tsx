@@ -30,7 +30,7 @@ export function GlowButton({
     secondary:
       'bg-accent-secondary/10 border border-accent-secondary/20 text-accent-secondary hover:bg-accent-secondary/18',
     ghost:
-      'bg-white/[0.04] border border-white/[0.08] text-text-secondary hover:bg-white/[0.06] hover:text-text-primary',
+      'bg-contrast/[0.04] border border-contrast/[0.08] text-text-secondary hover:bg-contrast/[0.06] hover:text-text-primary',
   }
 
   return (
@@ -50,7 +50,7 @@ export function GlowButton({
     >
       {isLoading && variant === 'primary' && (
         <span className="absolute inset-0 overflow-hidden" aria-hidden="true">
-          <span className="absolute top-0 h-full w-1/2 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-scan-line" />
+          <span className="absolute top-0 h-full w-1/2 bg-gradient-to-r from-transparent via-contrast/20 to-transparent animate-scan-line" />
         </span>
       )}
       <span className={clsx('relative flex items-center justify-center gap-2', isLoading && 'opacity-80')}>

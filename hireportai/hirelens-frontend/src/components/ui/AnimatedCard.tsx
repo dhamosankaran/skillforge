@@ -35,17 +35,17 @@ export function AnimatedCard({
     <motion.div
       variants={cardVariants}
       whileHover={{
-        borderColor: glowOnHover ? 'rgba(220,38,38,0.2)' : 'rgba(255,255,255,0.1)',
+        borderColor: glowOnHover ? 'var(--border-accent)' : 'var(--border)',
         y: -2,
         boxShadow: glowOnHover
-          ? '0 8px 30px rgba(0,0,0,0.4), 0 0 20px rgba(220,38,38,0.08)'
+          ? `0 8px 30px rgba(0,0,0,0.4), 0 0 20px var(--accent-glow)`
           : '0 8px 30px rgba(0,0,0,0.3)',
         transition: { duration: 0.25 },
       }}
       whileTap={onClick ? { scale: 0.99 } : undefined}
       onClick={onClick}
       className={clsx(
-        'bg-bg-surface/60 border border-white/[0.06] rounded-2xl transition-all duration-200',
+        'bg-bg-surface/60 border border-contrast/[0.06] rounded-2xl transition-all duration-200',
         onClick && 'cursor-pointer',
         className
       )}

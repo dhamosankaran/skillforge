@@ -89,7 +89,7 @@ export function CoverLetterViewer({ coverLetter, isLoading, onGenerate }: CoverL
                 'px-4 py-2.5 rounded-xl text-sm font-medium capitalize transition-all duration-200',
                 selectedTone === tone
                   ? 'bg-accent-secondary/12 text-accent-secondary border border-accent-secondary/25 shadow-glow-violet/30'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.04] border border-transparent'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-contrast/[0.04] border border-transparent'
               )}
               aria-label={`Select ${tone} tone`}
             >
@@ -117,7 +117,7 @@ export function CoverLetterViewer({ coverLetter, isLoading, onGenerate }: CoverL
       {isLoading ? (
         <div className="space-y-4 p-8">
           <div className="h-4 bg-bg-elevated rounded-full w-1/4 animate-pulse" />
-          <div className="h-px bg-white/[0.04] my-4" />
+          <div className="h-px bg-contrast/[0.04] my-4" />
           {[...Array(3)].map((_, i) => (
             <div key={i} className="space-y-3 mb-6">
               <div className="h-3 bg-bg-elevated rounded-full w-full animate-pulse" />

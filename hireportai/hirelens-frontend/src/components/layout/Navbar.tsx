@@ -18,7 +18,7 @@ const navLinks = [
 ]
 
 const PLAN_CONFIG = {
-  free: { label: 'Free', color: 'text-text-muted', border: 'border-white/[0.08]', icon: null },
+  free: { label: 'Free', color: 'text-text-muted', border: 'border-contrast/[0.08]', icon: null },
   pro: {
     label: 'Pro',
     color: 'text-accent-primary',
@@ -79,7 +79,7 @@ export function Navbar() {
                     <motion.div
                       layoutId="nav-indicator"
                       className="absolute -bottom-0.5 left-0 right-0 h-px"
-                      style={{ background: 'linear-gradient(90deg, transparent, #DC2626, transparent)' }}
+                      style={{ background: `linear-gradient(90deg, transparent, var(--accent-primary), transparent)` }}
                       transition={{ type: 'spring', bounce: 0.15, duration: 0.45 }}
                     />
                   )}
@@ -111,13 +111,13 @@ export function Navbar() {
               <div className="relative hidden sm:block">
                 <button
                   onClick={() => setShowUserMenu((v) => !v)}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/[0.03] transition-all"
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-contrast/[0.03] transition-all"
                 >
                   {user.avatar_url ? (
                     <img
                       src={user.avatar_url}
                       alt={user.name}
-                      className="w-6 h-6 rounded-full border border-white/10 ring-2 ring-accent-primary/20"
+                      className="w-6 h-6 rounded-full border border-contrast/10 ring-2 ring-accent-primary/20"
                       referrerPolicy="no-referrer"
                     />
                   ) : (
@@ -140,9 +140,9 @@ export function Navbar() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 4, scale: 0.97 }}
                         transition={{ duration: 0.15 }}
-                        className="absolute right-0 top-full mt-2 w-52 rounded-xl border border-white/[0.08] bg-bg-surface/95 backdrop-blur-xl shadow-modal z-50 overflow-hidden"
+                        className="absolute right-0 top-full mt-2 w-52 rounded-xl border border-contrast/[0.08] bg-bg-surface/95 backdrop-blur-xl shadow-modal z-50 overflow-hidden"
                       >
-                        <div className="px-4 py-3 border-b border-white/[0.06]">
+                        <div className="px-4 py-3 border-b border-contrast/[0.06]">
                           <p className="text-[12px] font-medium text-text-primary truncate">{user.name}</p>
                           <p className="text-[10px] text-text-muted truncate mt-0.5">{user.email}</p>
                         </div>
@@ -150,7 +150,7 @@ export function Navbar() {
                           <Link
                             to="/profile"
                             onClick={() => setShowUserMenu(false)}
-                            className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-[11px] tracking-wide uppercase text-text-muted hover:bg-white/[0.03] hover:text-text-secondary transition-all"
+                            className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-[11px] tracking-wide uppercase text-text-muted hover:bg-contrast/[0.03] hover:text-text-secondary transition-all"
                           >
                             <User size={12} />
                             Profile
@@ -158,14 +158,14 @@ export function Navbar() {
                           <Link
                             to="/pricing"
                             onClick={() => setShowUserMenu(false)}
-                            className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-[11px] tracking-wide uppercase text-text-muted hover:bg-white/[0.03] hover:text-text-secondary transition-all"
+                            className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-[11px] tracking-wide uppercase text-text-muted hover:bg-contrast/[0.03] hover:text-text-secondary transition-all"
                           >
                             <CreditCard size={12} />
                             Manage Plan
                           </Link>
                           <button
                             onClick={() => { signOut(); setShowUserMenu(false) }}
-                            className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-[11px] tracking-wide uppercase text-text-muted hover:bg-white/[0.03] hover:text-text-secondary transition-all"
+                            className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-[11px] tracking-wide uppercase text-text-muted hover:bg-contrast/[0.03] hover:text-text-secondary transition-all"
                           >
                             Sign Out
                           </button>
@@ -194,7 +194,7 @@ export function Navbar() {
             {/* Hamburger (mobile/tablet) */}
             <button
               onClick={() => setShowMobileMenu((v) => !v)}
-              className="lg:hidden flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/[0.04] transition-all text-text-muted hover:text-text-primary"
+              className="lg:hidden flex items-center justify-center w-8 h-8 rounded-lg hover:bg-contrast/[0.04] transition-all text-text-muted hover:text-text-primary"
               aria-label="Toggle menu"
             >
               {showMobileMenu ? <X size={18} /> : <Menu size={18} />}
@@ -223,16 +223,16 @@ export function Navbar() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-              className="fixed top-0 right-0 bottom-0 z-50 w-72 bg-bg-surface/95 backdrop-blur-2xl border-l border-white/[0.07] lg:hidden flex flex-col"
+              className="fixed top-0 right-0 bottom-0 z-50 w-72 bg-bg-surface/95 backdrop-blur-2xl border-l border-contrast/[0.07] lg:hidden flex flex-col"
             >
               {/* Drawer header */}
-              <div className="flex items-center justify-between px-5 h-14 border-b border-white/[0.06]">
+              <div className="flex items-center justify-between px-5 h-14 border-b border-contrast/[0.06]">
                 <span className="font-editorial text-[18px] tracking-[0.08em] text-text-primary">
                   SKILL<span className="text-accent-primary">FORGE</span>
                 </span>
                 <button
                   onClick={() => setShowMobileMenu(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/[0.04] text-text-muted"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-contrast/[0.04] text-text-muted"
                 >
                   <X size={16} />
                 </button>
@@ -251,7 +251,7 @@ export function Navbar() {
                         'flex items-center px-4 py-3 rounded-xl text-[11px] tracking-[0.15em] uppercase font-medium transition-all duration-200',
                         active
                           ? 'bg-accent-primary/10 text-accent-primary border border-accent-primary/20'
-                          : 'text-text-muted hover:text-text-secondary hover:bg-white/[0.03]'
+                          : 'text-text-muted hover:text-text-secondary hover:bg-contrast/[0.03]'
                       )}
                     >
                       {label}
@@ -261,7 +261,7 @@ export function Navbar() {
               </nav>
 
               {/* Drawer footer: plan + auth */}
-              <div className="px-4 py-4 border-t border-white/[0.06] space-y-3">
+              <div className="px-4 py-4 border-t border-contrast/[0.06] space-y-3">
                 {/* Plan badge */}
                 <Link
                   to="/pricing"
@@ -284,7 +284,7 @@ export function Navbar() {
                         <img
                           src={user.avatar_url}
                           alt={user.name}
-                          className="w-7 h-7 rounded-full border border-white/10"
+                          className="w-7 h-7 rounded-full border border-contrast/10"
                           referrerPolicy="no-referrer"
                         />
                       ) : (
@@ -299,7 +299,7 @@ export function Navbar() {
                     </div>
                     <button
                       onClick={() => { signOut(); setShowMobileMenu(false) }}
-                      className="w-full text-left px-3 py-2 rounded-lg text-[11px] tracking-wide uppercase text-text-muted hover:bg-white/[0.03] hover:text-text-secondary transition-all"
+                      className="w-full text-left px-3 py-2 rounded-lg text-[11px] tracking-wide uppercase text-text-muted hover:bg-contrast/[0.03] hover:text-text-secondary transition-all"
                     >
                       Sign Out
                     </button>

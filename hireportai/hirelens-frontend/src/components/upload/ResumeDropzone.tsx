@@ -74,7 +74,7 @@ export function ResumeDropzone({ file, onFileChange }: ResumeDropzoneProps) {
               'border-2 border-dashed',
               isDragActive
                 ? 'border-accent-primary bg-accent-primary/5 shadow-glow'
-                : 'border-white/10 bg-bg-elevated hover:border-accent-primary/40 hover:bg-accent-primary/[0.03]'
+                : 'border-contrast/10 bg-bg-elevated hover:border-accent-primary/40 hover:bg-accent-primary/[0.03]'
             )}
           >
             <input {...getInputProps()} aria-label="Resume file upload" />
@@ -85,7 +85,7 @@ export function ResumeDropzone({ file, onFileChange }: ResumeDropzoneProps) {
                 'w-16 h-16 rounded-full flex items-center justify-center',
                 isDragActive
                   ? 'bg-accent-primary/20 border border-accent-primary/50'
-                  : 'bg-bg-overlay border border-white/10'
+                  : 'bg-bg-overlay border border-contrast/10'
               )}
             >
               <Upload

@@ -35,7 +35,7 @@ const DIFF_COLORS = {
 } as const
 
 const INPUT =
-  'w-full px-3 py-2.5 bg-bg-elevated border border-white/[0.06] rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary/30 transition-colors'
+  'w-full px-3 py-2.5 bg-bg-elevated border border-contrast/[0.06] rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary/30 transition-colors'
 const LABEL = 'block text-xs text-text-muted mb-1.5'
 
 export default function AdminPanel() {
@@ -85,7 +85,7 @@ function AdminDashboard() {
         </motion.div>
 
         {/* Tab bar */}
-        <div className="flex gap-1 mb-6 p-1 bg-bg-surface/60 border border-white/[0.06] rounded-xl w-fit">
+        <div className="flex gap-1 mb-6 p-1 bg-bg-surface/60 border border-contrast/[0.06] rounded-xl w-fit">
           {tabs.map((t) => (
             <button
               key={t.key}
@@ -93,7 +93,7 @@ function AdminDashboard() {
               className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                 tab === t.key
                   ? 'bg-accent-primary text-bg-base'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.04]'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-contrast/[0.04]'
               }`}
             >
               {t.icon}
@@ -229,7 +229,7 @@ function CardTable({
       <p className="text-xs text-text-muted mb-3">{total} card{total !== 1 ? 's' : ''} total</p>
 
       {/* Table */}
-      <div className="bg-bg-surface/60 border border-white/[0.06] rounded-xl overflow-hidden">
+      <div className="bg-bg-surface/60 border border-contrast/[0.06] rounded-xl overflow-hidden">
         {loading ? (
           <div className="flex justify-center py-16">
             <Loader2 className="animate-spin text-accent-primary" size={28} />
@@ -240,7 +240,7 @@ function CardTable({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/[0.06] text-text-muted text-xs uppercase tracking-wider">
+                <tr className="border-b border-contrast/[0.06] text-text-muted text-xs uppercase tracking-wider">
                   <th className="text-left px-4 py-3 font-medium">Question</th>
                   <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Category</th>
                   <th className="text-left px-4 py-3 font-medium">Difficulty</th>
@@ -250,7 +250,7 @@ function CardTable({
               </thead>
               <tbody>
                 {cards.map((card) => (
-                  <tr key={card.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                  <tr key={card.id} className="border-b border-contrast/[0.04] hover:bg-contrast/[0.02] transition-colors">
                     <td className="px-4 py-3 text-text-primary max-w-xs truncate">{card.question}</td>
                     <td className="px-4 py-3 text-text-secondary hidden lg:table-cell">{card.category_name}</td>
                     <td className="px-4 py-3">
@@ -261,7 +261,7 @@ function CardTable({
                     <td className="px-4 py-3 hidden md:table-cell">
                       <div className="flex gap-1 flex-wrap">
                         {card.tags.slice(0, 3).map((t) => (
-                          <span key={t} className="px-1.5 py-0.5 bg-white/[0.04] rounded text-xs text-text-muted">{t}</span>
+                          <span key={t} className="px-1.5 py-0.5 bg-contrast/[0.04] rounded text-xs text-text-muted">{t}</span>
                         ))}
                         {card.tags.length > 3 && <span className="text-xs text-text-muted">+{card.tags.length - 3}</span>}
                       </div>
@@ -270,7 +270,7 @@ function CardTable({
                       <div className="flex justify-end gap-1.5">
                         <button
                           onClick={() => setEditingCard(card)}
-                          className="p-1.5 rounded-lg hover:bg-white/[0.06] text-text-muted hover:text-accent-primary transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-contrast/[0.06] text-text-muted hover:text-accent-primary transition-colors"
                           title="Edit"
                         >
                           <Pencil size={14} />
@@ -299,7 +299,7 @@ function CardTable({
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="p-2 rounded-lg hover:bg-white/[0.04] text-text-muted disabled:opacity-30 transition-colors"
+            className="p-2 rounded-lg hover:bg-contrast/[0.04] text-text-muted disabled:opacity-30 transition-colors"
           >
             <ChevronLeft size={16} />
           </button>
@@ -309,7 +309,7 @@ function CardTable({
           <button
             onClick={() => setPage((p) => Math.min(pages, p + 1))}
             disabled={page === pages}
-            className="p-2 rounded-lg hover:bg-white/[0.04] text-text-muted disabled:opacity-30 transition-colors"
+            className="p-2 rounded-lg hover:bg-contrast/[0.04] text-text-muted disabled:opacity-30 transition-colors"
           >
             <ChevronRight size={16} />
           </button>
@@ -388,11 +388,11 @@ function EditCardModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg bg-bg-surface border border-white/[0.08] rounded-2xl p-6 max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-lg bg-bg-surface border border-contrast/[0.08] rounded-2xl p-6 max-h-[90vh] overflow-y-auto"
       >
         <div className="flex justify-between items-center mb-5">
           <h2 className="font-display text-lg font-semibold text-text-primary">Edit Card</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-text-muted transition-colors">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-contrast/[0.06] text-text-muted transition-colors">
             <X size={16} />
           </button>
         </div>
@@ -539,7 +539,7 @@ function CreateCardForm({
   return (
     <div className="max-w-lg">
       <h2 className="font-display text-lg font-semibold text-text-primary mb-4">Create New Card</h2>
-      <form onSubmit={handleSubmit} className="space-y-4 bg-bg-surface/60 border border-white/[0.06] rounded-xl p-6">
+      <form onSubmit={handleSubmit} className="space-y-4 bg-bg-surface/60 border border-contrast/[0.06] rounded-xl p-6">
         <CardFormFields form={form} setForm={setForm} categories={categories} />
         <div className="flex justify-end pt-2">
           <GlowButton type="submit" size="sm" isLoading={saving}>
@@ -632,7 +632,7 @@ function AIGeneratePanel({
       </p>
 
       {/* Input row */}
-      <div className="bg-bg-surface/60 border border-white/[0.06] rounded-xl p-6 space-y-4 mb-6">
+      <div className="bg-bg-surface/60 border border-contrast/[0.06] rounded-xl p-6 space-y-4 mb-6">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="sm:col-span-2">
             <label className={LABEL}>Topic</label>
@@ -783,7 +783,7 @@ function CSVImportPanel({ onImported }: { onImported: () => void }) {
             ? 'border-accent-primary/40 bg-accent-primary/5'
             : file
               ? 'border-accent-primary/20 bg-bg-surface/60'
-              : 'border-white/[0.08] bg-bg-surface/40 hover:border-white/[0.12]'
+              : 'border-contrast/[0.08] bg-bg-surface/40 hover:border-contrast/[0.12]'
         }`}
       >
         <input
@@ -799,7 +799,7 @@ function CSVImportPanel({ onImported }: { onImported: () => void }) {
             <span className="text-sm font-medium">{file.name}</span>
             <button
               onClick={(e) => { e.stopPropagation(); setFile(null); setResult(null) }}
-              className="p-1 rounded hover:bg-white/[0.06]"
+              className="p-1 rounded hover:bg-contrast/[0.06]"
             >
               <X size={14} />
             </button>
@@ -822,7 +822,7 @@ function CSVImportPanel({ onImported }: { onImported: () => void }) {
             type="checkbox"
             checked={partial}
             onChange={(e) => setPartial(e.target.checked)}
-            className="rounded border-white/[0.1] bg-bg-elevated accent-accent-primary"
+            className="rounded border-contrast/[0.1] bg-bg-elevated accent-accent-primary"
           />
           Partial import (skip invalid rows)
         </label>
@@ -839,7 +839,7 @@ function CSVImportPanel({ onImported }: { onImported: () => void }) {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="mt-4 bg-bg-surface/60 border border-white/[0.06] rounded-xl p-4"
+            className="mt-4 bg-bg-surface/60 border border-contrast/[0.06] rounded-xl p-4"
           >
             <div className="flex items-center gap-4 text-sm">
               <span className="flex items-center gap-1.5 text-green-400">

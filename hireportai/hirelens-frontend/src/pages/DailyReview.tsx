@@ -127,7 +127,7 @@ function TabBody({ activeTab, card, sessionId, startTimeMs, onRated }: TabBodyPr
               {codeBlocks.map((block, i) => (
                 <pre
                   key={i}
-                  className="text-[12px] font-mono bg-bg-base/60 border border-white/[0.06] rounded-xl p-4 overflow-x-auto text-text-secondary leading-relaxed"
+                  className="text-[12px] font-mono bg-bg-base/60 border border-contrast/[0.06] rounded-xl p-4 overflow-x-auto text-text-secondary leading-relaxed"
                 >
                   {block}
                 </pre>
@@ -170,7 +170,7 @@ function ProgressBar({ completed, total }: { completed: number; total: number })
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0
   return (
     <div className="flex items-center gap-3">
-      <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+      <div className="flex-1 h-1.5 rounded-full bg-contrast/[0.06] overflow-hidden">
         <motion.div
           className="h-full rounded-full bg-gradient-to-r from-accent-primary to-accent-secondary"
           initial={{ width: 0 }}
@@ -269,7 +269,7 @@ export default function DailyReview() {
           <div className="h-4 w-48 rounded-full bg-bg-elevated animate-pulse" />
           <div className="h-1.5 rounded-full bg-bg-elevated animate-pulse" />
           <div
-            className="rounded-2xl border border-white/[0.06] bg-bg-surface/50 animate-pulse"
+            className="rounded-2xl border border-contrast/[0.06] bg-bg-surface/50 animate-pulse"
             style={{ minHeight: 420 }}
           />
         </div>
@@ -362,7 +362,7 @@ export default function DailyReview() {
   const backContent = (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Tab bar */}
-      <div className="flex shrink-0 border-b border-white/[0.06] px-4 pt-3 gap-1">
+      <div className="flex shrink-0 border-b border-contrast/[0.06] px-4 pt-3 gap-1">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -370,7 +370,7 @@ export default function DailyReview() {
             className={clsx(
               'px-3 py-1.5 text-xs font-medium rounded-t-lg transition-colors',
               activeTab === tab.id
-                ? 'text-text-primary bg-white/[0.05] border-b-2 border-accent-primary'
+                ? 'text-text-primary bg-contrast/[0.05] border-b-2 border-accent-primary'
                 : 'text-text-muted hover:text-text-secondary'
             )}
           >

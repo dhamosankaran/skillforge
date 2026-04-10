@@ -32,7 +32,7 @@ export function StreakBadge() {
         'flex items-center gap-1.5 px-2.5 py-1 border rounded-lg text-[11px] font-semibold transition-all duration-200 glow-hover tabular-nums',
         isActive
           ? 'border-orange-500/40 text-orange-300 hover:border-orange-500/60'
-          : 'border-white/[0.08] text-text-muted hover:text-text-secondary',
+          : 'border-contrast/[0.08] text-text-muted hover:text-text-secondary',
       )}
     >
       <motion.span

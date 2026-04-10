@@ -43,7 +43,7 @@ export function FlipCard({
           transition={SPRING}
           style={{ backfaceVisibility: 'hidden', transformStyle: 'preserve-3d' }}
           className={clsx(
-            'absolute inset-0 flex flex-col rounded-2xl border border-white/[0.07]',
+            'absolute inset-0 flex flex-col rounded-2xl border border-contrast/[0.07]',
             'bg-bg-surface/70 overflow-hidden',
             !isFlipped && 'cursor-pointer'
           )}
@@ -79,7 +79,7 @@ export function FlipCard({
           transition={SPRING}
           style={{ backfaceVisibility: 'hidden', transformStyle: 'preserve-3d' }}
           className={clsx(
-            'absolute inset-0 flex flex-col rounded-2xl border border-white/[0.07]',
+            'absolute inset-0 flex flex-col rounded-2xl border border-contrast/[0.07]',
             'bg-bg-surface/70 overflow-hidden'
           )}
         >

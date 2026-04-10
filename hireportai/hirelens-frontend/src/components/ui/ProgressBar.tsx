@@ -23,9 +23,9 @@ export function ProgressBar({
   const pct = Math.min(100, Math.max(0, (value / max) * 100))
 
   const colorMap: Record<string, string> = {
-    teal: '#00ffc8',
-    violet: '#7c3aed',
-    default: pct >= 80 ? '#00ffc8' : pct >= 60 ? '#f0a500' : '#f85149',
+    teal: 'var(--success)',
+    violet: 'var(--accent-primary)',
+    default: pct >= 80 ? 'var(--success)' : pct >= 60 ? 'var(--warning)' : 'var(--danger)',
   }
 
   const autoColor = color

@@ -109,7 +109,7 @@ export default function CategoryDetail() {
         {data && !error && (
           <>
             {data.cards.length === 0 ? (
-              <div className="rounded-xl border border-white/[0.06] bg-bg-surface/50 p-8 text-center">
+              <div className="rounded-xl border border-contrast/[0.06] bg-bg-surface/50 p-8 text-center">
                 <p className="text-sm text-text-secondary">
                   No cards in this category yet.
                 </p>
@@ -123,7 +123,7 @@ export default function CategoryDetail() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.03 * i }}
                     onClick={() => navigate(`/study/card/${card.id}`)}
-                    className="group w-full flex items-center gap-4 rounded-xl border border-white/[0.06] bg-bg-surface/50 p-4 sm:p-5 text-left hover:border-white/[0.14] hover:bg-bg-surface/70 transition-colors"
+                    className="group w-full flex items-center gap-4 rounded-xl border border-contrast/[0.06] bg-bg-surface/50 p-4 sm:p-5 text-left hover:border-contrast/[0.14] hover:bg-bg-surface/70 transition-colors"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-text-primary truncate">

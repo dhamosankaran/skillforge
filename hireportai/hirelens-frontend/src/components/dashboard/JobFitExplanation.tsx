@@ -34,7 +34,7 @@ export function JobFitExplanation({
   return (
     <div className="space-y-6">
       {/* Explanation text */}
-      <div className="p-4 rounded-xl bg-bg-elevated border border-white/[0.06]">
+      <div className="p-4 rounded-xl bg-bg-elevated border border-contrast/[0.06]">
         <div className="flex items-center gap-2 mb-3">
           <Lightbulb size={14} className="text-accent-primary" />
           <span className="text-xs font-medium text-accent-primary uppercase tracking-wider">

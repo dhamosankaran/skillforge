@@ -19,13 +19,13 @@ export function ApplicationCard({ application, onDelete, dragHandleProps }: Appl
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ scale: 1.02 }}
-      className="bg-bg-elevated border border-white/[0.06] rounded-xl p-4 cursor-grab active:cursor-grabbing"
+      className="bg-bg-elevated border border-contrast/[0.06] rounded-xl p-4 cursor-grab active:cursor-grabbing"
       {...dragHandleProps}
     >
       {/* Company & Delete */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-accent-primary/5 border border-white/[0.06] flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-accent-primary/5 border border-contrast/[0.06] flex items-center justify-center">
             <Building2 size={14} className="text-text-muted" />
           </div>
           <div>

@@ -58,32 +58,37 @@ export function SkillRadar() {
     )
   }
 
+  const s = getComputedStyle(document.documentElement)
+  const accent = s.getPropertyValue('--accent-primary').trim() || '#7c3aed'
+  const bgEl = s.getPropertyValue('--bg-elevated').trim() || '#1a1a1d'
+  const cRgb = s.getPropertyValue('--color-contrast').trim() || '255 255 255'
+
   return (
     <ResponsiveContainer width="100%" height={320}>
       <RadarChart data={data} cx="50%" cy="50%" outerRadius="75%">
-        <PolarGrid stroke="rgba(255,255,255,0.08)" />
+        <PolarGrid stroke={`rgb(${cRgb} / 0.08)`} />
         <PolarAngleAxis
           dataKey="category"
-          tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 10 }}
+          tick={{ fill: `rgb(${cRgb} / 0.6)`, fontSize: 10 }}
         />
         <PolarRadiusAxis
           angle={90}
           domain={[0, 100]}
-          tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 9 }}
+          tick={{ fill: `rgb(${cRgb} / 0.3)`, fontSize: 9 }}
           axisLine={false}
         />
         <Radar
           name="Mastery"
           dataKey="mastery_pct"
-          stroke="#7c3aed"
-          fill="#7c3aed"
+          stroke={accent}
+          fill={accent}
           fillOpacity={0.25}
           strokeWidth={2}
         />
         <Tooltip
           contentStyle={{
-            backgroundColor: '#1a1a1d',
-            border: '1px solid rgba(255,255,255,0.1)',
+            backgroundColor: bgEl,
+            border: `1px solid rgb(${cRgb} / 0.1)`,
             borderRadius: 8,
             fontSize: 11,
           }}

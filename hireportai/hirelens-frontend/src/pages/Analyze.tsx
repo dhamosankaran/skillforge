@@ -45,7 +45,7 @@ function LoadingOverlay() {
         <motion.div
           animate={{ boxShadow: ['0 0 30px rgba(0,255,200,0.15)', '0 0 50px rgba(0,255,200,0.25)', '0 0 30px rgba(0,255,200,0.15)'] }}
           transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-          className="w-20 h-20 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center"
+          className="w-20 h-20 rounded-2xl bg-contrast/[0.04] border border-contrast/[0.08] flex items-center justify-center"
         >
           <Cpu size={32} className="text-accent-primary" strokeWidth={1.5} />
         </motion.div>
@@ -111,7 +111,7 @@ export default function Analyze() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="inline-flex items-center gap-2 mt-4 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs text-text-muted"
+              className="inline-flex items-center gap-2 mt-4 px-3 py-1.5 rounded-lg bg-contrast/[0.03] border border-contrast/[0.06] text-xs text-text-muted"
             >
               <span className="font-mono">{usage.scansUsed}/3</span> free scans used
               {!canScan && (
@@ -130,10 +130,10 @@ export default function Analyze() {
           transition={{ delay: 0.08 }}
           className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8"
         >
-          <div className="bg-bg-surface/50 border border-white/[0.06] rounded-2xl p-5 min-h-[300px] flex flex-col transition-colors hover:border-white/[0.1]">
+          <div className="bg-bg-surface/50 border border-contrast/[0.06] rounded-2xl p-5 min-h-[300px] flex flex-col transition-colors hover:border-contrast/[0.1]">
             <ResumeDropzone file={resumeFile} onFileChange={setFile} />
           </div>
-          <div className="bg-bg-surface/50 border border-white/[0.06] rounded-2xl p-5 min-h-[300px] flex flex-col transition-colors hover:border-white/[0.1]">
+          <div className="bg-bg-surface/50 border border-contrast/[0.06] rounded-2xl p-5 min-h-[300px] flex flex-col transition-colors hover:border-contrast/[0.1]">
             <JDInput value={jobDescription} onChange={setJobDescription} />
           </div>
         </motion.div>

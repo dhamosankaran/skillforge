@@ -34,7 +34,7 @@ export function Tooltip({ content, children, position = 'top' }: TooltipProps) {
             transition={{ duration: 0.15 }}
             className={`absolute z-50 ${positionStyles[position]} pointer-events-none`}
           >
-            <div className="bg-bg-overlay border border-white/10 text-text-primary text-xs px-3 py-1.5 rounded-lg shadow-lg whitespace-nowrap">
+            <div className="bg-bg-overlay border border-contrast/10 text-text-primary text-xs px-3 py-1.5 rounded-lg shadow-lg whitespace-nowrap">
               {content}
             </div>
           </motion.div>

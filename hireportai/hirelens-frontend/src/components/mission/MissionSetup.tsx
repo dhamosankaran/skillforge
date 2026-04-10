@@ -106,7 +106,7 @@ export function MissionSetup({ categories, onCreate }: MissionSetupProps) {
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Google SDE-2 Prep"
             maxLength={200}
-            className="w-full px-4 py-2.5 rounded-xl bg-bg-elevated border border-white/[0.08] text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary/40 transition-colors"
+            className="w-full px-4 py-2.5 rounded-xl bg-bg-elevated border border-contrast/[0.08] text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary/40 transition-colors"
           />
         </div>
 
@@ -121,7 +121,7 @@ export function MissionSetup({ categories, onCreate }: MissionSetupProps) {
             value={targetDate}
             onChange={(e) => setTargetDate(e.target.value)}
             min={minDate}
-            className="w-full px-4 py-2.5 rounded-xl bg-bg-elevated border border-white/[0.08] text-sm text-text-primary focus:outline-none focus:border-accent-primary/40 transition-colors"
+            className="w-full px-4 py-2.5 rounded-xl bg-bg-elevated border border-contrast/[0.08] text-sm text-text-primary focus:outline-none focus:border-accent-primary/40 transition-colors"
           />
         </div>
 
@@ -146,7 +146,7 @@ export function MissionSetup({ categories, onCreate }: MissionSetupProps) {
                     'flex items-center gap-2.5 px-3.5 py-3 rounded-xl border text-left transition-all duration-150',
                     selected
                       ? 'bg-accent-primary/10 border-accent-primary/30 text-text-primary'
-                      : 'bg-bg-surface/50 border-white/[0.06] text-text-secondary hover:border-white/[0.12]'
+                      : 'bg-bg-surface/50 border-contrast/[0.06] text-text-secondary hover:border-contrast/[0.12]'
                   )}
                 >
                   <span className="text-base">{cat.icon}</span>

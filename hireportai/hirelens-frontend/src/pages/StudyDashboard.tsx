@@ -130,7 +130,7 @@ export default function StudyDashboard() {
             </div>
             <button
               onClick={() => setSearchParams({})}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-white/[0.08] text-xs text-text-muted hover:text-text-secondary hover:border-white/[0.15] transition-colors"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-contrast/[0.08] text-xs text-text-muted hover:text-text-secondary hover:border-contrast/[0.15] transition-colors"
             >
               Show all categories
             </button>
