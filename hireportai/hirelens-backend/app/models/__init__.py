@@ -8,3 +8,4 @@ from app.models.tracker import TrackerApplicationModel  # noqa: F401
 from app.models.category import Category  # noqa: F401
 from app.models.card import Card  # noqa: F401
 from app.models.card_progress import CardProgress  # noqa: F401
+from app.models.gamification import Badge, GamificationStats, UserBadge  # noqa: F401
