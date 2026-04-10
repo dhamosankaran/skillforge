@@ -30,6 +30,11 @@ from app.models.card import Card
 from app.models.card_progress import CardProgress
 from app.models.category import Category
 from app.schemas.study import DailyCardItem, DailyReviewResponse, ReviewResponse, StudyProgressResponse
+from app.services import gamification_service
+
+# Daily 5 = the size of the daily review queue. Crossing this count earns the
+# `daily_complete` XP bonus exactly once per UTC day.
+_DAILY_GOAL = 5
 
 # Module-level scheduler — stateless, safe to share
 _scheduler = Scheduler()
@@ -339,6 +344,39 @@ async def review_card(
             "lapses": progress.lapses,
         },
     )
+
+    # ── Gamification: per-review XP + streak tick ───────────────────────────
+    # award_xp internally calls update_streak, so the streak is bumped on the
+    # first XP-earning activity of the day. We don't need a separate
+    # update_streak call here.
+    await gamification_service.award_xp(
+        user_id=user_id,
+        amount=gamification_service.XP_RULES["review"],
+        source="review",
+        db=db,
+    )
+
+    # ── Daily 5 completion bonus ────────────────────────────────────────────
+    # Count distinct cards reviewed today (UTC). When this review is the one
+    # that takes the count from 4 → 5, award the bonus exactly once. A 6th
+    # review on the same day finds count == 6 and skips, so the bonus never
+    # double-fires.
+    from sqlalchemy import func as sa_func
+    today_start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
+    reviewed_today = (
+        await db.execute(
+            select(sa_func.count(CardProgress.id))
+            .where(CardProgress.user_id == user_id)
+            .where(CardProgress.last_reviewed >= today_start)
+        )
+    ).scalar_one()
+    if reviewed_today == _DAILY_GOAL:
+        await gamification_service.award_xp(
+            user_id=user_id,
+            amount=gamification_service.XP_RULES["daily_complete"],
+            source="daily_complete",
+            db=db,
+        )
 
     return ReviewResponse(
         card_id=card_id,

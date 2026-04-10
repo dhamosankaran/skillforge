@@ -89,6 +89,29 @@ async def engine():
     async with eng.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+    # Seed the gamification badge catalog. Production seeds it via the alembic
+    # migration, but the test schema is built with create_all so we mirror the
+    # seed here. Without this, any test that triggers gamification (the new
+    # XP wiring inside study_service.review_card) hits an FK violation when
+    # award_xp tries to insert a UserBadge row.
+    from app.services.gamification_service import BADGES
+    async with eng.begin() as conn:
+        for b in BADGES:
+            await conn.execute(
+                text(
+                    "INSERT INTO badges (id, name, description, threshold_type, threshold_value) "
+                    "VALUES (:id, :name, :desc, :tt, :tv) "
+                    "ON CONFLICT (id) DO NOTHING"
+                ),
+                {
+                    "id": b.id,
+                    "name": b.name,
+                    "desc": b.name,
+                    "tt": b.threshold_type,
+                    "tv": b.threshold_value,
+                },
+            )
+
     yield eng
 
     # --- teardown ------------------------------------------------------------

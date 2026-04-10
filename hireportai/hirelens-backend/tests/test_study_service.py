@@ -342,3 +342,75 @@ async def test_review_free_user_premium_card_raises(db_session):
             is_free=True,  # ← free-plan gate
             db=db_session,
         )
+
+
+# ── Gamification wiring ──────────────────────────────────────────────────────
+# These tests verify that study_service.review_card credits XP and ticks the
+# streak via the gamification service. The wiring is critical because the rest
+# of the gamification UX (badges, daily 5 bonus) hangs off these XP awards.
+
+
+async def test_review_card_awards_xp(db_session):
+    """Each successful review credits exactly 10 XP via gamification_service."""
+    from app.services import gamification_service
+
+    user = await _make_user(db_session)
+    cat = await _make_category(db_session)
+    card = await _make_card(db_session, cat.id)
+    await _make_progress(db_session, user.id, card.id, state="review")
+
+    await study_service.review_card(
+        user_id=user.id,
+        card_id=card.id,
+        rating=3,
+        is_free=False,
+        db=db_session,
+    )
+
+    stats = await gamification_service.get_stats(user.id, db_session)
+    assert stats.total_xp == 10
+    # Streak should also have ticked to 1 on the first activity of the day.
+    assert stats.current_streak == 1
+
+
+async def test_daily_five_completion_awards_bonus(db_session):
+    """Reviewing the 5th unique card today triggers a 50 XP daily bonus.
+
+    Total XP after 5 reviews should be 5×10 (per-review) + 50 (daily bonus) =
+    100. A 6th review on the same day must NOT re-fire the bonus, so the
+    total only grows by 10 more.
+    """
+    from app.services import gamification_service
+
+    user = await _make_user(db_session)
+    cat = await _make_category(db_session)
+
+    cards = [await _make_card(db_session, cat.id) for _ in range(6)]
+    for c in cards[:5]:
+        await _make_progress(db_session, user.id, c.id, state="review")
+        await study_service.review_card(
+            user_id=user.id,
+            card_id=c.id,
+            rating=3,
+            is_free=False,
+            db=db_session,
+        )
+
+    stats = await gamification_service.get_stats(user.id, db_session)
+    assert stats.total_xp == 5 * 10 + 50, (
+        f"expected 100 XP (5 reviews + daily bonus), got {stats.total_xp}"
+    )
+
+    # 6th unique review on the same day → +10 only, no second bonus.
+    await _make_progress(db_session, user.id, cards[5].id, state="review")
+    await study_service.review_card(
+        user_id=user.id,
+        card_id=cards[5].id,
+        rating=3,
+        is_free=False,
+        db=db_session,
+    )
+    stats = await gamification_service.get_stats(user.id, db_session)
+    assert stats.total_xp == 110, (
+        f"6th review must not refire the daily bonus; got {stats.total_xp}"
+    )
