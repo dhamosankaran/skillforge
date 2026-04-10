@@ -42,9 +42,15 @@ export function FlipCard({
           animate={{ rotateY: isFlipped ? -180 : 0 }}
           transition={SPRING}
           style={{ backfaceVisibility: 'hidden', transformStyle: 'preserve-3d' }}
+          whileHover={!isFlipped ? {
+            scale: 1.02,
+            boxShadow: '0 12px 36px rgba(0,0,0,0.3), 0 0 20px rgba(var(--color-accent-primary), 0.08)',
+            transition: { duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] },
+          } : undefined}
+          whileTap={!isFlipped ? { scale: 0.98, transition: { duration: 0.1 } } : undefined}
           className={clsx(
             'absolute inset-0 flex flex-col rounded-2xl border border-contrast/[0.07]',
-            'bg-bg-surface/70 overflow-hidden',
+            'bg-bg-surface/70 overflow-hidden transition-shadow',
             !isFlipped && 'cursor-pointer'
           )}
           onClick={!isFlipped ? onFlip : undefined}

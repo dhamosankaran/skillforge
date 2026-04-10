@@ -145,10 +145,20 @@ export default function StudyDashboard() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center gap-3 py-20 text-center"
+                className="flex flex-col items-center gap-4 py-20 text-center"
               >
-                <BookOpen size={36} className="text-text-muted opacity-40" />
-                <p className="text-sm text-text-muted">No categories found.</p>
+                <div className="w-14 h-14 rounded-2xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center">
+                  <BookOpen size={24} className="text-accent-primary" />
+                </div>
+                <div>
+                  <p className="text-base font-semibold text-text-primary mb-1">No categories yet</p>
+                  <p className="text-sm text-text-muted max-w-xs mx-auto">
+                    Scan your resume first — we'll build study categories from your skill gaps.
+                  </p>
+                </div>
+                <GlowButton size="sm" onClick={() => navigate('/analyze')}>
+                  Scan Resume
+                </GlowButton>
               </motion.div>
             )}
 
@@ -157,12 +167,17 @@ export default function StudyDashboard() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center gap-3 py-16 text-center"
+                className="flex flex-col items-center gap-4 py-16 text-center"
               >
-                <BookOpen size={36} className="text-text-muted opacity-40" />
-                <p className="text-sm text-text-muted">
-                  That category isn't available on your current plan.
-                </p>
+                <div className="w-14 h-14 rounded-2xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center">
+                  <Filter size={24} className="text-accent-primary" />
+                </div>
+                <div>
+                  <p className="text-base font-semibold text-text-primary mb-1">Category not available</p>
+                  <p className="text-sm text-text-muted max-w-xs mx-auto">
+                    That category isn't included in your current plan. Explore other categories or upgrade.
+                  </p>
+                </div>
                 <GlowButton variant="ghost" size="sm" onClick={() => setSearchParams({})}>
                   Show all categories
                 </GlowButton>

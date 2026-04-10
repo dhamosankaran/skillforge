@@ -37,12 +37,13 @@ export function AnimatedCard({
       whileHover={{
         borderColor: glowOnHover ? 'var(--border-accent)' : 'var(--border)',
         y: -2,
+        scale: 1.02,
         boxShadow: glowOnHover
           ? `0 8px 30px rgba(0,0,0,0.4), 0 0 20px var(--accent-glow)`
           : '0 8px 30px rgba(0,0,0,0.3)',
-        transition: { duration: 0.25 },
+        transition: { duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] },
       }}
-      whileTap={onClick ? { scale: 0.99 } : undefined}
+      whileTap={onClick ? { scale: 0.98, transition: { duration: 0.1 } } : undefined}
       onClick={onClick}
       className={clsx(
         'bg-bg-surface/60 border border-contrast/[0.06] rounded-2xl transition-all duration-200',

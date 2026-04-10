@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { AlertCircle, ArrowLeft, ArrowRight, RefreshCw } from 'lucide-react'
+import { AlertCircle, ArrowLeft, ArrowRight, RefreshCw, Layers } from 'lucide-react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { GlowButton } from '@/components/ui/GlowButton'
 import { fetchCardsByCategory, type CategoryCardsResponse } from '@/services/api'
@@ -63,7 +63,24 @@ export default function CategoryDetail() {
 
         {/* Header */}
         {isLoading ? (
-          <div className="h-12 w-60 rounded-xl bg-bg-surface/60 animate-pulse mb-8" />
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-12 h-12 rounded-2xl bg-bg-elevated animate-pulse" />
+              <div className="space-y-2">
+                <div className="h-6 w-48 rounded-full bg-bg-elevated animate-pulse" />
+                <div className="h-3 w-20 rounded-full bg-bg-elevated animate-pulse" />
+              </div>
+            </div>
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="rounded-xl border border-contrast/[0.04] bg-bg-surface/40 p-5 flex items-center gap-4 animate-pulse">
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-3/4 rounded-full bg-bg-elevated" />
+                  <div className="h-3 w-1/3 rounded-full bg-bg-elevated" />
+                </div>
+                <div className="w-4 h-4 rounded bg-bg-elevated" />
+              </div>
+            ))}
+          </div>
         ) : data ? (
           <motion.div
             initial={{ opacity: 0, y: -6 }}
@@ -109,10 +126,20 @@ export default function CategoryDetail() {
         {data && !error && (
           <>
             {data.cards.length === 0 ? (
-              <div className="rounded-xl border border-contrast/[0.06] bg-bg-surface/50 p-8 text-center">
-                <p className="text-sm text-text-secondary">
-                  No cards in this category yet.
-                </p>
+              <div className="flex flex-col items-center gap-4 py-16 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center">
+                  <Layers size={24} className="text-accent-primary" />
+                </div>
+                <div>
+                  <p className="text-base font-semibold text-text-primary mb-1">No cards yet</p>
+                  <p className="text-sm text-text-muted max-w-xs mx-auto">
+                    This category doesn't have any cards. Check back after scanning a resume.
+                  </p>
+                </div>
+                <GlowButton variant="ghost" size="sm" onClick={() => navigate('/study')}>
+                  <ArrowLeft size={13} />
+                  Back to Dashboard
+                </GlowButton>
               </div>
             ) : (
               <div className="space-y-2.5">
@@ -122,6 +149,13 @@ export default function CategoryDetail() {
                     initial={{ opacity: 0, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.03 * i }}
+                    whileHover={{
+                      scale: 1.02,
+                      y: -2,
+                      boxShadow: '0 8px 30px rgba(0,0,0,0.3)',
+                      transition: { duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] },
+                    }}
+                    whileTap={{ scale: 0.98, transition: { duration: 0.1 } }}
                     onClick={() => navigate(`/study/card/${card.id}`)}
                     className="group w-full flex items-center gap-4 rounded-xl border border-contrast/[0.06] bg-bg-surface/50 p-4 sm:p-5 text-left hover:border-contrast/[0.14] hover:bg-bg-surface/70 transition-colors"
                   >

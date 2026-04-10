@@ -355,3 +355,28 @@ h1, h2, h3, h4, h5, h6 {
 .reveal-gradient {
   background: linear-gradient(180deg, transparent, var(--bg-base) 30%, var(--bg-base) 70%, transparent);
 }
+
+/* ── Hero animated gradient ── */
+@keyframes heroGradientShift {
+  0%   { background-position: 0% 50%; }
+  25%  { background-position: 50% 100%; }
+  50%  { background-position: 100% 50%; }
+  75%  { background-position: 50% 0%; }
+  100% { background-position: 0% 50%; }
+}
+
+.hero-gradient-animated {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 212, 255, 0.06) 0%,
+    rgba(123, 97, 255, 0.05) 25%,
+    rgba(255, 138, 80, 0.04) 50%,
+    rgba(123, 97, 255, 0.05) 75%,
+    rgba(0, 212, 255, 0.06) 100%
+  );
+  background-size: 300% 300%;
+  animation: heroGradientShift 12s ease infinite;
+  pointer-events: none;
+}

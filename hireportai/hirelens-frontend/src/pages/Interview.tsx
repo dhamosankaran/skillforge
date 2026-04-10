@@ -310,9 +310,22 @@ export default function Interview() {
                   />
                 ))
               ) : (
-                <div className="text-center py-12 text-text-muted">
-                  <MessageSquare size={32} className="mx-auto mb-3 opacity-40" />
-                  <p className="text-sm">No {activeFilter} questions found.</p>
+                <div className="flex flex-col items-center gap-4 py-16 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center">
+                    <MessageSquare size={24} className="text-accent-primary" />
+                  </div>
+                  <div>
+                    <p className="text-base font-semibold text-text-primary mb-1">No {activeFilter} questions</p>
+                    <p className="text-sm text-text-muted max-w-xs mx-auto">
+                      Try selecting a different category filter to see more questions.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setActiveFilter('all')}
+                    className="text-sm text-accent-primary hover:text-accent-primary/80 font-medium transition-colors"
+                  >
+                    Show all questions
+                  </button>
                 </div>
               )}
             </div>

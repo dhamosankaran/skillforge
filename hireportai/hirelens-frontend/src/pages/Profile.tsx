@@ -109,7 +109,7 @@ export default function Profile() {
             </div>
           )}
           <div>
-            <h1 className="text-2xl font-semibold text-text-primary">{user?.name ?? 'Profile'}</h1>
+            <h1 className="font-display text-2xl font-bold text-text-primary">{user?.name ?? 'Profile'}</h1>
             <p className="text-sm text-text-muted">{user?.email}</p>
           </div>
         </motion.div>

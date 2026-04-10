@@ -324,9 +324,29 @@ export default function MissionMode() {
     return (
       <PageWrapper className="min-h-screen bg-bg-base">
         <div className="max-w-2xl mx-auto px-4 py-10 sm:px-6 space-y-6">
-          <div className="h-4 w-48 rounded-full bg-bg-elevated animate-pulse mx-auto" />
-          <div className="w-28 h-28 rounded-full bg-bg-elevated animate-pulse mx-auto" />
-          <div className="h-24 rounded-2xl bg-bg-elevated animate-pulse" />
+          {/* Back link skeleton */}
+          <div className="h-4 w-24 rounded-full bg-bg-elevated animate-pulse" />
+          {/* Countdown ring skeleton */}
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-28 h-28 rounded-full bg-bg-surface/60 border border-contrast/[0.06] animate-pulse" />
+            <div className="h-5 w-40 rounded-full bg-bg-elevated animate-pulse" />
+            <div className="h-3 w-24 rounded-full bg-bg-elevated animate-pulse" />
+          </div>
+          {/* Daily target skeleton */}
+          <div className="rounded-2xl border border-contrast/[0.04] bg-bg-surface/40 p-5 space-y-3 animate-pulse">
+            <div className="h-4 w-32 rounded-full bg-bg-elevated" />
+            <div className="h-1.5 rounded-full bg-bg-elevated" />
+            <div className="h-10 w-full rounded-xl bg-bg-elevated" />
+          </div>
+          {/* Progress grid skeleton */}
+          <div className="space-y-2">
+            <div className="h-3 w-28 rounded-full bg-bg-elevated animate-pulse" />
+            <div className="flex flex-wrap gap-1.5">
+              {[...Array(14)].map((_, i) => (
+                <div key={i} className="w-6 h-6 rounded-md bg-bg-elevated animate-pulse" />
+              ))}
+            </div>
+          </div>
         </div>
       </PageWrapper>
     )

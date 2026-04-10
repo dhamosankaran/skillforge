@@ -98,7 +98,7 @@ export default function Analyze() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-12"
         >
-          <h1 className="font-display text-3xl sm:text-4xl font-bold mb-3 tracking-tight">
+          <h1 className="font-display text-3xl sm:text-4xl font-bold text-text-primary mb-3 tracking-tight">
             Resume <span className="text-accent-primary">Analysis</span>
           </h1>
           <p className="text-text-secondary text-sm max-w-md mx-auto leading-relaxed">

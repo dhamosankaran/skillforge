@@ -129,6 +129,9 @@ function Hero({ ctaTo }: { ctaTo: string }) {
       textAlign: "center",
       padding: "120px 24px 80px",
     }}>
+      {/* Animated gradient background */}
+      <div className="hero-gradient-animated" />
+
       {/* Background glow */}
       <div style={{
         position: "absolute",

@@ -43,9 +43,15 @@ export function CategoryCard({ category, index, onClick }: CategoryCardProps) {
       whileHover={
         locked
           ? { borderColor: 'var(--border)' }
-          : { y: -3, borderColor: 'var(--border)', boxShadow: '0 12px 36px rgba(0,0,0,0.35)' }
+          : {
+              y: -3,
+              scale: 1.02,
+              borderColor: 'var(--border)',
+              boxShadow: '0 12px 36px rgba(0,0,0,0.35), 0 0 20px rgba(var(--color-accent-primary), 0.08)',
+              transition: { duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] },
+            }
       }
-      whileTap={{ scale: 0.98 }}
+      whileTap={{ scale: 0.98, transition: { duration: 0.1 } }}
       onClick={onClick}
       className={clsx(
         'relative cursor-pointer rounded-2xl border border-contrast/[0.06] bg-bg-surface/60 p-5 min-h-[160px] flex flex-col transition-colors duration-200',
