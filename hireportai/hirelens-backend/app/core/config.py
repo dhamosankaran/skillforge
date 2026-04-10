@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     claude_model: str = "claude-sonnet-4-20250514"
 
+    # --- Email (Resend) ---
+    resend_api_key: str = ""
+    resend_from_address: str = "reminders@skillforge.app"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

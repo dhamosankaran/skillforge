@@ -84,8 +84,9 @@ async def engine():
     import app.models.category      # noqa: F401
     import app.models.card          # noqa: F401
     import app.models.card_progress  # noqa: F401
-    import app.models.gamification  # noqa: F401
-    import app.models.mission       # noqa: F401
+    import app.models.gamification       # noqa: F401
+    import app.models.mission            # noqa: F401
+    import app.models.email_preference   # noqa: F401
 
     async with eng.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

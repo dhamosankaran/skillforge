@@ -22,6 +22,7 @@ from app.api.v1.routes import (
     auth as v1_auth,
     cards as v1_cards,
     cover_letter as v1_cover_letter,
+    email_prefs as v1_email_prefs,
     gamification as v1_gamification,
     interview as v1_interview,
     mission as v1_mission,
@@ -117,6 +118,7 @@ def create_app() -> FastAPI:
     app.include_router(v1_cards.router, prefix="/api/v1", tags=["v1 Cards"])
     app.include_router(v1_study.router, prefix="/api/v1", tags=["v1 Study"])
     app.include_router(v1_gamification.router, prefix="/api/v1", tags=["v1 Gamification"])
+    app.include_router(v1_email_prefs.router, prefix="/api/v1", tags=["v1 Email Preferences"])
     app.include_router(v1_mission.router, prefix="/api/v1", tags=["v1 Mission"])
     app.include_router(v1_progress.router, prefix="/api/v1", tags=["v1 Progress"])
     app.include_router(onboarding.router, prefix="/api/v1", tags=["v1 Onboarding"])
