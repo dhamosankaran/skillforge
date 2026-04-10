@@ -322,6 +322,28 @@ export async function updateEmailPreferences(
   return response.data
 }
 
+// ─── Experience Generator ─────────────────────────────────────────────────────
+
+export interface ExperienceRequest {
+  topic?: string
+}
+
+export interface ExperienceResponse {
+  experience_text: string
+  summary: string
+  cards_studied: number
+}
+
+export async function generateExperience(
+  req: ExperienceRequest = {},
+): Promise<ExperienceResponse> {
+  const response = await api.post<ExperienceResponse>(
+    '/api/v1/study/experience',
+    req,
+  )
+  return response.data
+}
+
 // ─── Card Feedback ────────────────────────────────────────────────────────────
 
 export interface CardFeedbackRequest {

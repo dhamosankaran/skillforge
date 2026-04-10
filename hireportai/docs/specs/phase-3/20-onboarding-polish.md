@@ -1,7 +1,7 @@
 # Spec #20 — Onboarding Polish: Persona Picker + Guided Tour
 
 **Phase:** 3
-**Status:** in-progress
+**Status:** Done
 **Owner:** Full-stack
 **Depends on:** Auth (done), Study Dashboard (done), Mission Mode (done)
 

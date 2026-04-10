@@ -1,6 +1,6 @@
 # SPEC: Per-Card Feedback & NPS System
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 <!-- What user problem does this solve? -->

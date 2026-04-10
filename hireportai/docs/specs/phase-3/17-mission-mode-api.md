@@ -1,6 +1,6 @@
 # SPEC: Mission Mode Backend
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 <!-- What user problem does this solve? -->

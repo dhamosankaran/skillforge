@@ -1,6 +1,6 @@
 # SPEC: Mission Mode UI (Countdown + Sprint)
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 <!-- What user problem does this solve? -->

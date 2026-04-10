@@ -1,6 +1,6 @@
 # SPEC: AI Card Generation
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 

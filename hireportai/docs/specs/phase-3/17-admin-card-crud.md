@@ -1,6 +1,6 @@
 # SPEC: Admin Card CRUD
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 

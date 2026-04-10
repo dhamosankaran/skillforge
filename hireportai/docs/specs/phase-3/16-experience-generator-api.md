@@ -1,6 +1,6 @@
 # SPEC: AI Experience Generator API
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 <!-- What user problem does this solve? -->

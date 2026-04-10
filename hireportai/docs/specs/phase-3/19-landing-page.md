@@ -1,7 +1,7 @@
 # Spec #19 — Landing Page Upgrade (Conversion-Grade)
 
 **Phase:** 3
-**Status:** in-progress
+**Status:** Done
 **Owner:** Frontend
 **Depends on:** Google OAuth (done), PostHog (done), existing LandingPage.tsx
 

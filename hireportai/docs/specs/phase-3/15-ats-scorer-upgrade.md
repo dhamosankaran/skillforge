@@ -1,6 +1,6 @@
 # SPEC: ATS Scorer → Skill Gap → Card Mapping
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 <!-- What user problem does this solve? -->

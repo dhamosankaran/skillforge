@@ -1,9 +1,10 @@
 """Study API routes — FSRS spaced-repetition daily review.
 
 Endpoints:
-  GET  /study/daily    Return up to 5 cards due for review today.
-  POST /study/review   Submit a review rating; advance FSRS state.
-  GET  /study/progress Return aggregate study statistics.
+  GET  /study/daily      Return up to 5 cards due for review today.
+  POST /study/review     Submit a review rating; advance FSRS state.
+  GET  /study/progress   Return aggregate study statistics.
+  POST /study/experience Generate AI experience narrative from study history.
 
 All endpoints require a valid JWT (via get_current_user).
 Plan-gate enforcement (free vs pro) is computed here and forwarded to
@@ -12,14 +13,17 @@ full User objects.
 
 PostHog events are fired inside the service; the route stays thin.
 """
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.study import DailyReviewResponse, ReviewRequest, ReviewResponse, StudyProgressResponse
-from app.services import study_service
+from app.services import experience_service, study_service
 
 router = APIRouter()
 
@@ -129,3 +133,39 @@ async def get_progress(
     included in the counts (they appear as 'unreviewed' in the daily queue).
     """
     return await study_service.get_progress(user_id=user.id, db=db)
+
+
+# ── Experience generation ────────────────────────────────────────────────────
+
+
+class ExperienceRequest(BaseModel):
+    topic: Optional[str] = None
+
+
+class ExperienceResponse(BaseModel):
+    experience_text: str
+    summary: str
+    cards_studied: int
+
+
+@router.post(
+    "/study/experience",
+    response_model=ExperienceResponse,
+    summary="Generate AI experience narrative",
+)
+async def generate_experience(
+    body: ExperienceRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> ExperienceResponse:
+    """Generate a resume-ready bullet point from the user's study history.
+
+    Uses the configured LLM provider to turn study stats into a
+    professional narrative suitable for a resume or LinkedIn profile.
+    """
+    result = await experience_service.generate_experience(
+        user_id=user.id,
+        topic=body.topic or "",
+        db=db,
+    )
+    return ExperienceResponse(**result)

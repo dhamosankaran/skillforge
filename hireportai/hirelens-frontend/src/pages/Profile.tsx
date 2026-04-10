@@ -18,13 +18,13 @@
  */
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Flame, Lock, Trophy, BookOpen, Sparkles, Radar, CalendarDays, Settings } from 'lucide-react'
+import { Flame, Lock, Trophy, BookOpen, Sparkles, Radar, CalendarDays, Settings, FileText, Copy, Check, Loader2 } from 'lucide-react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { XPBar } from '@/components/profile/XPBar'
 import { useGamification } from '@/context/GamificationContext'
 import { useAuth } from '@/context/AuthContext'
 import { capture } from '@/utils/posthog'
-import api from '@/services/api'
+import api, { generateExperience } from '@/services/api'
 import { SkillRadar } from '@/components/progress/SkillRadar'
 import { ActivityHeatmap } from '@/components/progress/ActivityHeatmap'
 import { EmailPreferences } from '@/components/settings/EmailPreferences'
@@ -71,6 +71,9 @@ export default function Profile() {
   const { stats, isLoading, refresh } = useGamification()
   const [progress, setProgress] = useState<StudyProgress | null>(null)
   const [progressError, setProgressError] = useState<string | null>(null)
+  const [experienceText, setExperienceText] = useState<string | null>(null)
+  const [experienceLoading, setExperienceLoading] = useState(false)
+  const [experienceCopied, setExperienceCopied] = useState(false)
 
   useEffect(() => {
     capture('profile_viewed')
@@ -203,6 +206,74 @@ export default function Profile() {
               <Stat label="In review" value={progress?.by_state?.review ?? 0} />
             </div>
           )}
+        </section>
+
+        {/* ── Experience generator ─────────────────────────────────── */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <FileText size={14} className="text-accent-primary" />
+            <h2 className="text-[11px] uppercase tracking-[0.15em] text-text-secondary font-semibold">
+              My Experience
+            </h2>
+          </div>
+          <div className="rounded-2xl border border-white/[0.08] bg-bg-surface/60 p-5">
+            {experienceText ? (
+              <div className="space-y-3">
+                <p className="text-sm text-text-secondary leading-relaxed">{experienceText}</p>
+                <button
+                  onClick={() => {
+                    void navigator.clipboard.writeText(experienceText)
+                    setExperienceCopied(true)
+                    setTimeout(() => setExperienceCopied(false), 2000)
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.08] text-[11px] text-text-muted hover:text-text-secondary hover:border-white/[0.15] transition-colors"
+                >
+                  {experienceCopied ? <Check size={12} /> : <Copy size={12} />}
+                  {experienceCopied ? 'Copied!' : 'Copy to clipboard'}
+                </button>
+                <button
+                  onClick={() => setExperienceText(null)}
+                  className="ml-2 text-[11px] text-text-muted hover:text-text-secondary transition-colors"
+                >
+                  Regenerate
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-3 py-2">
+                <p className="text-xs text-text-muted text-center max-w-sm">
+                  Generate a resume-ready bullet point from your study history, powered by AI.
+                </p>
+                <button
+                  onClick={async () => {
+                    setExperienceLoading(true)
+                    try {
+                      const res = await generateExperience({})
+                      setExperienceText(res.experience_text)
+                      capture('experience_generated', { topic: '', cards_studied_count: res.cards_studied })
+                    } catch {
+                      // toast is handled by API interceptor
+                    } finally {
+                      setExperienceLoading(false)
+                    }
+                  }}
+                  disabled={experienceLoading}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-accent-primary/10 border border-accent-primary/25 text-accent-primary text-sm font-semibold hover:bg-accent-primary/18 transition-colors disabled:opacity-40"
+                >
+                  {experienceLoading ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={14} />
+                      Generate My Experience
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
         </section>
 
         {/* ── Skill radar ──────────────────────────────────────────── */}
