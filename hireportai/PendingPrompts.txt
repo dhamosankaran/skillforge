@@ -65,9 +65,13 @@ Follow-ups (not done)
   - createCheckoutSession() API client uses default base URL — verify CORS + auth header propagation manually before going live.                                                                                                                 
   - Pydantic v2 deprecation warning in config.py:8 — class Config → ConfigDict. Cosmetic, but the warning persists across every test run.                                                                                                        
                                                                                          
+Defer to later phases:
 
-P0-S8: Verify Production
-Start with this
+PaywallModal tests → Phase 4 (hardening)
+Webhook idempotency table → Phase 4 (hardening)
+CORS + auth header verification on createCheckoutSession → your manual test checklist when you test Stripe in test mode
+
+
 
 ### P1-S23: Phase 1 Final Verification
 
