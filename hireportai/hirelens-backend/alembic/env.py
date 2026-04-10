@@ -45,6 +45,7 @@ import app.models.category     # noqa: E402, F401
 import app.models.card          # noqa: E402, F401
 import app.models.card_progress  # noqa: E402, F401
 import app.models.gamification  # noqa: E402, F401
+import app.models.card_feedback  # noqa: E402, F401
 
 target_metadata = Base.metadata
 

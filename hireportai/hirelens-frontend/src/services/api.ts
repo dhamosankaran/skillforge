@@ -322,6 +322,33 @@ export async function updateEmailPreferences(
   return response.data
 }
 
+// ─── Card Feedback ────────────────────────────────────────────────────────────
+
+export interface CardFeedbackRequest {
+  vote: 'up' | 'down'
+  comment?: string
+}
+
+export interface CardFeedbackResponse {
+  id: string
+  user_id: string
+  card_id: string
+  vote: string
+  comment: string | null
+  created_at: string
+}
+
+export async function submitCardFeedback(
+  cardId: string,
+  req: CardFeedbackRequest,
+): Promise<CardFeedbackResponse> {
+  const response = await api.post<CardFeedbackResponse>(
+    `/api/v1/cards/${cardId}/feedback`,
+    req,
+  )
+  return response.data
+}
+
 // ─── Onboarding — Persona picker ──────────────────────────────────────────────
 
 export interface CompleteOnboardingRequest {

@@ -10,9 +10,9 @@
  */
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Eye, CheckCircle, AlertCircle } from 'lucide-react'
+import { Eye, CheckCircle, AlertCircle, ThumbsUp, ThumbsDown } from 'lucide-react'
 import clsx from 'clsx'
-import { submitReview } from '@/services/api'
+import { submitReview, submitCardFeedback } from '@/services/api'
 import { capture } from '@/utils/posthog'
 import type { FsrsRating, ReviewResponse } from '@/types'
 
@@ -230,9 +230,120 @@ export function QuizPanel({
                 )}
               </p>
             </div>
+
+            {/* ── Card feedback ── */}
+            <CardFeedbackRow cardId={cardId} />
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  )
+}
+
+
+/* ── Card Feedback Row ───────────────────────────────────────────────────── */
+
+type FeedbackState = 'idle' | 'comment' | 'submitting' | 'sent'
+
+function CardFeedbackRow({ cardId }: { cardId: string }) {
+  const [fbState, setFbState] = useState<FeedbackState>('idle')
+  const [vote, setVote] = useState<'up' | 'down' | null>(null)
+  const [comment, setComment] = useState('')
+
+  async function handleVote(v: 'up' | 'down') {
+    setVote(v)
+    if (v === 'up') {
+      // Submit immediately for upvotes
+      setFbState('submitting')
+      try {
+        await submitCardFeedback(cardId, { vote: v })
+        capture('card_feedback_submitted', { card_id: cardId, vote: v, has_comment: false })
+        setFbState('sent')
+      } catch {
+        setFbState('idle')
+      }
+    } else {
+      // Show comment input for downvotes
+      setFbState('comment')
+    }
+  }
+
+  async function handleSubmitComment() {
+    if (!vote) return
+    setFbState('submitting')
+    try {
+      const trimmed = comment.trim() || undefined
+      await submitCardFeedback(cardId, { vote, comment: trimmed })
+      capture('card_feedback_submitted', {
+        card_id: cardId,
+        vote,
+        has_comment: !!trimmed,
+      })
+      setFbState('sent')
+    } catch {
+      setFbState('comment')
+    }
+  }
+
+  if (fbState === 'sent') {
+    return (
+      <p className="text-[11px] text-text-muted mt-2">Thanks for your feedback!</p>
+    )
+  }
+
+  return (
+    <div className="mt-3 w-full max-w-xs">
+      {fbState === 'idle' && (
+        <div className="flex items-center justify-center gap-3">
+          <span className="text-[11px] text-text-muted">Rate this card:</span>
+          <button
+            onClick={() => handleVote('up')}
+            className="p-1.5 rounded-lg border border-white/[0.08] hover:border-accent-primary/30 hover:bg-accent-primary/[0.06] transition-all text-text-muted hover:text-accent-primary"
+            aria-label="Thumbs up"
+          >
+            <ThumbsUp size={14} />
+          </button>
+          <button
+            onClick={() => handleVote('down')}
+            className="p-1.5 rounded-lg border border-white/[0.08] hover:border-red-500/30 hover:bg-red-500/[0.06] transition-all text-text-muted hover:text-red-400"
+            aria-label="Thumbs down"
+          >
+            <ThumbsDown size={14} />
+          </button>
+        </div>
+      )}
+
+      {(fbState === 'comment' || fbState === 'submitting') && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          className="flex flex-col gap-2"
+        >
+          <textarea
+            placeholder="What's wrong with this card? (optional)"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            rows={2}
+            className="w-full px-3 py-2 rounded-lg border border-white/[0.08] bg-white/[0.03] text-xs text-text-secondary placeholder:text-text-muted resize-none focus:outline-none focus:border-accent-primary/30"
+          />
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={() => { setVote(null); setFbState('idle'); setComment('') }}
+              disabled={fbState === 'submitting'}
+              className="px-3 py-1 text-[11px] text-text-muted hover:text-text-secondary transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmitComment}
+              disabled={fbState === 'submitting'}
+              className="px-3 py-1 rounded-lg bg-accent-primary/10 border border-accent-primary/25 text-accent-primary text-[11px] font-medium hover:bg-accent-primary/18 transition-colors disabled:opacity-40"
+            >
+              {fbState === 'submitting' ? 'Sending...' : 'Send feedback'}
+            </button>
+          </div>
+        </motion.div>
+      )}
     </div>
   )
 }
