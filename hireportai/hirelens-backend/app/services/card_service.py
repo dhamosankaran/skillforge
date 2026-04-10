@@ -91,7 +91,7 @@ async def list_categories(db: AsyncSession, user: User) -> CategoryListResponse:
     """
     stmt = (
         select(Category, func.count(Card.id).label("card_count"))
-        .outerjoin(Card, Card.category_id == Category.id)
+        .outerjoin(Card, (Card.category_id == Category.id) & (Card.deleted_at.is_(None)))
         .group_by(Category.id)
         .order_by(Category.display_order)
     )
@@ -137,7 +137,9 @@ async def get_cards_by_category(
         )
 
     result = await db.execute(
-        select(Card).where(Card.category_id == category_id).order_by(Card.created_at)
+        select(Card)
+        .where(Card.category_id == category_id, Card.deleted_at.is_(None))
+        .order_by(Card.created_at)
     )
     cards = result.scalars().all()
 
@@ -167,7 +169,7 @@ async def get_card(card_id: str, db: AsyncSession, user: User) -> CardResponse:
     result = await db.execute(
         select(Card, Category)
         .join(Category, Category.id == Card.category_id)
-        .where(Card.id == card_id)
+        .where(Card.id == card_id, Card.deleted_at.is_(None))
     )
     row = result.first()
     if row is None:
@@ -219,7 +221,7 @@ async def search_cards(
             (1 - Card.embedding.cosine_distance(query_vector)).label("score"),
         )
         .join(Category, Category.id == Card.category_id)
-        .where(Card.embedding.is_not(None))
+        .where(Card.embedding.is_not(None), Card.deleted_at.is_(None))
         .order_by(Card.embedding.cosine_distance(query_vector))
         .limit(limit)
     )
