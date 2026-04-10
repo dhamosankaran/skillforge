@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, useInView } from "framer-motion";
+import { ScanLine, Brain, Target, ShieldCheck, BookOpen, UserCheck, Zap } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 import { capture } from "@/utils/posthog";
 
 /* ═══════════════════════════════════════════════════════════════
@@ -27,6 +29,9 @@ const stagger = {
 };
 
 export default function LandingPage() {
+  const { user } = useAuth();
+  const ctaTo = user ? "/study" : "/login";
+
   // Acquisition funnel entry point. Fires once per mount.
   useEffect(() => {
     capture('landing_page_viewed');
@@ -39,14 +44,15 @@ export default function LandingPage() {
       fontFamily: "var(--sf-font-body)",
       overflow: "hidden",
     }}>
-      <LandingNavbar />
-      <Hero />
+      <LandingNavbar ctaTo={ctaTo} />
+      <Hero ctaTo={ctaTo} />
       <LogoBar />
       <TheLoop />
       <ThreeEngines />
       <HowItWorks />
-      <Pricing />
-      <FinalCTA />
+      <Pricing ctaTo={ctaTo} />
+      <Trust />
+      <FinalCTA ctaTo={ctaTo} />
       <Footer />
     </div>
   );
@@ -54,7 +60,7 @@ export default function LandingPage() {
 
 /* ── NAVBAR ── */
 
-function LandingNavbar() {
+function LandingNavbar({ ctaTo }: { ctaTo: string }) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -97,12 +103,12 @@ function LandingNavbar() {
         <a href="#pricing" style={{ color: "var(--sf-text-secondary)", textDecoration: "none", fontSize: 14, fontWeight: 500 }}>Pricing</a>
         <Link to="/login" style={{ color: "var(--sf-text-secondary)", textDecoration: "none", fontSize: 14, fontWeight: 500 }}>Log in</Link>
         <Link
-          to="/login"
+          to={ctaTo}
           className="sf-btn-primary"
           style={{ padding: "8px 20px", fontSize: 13 }}
           onClick={() => capture('cta_clicked', { button: 'hero' })}
         >
-          Scan Free
+          Start Free
         </Link>
       </div>
     </nav>
@@ -111,7 +117,7 @@ function LandingNavbar() {
 
 /* ── HERO ── */
 
-function Hero() {
+function Hero({ ctaTo }: { ctaTo: string }) {
   return (
     <section style={{
       position: "relative",
@@ -170,9 +176,9 @@ function Hero() {
           fontFamily: "var(--sf-font-display)",
           margin: "0 0 24px",
         }}>
-          Stop guessing.{" "}
+          Ace your next{" "}
           <span className="sf-gradient-text">
-            Start forging.
+            engineering interview
           </span>
         </motion.h1>
 
@@ -183,19 +189,24 @@ function Hero() {
           maxWidth: 580,
           margin: "0 auto 40px",
         }}>
-          Scan your resume. See exactly where you're weak. Study the right cards with spaced repetition. Ace the interview.
+          Scan your resume, study your gaps with AI-powered spaced repetition, and walk into every interview prepared.
         </motion.p>
 
         <motion.div variants={fadeUp} style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
           <Link
-            to="/login"
+            to={ctaTo}
             className="sf-btn-primary"
             style={{ fontSize: 16, padding: "14px 36px", textDecoration: "none" }}
             onClick={() => capture('cta_clicked', { button: 'hero' })}
           >
-            Scan Your Resume Free →
+            Start Free →
           </Link>
-          <a href="#how" className="sf-btn-secondary" style={{ fontSize: 16, padding: "14px 36px" }}>
+          <a
+            href="#how"
+            className="sf-btn-secondary"
+            style={{ fontSize: 16, padding: "14px 36px" }}
+            onClick={() => capture('cta_clicked', { button: 'how_it_works' })}
+          >
             See how it works
           </a>
         </motion.div>
@@ -205,7 +216,7 @@ function Hero() {
           color: "var(--sf-text-tertiary)",
           marginTop: 16,
         }}>
-          Free ATS scan + 15 study cards. No credit card required.
+          Join 500+ engineers studying smarter. No credit card required.
         </motion.p>
       </motion.div>
 
@@ -400,9 +411,9 @@ function HowItWorks() {
   const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   const steps = [
-    { num: "01", title: "Scan your resume", desc: "Drop your PDF. Our AI runs it through real ATS scoring and surfaces every skill gap — in 30 seconds.", color: "var(--sf-accent-primary)" },
-    { num: "02", title: "Study your gaps", desc: "Each gap maps to expert flashcards. FSRS schedules reviews at the optimal moment. 5 cards a day builds mastery.", color: "var(--sf-accent-secondary)" },
-    { num: "03", title: "Ace the interview", desc: "Track your progress with skill radar. Set a Mission countdown for your interview date. Show up prepared.", color: "var(--sf-accent-warm)" },
+    { icon: <ScanLine size={24} />, title: "Scan your resume", desc: "Drop your PDF. Our AI runs it through real ATS scoring and surfaces every skill gap — in 30 seconds.", color: "var(--sf-accent-primary)" },
+    { icon: <Brain size={24} />, title: "Study your gaps", desc: "Each gap maps to expert flashcards. FSRS schedules reviews at the optimal moment. 5 cards a day builds mastery.", color: "var(--sf-accent-secondary)" },
+    { icon: <Target size={24} />, title: "Ace the interview", desc: "Track your progress with skill radar. Set a Mission countdown for your interview date. Show up prepared.", color: "var(--sf-accent-warm)" },
   ];
 
   return (
@@ -417,7 +428,7 @@ function HowItWorks() {
 
         <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
           {steps.map(step => (
-            <motion.div key={step.num} variants={fadeUp} style={{
+            <motion.div key={step.title} variants={fadeUp} style={{
               display: "flex", gap: 24, alignItems: "flex-start",
               padding: "28px",
               borderRadius: "var(--sf-radius-lg)",
@@ -429,11 +440,10 @@ function HowItWorks() {
                 background: `${step.color}15`,
                 border: `1px solid ${step.color}30`,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontFamily: "var(--sf-font-mono)", fontSize: 14, fontWeight: 700,
                 color: step.color,
                 flexShrink: 0,
               }}>
-                {step.num}
+                {step.icon}
               </div>
               <div>
                 <h3 style={{ fontSize: 20, fontWeight: 700, fontFamily: "var(--sf-font-display)", margin: "0 0 8px", letterSpacing: "-0.02em" }}>
@@ -453,7 +463,7 @@ function HowItWorks() {
 
 /* ── PRICING ── */
 
-function Pricing() {
+function Pricing({ ctaTo }: { ctaTo: string }) {
   const ref = useRef<HTMLElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
 
@@ -483,14 +493,14 @@ function Pricing() {
               <span style={{ color: "var(--sf-text-tertiary)", fontSize: 14 }}>/forever</span>
             </div>
             <ul style={{ listStyle: "none", padding: 0, margin: "0 0 32px", display: "flex", flexDirection: "column", gap: 12 }}>
-              {["ATS resume scan (unlimited)", "15 Foundation study cards", "Basic skill gap report", "Community access"].map(f => (
+              {["15 study cards", "1 ATS resume scan", "Daily review", "Basic skill gap report"].map(f => (
                 <li key={f} style={{ fontSize: 14, color: "var(--sf-text-secondary)", display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ color: "var(--sf-accent-success)", fontSize: 16 }}>✓</span> {f}
                 </li>
               ))}
             </ul>
             <Link
-              to="/login"
+              to={ctaTo}
               className="sf-btn-secondary"
               style={{ display: "block", textAlign: "center", textDecoration: "none" }}
               onClick={() => capture('cta_clicked', { button: 'pricing' })}
@@ -519,13 +529,13 @@ function Pricing() {
             <ul style={{ listStyle: "none", padding: 0, margin: "0 0 32px", display: "flex", flexDirection: "column", gap: 12 }}>
               {[
                 "Everything in Free",
-                "177 expert flashcards (all categories)",
-                "FSRS spaced repetition (Daily 5)",
+                "Unlimited study cards",
+                "Unlimited ATS scans",
                 "Mission Mode — interview countdown",
+                "Streak freeze",
+                "FSRS spaced repetition (Daily 5)",
                 "Skill radar + activity heatmap",
-                "Streaks, XP, and badges",
                 "Daily email reminders",
-                "AI-generated study experiences",
               ].map(f => (
                 <li key={f} style={{ fontSize: 14, color: "var(--sf-text-secondary)", display: "flex", alignItems: "center", gap: 10 }}>
                   <span style={{ color: "var(--sf-accent-primary)", fontSize: 16 }}>✓</span> {f}
@@ -533,7 +543,7 @@ function Pricing() {
               ))}
             </ul>
             <Link
-              to="/login"
+              to={ctaTo}
               className="sf-btn-primary"
               style={{ display: "block", textAlign: "center", textDecoration: "none", width: "100%", boxSizing: "border-box" }}
               onClick={() => capture('cta_clicked', { button: 'pricing' })}
@@ -552,7 +562,7 @@ function Pricing() {
 
 /* ── FINAL CTA ── */
 
-function FinalCTA() {
+function FinalCTA({ ctaTo }: { ctaTo: string }) {
   return (
     <section style={{
       padding: "96px 24px",
@@ -577,14 +587,80 @@ function FinalCTA() {
           The engineers who get $200K+ offers aren't smarter. They're more prepared. Start your first scan in 30 seconds.
         </p>
         <Link
-          to="/login"
+          to={ctaTo}
           className="sf-btn-primary"
           style={{ fontSize: 17, padding: "16px 40px", textDecoration: "none" }}
           onClick={() => capture('cta_clicked', { button: 'hero' })}
         >
-          Scan Your Resume Free →
+          Start Free →
         </Link>
       </div>
+    </section>
+  );
+}
+
+/* ── TRUST ── */
+
+function Trust() {
+  const ref = useRef<HTMLElement>(null);
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
+
+  const items = [
+    { icon: <Zap size={24} />, title: "AI-powered spaced repetition", desc: "FSRS algorithm schedules reviews at the optimal moment for long-term retention." },
+    { icon: <BookOpen size={24} />, title: "177+ expert-curated cards", desc: "Covering system design, algorithms, behavioral, and more — written by senior engineers." },
+    { icon: <UserCheck size={24} />, title: "Personalized to your resume gaps", desc: "Our ATS scanner identifies exactly what you're missing and builds a study plan around it." },
+    { icon: <ShieldCheck size={24} />, title: "Built by engineers, for engineers", desc: "We've been through the interview grind. SkillForge is the tool we wished we had." },
+  ];
+
+  return (
+    <section ref={ref} style={{ padding: "96px 24px" }}>
+      <motion.div initial="hidden" animate={isInView ? "visible" : "hidden"} variants={stagger} style={{ maxWidth: 880, margin: "0 auto" }}>
+        <motion.div variants={fadeUp} style={{ textAlign: "center", marginBottom: 56 }}>
+          <p className="sf-badge sf-badge-purple" style={{ margin: "0 auto 16px", display: "inline-flex" }}>WHY SKILLFORGE</p>
+          <h2 style={{
+            fontSize: "clamp(28px, 4vw, 44px)", fontWeight: 800,
+            fontFamily: "var(--sf-font-display)", letterSpacing: "-0.03em", margin: 0,
+          }}>
+            Everything you need to{" "}
+            <span className="sf-gradient-text">level up</span>
+          </h2>
+        </motion.div>
+
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          gap: 24,
+        }}>
+          {items.map(item => (
+            <motion.div key={item.title} variants={fadeUp} style={{
+              padding: "28px 24px",
+              borderRadius: "var(--sf-radius-lg)",
+              border: "1px solid var(--sf-border-subtle)",
+              background: "var(--sf-bg-tertiary)",
+            }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: "var(--sf-radius-md)",
+                background: "rgba(123,97,255,0.1)",
+                border: "1px solid rgba(123,97,255,0.2)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "var(--sf-accent-secondary)",
+                marginBottom: 16,
+              }}>
+                {item.icon}
+              </div>
+              <h3 style={{
+                fontSize: 16, fontWeight: 700, fontFamily: "var(--sf-font-display)",
+                letterSpacing: "-0.02em", margin: "0 0 8px",
+              }}>
+                {item.title}
+              </h3>
+              <p style={{ fontSize: 14, color: "var(--sf-text-secondary)", lineHeight: 1.6, margin: 0 }}>
+                {item.desc}
+              </p>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
     </section>
   );
 }
@@ -614,9 +690,11 @@ function Footer() {
         <span style={{ fontSize: 14, fontWeight: 600, fontFamily: "var(--sf-font-display)" }}>SkillForge</span>
       </div>
       <p style={{ fontSize: 13, color: "var(--sf-text-tertiary)", margin: 0 }}>
-        © 2025 SkillForge. All rights reserved.
+        © 2026 SkillForge. All rights reserved.
       </p>
-      <div style={{ display: "flex", gap: 24 }}>
+      <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+        <a href="#how" style={{ color: "var(--sf-text-tertiary)", textDecoration: "none", fontSize: 13 }}>About</a>
+        <a href="#pricing" style={{ color: "var(--sf-text-tertiary)", textDecoration: "none", fontSize: 13 }}>Pricing</a>
         <a href="/privacy" style={{ color: "var(--sf-text-tertiary)", textDecoration: "none", fontSize: 13 }}>Privacy</a>
         <a href="/terms" style={{ color: "var(--sf-text-tertiary)", textDecoration: "none", fontSize: 13 }}>Terms</a>
         <a href="mailto:hello@theskillsforge.dev" style={{ color: "var(--sf-text-tertiary)", textDecoration: "none", fontSize: 13 }}>Contact</a>
