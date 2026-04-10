@@ -6,6 +6,8 @@ import type {
   CategoriesResponse,
   CoverLetterResponse,
   DailyQueueResponse,
+  EmailPreference,
+  EmailPreferenceUpdate,
   GamificationStats,
   InterviewPrepResponse,
   MissionCreateRequest,
@@ -297,6 +299,20 @@ export async function fetchGamificationStats(): Promise<GamificationStats> {
   const response = await api.get<GamificationStats>(
     '/api/v1/gamification/stats',
   )
+  return response.data
+}
+
+// ─── Email Preferences ──────────────────────────────────────────────────────
+
+export async function fetchEmailPreferences(): Promise<EmailPreference> {
+  const response = await api.get<EmailPreference>('/api/v1/email-preferences')
+  return response.data
+}
+
+export async function updateEmailPreferences(
+  data: EmailPreferenceUpdate,
+): Promise<EmailPreference> {
+  const response = await api.put<EmailPreference>('/api/v1/email-preferences', data)
   return response.data
 }
 

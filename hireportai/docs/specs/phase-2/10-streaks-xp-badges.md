@@ -1,6 +1,6 @@
 # SPEC: Streaks, XP & Badges
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 Daily-return habit is the single largest driver of long-term retention for a

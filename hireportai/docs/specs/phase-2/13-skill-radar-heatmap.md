@@ -1,6 +1,6 @@
 # Spec 13 — Skill Radar + Activity Heatmap
 
-**Phase:** 2 | **Status:** in-progress | **Priority:** P1
+**Phase:** 2 | **Status:** done | **Priority:** P1
 
 ## Goal
 Give users a visual dashboard showing (a) how well they've covered each

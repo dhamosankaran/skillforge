@@ -1,6 +1,6 @@
 # SPEC: Email Preferences API
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 Users need control over the daily email reminders introduced in Spec #15.

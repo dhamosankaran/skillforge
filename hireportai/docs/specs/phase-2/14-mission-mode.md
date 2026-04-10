@@ -1,6 +1,6 @@
 # SPEC: Mission Mode — Time-Bound Study Sprints
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 Users preparing for interviews need a structured, deadline-driven study plan.

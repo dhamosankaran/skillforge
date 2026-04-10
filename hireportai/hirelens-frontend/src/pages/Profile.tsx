@@ -18,7 +18,7 @@
  */
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Flame, Lock, Trophy, BookOpen, Sparkles, Radar, CalendarDays } from 'lucide-react'
+import { Flame, Lock, Trophy, BookOpen, Sparkles, Radar, CalendarDays, Settings } from 'lucide-react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { XPBar } from '@/components/profile/XPBar'
 import { useGamification } from '@/context/GamificationContext'
@@ -27,6 +27,7 @@ import { capture } from '@/utils/posthog'
 import api from '@/services/api'
 import { SkillRadar } from '@/components/progress/SkillRadar'
 import { ActivityHeatmap } from '@/components/progress/ActivityHeatmap'
+import { EmailPreferences } from '@/components/settings/EmailPreferences'
 
 // ── Badge catalog (mirror of backend BADGES tuple) ───────────────────────────
 
@@ -228,6 +229,17 @@ export default function Profile() {
           <div className="rounded-2xl border border-white/[0.08] bg-bg-surface/60 p-5 overflow-x-auto">
             <ActivityHeatmap />
           </div>
+        </section>
+
+        {/* ── Settings ──────────────────────────────────────────── */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <Settings size={14} className="text-accent-primary" />
+            <h2 className="text-[11px] uppercase tracking-[0.15em] text-text-secondary font-semibold">
+              Settings
+            </h2>
+          </div>
+          <EmailPreferences />
         </section>
 
         {isLoading && (

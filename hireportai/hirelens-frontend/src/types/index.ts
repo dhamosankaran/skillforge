@@ -278,6 +278,19 @@ export interface GamificationStats {
   badges: BadgeView[]
 }
 
+// ─── Email Preferences (spec phase-2/15-16) ─────────────────────────────────
+
+export interface EmailPreference {
+  user_id: string
+  daily_reminder: boolean
+  timezone: string
+}
+
+export interface EmailPreferenceUpdate {
+  daily_reminder?: boolean
+  timezone?: string
+}
+
 // ─── Analysis ─────────────────────────────────────────────────────────────────
 
 export interface AnalysisState {

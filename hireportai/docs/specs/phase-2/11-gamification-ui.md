@@ -1,6 +1,6 @@
 # SPEC: Gamification UI (Heatmap, Radar, Badges)
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 <!-- What user problem does this solve? -->

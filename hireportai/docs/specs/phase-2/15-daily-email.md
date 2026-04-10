@@ -1,6 +1,6 @@
 # SPEC: Daily Email Reminders
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 Users forget to return to SkillForge after the initial excitement fades.

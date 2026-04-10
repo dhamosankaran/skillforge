@@ -1,6 +1,6 @@
 # SPEC: Admin AI Card Generator
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 <!-- What user problem does this solve? -->

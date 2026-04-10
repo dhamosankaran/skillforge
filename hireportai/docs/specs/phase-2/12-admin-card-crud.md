@@ -1,6 +1,6 @@
 # SPEC: Admin Card CRUD Panel
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 <!-- What user problem does this solve? -->
