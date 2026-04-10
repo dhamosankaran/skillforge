@@ -34,7 +34,7 @@ export function FlipCard({
 }: FlipCardProps) {
   return (
     /* 3D stage — perspective must be on the *parent*, not the rotating element */
-    <div style={{ perspective: '1200px' }} className="w-full">
+    <div style={{ perspective: '1200px' }} className="w-full" data-tour="flip-card">
       <div className="relative w-full" style={{ minHeight: '420px' }}>
 
         {/* ── Front face ─────────────────────────────────────────────── */}

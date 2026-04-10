@@ -91,7 +91,7 @@ export function Navbar() {
           {/* ── Right: streak + plan + auth + hamburger ── */}
           <div className="flex items-center gap-3 flex-shrink-0">
             {/* Streak badge (signed-in users only; component renders null otherwise) */}
-            {user && <StreakBadge />}
+            {user && <span data-tour="streak-badge"><StreakBadge /></span>}
 
             {/* Plan badge (hidden on mobile) */}
             <Link

@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { Navbar } from '@/components/layout/Navbar'
 import { useAuth } from '@/context/AuthContext'
+import PersonaPicker from '@/components/onboarding/PersonaPicker'
 import LandingPage from '@/pages/LandingPage'
 import LoginPage from '@/pages/LoginPage'
 import Analyze from '@/pages/Analyze'
@@ -19,11 +20,12 @@ import Profile from '@/pages/Profile'
 import MissionMode from '@/pages/MissionMode'
 import AdminPanel from '@/pages/AdminPanel'
 
-/** Redirects unauthenticated users to /. Renders nothing while auth hydrates. */
+/** Redirects unauthenticated users to /. Shows PersonaPicker if onboarding not done. */
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
   if (isLoading) return null
   if (!user) return <Navigate to="/" replace />
+  if (!user.onboarding_completed) return <PersonaPicker />
   return <>{children}</>
 }
 

@@ -322,6 +322,24 @@ export async function updateEmailPreferences(
   return response.data
 }
 
+// ─── Onboarding — Persona picker ──────────────────────────────────────────────
+
+export interface CompleteOnboardingRequest {
+  persona: 'interview' | 'climber' | 'team'
+  target_company?: string
+  target_date?: string
+}
+
+export async function completeOnboarding(
+  req: CompleteOnboardingRequest,
+): Promise<{ persona: string; onboarding_completed: boolean }> {
+  const response = await api.patch<{ persona: string; onboarding_completed: boolean }>(
+    '/api/v1/auth/onboarding',
+    req,
+  )
+  return response.data
+}
+
 // ─── Onboarding — ATS gap → card bridge ───────────────────────────────────────
 
 /**

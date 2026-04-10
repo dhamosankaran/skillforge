@@ -88,7 +88,7 @@ export default function StudyDashboard() {
             </p>
           </div>
 
-          <GlowButton onClick={() => navigate('/study/daily')} size="sm">
+          <GlowButton onClick={() => navigate('/study/daily')} size="sm" data-tour="daily-review">
             <Play size={13} />
             Start Daily Review
           </GlowButton>
@@ -169,7 +169,7 @@ export default function StudyDashboard() {
               </motion.div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" data-tour="category-grid">
               {isLoading
                 ? [...Array(skeletonCount)].map((_, i) => <CategoryCardSkeleton key={i} />)
                 : visibleCategories.map((cat, i) => (

@@ -1,4 +1,6 @@
 """Authentication endpoints — Google OAuth + JWT."""
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,6 +41,12 @@ class RefreshResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class OnboardingRequest(BaseModel):
+    persona: str  # 'interview' | 'climber' | 'team'
+    target_company: Optional[str] = None
+    target_date: Optional[str] = None
+
+
 # --- Endpoints ---
 
 @router.post("/auth/google", response_model=TokenResponse)
@@ -71,6 +79,9 @@ async def google_auth(body: GoogleAuthRequest, db: AsyncSession = Depends(get_db
             "email": user.email,
             "name": user.name,
             "avatar_url": user.avatar_url,
+            "role": user.role,
+            "persona": user.persona,
+            "onboarding_completed": user.onboarding_completed,
         },
     )
 
@@ -112,10 +123,40 @@ async def get_me(user: User = Depends(get_current_user), db: AsyncSession = Depe
         "name": user.name,
         "avatar_url": user.avatar_url,
         "role": user.role,
+        "persona": user.persona,
+        "onboarding_completed": user.onboarding_completed,
         "created_at": str(user.created_at),
         "subscription": {
             "plan": sub.plan if sub else "free",
             "status": sub.status if sub else "active",
             "current_period_end": str(sub.current_period_end) if sub and sub.current_period_end else None,
         },
+    }
+
+
+@router.patch("/auth/onboarding")
+async def complete_onboarding(
+    body: OnboardingRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Record persona selection and mark onboarding as completed."""
+    if body.persona not in ("interview", "climber", "team"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="persona must be one of: interview, climber, team",
+        )
+    user.persona = body.persona
+    user.onboarding_completed = True
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    return {
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "avatar_url": user.avatar_url,
+        "role": user.role,
+        "persona": user.persona,
+        "onboarding_completed": user.onboarding_completed,
     }

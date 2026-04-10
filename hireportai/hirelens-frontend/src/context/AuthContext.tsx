@@ -28,6 +28,8 @@ export interface AuthUser {
   name: string
   avatar_url: string | null
   role: 'user' | 'admin'
+  persona: 'interview' | 'climber' | 'team' | null
+  onboarding_completed: boolean
 }
 
 interface AuthContextValue {
@@ -35,6 +37,7 @@ interface AuthContextValue {
   isLoading: boolean
   signIn: (credential: string) => Promise<void>
   signOut: () => Promise<void>
+  updateUser: (patch: Partial<AuthUser>) => void
 }
 
 export const STORAGE_KEY_ACCESS = 'skillforge_access_token'
@@ -89,6 +92,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(backendUser)
   }, [])
 
+  const updateUser = useCallback((patch: Partial<AuthUser>) => {
+    setUser((prev) => {
+      if (!prev) return prev
+      const updated = { ...prev, ...patch }
+      localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(updated))
+      return updated
+    })
+  }, [])
+
   const signOut = useCallback(async (): Promise<void> => {
     const token = localStorage.getItem(STORAGE_KEY_ACCESS)
     if (token) {
@@ -105,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, isLoading, signIn, signOut, updateUser }}>
       {children}
     </AuthContext.Provider>
   )
