@@ -1,6 +1,6 @@
 # SPEC: Unified Landing Page
 
-## Status: Draft
+## Status: Deferred
 
 ## Problem
 <!-- What user problem does this solve? -->

@@ -1,6 +1,6 @@
 # SPEC: AI Weekly Feedback Digest
 
-## Status: Draft
+## Status: Deferred
 
 ## Problem
 <!-- What user problem does this solve? -->
