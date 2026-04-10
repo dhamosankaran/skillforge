@@ -18,13 +18,15 @@
  */
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Flame, Lock, Trophy, BookOpen, Sparkles } from 'lucide-react'
+import { Flame, Lock, Trophy, BookOpen, Sparkles, Radar, CalendarDays } from 'lucide-react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { XPBar } from '@/components/profile/XPBar'
 import { useGamification } from '@/context/GamificationContext'
 import { useAuth } from '@/context/AuthContext'
 import { capture } from '@/utils/posthog'
 import api from '@/services/api'
+import { SkillRadar } from '@/components/progress/SkillRadar'
+import { ActivityHeatmap } from '@/components/progress/ActivityHeatmap'
 
 // ── Badge catalog (mirror of backend BADGES tuple) ───────────────────────────
 
@@ -200,6 +202,32 @@ export default function Profile() {
               <Stat label="In review" value={progress?.by_state?.review ?? 0} />
             </div>
           )}
+        </section>
+
+        {/* ── Skill radar ──────────────────────────────────────────── */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <Radar size={14} className="text-accent-primary" />
+            <h2 className="text-[11px] uppercase tracking-[0.15em] text-text-secondary font-semibold">
+              Skill coverage
+            </h2>
+          </div>
+          <div className="rounded-2xl border border-white/[0.08] bg-bg-surface/60 p-5">
+            <SkillRadar />
+          </div>
+        </section>
+
+        {/* ── Activity heatmap ────────────────────────────────────── */}
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <CalendarDays size={14} className="text-accent-primary" />
+            <h2 className="text-[11px] uppercase tracking-[0.15em] text-text-secondary font-semibold">
+              Activity
+            </h2>
+          </div>
+          <div className="rounded-2xl border border-white/[0.08] bg-bg-surface/60 p-5 overflow-x-auto">
+            <ActivityHeatmap />
+          </div>
         </section>
 
         {isLoading && (
