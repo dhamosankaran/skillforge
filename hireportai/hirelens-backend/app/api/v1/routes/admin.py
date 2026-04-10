@@ -1,10 +1,11 @@
 """Admin-only endpoints."""
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import require_admin
+from app.core.rate_limit import limiter
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.admin_card import (
@@ -88,7 +89,9 @@ async def import_cards(
 
 
 @router.post("/admin/cards/generate", response_model=CardDraftResponse)
+@limiter.limit("5/minute")
 async def generate_card(
+    request: Request,
     payload: CardGenerateRequest,
     user: User = Depends(require_admin),
 ):

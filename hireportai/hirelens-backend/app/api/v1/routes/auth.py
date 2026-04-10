@@ -1,11 +1,12 @@
 """Authentication endpoints — Google OAuth + JWT."""
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user
+from app.core.rate_limit import limiter
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -50,7 +51,8 @@ class OnboardingRequest(BaseModel):
 # --- Endpoints ---
 
 @router.post("/auth/google", response_model=TokenResponse)
-async def google_auth(body: GoogleAuthRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def google_auth(request: Request, body: GoogleAuthRequest, db: AsyncSession = Depends(get_db)):
     """Validate a Google ID token, upsert user, and return JWT pair."""
     google_info = await verify_google_token(body.credential)
     if google_info is None:
@@ -87,7 +89,8 @@ async def google_auth(body: GoogleAuthRequest, db: AsyncSession = Depends(get_db
 
 
 @router.post("/auth/refresh", response_model=RefreshResponse)
-async def refresh_access_token(body: RefreshRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def refresh_access_token(request: Request, body: RefreshRequest, db: AsyncSession = Depends(get_db)):
     """Exchange a valid refresh token for a new access token."""
     payload = decode_token(body.refresh_token)
     if payload is None or payload.get("type") != "refresh":
@@ -101,13 +104,15 @@ async def refresh_access_token(body: RefreshRequest, db: AsyncSession = Depends(
 
 
 @router.post("/auth/logout", status_code=200)
-async def logout(user: User = Depends(get_current_user)):
+@limiter.limit("10/minute")
+async def logout(request: Request, user: User = Depends(get_current_user)):
     """Logout endpoint (stateless — client should discard tokens)."""
     return {"message": "Logged out successfully"}
 
 
 @router.get("/auth/me")
-async def get_me(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def get_me(request: Request, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Return the current authenticated user's profile and subscription."""
     from app.models.subscription import Subscription
     from sqlalchemy import select
@@ -135,7 +140,9 @@ async def get_me(user: User = Depends(get_current_user), db: AsyncSession = Depe
 
 
 @router.patch("/auth/onboarding")
+@limiter.limit("10/minute")
 async def complete_onboarding(
+    request: Request,
     body: OnboardingRequest,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

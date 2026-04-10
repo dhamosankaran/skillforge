@@ -21,6 +21,12 @@ from typing import AsyncIterator
 
 import pytest
 import pytest_asyncio
+
+from app.core.rate_limit import limiter
+
+# Disable rate limiting globally during tests — the rate-limit test re-enables
+# it locally so other test files are not affected by accumulated counters.
+limiter.enabled = False
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncSession,

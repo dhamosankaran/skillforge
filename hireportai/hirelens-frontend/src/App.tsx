@@ -1,5 +1,7 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
+import { Loader2 } from 'lucide-react'
 import { Navbar } from '@/components/layout/Navbar'
 import { useAuth } from '@/context/AuthContext'
 import PersonaPicker from '@/components/onboarding/PersonaPicker'
@@ -16,9 +18,19 @@ import CategoryDetail from '@/pages/CategoryDetail'
 import CardViewer from '@/pages/CardViewer'
 import DailyReview from '@/pages/DailyReview'
 import Onboarding from '@/pages/Onboarding'
-import Profile from '@/pages/Profile'
-import MissionMode from '@/pages/MissionMode'
-import AdminPanel from '@/pages/AdminPanel'
+
+// Lazy-loaded pages — not on the critical path (Spec #25)
+const Profile = lazy(() => import('@/pages/Profile'))
+const MissionMode = lazy(() => import('@/pages/MissionMode'))
+const AdminPanel = lazy(() => import('@/pages/AdminPanel'))
+
+function LazyFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <Loader2 size={24} className="animate-spin text-text-muted" />
+    </div>
+  )
+}
 
 /** Redirects unauthenticated users to /. Shows PersonaPicker if onboarding not done. */
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -45,6 +57,7 @@ export default function App() {
     <div className="min-h-screen bg-bg-base text-text-primary font-body">
       {!isLanding && <Navbar />}
       <AnimatePresence mode="wait">
+        <Suspense fallback={<LazyFallback />}>
         <Routes location={location} key={location.pathname}>
           {/* Public routes */}
           <Route path="/" element={<HomeRoute />} />
@@ -68,6 +81,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </AnimatePresence>
     </div>
   )
