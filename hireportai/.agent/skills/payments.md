@@ -12,14 +12,17 @@ Foundation cards + ATS scanning. Pro unlocks the full library.
 1. User hits 15-card wall → PaywallModal shows
 2. Click "Upgrade" → POST /api/v1/payments/checkout → Stripe Checkout Session
 3. User completes payment on Stripe-hosted page
-4. Stripe webhook → POST /api/v1/payments/webhook → update user.plan = "pro"
+4. Stripe webhook → POST /api/v1/payments/webhook → update subscription.plan = "pro"
 5. Redirect back to app → full library unlocked
-## Webhook Events to Handle
+## Webhook Events Handled
 - `checkout.session.completed` → activate Pro
 - `customer.subscription.deleted` → downgrade to Free
-- `invoice.payment_failed` → grace period, email user
+- `invoice.payment_failed` → not yet implemented (silently acknowledged)
+## Webhook Idempotency (Spec #22)
+- Duplicate events are deduplicated via the `stripe_events` table (PK = Stripe event ID)
+- Model: `app/models/stripe_event.py`
 ## Analytics Events
-- `paywall_hit` — { card_count_viewed, trigger_page }
-- `checkout_started` — { price_id }
-- `payment_completed` — { amount, plan }
-- `subscription_cancelled` — { months_active, reason }
+- `paywall_hit` — { cards_viewed, trigger, category_name } (frontend)
+- `checkout_started` — { price_id, plan } (backend) / { trigger, plan, price_usd } (frontend)
+- `payment_completed` — { plan, amount_total, currency } (backend, via webhook)
+- `subscription_cancelled` — { plan } (backend, via webhook)
