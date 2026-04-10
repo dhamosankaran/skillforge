@@ -27,6 +27,7 @@ export interface AuthUser {
   email: string
   name: string
   avatar_url: string | null
+  role: 'user' | 'admin'
 }
 
 interface AuthContextValue {

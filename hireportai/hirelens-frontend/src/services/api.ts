@@ -1,8 +1,14 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import toast from 'react-hot-toast'
 import type {
+  AdminCard,
+  AdminCardCreateRequest,
+  AdminCardListResponse,
+  AdminCardUpdateRequest,
   AnalysisResponse,
   Card,
+  CardDraft,
+  CardImportResponse,
   CategoriesResponse,
   CoverLetterResponse,
   DailyQueueResponse,
@@ -362,6 +368,49 @@ export async function fetchOnboardingRecommendations(
         return parts.join('&')
       },
     },
+  )
+  return response.data
+}
+
+// ─── Admin Card CRUD ────────────────────────────────────────────────────────
+
+export async function fetchAdminCards(params?: {
+  page?: number
+  per_page?: number
+  category_id?: string
+  difficulty?: string
+  q?: string
+}): Promise<AdminCardListResponse> {
+  const response = await api.get<AdminCardListResponse>('/api/v1/admin/cards', { params })
+  return response.data
+}
+
+export async function createAdminCard(data: AdminCardCreateRequest): Promise<AdminCard> {
+  const response = await api.post<AdminCard>('/api/v1/admin/cards', data)
+  return response.data
+}
+
+export async function updateAdminCard(id: string, data: AdminCardUpdateRequest): Promise<AdminCard> {
+  const response = await api.put<AdminCard>(`/api/v1/admin/cards/${id}`, data)
+  return response.data
+}
+
+export async function deleteAdminCard(id: string): Promise<void> {
+  await api.delete(`/api/v1/admin/cards/${id}`)
+}
+
+export async function generateCardDraft(topic: string, difficulty: string): Promise<CardDraft> {
+  const response = await api.post<CardDraft>('/api/v1/admin/cards/generate', { topic, difficulty })
+  return response.data
+}
+
+export async function importCardsCSV(file: File, partial: boolean = false): Promise<CardImportResponse> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const response = await api.post<CardImportResponse>(
+    `/api/v1/admin/cards/import?partial=${partial}`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
   )
   return response.data
 }

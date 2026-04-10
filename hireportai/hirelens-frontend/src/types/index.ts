@@ -291,6 +291,58 @@ export interface EmailPreferenceUpdate {
   timezone?: string
 }
 
+// ─── Admin Card CRUD ─────────────────────────────────────────────────────────
+
+export interface AdminCard {
+  id: string
+  category_id: string
+  category_name: string
+  question: string
+  answer: string
+  difficulty: 'easy' | 'medium' | 'hard'
+  tags: string[]
+  embedding_status: 'pending' | 'ready'
+  created_at: string
+  updated_at: string
+}
+
+export interface AdminCardListResponse {
+  cards: AdminCard[]
+  total: number
+  page: number
+  per_page: number
+  pages: number
+}
+
+export interface AdminCardCreateRequest {
+  category_id: string
+  question: string
+  answer: string
+  difficulty: 'easy' | 'medium' | 'hard'
+  tags: string[]
+}
+
+export interface AdminCardUpdateRequest {
+  category_id?: string
+  question?: string
+  answer?: string
+  difficulty?: 'easy' | 'medium' | 'hard'
+  tags?: string[]
+}
+
+export interface CardDraft {
+  question: string
+  answer: string
+  difficulty: 'easy' | 'medium' | 'hard'
+  tags: string[]
+}
+
+export interface CardImportResponse {
+  created_count: number
+  skipped_count: number
+  errors: Array<{ row: number; error: string }>
+}
+
 // ─── Analysis ─────────────────────────────────────────────────────────────────
 
 export interface AnalysisState {
