@@ -1,6 +1,6 @@
 # SPEC: Stripe Unified Pricing ($49/mo Pro)
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 <!-- What user problem does this solve? -->

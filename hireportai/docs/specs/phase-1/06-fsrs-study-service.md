@@ -1,6 +1,6 @@
 # SPEC: FSRS Spaced Repetition (Daily 5)
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 <!-- What user problem does this solve? -->

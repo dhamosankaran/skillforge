@@ -2,7 +2,7 @@
 
 **Spec #:** 06  
 **Phase:** 1  
-**Status:** Draft  
+**Status:** Done
 **Branch:** `feature/p1-06-study-dashboard-ui`
 
 ---

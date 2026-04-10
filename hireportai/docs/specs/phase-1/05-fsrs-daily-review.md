@@ -2,7 +2,7 @@
 
 **Spec #:** 05  
 **Phase:** 1  
-**Status:** Draft  
+**Status:** Done
 **Branch:** `feature/p1-05-fsrs-daily-review`
 
 ---

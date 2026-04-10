@@ -1,6 +1,6 @@
 # SPEC: Card Data Model + JSX Extraction
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 177 study cards are hardcoded in JSX files. This blocks FSRS scheduling (which requires server-side state per user per card), semantic search (which requires embeddings stored in PostgreSQL + pgvector), and any admin CRUD workflow. Until cards live in the database, all Phase 1 study features are unbuildable.

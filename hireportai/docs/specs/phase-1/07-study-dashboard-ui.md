@@ -1,6 +1,6 @@
 # SPEC: Study Dashboard UI
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 <!-- What user problem does this solve? -->

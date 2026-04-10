@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, useInView } from "framer-motion";
+import { capture } from "@/utils/posthog";
 
 /* ═══════════════════════════════════════════════════════════════
    SKILLFORGE LANDING PAGE — "Midnight Forge" Theme
@@ -26,6 +27,11 @@ const stagger = {
 };
 
 export default function LandingPage() {
+  // Acquisition funnel entry point. Fires once per mount.
+  useEffect(() => {
+    capture('landing_page_viewed');
+  }, []);
+
   return (
     <div style={{
       background: "var(--sf-bg-primary)",
@@ -90,7 +96,12 @@ function LandingNavbar() {
         <a href="#how" style={{ color: "var(--sf-text-secondary)", textDecoration: "none", fontSize: 14, fontWeight: 500 }}>How it works</a>
         <a href="#pricing" style={{ color: "var(--sf-text-secondary)", textDecoration: "none", fontSize: 14, fontWeight: 500 }}>Pricing</a>
         <Link to="/login" style={{ color: "var(--sf-text-secondary)", textDecoration: "none", fontSize: 14, fontWeight: 500 }}>Log in</Link>
-        <Link to="/login" className="sf-btn-primary" style={{ padding: "8px 20px", fontSize: 13 }}>
+        <Link
+          to="/login"
+          className="sf-btn-primary"
+          style={{ padding: "8px 20px", fontSize: 13 }}
+          onClick={() => capture('cta_clicked', { button: 'hero' })}
+        >
           Scan Free
         </Link>
       </div>
@@ -176,7 +187,12 @@ function Hero() {
         </motion.p>
 
         <motion.div variants={fadeUp} style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
-          <Link to="/login" className="sf-btn-primary" style={{ fontSize: 16, padding: "14px 36px", textDecoration: "none" }}>
+          <Link
+            to="/login"
+            className="sf-btn-primary"
+            style={{ fontSize: 16, padding: "14px 36px", textDecoration: "none" }}
+            onClick={() => capture('cta_clicked', { button: 'hero' })}
+          >
             Scan Your Resume Free →
           </Link>
           <a href="#how" className="sf-btn-secondary" style={{ fontSize: 16, padding: "14px 36px" }}>
@@ -473,7 +489,12 @@ function Pricing() {
                 </li>
               ))}
             </ul>
-            <Link to="/login" className="sf-btn-secondary" style={{ display: "block", textAlign: "center", textDecoration: "none" }}>
+            <Link
+              to="/login"
+              className="sf-btn-secondary"
+              style={{ display: "block", textAlign: "center", textDecoration: "none" }}
+              onClick={() => capture('cta_clicked', { button: 'pricing' })}
+            >
               Get started free
             </Link>
           </motion.div>
@@ -511,7 +532,12 @@ function Pricing() {
                 </li>
               ))}
             </ul>
-            <Link to="/login" className="sf-btn-primary" style={{ display: "block", textAlign: "center", textDecoration: "none", width: "100%", boxSizing: "border-box" }}>
+            <Link
+              to="/login"
+              className="sf-btn-primary"
+              style={{ display: "block", textAlign: "center", textDecoration: "none", width: "100%", boxSizing: "border-box" }}
+              onClick={() => capture('cta_clicked', { button: 'pricing' })}
+            >
               Start Pro — $49/mo →
             </Link>
             <p style={{ fontSize: 12, color: "var(--sf-text-tertiary)", textAlign: "center", marginTop: 12 }}>
@@ -550,7 +576,12 @@ function FinalCTA() {
         <p style={{ fontSize: 17, color: "var(--sf-text-secondary)", marginBottom: 36, lineHeight: 1.6 }}>
           The engineers who get $200K+ offers aren't smarter. They're more prepared. Start your first scan in 30 seconds.
         </p>
-        <Link to="/login" className="sf-btn-primary" style={{ fontSize: 17, padding: "16px 40px", textDecoration: "none" }}>
+        <Link
+          to="/login"
+          className="sf-btn-primary"
+          style={{ fontSize: 17, padding: "16px 40px", textDecoration: "none" }}
+          onClick={() => capture('cta_clicked', { button: 'hero' })}
+        >
           Scan Your Resume Free →
         </Link>
       </div>

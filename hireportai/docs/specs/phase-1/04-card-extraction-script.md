@@ -1,6 +1,6 @@
 # SPEC: JSX → PostgreSQL Card Extraction
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 <!-- What user problem does this solve? -->

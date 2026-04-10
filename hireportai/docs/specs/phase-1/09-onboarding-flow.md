@@ -2,7 +2,7 @@
 
 **Spec #:** 09
 **Phase:** 1
-**Status:** Draft
+**Status:** Done
 **Branch:** `feature/p1-09-onboarding-flow`
 
 ---

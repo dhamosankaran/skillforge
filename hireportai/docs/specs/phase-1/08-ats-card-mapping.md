@@ -2,7 +2,7 @@
 
 **Spec #:** 08
 **Phase:** 1
-**Status:** Draft
+**Status:** Done
 **Branch:** `feature/p1-08-ats-card-mapping`
 
 ---

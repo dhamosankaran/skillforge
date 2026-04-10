@@ -56,6 +56,16 @@ Environment variables to set in Railway dashboard
    with?      
 
 
+
+Follow-ups (not done)                                                                                                                                                                                                                          
+                                                            
+  - PaywallModal tests — Spec #11 calls for 5 RTL tests (renders trigger headlines, CTA redirects, error toast, Not now, fires checkout_started). Flagged per your instruction.                                                                  
+  - landing_page_viewed + cta_clicked — Never instrumented on LandingPage.tsx. Quick wins if you want them in the funnel.
+  - Webhook idempotency — payment_completed will still double-fire on Stripe retries (stripe_events table not built).                                                                                                                            
+  - createCheckoutSession() API client uses default base URL — verify CORS + auth header propagation manually before going live.                                                                                                                 
+  - Pydantic v2 deprecation warning in config.py:8 — class Config → ConfigDict. Cosmetic, but the warning persists across every test run.                                                                                                        
+                                                                                         
+
 P0-S8: Verify Production
 Start with this
 

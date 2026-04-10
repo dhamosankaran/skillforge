@@ -1,6 +1,6 @@
 # SPEC: Card Viewer (Flip + Quiz + Tabs)
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 <!-- What user problem does this solve? -->

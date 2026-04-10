@@ -1,6 +1,6 @@
 # SPEC: Cards API
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 Cards and categories live in PostgreSQL (seeded in spec #03), but there is no

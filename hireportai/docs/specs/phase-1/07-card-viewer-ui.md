@@ -2,7 +2,7 @@
 
 **Spec #:** 07  
 **Phase:** 1  
-**Status:** Draft  
+**Status:** Done
 **Branch:** `feature/p1-07-card-viewer-ui`
 
 ---

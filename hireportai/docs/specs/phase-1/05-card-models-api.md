@@ -1,6 +1,6 @@
 # SPEC: Card & Category Models + API
 
-## Status: Draft
+## Status: Done
 
 ## Problem
 <!-- What user problem does this solve? -->
