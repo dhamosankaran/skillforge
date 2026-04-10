@@ -11,10 +11,12 @@ from app.schemas.admin_card import (
     AdminCardListResponse,
     AdminCardResponse,
     CardCreateRequest,
+    CardDraftResponse,
+    CardGenerateRequest,
     CardImportResponse,
     CardUpdateRequest,
 )
-from app.services import card_admin_service
+from app.services import ai_card_service, card_admin_service
 
 router = APIRouter()
 
@@ -83,3 +85,11 @@ async def import_cards(
 ):
     content = await file.read()
     return await card_admin_service.bulk_import_csv(content, partial, db)
+
+
+@router.post("/admin/cards/generate", response_model=CardDraftResponse)
+async def generate_card(
+    payload: CardGenerateRequest,
+    user: User = Depends(require_admin),
+):
+    return ai_card_service.generate_card_draft(payload)

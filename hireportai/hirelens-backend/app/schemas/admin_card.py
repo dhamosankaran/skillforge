@@ -62,3 +62,15 @@ class CardImportResponse(BaseModel):
     created_count: int
     skipped_count: int
     errors: list[CardImportRowError]
+
+
+class CardGenerateRequest(BaseModel):
+    topic: str = Field(..., min_length=1, max_length=500)
+    difficulty: Literal["easy", "medium", "hard"]
+
+
+class CardDraftResponse(BaseModel):
+    question: str
+    answer: str
+    difficulty: str
+    tags: list[str]

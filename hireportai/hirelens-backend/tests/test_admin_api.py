@@ -1,11 +1,12 @@
 """Admin Card CRUD API tests.
 
 Covers: create, update, soft-delete, hard-delete, 403 for non-admin,
-bulk CSV import (all-or-nothing and partial mode).
+bulk CSV import (all-or-nothing and partial mode), AI card generation.
 """
 import io
+import json
 import uuid
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
@@ -276,3 +277,66 @@ class TestBulkImport:
         assert data["skipped_count"] == 1
         assert len(data["errors"]) == 1
         assert data["errors"][0]["row"] == 3
+
+
+class TestAICardGeneration:
+    async def test_generates_valid_card_structure(self, client, db_session):
+        """Mock LLM returns valid JSON; endpoint returns a well-structured draft."""
+        token, _ = await _sign_in(client, role="admin")
+
+        mock_llm_response = json.dumps({
+            "question": "What is the time complexity of binary search?",
+            "answer": "O(log n). Binary search halves the search space at each step.",
+            "tags": ["algorithms", "binary-search", "time-complexity"],
+        })
+
+        mock_provider = MagicMock()
+        mock_provider.generate.return_value = mock_llm_response
+
+        with patch(
+            "app.services.ai_card_service.get_llm_provider",
+            return_value=mock_provider,
+        ):
+            resp = await client.post("/api/v1/admin/cards/generate", json={
+                "topic": "Binary search",
+                "difficulty": "medium",
+            }, headers=_auth(token))
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["question"] == "What is the time complexity of binary search?"
+        assert "O(log n)" in data["answer"]
+        assert data["difficulty"] == "medium"
+        assert isinstance(data["tags"], list)
+        assert len(data["tags"]) == 3
+        assert "algorithms" in data["tags"]
+
+    async def test_generate_non_admin_403(self, client, db_session):
+        """Non-admin user gets 403 on the generate endpoint."""
+        token, _ = await _sign_in(client, role="user")
+
+        resp = await client.post("/api/v1/admin/cards/generate", json={
+            "topic": "Binary search",
+            "difficulty": "easy",
+        }, headers=_auth(token))
+
+        assert resp.status_code == 403
+
+    async def test_generate_llm_failure_503(self, client, db_session):
+        """LLM failure returns 503."""
+        token, _ = await _sign_in(client, role="admin")
+
+        mock_provider = MagicMock()
+        mock_provider.generate.side_effect = RuntimeError("LLM down")
+
+        with patch(
+            "app.services.ai_card_service.get_llm_provider",
+            return_value=mock_provider,
+        ):
+            resp = await client.post("/api/v1/admin/cards/generate", json={
+                "topic": "Merge sort",
+                "difficulty": "hard",
+            }, headers=_auth(token))
+
+        assert resp.status_code == 503
+        assert "unavailable" in resp.json()["detail"].lower()
