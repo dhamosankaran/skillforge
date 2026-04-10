@@ -1,6 +1,7 @@
 """FastAPI dependencies for authentication and authorization."""
 from typing import Optional
 
+import sentry_sdk
 from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
@@ -59,6 +60,7 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
         )
+    sentry_sdk.set_user({"id": user.id, "email": user.email})
     return user
 
 

@@ -20,6 +20,7 @@ from sqlalchemy import select
 from app.core.security import create_access_token
 from app.db.session import get_db
 from app.main import app
+from app.models.stripe_event import StripeEvent
 from app.models.subscription import Subscription
 from app.models.user import User
 
@@ -220,6 +221,70 @@ async def test_webhook_cancels_pro(client, test_user, db_session):
     assert sub_after.plan == "free"
     assert sub_after.status == "canceled"
     assert sub_after.stripe_subscription_id is None
+
+
+async def test_duplicate_webhook_is_idempotent(client, test_user, db_session):
+    """Sending the same Stripe event twice only changes user.plan once."""
+    # Ensure user starts on free plan.
+    sub = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == test_user.id)
+        )
+    ).scalar_one()
+    sub.plan = "free"
+    sub.status = "active"
+    sub.stripe_customer_id = "cus_idem_abc"
+    sub.stripe_subscription_id = None
+    await db_session.flush()
+
+    fake_event = {
+        "id": "evt_idempotent_test_001",
+        "type": "checkout.session.completed",
+        "data": {
+            "object": {
+                "client_reference_id": test_user.id,
+                "customer": "cus_idem_abc",
+                "subscription": "sub_idem_123",
+                "amount_total": 4900,
+                "currency": "usd",
+                "metadata": {"user_id": test_user.id, "plan": "pro"},
+            }
+        },
+    }
+    payload = json.dumps(fake_event).encode()
+    headers = {"stripe-signature": "t=1,v1=fake"}
+
+    with patch(
+        "app.services.payment_service.stripe.Webhook.construct_event",
+        return_value=fake_event,
+    ):
+        # First delivery — should process and flip to pro.
+        resp1 = await client.post(
+            "/api/v1/payments/webhook", content=payload, headers=headers
+        )
+        assert resp1.status_code == 200
+
+        # Second delivery — duplicate, should be a no-op.
+        resp2 = await client.post(
+            "/api/v1/payments/webhook", content=payload, headers=headers
+        )
+        assert resp2.status_code == 200
+
+    # Plan should be pro (set once, not toggled or errored).
+    sub_after = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == test_user.id)
+        )
+    ).scalar_one()
+    assert sub_after.plan == "pro"
+
+    # Only one StripeEvent row for that event ID.
+    event_rows = (
+        await db_session.execute(
+            select(StripeEvent).where(StripeEvent.id == "evt_idempotent_test_001")
+        )
+    ).scalars().all()
+    assert len(event_rows) == 1
 
 
 async def test_webhook_rejects_invalid_signature(client):

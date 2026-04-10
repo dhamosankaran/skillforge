@@ -17,6 +17,7 @@ those columns onto ``User``.
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 
 import stripe
 from sqlalchemy import select
@@ -24,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.analytics import track as analytics_track
 from app.core.config import get_settings
+from app.models.stripe_event import StripeEvent
 from app.models.subscription import Subscription
 from app.models.user import User
 
@@ -159,8 +161,28 @@ async def handle_webhook(
     except ValueError as exc:
         raise InvalidSignatureError(f"Malformed payload: {exc}") from exc
 
+    event_id = event.get("id", "")
     event_type = event["type"]
     data = event["data"]["object"]
+
+    # Idempotency: skip if this Stripe event was already processed.
+    if event_id:
+        existing = (
+            await db.execute(
+                select(StripeEvent).where(StripeEvent.id == event_id)
+            )
+        ).scalar_one_or_none()
+        if existing is not None:
+            logger.info("Duplicate Stripe event %s — skipping", event_id)
+            return {"received": True, "event_type": event_type}
+        db.add(
+            StripeEvent(
+                id=event_id,
+                event_type=event_type,
+                processed_at=datetime.now(tz=None),
+            )
+        )
+        await db.flush()
 
     if event_type == "checkout.session.completed":
         await _handle_checkout_completed(data, db)

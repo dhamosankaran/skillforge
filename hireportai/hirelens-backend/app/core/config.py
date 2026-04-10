@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     claude_model: str = "claude-sonnet-4-20250514"
 
+    # --- Error monitoring (Sentry) ---
+    sentry_dsn: str = ""
+
     # --- Email (Resend) ---
     resend_api_key: str = ""
     resend_from_address: str = "reminders@skillforge.app"

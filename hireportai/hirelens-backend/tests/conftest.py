@@ -88,6 +88,7 @@ async def engine():
     import app.models.mission            # noqa: F401
     import app.models.email_preference   # noqa: F401
     import app.models.card_feedback      # noqa: F401
+    import app.models.stripe_event       # noqa: F401
 
     async with eng.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

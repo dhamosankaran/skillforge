@@ -36,5 +36,8 @@ anthropic>=0.39.0
 # Analytics
 posthog>=3.5.0
 
+# Error monitoring
+sentry-sdk[fastapi]>=2.0.0
+
 # Email
 resend>=2.0.0
