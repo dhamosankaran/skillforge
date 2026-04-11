@@ -1,18 +1,21 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Copy, Check, FileText, Download, FileDown } from 'lucide-react'
+import { Copy, Check, FileText, Download, FileDown, RefreshCw } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import type { RewriteResponse } from '@/types'
 
 interface ResumeEditorProps {
   original: string
   rewrite: RewriteResponse | null
   isLoading: boolean
+  onRegenerate?: () => void
   onDownloadPDF?: () => void
   onDownloadDocx?: () => void
   isExportingPDF?: boolean
+  isRegenerating?: boolean
 }
 
-/** Full formatted resume preview */
+/** Full formatted resume preview — structured sections */
 function ResumePreview({ rewrite }: { rewrite: RewriteResponse }) {
   return (
     <div className="p-8 bg-white rounded-2xl shadow-card min-h-[400px]" style={{ fontFamily: 'Times New Roman, serif' }}>
@@ -93,7 +96,72 @@ function ResumePreview({ rewrite }: { rewrite: RewriteResponse }) {
   )
 }
 
-export function ResumeEditor({ original, rewrite, isLoading, onDownloadPDF, onDownloadDocx, isExportingPDF }: ResumeEditorProps) {
+/** Markdown-rendered resume preview */
+function MarkdownPreview({ content }: { content: string }) {
+  return (
+    <div className="p-8 bg-bg-elevated/60 backdrop-blur-sm border border-accent-primary/10 rounded-2xl shadow-card min-h-[400px]">
+      <div className="prose-resume">
+        <ReactMarkdown
+          components={{
+            h1: ({ children }) => (
+              <h1 className="text-xl font-bold text-text-primary mb-4 pb-2 border-b border-contrast/10">
+                {children}
+              </h1>
+            ),
+            h2: ({ children }) => (
+              <h2 className="text-lg font-semibold text-accent-primary mt-6 mb-3 pb-1 border-b border-contrast/[0.06] uppercase tracking-wide text-sm">
+                {children}
+              </h2>
+            ),
+            h3: ({ children }) => (
+              <h3 className="text-sm font-semibold text-text-primary mt-4 mb-2">
+                {children}
+              </h3>
+            ),
+            p: ({ children }) => (
+              <p className="text-sm text-text-primary/90 leading-relaxed mb-3">
+                {children}
+              </p>
+            ),
+            ul: ({ children }) => (
+              <ul className="space-y-1.5 mb-4 ml-1">
+                {children}
+              </ul>
+            ),
+            li: ({ children }) => (
+              <li className="flex gap-2 text-sm text-text-primary/85 leading-relaxed">
+                <span className="text-accent-primary/60 flex-shrink-0 mt-0.5">•</span>
+                <span>{children}</span>
+              </li>
+            ),
+            strong: ({ children }) => (
+              <strong className="font-semibold text-text-primary">{children}</strong>
+            ),
+            em: ({ children }) => (
+              <em className="italic text-text-secondary">{children}</em>
+            ),
+            hr: () => (
+              <hr className="border-contrast/[0.06] my-4" />
+            ),
+          }}
+        >
+          {content}
+        </ReactMarkdown>
+      </div>
+    </div>
+  )
+}
+
+export function ResumeEditor({
+  original,
+  rewrite,
+  isLoading,
+  onRegenerate,
+  onDownloadPDF,
+  onDownloadDocx,
+  isExportingPDF,
+  isRegenerating,
+}: ResumeEditorProps) {
   const [copiedFull, setCopiedFull] = useState(false)
 
   const handleCopyFull = async () => {
@@ -102,6 +170,20 @@ export function ResumeEditor({ original, rewrite, isLoading, onDownloadPDF, onDo
     setCopiedFull(true)
     setTimeout(() => setCopiedFull(false), 2000)
   }
+
+  const handleDownloadTxt = () => {
+    if (!rewrite) return
+    const blob = new Blob([rewrite.full_text], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'resume-rewrite.txt'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // Whether this rewrite uses markdown (full_text only, no structured sections)
+  const isMarkdown = rewrite && rewrite.sections.length === 0 && rewrite.full_text.length > 0
 
   if (isLoading) {
     return (
@@ -135,7 +217,7 @@ export function ResumeEditor({ original, rewrite, isLoading, onDownloadPDF, onDo
           No Rewrite Yet
         </h3>
         <p className="text-sm text-text-secondary max-w-sm leading-relaxed">
-          Select a template, enter your major, then click &quot;Generate AI Rewrite&quot; to get an ATS-optimized version of your resume.
+          Click &quot;Generate AI Rewrite&quot; to get an ATS-optimized version of your resume.
         </p>
       </div>
     )
@@ -148,16 +230,33 @@ export function ResumeEditor({ original, rewrite, isLoading, onDownloadPDF, onDo
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-accent-primary animate-pulse" />
           <span className="text-xs font-medium text-accent-primary uppercase tracking-wider">
-            AI Optimized — {rewrite.template_type === 'data_science' ? 'Data Science' : rewrite.template_type === 'business' ? 'Business' : 'General/STEM'} Template
+            AI Optimized
           </span>
         </div>
         <div className="flex items-center gap-1">
+          {onRegenerate && (
+            <button
+              onClick={onRegenerate}
+              disabled={isRegenerating}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs text-text-secondary hover:text-accent-primary hover:bg-accent-primary/5 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw size={12} className={isRegenerating ? 'animate-spin' : ''} />
+              Regenerate
+            </button>
+          )}
           <button
             onClick={handleCopyFull}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs text-text-secondary hover:text-accent-primary hover:bg-accent-primary/5 transition-colors"
           >
             {copiedFull ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
-            {copiedFull ? 'Copied!' : 'Copy Text'}
+            {copiedFull ? 'Copied!' : 'Copy'}
+          </button>
+          <button
+            onClick={handleDownloadTxt}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs text-text-secondary hover:text-accent-primary hover:bg-accent-primary/5 transition-colors"
+          >
+            <Download size={12} />
+            .txt
           </button>
           {onDownloadPDF && (
             <button
@@ -181,7 +280,7 @@ export function ResumeEditor({ original, rewrite, isLoading, onDownloadPDF, onDo
         </div>
       </div>
 
-      {/* Two column: original vs formatted rewrite */}
+      {/* Two column: original vs rewrite */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Original */}
         <div>
@@ -196,7 +295,7 @@ export function ResumeEditor({ original, rewrite, isLoading, onDownloadPDF, onDo
           </div>
         </div>
 
-        {/* Formatted rewrite */}
+        {/* Rewrite */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <div className="w-2 h-2 rounded-full bg-accent-primary animate-pulse" />
@@ -209,7 +308,11 @@ export function ResumeEditor({ original, rewrite, isLoading, onDownloadPDF, onDo
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <ResumePreview rewrite={rewrite} />
+            {isMarkdown ? (
+              <MarkdownPreview content={rewrite.full_text} />
+            ) : (
+              <ResumePreview rewrite={rewrite} />
+            )}
           </motion.div>
         </div>
       </div>

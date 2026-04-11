@@ -448,6 +448,8 @@ export default function Rewrite() {
                   original={resumeText}
                   rewrite={rewriteResult}
                   isLoading={isLoadingRewrite}
+                  onRegenerate={() => runRewrite(resumeText, jobDescription)}
+                  isRegenerating={isLoadingRewrite}
                   onDownloadPDF={handleDownloadPDF}
                   onDownloadDocx={handleDownloadDocx}
                   isExportingPDF={isExportingPDF}

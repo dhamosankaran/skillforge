@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Copy, Check, RefreshCw, FileText, Download, FileDown } from 'lucide-react'
 import clsx from 'clsx'
+import ReactMarkdown from 'react-markdown'
 import { downloadCoverLetterDocx } from '@/utils/docxExport'
 import type { CoverLetterResponse } from '@/types'
 
@@ -31,6 +32,17 @@ export function CoverLetterViewer({ coverLetter, isLoading, onGenerate }: CoverL
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const handleDownloadTxt = () => {
+    if (!coverLetter) return
+    const blob = new Blob([coverLetter.cover_letter], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'cover-letter.txt'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const handleDownloadPDF = async () => {
     if (!coverLetter) return
     setIsExporting(true)
@@ -43,8 +55,11 @@ export function CoverLetterViewer({ coverLetter, isLoading, onGenerate }: CoverL
         const trimmed = line.trim()
         const isGreeting = trimmed.startsWith('Dear ')
         const isSignoff = /^(Sincerely|Best regards|Regards|Warm regards|Respectfully|Respectfully yours),?\s*$/i.test(trimmed)
+        const isHeader = trimmed.startsWith('## ')
 
-        if (isGreeting) {
+        if (isHeader) {
+          html += `<div style="margin-top: 16px; margin-bottom: 8px; font-weight: bold; font-size: 12pt;">${trimmed.replace(/^##\s*/, '')}</div>`
+        } else if (isGreeting) {
           html += `<div style="margin: 16px 0;">${trimmed}</div>`
         } else if (isSignoff) {
           html += `<div style="margin-top: 24px; margin-bottom: 4px;">${trimmed}</div>`
@@ -156,6 +171,14 @@ export function CoverLetterViewer({ coverLetter, isLoading, onGenerate }: CoverL
                 DOCX
               </button>
               <button
+                onClick={handleDownloadTxt}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-text-secondary hover:text-accent-primary hover:bg-accent-primary/5 transition-colors"
+                aria-label="Download as text"
+              >
+                <Download size={12} />
+                .txt
+              </button>
+              <button
                 onClick={handleCopy}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-text-secondary hover:text-accent-primary hover:bg-accent-primary/5 transition-colors"
                 aria-label="Copy cover letter"
@@ -163,7 +186,7 @@ export function CoverLetterViewer({ coverLetter, isLoading, onGenerate }: CoverL
                 {copied ? (
                   <>
                     <Check size={12} className="text-success" />
-                    Copied
+                    Copied!
                   </>
                 ) : (
                   <>
@@ -184,76 +207,47 @@ export function CoverLetterViewer({ coverLetter, isLoading, onGenerate }: CoverL
               className="p-8 bg-bg-elevated/60 backdrop-blur-sm border border-accent-secondary/10 rounded-2xl shadow-card"
             >
               <div className="cover-letter-content">
-                {(() => {
-                  const lines = coverLetter.cover_letter.split('\n')
-                  const nonEmptyLines = lines.map((l, i) => ({ text: l.trim(), idx: i })).filter(l => l.text)
-                  const greetingIdx = nonEmptyLines.findIndex(l => l.text.startsWith('Dear '))
-                  const headerLines = greetingIdx > 0 ? nonEmptyLines.slice(0, greetingIdx) : []
-
-                  return lines.map((line, i) => {
-                    const trimmed = line.trim()
-                    if (!trimmed) return null
-
-                    // Header block: lines before "Dear ..." (name, contact, date)
-                    if (headerLines.some(h => h.idx === i)) {
-                      const isFirst = headerLines[0]?.idx === i
-                      return (
-                        <p
-                          key={i}
-                          className={
-                            isFirst
-                              ? 'text-text-primary text-sm font-semibold mb-0.5'
-                              : 'text-text-secondary text-xs mb-0.5'
-                          }
-                        >
-                          {trimmed}
-                        </p>
-                      )
-                    }
-
-                    if (trimmed.startsWith('Dear ')) {
-                      return (
-                        <p key={i} className="text-text-primary text-sm font-medium mt-4 mb-6">
-                          {trimmed}
-                        </p>
-                      )
-                    }
-
-                    if (/^(Sincerely|Best regards|Regards|Warm regards|Respectfully|Respectfully yours),?\s*$/i.test(trimmed)) {
-                      return (
-                        <p key={i} className="text-text-primary text-sm mt-6 mb-1">
-                          {trimmed}
-                        </p>
-                      )
-                    }
-
-                    // Name line after sign-off
-                    const prevLines = lines.slice(0, i)
-                    const prevNonEmpty = prevLines.filter(l => l.trim()).pop()?.trim() || ''
-                    if (/^(Sincerely|Best regards|Regards|Warm regards|Respectfully|Respectfully yours),?\s*$/i.test(prevNonEmpty) && trimmed.length < 60) {
-                      return (
-                        <p key={i} className="text-text-primary text-sm font-semibold">
-                          {trimmed}
-                        </p>
-                      )
-                    }
-
-                    // Body paragraph — render **bold** spans
-                    const parts = trimmed.split(/(\*\*[^*]+\*\*)/)
-                    return (
-                      <p
-                        key={i}
-                        className="text-text-primary/90 text-sm leading-[1.8] mb-4 last:mb-0"
-                      >
-                        {parts.map((part, j) =>
-                          part.startsWith('**') && part.endsWith('**')
-                            ? <strong key={j} className="font-semibold text-text-primary">{part.slice(2, -2)}</strong>
-                            : part
-                        )}
+                <ReactMarkdown
+                  components={{
+                    h2: ({ children }) => (
+                      <h2 className="text-base font-semibold text-accent-secondary mt-5 mb-3 first:mt-0">
+                        {children}
+                      </h2>
+                    ),
+                    h3: ({ children }) => (
+                      <h3 className="text-sm font-semibold text-text-primary mt-4 mb-2">
+                        {children}
+                      </h3>
+                    ),
+                    p: ({ children }) => (
+                      <p className="text-text-primary/90 text-sm leading-[1.8] mb-4 last:mb-0">
+                        {children}
                       </p>
-                    )
-                  })
-                })()}
+                    ),
+                    ul: ({ children }) => (
+                      <ul className="space-y-1 mb-4 ml-1">
+                        {children}
+                      </ul>
+                    ),
+                    li: ({ children }) => (
+                      <li className="flex gap-2 text-sm text-text-primary/85 leading-relaxed">
+                        <span className="text-accent-secondary/60 flex-shrink-0 mt-0.5">•</span>
+                        <span>{children}</span>
+                      </li>
+                    ),
+                    strong: ({ children }) => (
+                      <strong className="font-semibold text-text-primary">{children}</strong>
+                    ),
+                    em: ({ children }) => (
+                      <em className="italic text-text-secondary">{children}</em>
+                    ),
+                    hr: () => (
+                      <hr className="border-contrast/[0.06] my-4" />
+                    ),
+                  }}
+                >
+                  {coverLetter.cover_letter}
+                </ReactMarkdown>
               </div>
             </motion.div>
           </AnimatePresence>

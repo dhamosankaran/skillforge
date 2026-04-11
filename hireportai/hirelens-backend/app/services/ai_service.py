@@ -10,10 +10,8 @@ from app.schemas.responses import (
     CoverLetterResponse,
     InterviewPrepResponse,
     InterviewQuestion,
-    RewriteEntry,
     RewriteHeader,
     RewriteResponse,
-    RewriteSection,
 )
 from app.core.llm_router import generate_for_task
 
@@ -76,89 +74,44 @@ def generate_resume_rewrite(
 ) -> RewriteResponse:
     """Generate an ATS-optimized rewrite of the resume.
 
-    Returns structured data (header, sections with typed entries)
-    so the frontend can render a properly formatted resume.
+    Returns the rewritten resume as clean markdown in ``full_text``.
     """
     resume_text = resume_data.get("full_text", "")[:4000]
-    jd_skills = ", ".join(jd_requirements.get("all_skills", [])[:30])
     jd_title = jd_requirements.get("job_title", "the role")
-    required_skills = ", ".join(jd_requirements.get("required_skills", [])[:20])
+    missing_keywords = ", ".join(jd_requirements.get("missing_keywords", jd_requirements.get("all_skills", []))[:30])
 
-    prompt = f"""You are a professional resume writer and ATS optimization specialist.
-Your task is to rewrite the candidate's resume so it passes ATS screening for the target role.
+    prompt = f"""You are an expert resume writer specializing in ATS optimization.
+Rewrite the following resume to maximize ATS compatibility for the target role.
 
-CRITICAL RULES:
-1. PRESERVE FACTS: Keep real company names, job titles, dates, GPA. NEVER fabricate.
-2. USE STRONG ACTION VERBS: Start each bullet with a powerful past-tense action verb.
-3. ADD QUANTIFICATION: Use the X-Y-Z formula: "Accomplished [X] as measured by [Y], by doing [Z]".
-4. INCORPORATE TARGET KEYWORDS NATURALLY: Weave in required skills where they genuinely apply.
-5. ATS-FRIENDLY FORMATTING: Use standard headings (EDUCATION, EXPERIENCE, SKILLS, PROJECTS).
-6. HEADER: Extract REAL name and contact info from the resume. No placeholders.
-7. ENTRIES vs CONTENT: Experience-type sections use "entries" array. Skills/Honors use "content" string.
-8. SKILLS SECTION: Group by category. Include ALL skills from original resume plus plausibly inferred ones.
-9. BULLETS: 2-4 per entry. Every bullet = action verb + what you did + quantified result.
+Rules:
+1. Maintain the EXACT same sections as the original (Summary, Experience, Skills, Education, etc.)
+2. Improve bullet points with quantified achievements (numbers, percentages, dollar amounts)
+3. Incorporate the missing keywords naturally into relevant sections
+4. Use strong action verbs at the start of each bullet
+5. Keep the tone professional and confident
+6. Output in clean markdown with ## headers for each section, - for bullet points
+7. Do NOT add sections that weren't in the original resume
+8. Do NOT remove any jobs, education entries, or skills — only improve the language
 
-ORIGINAL RESUME:
----
-{resume_text}
----
+Missing keywords to incorporate: {missing_keywords}
+Target role: {jd_title}
 
-TARGET ROLE: {jd_title}
-REQUIRED SKILLS: {required_skills}
-ALL JD KEYWORDS: {jd_skills}
-
-Return a JSON object with this EXACT structure:
-{{
-  "header": {{"name": "Full Name", "contact": "phone | email | linkedin | City, State"}},
-  "sections": [
-    {{"title": "EDUCATION", "content": "", "entries": [{{"org": "University Name", "date": "May 2024", "title": "Degree, GPA: X.XX", "details": ["Relevant Coursework: ..."], "bullets": []}}]}},
-    {{"title": "EXPERIENCE", "content": "", "entries": [{{"org": "Company Name", "date": "June 2023 - Present", "title": "Job Title", "details": [], "bullets": ["Engineered automated pipeline using Python, reducing processing time by 40%"]}}]}},
-    {{"title": "SKILLS", "content": "Languages: Python, Java\\nFrameworks: React, FastAPI\\nTools: Git, Docker, AWS", "entries": []}}
-  ],
-  "full_text": "Complete rewritten resume as plain text"
-}}"""
+Original resume:
+{resume_text}"""
 
     try:
-        response_text = generate_for_task(task="resume_rewrite", prompt=prompt, json_mode=True, max_tokens=4000, temperature=0.4)
-        data = json.loads(response_text)
-
-        header = RewriteHeader(
-            name=data.get("header", {}).get("name", ""),
-            contact=data.get("header", {}).get("contact", ""),
+        markdown = generate_for_task(
+            task="resume_rewrite", prompt=prompt, max_tokens=4000, temperature=0.4,
         )
-
-        sections = []
-        for s in data.get("sections", []):
-            entries = []
-            for e in s.get("entries", []):
-                entries.append(RewriteEntry(
-                    org=e.get("org", ""),
-                    location=e.get("location", ""),
-                    date=e.get("date", ""),
-                    title=e.get("title", ""),
-                    bullets=e.get("bullets", []),
-                    details=e.get("details", []),
-                ))
-            sections.append(RewriteSection(
-                title=s.get("title", ""),
-                content=s.get("content", ""),
-                entries=entries,
-            ))
-
-        return RewriteResponse(
-            header=header,
-            sections=sections,
-            full_text=data.get("full_text", resume_text),
-        )
-    except Exception:
-        sections_data = resume_data.get("sections", {})
-        sections = [
-            RewriteSection(title=k.title(), content=v)
-            for k, v in sections_data.items()
-        ]
         return RewriteResponse(
             header=RewriteHeader(),
-            sections=sections if sections else [RewriteSection(title="Resume", content=resume_text)],
+            sections=[],
+            full_text=markdown.strip(),
+        )
+    except Exception:
+        return RewriteResponse(
+            header=RewriteHeader(),
+            sections=[],
             full_text=resume_text,
         )
 
@@ -168,50 +121,40 @@ def generate_cover_letter(
     jd_requirements: Dict[str, Any],
     tone: str = "professional",
 ) -> CoverLetterResponse:
-    """Generate a personalized cover letter."""
+    """Generate a personalized cover letter in markdown."""
     resume_text = resume_data.get("full_text", "")[:2500]
     jd_title = jd_requirements.get("job_title", "this role")
-    required_skills = ", ".join(jd_requirements.get("required_skills", [])[:15])
-    all_skills = ", ".join(jd_requirements.get("all_skills", [])[:20])
+    jd_text = jd_requirements.get("full_text", "")[:1500]
+    missing_keywords = ", ".join(jd_requirements.get("missing_keywords", jd_requirements.get("all_skills", []))[:20])
 
-    tone_instructions = {
-        "professional": "formal and polished, using professional business language",
-        "confident": "assertive and direct, highlighting achievements boldly without arrogance",
-        "conversational": "warm and personable, showing personality while remaining professional",
-    }
-    tone_desc = tone_instructions.get(tone, tone_instructions["professional"])
+    prompt = f"""You are an expert career coach writing a compelling cover letter.
+Write a cover letter for the candidate applying to the target role.
 
-    prompt = f"""You are a professional career coach and hiring manager.
-Write a high-quality cover letter that follows the correct modern format.
+Structure it as:
 
-CANDIDATE BACKGROUND:
----
+## Opening
+Hook the reader with enthusiasm for the specific company and role. 2-3 sentences.
+
+## Why I'm a Fit
+Connect 3-4 of the candidate's strongest skills and experiences to the job requirements. Use specific examples from their resume.
+
+## Key Achievement
+One specific, quantified accomplishment that demonstrates impact relevant to this role.
+
+## Closing
+Express enthusiasm, request an interview, professional sign-off.
+
+Keep it under 400 words. Tone: confident, specific, not generic.
+Output in clean markdown.
+
+Candidate resume:
 {resume_text}
----
 
-TARGET ROLE: {jd_title}
-REQUIRED SKILLS: {required_skills}
-JD KEYWORDS: {all_skills}
-TONE: {tone_desc}
+Job description:
+{jd_text}
 
-Follow this EXACT structure:
-
-1. GREETING: "Dear Hiring Manager,"
-2. OPENING PARAGRAPH: State the role, briefly introduce the candidate, express enthusiasm.
-3. MIDDLE PARAGRAPH(S) (1-2 paragraphs): Highlight key experiences, relevant skills, measurable results.
-4. COMPANY FIT PARAGRAPH: Why this role/company, how goals align, specific value the candidate brings.
-5. CLOSING PARAGRAPH: Express enthusiasm, thank the reader, invite further discussion.
-6. SIGN-OFF: "Sincerely," "[Candidate Name from resume]"
-
-GUIDELINES:
-- Tone: {tone_desc}
-- Length: 250-400 words
-- No generic phrases like "I am a hard worker"
-- No [brackets] or placeholders
-- Only reference experiences from the resume
-- Extract the candidate's actual name from the resume for the sign-off
-
-Return only the cover letter text."""
+Missing skills to address if possible:
+{missing_keywords}"""
 
     try:
         cover_letter = generate_for_task(task="cover_letter", prompt=prompt, max_tokens=900, temperature=0.7)
@@ -220,7 +163,7 @@ Return only the cover letter text."""
         return CoverLetterResponse(
             cover_letter=(
                 f"Dear Hiring Manager,\n\nI am writing to express my strong interest in the {jd_title} position. "
-                f"My background aligns well with the requirements you have outlined, particularly in {required_skills[:100]}. "
+                "My background aligns well with the requirements you have outlined. "
                 "I am eager to bring my expertise to your team and contribute meaningfully to your organization's goals.\n\n"
                 "Throughout my career, I have consistently delivered results through my technical expertise and collaborative approach. "
                 "I would welcome the opportunity to further discuss how my skills and experiences align with your team's goals. "
