@@ -41,6 +41,8 @@ async def rewrite_resume(body: RewriteRequest) -> RewriteResponse:
         result = generate_resume_rewrite(
             resume_data,
             jd_requirements,
+            template_type=body.template_type or "general",
+            major=body.major,
             missing_keywords=missing_keywords,
             missing_skills=missing_skills,
         )

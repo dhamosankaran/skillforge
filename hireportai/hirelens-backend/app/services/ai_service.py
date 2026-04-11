@@ -10,6 +10,8 @@ from app.schemas.responses import (
     CoverLetterResponse,
     InterviewPrepResponse,
     InterviewQuestion,
+    RewriteEntry,
+    RewriteHeader,
     RewriteResponse,
     RewriteSection,
 )
@@ -83,7 +85,11 @@ def generate_resume_rewrite(
     resume_data: Dict[str, Any],
     jd_requirements: Dict[str, Any],
 ) -> RewriteResponse:
-    """Generate an ATS-optimized rewrite of the resume."""
+    """Generate an ATS-optimized rewrite of the resume.
+
+    Returns structured data (header, sections with typed entries)
+    so the frontend can render a properly formatted resume.
+    """
     resume_text = resume_data.get("full_text", "")[:4000]
     jd_skills = ", ".join(jd_requirements.get("all_skills", [])[:30])
     jd_title = jd_requirements.get("job_title", "the role")
@@ -93,14 +99,15 @@ def generate_resume_rewrite(
 Your task is to rewrite the candidate's resume so it passes ATS screening for the target role.
 
 CRITICAL RULES:
-1. PRESERVE THE EXACT FORMAT: Keep the same section order, headings, company names, job titles, dates, and layout.
-2. ONLY REWRITE BULLET POINTS AND SUMMARIES: Improve language, keyword density, and impact. Do NOT change headings, company names, titles, education entries, or dates.
-3. USE STRONG ACTION VERBS: Start each bullet with a powerful past-tense action verb.
-4. ADD QUANTIFICATION: Use the X-Y-Z formula: "Accomplished [X] as measured by [Y], by doing [Z]".
-5. INCORPORATE TARGET KEYWORDS NATURALLY: Weave in required skills where they genuinely apply.
-6. NEVER FABRICATE: Do not invent experiences, skills, or achievements not in the original.
-7. ATS-FRIENDLY FORMATTING: Use standard headings. Avoid tables, columns, or special characters.
-8. SKILLS SECTION: List all relevant technologies from the original resume and job description.
+1. PRESERVE FACTS: Keep real company names, job titles, dates, GPA. NEVER fabricate.
+2. USE STRONG ACTION VERBS: Start each bullet with a powerful past-tense action verb.
+3. ADD QUANTIFICATION: Use the X-Y-Z formula: "Accomplished [X] as measured by [Y], by doing [Z]".
+4. INCORPORATE TARGET KEYWORDS NATURALLY: Weave in required skills where they genuinely apply.
+5. ATS-FRIENDLY FORMATTING: Use standard headings (EDUCATION, EXPERIENCE, SKILLS, PROJECTS).
+6. HEADER: Extract REAL name and contact info from the resume. No placeholders.
+7. ENTRIES vs CONTENT: Experience-type sections use "entries" array. Skills/Honors use "content" string.
+8. SKILLS SECTION: Group by category. Include ALL skills from original resume plus plausibly inferred ones.
+9. BULLETS: 2-4 per entry. Every bullet = action verb + what you did + quantified result.
 
 ORIGINAL RESUME:
 ---
@@ -111,23 +118,46 @@ TARGET ROLE: {jd_title}
 REQUIRED SKILLS: {required_skills}
 ALL JD KEYWORDS: {jd_skills}
 
-Return a JSON object:
+Return a JSON object with this EXACT structure:
 {{
+  "header": {{"name": "Full Name", "contact": "phone | email | linkedin | City, State"}},
   "sections": [
-    {{"title": "<exact section heading from original>", "content": "<optimized content>"}},
-    ...
+    {{"title": "EDUCATION", "content": "", "entries": [{{"org": "University Name", "date": "May 2024", "title": "Degree, GPA: X.XX", "details": ["Relevant Coursework: ..."], "bullets": []}}]}},
+    {{"title": "EXPERIENCE", "content": "", "entries": [{{"org": "Company Name", "date": "June 2023 - Present", "title": "Job Title", "details": [], "bullets": ["Engineered automated pipeline using Python, reducing processing time by 40%"]}}]}},
+    {{"title": "SKILLS", "content": "Languages: Python, Java\\nFrameworks: React, FastAPI\\nTools: Git, Docker, AWS", "entries": []}}
   ],
-  "full_text": "Complete rewritten resume as a single string, preserving original format with optimized bullets"
+  "full_text": "Complete rewritten resume as plain text"
 }}"""
 
     try:
-        response_text = _generate(prompt, temperature=0.4, max_tokens=3500, json_mode=True)
+        response_text = _generate(prompt, temperature=0.4, max_tokens=4000, json_mode=True)
         data = json.loads(response_text)
-        sections = [
-            RewriteSection(title=s["title"], content=s["content"])
-            for s in data.get("sections", [])
-        ]
+
+        header = RewriteHeader(
+            name=data.get("header", {}).get("name", ""),
+            contact=data.get("header", {}).get("contact", ""),
+        )
+
+        sections = []
+        for s in data.get("sections", []):
+            entries = []
+            for e in s.get("entries", []):
+                entries.append(RewriteEntry(
+                    org=e.get("org", ""),
+                    location=e.get("location", ""),
+                    date=e.get("date", ""),
+                    title=e.get("title", ""),
+                    bullets=e.get("bullets", []),
+                    details=e.get("details", []),
+                ))
+            sections.append(RewriteSection(
+                title=s.get("title", ""),
+                content=s.get("content", ""),
+                entries=entries,
+            ))
+
         return RewriteResponse(
+            header=header,
             sections=sections,
             full_text=data.get("full_text", resume_text),
         )
@@ -138,6 +168,7 @@ Return a JSON object:
             for k, v in sections_data.items()
         ]
         return RewriteResponse(
+            header=RewriteHeader(),
             sections=sections if sections else [RewriteSection(title="Resume", content=resume_text)],
             full_text=resume_text,
         )

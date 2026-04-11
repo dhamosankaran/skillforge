@@ -184,45 +184,76 @@ export function CoverLetterViewer({ coverLetter, isLoading, onGenerate }: CoverL
               className="p-8 bg-bg-elevated/60 backdrop-blur-sm border border-accent-secondary/10 rounded-2xl shadow-card"
             >
               <div className="cover-letter-content">
-                {coverLetter.cover_letter.split('\n').map((line, i) => {
-                  const trimmed = line.trim()
-                  if (!trimmed) return null
+                {(() => {
+                  const lines = coverLetter.cover_letter.split('\n')
+                  const nonEmptyLines = lines.map((l, i) => ({ text: l.trim(), idx: i })).filter(l => l.text)
+                  const greetingIdx = nonEmptyLines.findIndex(l => l.text.startsWith('Dear '))
+                  const headerLines = greetingIdx > 0 ? nonEmptyLines.slice(0, greetingIdx) : []
 
-                  if (trimmed.startsWith('Dear ')) {
+                  return lines.map((line, i) => {
+                    const trimmed = line.trim()
+                    if (!trimmed) return null
+
+                    // Header block: lines before "Dear ..." (name, contact, date)
+                    if (headerLines.some(h => h.idx === i)) {
+                      const isFirst = headerLines[0]?.idx === i
+                      return (
+                        <p
+                          key={i}
+                          className={
+                            isFirst
+                              ? 'text-text-primary text-sm font-semibold mb-0.5'
+                              : 'text-text-secondary text-xs mb-0.5'
+                          }
+                        >
+                          {trimmed}
+                        </p>
+                      )
+                    }
+
+                    if (trimmed.startsWith('Dear ')) {
+                      return (
+                        <p key={i} className="text-text-primary text-sm font-medium mt-4 mb-6">
+                          {trimmed}
+                        </p>
+                      )
+                    }
+
+                    if (/^(Sincerely|Best regards|Regards|Warm regards|Respectfully|Respectfully yours),?\s*$/i.test(trimmed)) {
+                      return (
+                        <p key={i} className="text-text-primary text-sm mt-6 mb-1">
+                          {trimmed}
+                        </p>
+                      )
+                    }
+
+                    // Name line after sign-off
+                    const prevLines = lines.slice(0, i)
+                    const prevNonEmpty = prevLines.filter(l => l.trim()).pop()?.trim() || ''
+                    if (/^(Sincerely|Best regards|Regards|Warm regards|Respectfully|Respectfully yours),?\s*$/i.test(prevNonEmpty) && trimmed.length < 60) {
+                      return (
+                        <p key={i} className="text-text-primary text-sm font-semibold">
+                          {trimmed}
+                        </p>
+                      )
+                    }
+
+                    // Body paragraph — render **bold** spans
+                    const parts = trimmed.split(/(\*\*[^*]+\*\*)/)
                     return (
-                      <p key={i} className="text-text-primary text-sm font-medium mb-6">
-                        {trimmed}
+                      <p
+                        key={i}
+                        className="text-text-primary/90 text-sm leading-[1.8] mb-4 last:mb-0"
+                      >
+                        {parts.map((part, j) =>
+                          part.startsWith('**') && part.endsWith('**')
+                            ? <strong key={j} className="font-semibold text-text-primary">{part.slice(2, -2)}</strong>
+                            : part
+                        )}
                       </p>
                     )
-                  }
-
-                  if (/^(Sincerely|Best regards|Regards|Warm regards|Respectfully|Respectfully yours),?\s*$/i.test(trimmed)) {
-                    return (
-                      <p key={i} className="text-text-primary text-sm mt-6 mb-1">
-                        {trimmed}
-                      </p>
-                    )
-                  }
-
-                  const prevLines = coverLetter.cover_letter.split('\n').slice(0, i)
-                  const prevNonEmpty = prevLines.filter(l => l.trim()).pop()?.trim() || ''
-                  if (/^(Sincerely|Best regards|Regards|Warm regards|Respectfully|Respectfully yours),?\s*$/i.test(prevNonEmpty) && trimmed.length < 60) {
-                    return (
-                      <p key={i} className="text-text-primary text-sm font-semibold">
-                        {trimmed}
-                      </p>
-                    )
-                  }
-
-                  return (
-                    <p
-                      key={i}
-                      className="text-text-primary/90 text-sm leading-[1.8] mb-4 last:mb-0"
-                    >
-                      {trimmed}
-                    </p>
-                  )
-                })}
+                  })
+                })()}
               </div>
             </motion.div>
           </AnimatePresence>

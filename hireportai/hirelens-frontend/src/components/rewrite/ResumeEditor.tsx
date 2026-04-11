@@ -67,11 +67,25 @@ function ResumePreview({ rewrite }: { rewrite: RewriteResponse }) {
               </div>
             ))}
 
-          {/* Content fallback */}
+          {/* Content fallback (Skills, Honors, etc.) */}
           {section.content && (!section.entries || section.entries.length === 0) && (
-            <p className="text-[10.5px] text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {section.content}
-            </p>
+            <div className="text-[10.5px] text-gray-700 leading-relaxed">
+              {section.content.split('\n').map((line, k) => {
+                const trimmed = line.trim()
+                if (!trimmed) return null
+                // Render "Category: items" lines with bold category label
+                const colonIdx = trimmed.indexOf(':')
+                if (colonIdx > 0 && colonIdx < 40) {
+                  return (
+                    <p key={k} className="mb-0.5">
+                      <span className="font-bold text-gray-900">{trimmed.slice(0, colonIdx + 1)}</span>
+                      {trimmed.slice(colonIdx + 1)}
+                    </p>
+                  )
+                }
+                return <p key={k} className="mb-0.5">{trimmed}</p>
+              })}
+            </div>
           )}
         </div>
       ))}
