@@ -1,12 +1,17 @@
 import { motion } from 'framer-motion'
-import { AlertCircle, Info, Star, ExternalLink } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { AlertCircle, Info, Star, ExternalLink, BookOpen, Lock } from 'lucide-react'
 import { getImportanceBg, getImportanceColor } from '@/utils/formatters'
 import { getSkillResource } from '@/utils/skillResources'
-import type { SkillGap } from '@/types'
+import { capture } from '@/utils/posthog'
+import type { SkillGap, GapMapping } from '@/types'
 import { containerVariants, cardVariants } from '@/components/ui/AnimatedCard'
 
 interface MissingSkillsPanelProps {
   skillGaps: SkillGap[]
+  gapMappings?: GapMapping[]
+  isPro?: boolean
+  onUpgradeClick?: () => void
 }
 
 const IMPORTANCE_ICONS = {
@@ -15,7 +20,14 @@ const IMPORTANCE_ICONS = {
   'nice-to-have': Info,
 }
 
-export function MissingSkillsPanel({ skillGaps }: MissingSkillsPanelProps) {
+export function MissingSkillsPanel({
+  skillGaps,
+  gapMappings = [],
+  isPro = false,
+  onUpgradeClick,
+}: MissingSkillsPanelProps) {
+  const navigate = useNavigate()
+
   if (skillGaps.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-10 text-center">
@@ -26,6 +38,18 @@ export function MissingSkillsPanel({ skillGaps }: MissingSkillsPanelProps) {
         <p className="text-sm text-text-muted mt-1">Your resume covers the key requirements.</p>
       </div>
     )
+  }
+
+  // Build a lookup from gap name to its first matching category
+  const gapCategoryMap = new Map<string, { categoryId: string; categoryName: string }>()
+  for (const mapping of gapMappings) {
+    if (mapping.match_type !== 'none' && mapping.matching_categories.length > 0) {
+      const cat = mapping.matching_categories[0]
+      gapCategoryMap.set(mapping.gap.toLowerCase(), {
+        categoryId: cat.category_id,
+        categoryName: cat.name,
+      })
+    }
   }
 
   return (
@@ -39,6 +63,7 @@ export function MissingSkillsPanel({ skillGaps }: MissingSkillsPanelProps) {
         const Icon = IMPORTANCE_ICONS[gap.importance]
         const color = getImportanceColor(gap.importance)
         const bg = getImportanceBg(gap.importance)
+        const match = gapCategoryMap.get(gap.skill.toLowerCase())
 
         return (
           <motion.div
@@ -77,6 +102,42 @@ export function MissingSkillsPanel({ skillGaps }: MissingSkillsPanelProps) {
                   ) : null
                 })()}
               </div>
+              {/* Study link — Pro: navigate, Free: upgrade prompt */}
+              {match && (
+                <div className="mt-2">
+                  {isPro ? (
+                    <button
+                      onClick={() => {
+                        capture('gap_study_clicked', {
+                          gap_name: gap.skill,
+                          category_id: match.categoryId,
+                          user_plan: 'pro',
+                        })
+                        navigate(`/study?category=${match.categoryId}`)
+                      }}
+                      className="flex items-center gap-1 text-xs font-medium text-accent-primary hover:text-accent-primary/80 transition-colors"
+                    >
+                      <BookOpen size={10} />
+                      Study this
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        capture('gap_study_clicked', {
+                          gap_name: gap.skill,
+                          category_id: match.categoryId,
+                          user_plan: 'free',
+                        })
+                        onUpgradeClick?.()
+                      }}
+                      className="flex items-center gap-1 text-xs text-text-muted hover:text-text-secondary transition-colors"
+                    >
+                      <Lock size={10} />
+                      Upgrade to study
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </motion.div>
         )

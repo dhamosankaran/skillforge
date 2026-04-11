@@ -13,7 +13,7 @@ PLAN_LIMITS = {
         "analyze": 3,
         "rewrite": 0,
         "cover_letter": 0,
-        "interview_prep": 5,
+        "interview_prep": 3,
         "resume_optimize": 0,
     },
     "pro": {
@@ -78,6 +78,52 @@ async def check_usage_limit(
     )
     count = result.scalar() or 0
     return count < max_uses
+
+
+async def check_and_increment(
+    user_id: str,
+    feature: str,
+    db: AsyncSession,
+) -> dict:
+    """Check usage limit and increment if allowed.
+
+    Returns { allowed: bool, remaining: int, limit: int, plan: str }.
+    Pro/enterprise users are always allowed without tracking.
+    """
+    # Get user's plan
+    result = await db.execute(
+        select(Subscription).where(Subscription.user_id == user_id)
+    )
+    sub = result.scalar_one_or_none()
+    plan = sub.plan if sub else "free"
+
+    limits = PLAN_LIMITS.get(plan, PLAN_LIMITS["free"])
+    max_uses = limits.get(feature, 0)
+
+    if max_uses == -1:
+        return {"allowed": True, "remaining": -1, "limit": -1, "plan": plan}
+    if max_uses == 0:
+        return {"allowed": False, "remaining": 0, "limit": 0, "plan": plan}
+
+    # Count usage this month (use naive datetime to match DB column type)
+    month_start = datetime.utcnow().replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0
+    )
+    result = await db.execute(
+        select(func.count(UsageLog.id))
+        .where(UsageLog.user_id == user_id)
+        .where(UsageLog.feature_used == feature)
+        .where(UsageLog.created_at >= month_start)
+    )
+    count = result.scalar() or 0
+
+    if count >= max_uses:
+        return {"allowed": False, "remaining": 0, "limit": max_uses, "plan": plan}
+
+    # Log the usage
+    await log_usage(user_id, feature, 0, db)
+    remaining = max_uses - count - 1  # -1 because we just used one
+    return {"allowed": True, "remaining": remaining, "limit": max_uses, "plan": plan}
 
 
 async def get_usage_summary(user_id: str, db: AsyncSession) -> dict:

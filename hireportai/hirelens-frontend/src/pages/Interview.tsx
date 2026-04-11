@@ -8,6 +8,7 @@ import clsx from 'clsx'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { GlowButton } from '@/components/ui/GlowButton'
 import { AnimatedCard, containerVariants } from '@/components/ui/AnimatedCard'
+import { PaywallModal } from '@/components/PaywallModal'
 import { useAnalysisContext } from '@/context/AnalysisContext'
 import { useInterview } from '@/hooks/useInterview'
 
@@ -122,7 +123,8 @@ function QuestionCard({ question, starFramework, index }: QuestionCardProps) {
 
 export default function Interview() {
   const { state } = useAnalysisContext()
-  const { interviewResult, isLoading, runInterviewPrep, reset } = useInterview()
+  const { interviewResult, isLoading, limitInfo, runInterviewPrep, reset } = useInterview()
+  const [showPaywall, setShowPaywall] = useState(false)
 
   // Form state for manual entry (when no analysis context)
   const [manualResume, setManualResume] = useState('')
@@ -229,13 +231,35 @@ export default function Interview() {
           </motion.div>
         )}
 
+        {/* Limit reached banner */}
+        {limitInfo?.limitReached && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 rounded-xl bg-warning/[0.08] border border-warning/20 text-center"
+          >
+            <p className="text-sm text-text-primary font-medium mb-1">
+              Free limit reached ({limitInfo.limit} per month)
+            </p>
+            <p className="text-xs text-text-secondary mb-3">
+              Upgrade to Pro for unlimited interview prep generations.
+            </p>
+            <button
+              onClick={() => setShowPaywall(true)}
+              className="text-xs font-semibold text-accent-primary hover:text-accent-primary/80 transition-colors"
+            >
+              Upgrade to Pro →
+            </button>
+          </motion.div>
+        )}
+
         {/* Generate button (pre-result state) */}
-        {!interviewResult && (
+        {!interviewResult && !limitInfo?.limitReached && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="flex justify-center mb-8"
+            className="flex flex-col items-center gap-2 mb-8"
           >
             <GlowButton
               onClick={handleGenerate}
@@ -345,6 +369,12 @@ export default function Interview() {
           </motion.div>
         )}
       </div>
+
+      <PaywallModal
+        open={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        trigger="interview_limit"
+      />
     </PageWrapper>
   )
 }

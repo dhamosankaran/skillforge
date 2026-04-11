@@ -23,6 +23,8 @@ export type PaywallTrigger =
   | 'card_limit'
   | 'locked_category'
   | 'daily_review'
+  | 'interview_limit'
+  | 'skill_gap_study'
 
 interface PaywallModalProps {
   open: boolean
@@ -36,6 +38,8 @@ const HEADLINES: Record<PaywallTrigger, string> = {
   card_limit: 'Unlock the full card library',
   locked_category: 'This category is Pro-only',
   daily_review: 'Daily Review is a Pro feature',
+  interview_limit: "You've used your free interview preps",
+  skill_gap_study: 'Study skill gaps with flashcards',
 }
 
 const SUBLINES: Record<PaywallTrigger, string> = {
@@ -47,6 +51,10 @@ const SUBLINES: Record<PaywallTrigger, string> = {
     'Pro unlocks every category in the study library — foundation, advanced, and role-specific decks.',
   daily_review:
     'Daily Review uses FSRS to schedule the exact cards you need to revisit. Pro unlocks the full queue.',
+  interview_limit:
+    "You've reached your 3 free interview prep generations this month. Upgrade to Pro for unlimited access.",
+  skill_gap_study:
+    'Pro unlocks the full flashcard library so you can study every skill gap detected in your resume scan.',
 }
 
 const VALUE_PROPS = [

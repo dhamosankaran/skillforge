@@ -1,12 +1,15 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Target, BarChart3, GitMerge, AlertTriangle, Zap,
   MessageSquare, TrendingUp, RefreshCw, FileText,
-  Brain, CheckCircle2
+  Brain, CheckCircle2, Info
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { fetchOnboardingRecommendations } from '@/services/api'
+import { PaywallModal } from '@/components/PaywallModal'
+import { useUsage } from '@/context/UsageContext'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { ATSScoreGauge } from '@/components/dashboard/ATSScoreGauge'
 import { ScoreBreakdown } from '@/components/dashboard/ScoreBreakdown'
@@ -28,14 +31,34 @@ interface PanelSectionProps {
   icon: React.ElementType
   children: React.ReactNode
   className?: string
+  tooltip?: string
 }
 
-function PanelSection({ title, icon: Icon, children, className }: PanelSectionProps) {
+function PanelSection({ title, icon: Icon, children, className, tooltip }: PanelSectionProps) {
+  const [showTooltip, setShowTooltip] = useState(false)
   return (
     <AnimatedCard className={clsx('p-5', className)}>
       <div className="flex items-center gap-2 mb-4">
         <Icon size={14} className="text-accent-primary flex-shrink-0" />
         <h2 className="font-display font-semibold text-sm text-text-primary">{title}</h2>
+        {tooltip && (
+          <div className="relative">
+            <button
+              onMouseEnter={() => setShowTooltip(true)}
+              onMouseLeave={() => setShowTooltip(false)}
+              onClick={() => setShowTooltip((p) => !p)}
+              className="text-text-muted hover:text-text-secondary transition-colors"
+              aria-label={`Info: ${title}`}
+            >
+              <Info size={12} />
+            </button>
+            {showTooltip && (
+              <div className="absolute left-1/2 -translate-x-1/2 top-6 z-50 w-64 p-2.5 rounded-lg bg-bg-overlay border border-contrast/10 shadow-lg text-xs text-text-secondary leading-relaxed">
+                {tooltip}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {children}
     </AnimatedCard>
@@ -44,17 +67,29 @@ function PanelSection({ title, icon: Icon, children, className }: PanelSectionPr
 
 /** Quick navigation anchors for the left sidebar */
 const NAV_ITEMS = [
+  { id: 'job-fit', label: 'Job Fit', icon: MessageSquare },
   { id: 'keywords', label: 'Keywords', icon: BarChart3 },
   { id: 'skills', label: 'Skills Radar', icon: GitMerge },
-  { id: 'job-fit', label: 'Job Fit', icon: MessageSquare },
   { id: 'bullets', label: 'Bullets', icon: Zap },
 ]
 
 export default function Results() {
   const { state } = useAnalysisContext()
   const navigate = useNavigate()
+  const { canUsePro } = useUsage()
   const { result, isLoading } = state
   const toastShownRef = useRef<string | null>(null)
+  const [showPaywall, setShowPaywall] = useState(false)
+  const [gapMappings, setGapMappings] = useState<import('@/types').GapMapping[]>([])
+
+  // Fetch gap-to-category mappings when results load
+  useEffect(() => {
+    if (!result?.skill_gaps?.length) return
+    const gaps = result.skill_gaps.map((g) => g.skill)
+    fetchOnboardingRecommendations(gaps, result.scan_id)
+      .then((res) => setGapMappings(res.results))
+      .catch(() => {})
+  }, [result?.skill_gaps, result?.scan_id])
 
   // Show toast when scan results load (auto-created tracker entry)
   useEffect(() => {
@@ -151,15 +186,15 @@ export default function Results() {
           <div className="lg:sticky lg:top-20 space-y-4 z-10">
             {/* ATS Score Gauge */}
             <motion.div variants={cardVariants}>
-              <AnimatedCard className="p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <Target size={14} className="text-accent-primary" />
-                  <h2 className="font-display font-semibold text-sm text-text-primary">ATS Score</h2>
-                </div>
+              <PanelSection
+                title="ATS Score"
+                icon={Target}
+                tooltip="This score estimates how well your resume matches the job description based on keyword overlap, skills alignment, and formatting."
+              >
                 <div className="flex justify-center overflow-hidden">
                   <ATSScoreGauge score={result.ats_score} grade={result.grade} />
                 </div>
-              </AnimatedCard>
+              </PanelSection>
             </motion.div>
 
             {/* Score breakdown */}
@@ -232,12 +267,31 @@ export default function Results() {
           {/* ── MAIN PANEL ────────────────────────────────────────────── */}
           <div className="space-y-5 min-w-0">
 
+            {/* Job fit — most actionable, shown first */}
+            <div id="job-fit">
+              <PanelSection
+                title="Job Fit Explanation"
+                icon={MessageSquare}
+                tooltip="AI-generated analysis of how your experience aligns with the role requirements."
+              >
+                <JobFitExplanation
+                  explanation={result.job_fit_explanation}
+                  topStrengths={result.top_strengths}
+                  topGaps={result.top_gaps}
+                />
+              </PanelSection>
+            </div>
+
             {/* Keywords */}
             <div id="keywords">
-              <PanelSection title="Keyword Frequency Analysis" icon={BarChart3}>
+              <PanelSection
+                title="Keyword Frequency Analysis"
+                icon={BarChart3}
+                tooltip="Green keywords are found in your resume. Red keywords are missing — consider adding these to improve your score."
+              >
                 <div className="mb-3 flex items-center gap-4 text-xs text-text-muted">
                   <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-sm bg-accent-primary/70" />Matched
+                    <span className="w-2 h-2 rounded-sm bg-success/70" />Matched
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-sm bg-danger/40" />Missing
@@ -257,17 +311,6 @@ export default function Results() {
               </PanelSection>
             </div>
 
-            {/* Job fit */}
-            <div id="job-fit">
-              <PanelSection title="Job Fit Explanation" icon={MessageSquare}>
-                <JobFitExplanation
-                  explanation={result.job_fit_explanation}
-                  topStrengths={result.top_strengths}
-                  topGaps={result.top_gaps}
-                />
-              </PanelSection>
-            </div>
-
             {/* Bullet analysis */}
             <div id="bullets">
               <PanelSection title="Bullet Point Analysis" icon={Zap}>
@@ -281,8 +324,17 @@ export default function Results() {
           <div className="xl:sticky xl:top-20 space-y-4 lg:col-span-2 xl:col-span-1 z-10">
 
             {/* Missing skills */}
-            <PanelSection title="Missing Skills" icon={TrendingUp}>
-              <MissingSkillsPanel skillGaps={result.skill_gaps} />
+            <PanelSection
+              title="Missing Skills"
+              icon={TrendingUp}
+              tooltip="Skills mentioned in the job description but not found in your resume. These are areas to improve."
+            >
+              <MissingSkillsPanel
+                skillGaps={result.skill_gaps}
+                gapMappings={gapMappings}
+                isPro={canUsePro}
+                onUpgradeClick={() => setShowPaywall(true)}
+              />
             </PanelSection>
 
             {/* Formatting issues */}
@@ -301,6 +353,12 @@ export default function Results() {
           </div>
         </motion.div>
       </div>
+
+      <PaywallModal
+        open={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        trigger="skill_gap_study"
+      />
     </PageWrapper>
   )
 }
