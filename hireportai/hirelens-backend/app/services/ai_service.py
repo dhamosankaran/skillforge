@@ -15,18 +15,7 @@ from app.schemas.responses import (
     RewriteResponse,
     RewriteSection,
 )
-from app.services.llm.factory import get_llm_provider
-
-
-def _generate(
-    prompt: str,
-    temperature: float = 0.7,
-    max_tokens: int = 2000,
-    json_mode: bool = False,
-) -> str:
-    """Send a prompt to the active LLM provider."""
-    provider = get_llm_provider()
-    return provider.generate(prompt, temperature, max_tokens, json_mode)
+from app.core.llm_router import generate_for_task
 
 
 def generate_job_fit_explanation(
@@ -56,7 +45,7 @@ Respond with a JSON object containing:
 Be specific, direct, and constructive. Focus on actionable insights."""
 
     try:
-        response_text = _generate(prompt, temperature=0.6, max_tokens=800, json_mode=True)
+        response_text = generate_for_task(task="ats_keyword_extraction", prompt=prompt, json_mode=True, max_tokens=800, temperature=0.6)
         data = json.loads(response_text)
         return {
             "explanation": data.get("explanation", ""),
@@ -130,7 +119,7 @@ Return a JSON object with this EXACT structure:
 }}"""
 
     try:
-        response_text = _generate(prompt, temperature=0.4, max_tokens=4000, json_mode=True)
+        response_text = generate_for_task(task="resume_rewrite", prompt=prompt, json_mode=True, max_tokens=4000, temperature=0.4)
         data = json.loads(response_text)
 
         header = RewriteHeader(
@@ -225,7 +214,7 @@ GUIDELINES:
 Return only the cover letter text."""
 
     try:
-        cover_letter = _generate(prompt, temperature=0.7, max_tokens=900)
+        cover_letter = generate_for_task(task="cover_letter", prompt=prompt, max_tokens=900, temperature=0.7)
         return CoverLetterResponse(cover_letter=cover_letter.strip(), tone=tone)
     except Exception:
         return CoverLetterResponse(
@@ -269,7 +258,7 @@ Return a JSON object:
 Mix: behavioral (3), technical (4), situational (2), culture fit (1)."""
 
     try:
-        response_text = _generate(prompt, temperature=0.7, max_tokens=2000, json_mode=True)
+        response_text = generate_for_task(task="interview_questions", prompt=prompt, json_mode=True, max_tokens=2000, temperature=0.7)
         data = json.loads(response_text)
         questions = [
             InterviewQuestion(question=q["question"], star_framework=q["star_framework"])
@@ -327,7 +316,7 @@ Rules:
 Return a JSON object: {{"bullets": ["rewritten bullet 1", "rewritten bullet 2", ...]}}"""
 
     try:
-        response_text = _generate(prompt, temperature=0.5, max_tokens=1000, json_mode=True)
+        response_text = generate_for_task(task="rewrite_bullets", prompt=prompt, json_mode=True, max_tokens=1000, temperature=0.5)
         data = json.loads(response_text)
         return data.get("bullets", bullets)
     except Exception:

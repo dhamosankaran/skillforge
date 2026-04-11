@@ -111,13 +111,10 @@ class TestGenerateExperience:
             "summary": "Strong in system design fundamentals.",
         })
 
-        mock_provider = MagicMock()
-        mock_provider.generate.return_value = mock_llm_response
-
         with patch(
-            "app.services.experience_service.get_llm_provider",
-            return_value=mock_provider,
-        ):
+            "app.services.experience_service.generate_for_task",
+            return_value=mock_llm_response,
+        ) as mock_generate:
             resp = await client.post(
                 "/api/v1/study/experience",
                 json={"topic": "system design"},
@@ -131,8 +128,9 @@ class TestGenerateExperience:
         assert data["cards_studied"] == 5
 
         # Verify the LLM was called with a prompt containing the study stats
-        call_args = mock_provider.generate.call_args
-        prompt = call_args[0][0] if call_args[0] else call_args[1].get("prompt", "")
+        call_args = mock_generate.call_args
+        # generate_for_task is called positionally via asyncio.to_thread
+        prompt = call_args[0][1] if len(call_args[0]) > 1 else call_args[1].get("prompt", "")
         assert "System Design" in prompt
         assert "5" in prompt  # cards_studied count
 
@@ -161,12 +159,9 @@ class TestGenerateExperience:
         token, user_id = await _sign_in(client)
         await _seed_study_history(db_session, user_id)
 
-        mock_provider = MagicMock()
-        mock_provider.generate.side_effect = RuntimeError("LLM down")
-
         with patch(
-            "app.services.experience_service.get_llm_provider",
-            return_value=mock_provider,
+            "app.services.experience_service.generate_for_task",
+            side_effect=RuntimeError("LLM down"),
         ):
             resp = await client.post(
                 "/api/v1/study/experience",

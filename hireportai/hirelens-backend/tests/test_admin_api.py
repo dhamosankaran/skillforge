@@ -290,12 +290,9 @@ class TestAICardGeneration:
             "tags": ["algorithms", "binary-search", "time-complexity"],
         })
 
-        mock_provider = MagicMock()
-        mock_provider.generate.return_value = mock_llm_response
-
         with patch(
-            "app.services.ai_card_service.get_llm_provider",
-            return_value=mock_provider,
+            "app.services.ai_card_service.generate_for_task",
+            return_value=mock_llm_response,
         ):
             resp = await client.post("/api/v1/admin/cards/generate", json={
                 "topic": "Binary search",
@@ -326,12 +323,9 @@ class TestAICardGeneration:
         """LLM failure returns 503."""
         token, _ = await _sign_in(client, role="admin")
 
-        mock_provider = MagicMock()
-        mock_provider.generate.side_effect = RuntimeError("LLM down")
-
         with patch(
-            "app.services.ai_card_service.get_llm_provider",
-            return_value=mock_provider,
+            "app.services.ai_card_service.generate_for_task",
+            side_effect=RuntimeError("LLM down"),
         ):
             resp = await client.post("/api/v1/admin/cards/generate", json={
                 "topic": "Merge sort",

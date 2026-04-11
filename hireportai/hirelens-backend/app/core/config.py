@@ -45,6 +45,13 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     claude_model: str = "claude-sonnet-4-20250514"
 
+    # --- LLM Router (multi-model) ---
+    llm_fast_provider: str = "gemini"
+    llm_fast_model: str = "gemini-2.0-flash"
+    llm_reasoning_provider: str = "gemini"
+    llm_reasoning_model: str = "gemini-2.5-pro"
+    openai_api_key: str = ""
+
     # --- Error monitoring (Sentry) ---
     sentry_dsn: str = ""
 

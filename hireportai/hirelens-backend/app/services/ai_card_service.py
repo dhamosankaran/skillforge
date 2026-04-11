@@ -3,8 +3,8 @@ import json
 
 from fastapi import HTTPException, status
 
+from app.core.llm_router import generate_for_task
 from app.schemas.admin_card import CardDraftResponse, CardGenerateRequest
-from app.services.llm.factory import get_llm_provider
 
 _PROMPT_TEMPLATE = """You are an expert educator creating flashcards for software engineering interview prep.
 
@@ -46,9 +46,11 @@ def generate_card_draft(payload: CardGenerateRequest) -> CardDraftResponse:
     )
 
     try:
-        provider = get_llm_provider()
-        response_text = provider.generate(
-            prompt, temperature=0.7, max_tokens=800, json_mode=True,
+        response_text = generate_for_task(
+            task="card_draft",
+            prompt=prompt,
+            json_mode=True,
+            max_tokens=800,
         )
         data = json.loads(response_text)
     except Exception:

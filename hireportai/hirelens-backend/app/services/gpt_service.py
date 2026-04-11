@@ -1,7 +1,11 @@
-"""Google Gemini service for AI-powered resume optimization features."""
+"""AI-powered resume optimization features (legacy routes).
+
+Now delegates to the multi-model LLM router instead of calling Gemini directly.
+"""
 import json
 from typing import Any, Dict, List, Optional
 
+from app.core.llm_router import generate_for_task
 from app.models.response_models import (
     CoverLetterResponse,
     InterviewPrepResponse,
@@ -11,61 +15,6 @@ from app.models.response_models import (
     RewriteResponse,
     RewriteSection,
 )
-
-
-def _get_client():
-    """Lazy-load the Gemini client."""
-    try:
-        from google import genai
-        from app.config import get_settings
-        settings = get_settings()
-        if not settings.gemini_api_key:
-            return None, None
-        client = genai.Client(api_key=settings.gemini_api_key)
-        return client, settings.gemini_model
-    except Exception:
-        return None, None
-
-
-def _generate(
-    prompt: str,
-    temperature: float = 0.7,
-    max_tokens: int = 2000,
-    json_mode: bool = False,
-) -> str:
-    """Send a prompt to Gemini and return the response text.
-
-    Args:
-        prompt: The full prompt string.
-        temperature: Sampling temperature (0.0 - 1.0).
-        max_tokens: Maximum output tokens.
-        json_mode: Whether to request JSON-formatted output.
-
-    Returns:
-        Response text string.
-
-    Raises:
-        RuntimeError: If Gemini client is not configured.
-    """
-    from google.genai import types
-
-    client, model_name = _get_client()
-    if client is None:
-        raise RuntimeError("Gemini API key not configured")
-
-    config_kwargs: Dict[str, Any] = {
-        "temperature": temperature,
-        "max_output_tokens": max_tokens,
-    }
-    if json_mode:
-        config_kwargs["response_mime_type"] = "application/json"
-
-    response = client.models.generate_content(
-        model=model_name,
-        contents=prompt,
-        config=types.GenerateContentConfig(**config_kwargs),
-    )
-    return response.text or ""
 
 
 def generate_job_fit_explanation(
@@ -95,7 +44,7 @@ Respond with a JSON object containing:
 Be specific, direct, and constructive. Focus on actionable insights."""
 
     try:
-        response_text = _generate(prompt, temperature=0.6, max_tokens=800, json_mode=True)
+        response_text = generate_for_task(task="ats_keyword_extraction", prompt=prompt, json_mode=True, max_tokens=800, temperature=0.6)
         data = json.loads(response_text)
         return {
             "explanation": data.get("explanation", ""),
@@ -227,7 +176,7 @@ Read the original resume and map its content to these standard sections:
 {resume_text}"""
 
     try:
-        response_text = _generate(prompt, temperature=0.4, max_tokens=4000, json_mode=True)
+        response_text = generate_for_task(task="resume_rewrite", prompt=prompt, json_mode=True, max_tokens=4000, temperature=0.4)
         data = json.loads(response_text)
 
         header = RewriteHeader(
@@ -332,7 +281,7 @@ RULES:
 - End with "Respectfully yours," followed by the candidate's name"""
 
     try:
-        cover_letter = _generate(prompt, temperature=0.7, max_tokens=900)
+        cover_letter = generate_for_task(task="cover_letter", prompt=prompt, max_tokens=900, temperature=0.7)
         return CoverLetterResponse(cover_letter=cover_letter.strip(), tone=tone)
     except Exception:
         return CoverLetterResponse(
@@ -379,7 +328,7 @@ Mix: behavioral (3), technical (4), situational (2), culture fit (1).
 Make questions specific to the role and candidate's background."""
 
     try:
-        response_text = _generate(prompt, temperature=0.7, max_tokens=2000, json_mode=True)
+        response_text = generate_for_task(task="interview_questions", prompt=prompt, json_mode=True, max_tokens=2000, temperature=0.7)
         data = json.loads(response_text)
         questions = [
             InterviewQuestion(question=q["question"], star_framework=q["star_framework"])
@@ -440,7 +389,7 @@ Rules:
 Return a JSON object: {{"bullets": ["rewritten bullet 1", "rewritten bullet 2", ...]}}"""
 
     try:
-        response_text = _generate(prompt, temperature=0.5, max_tokens=1000, json_mode=True)
+        response_text = generate_for_task(task="rewrite_bullets", prompt=prompt, json_mode=True, max_tokens=1000, temperature=0.5)
         data = json.loads(response_text)
         return data.get("bullets", bullets)
     except Exception:

@@ -10,7 +10,7 @@ from app.core.analytics import track as analytics_track
 from app.models.card import Card
 from app.models.card_progress import CardProgress
 from app.models.category import Category
-from app.services.llm.factory import get_llm_provider
+from app.core.llm_router import generate_for_task
 
 _PROMPT_TEMPLATE = """You are a career coach helping a software engineer write resume bullet points.
 
@@ -95,9 +95,14 @@ async def generate_experience(
     )
 
     try:
-        provider = get_llm_provider()
         response_text = await asyncio.to_thread(
-            provider.generate, prompt, 0.7, 500, True,
+            generate_for_task,
+            "experience_narrative",
+            prompt,
+            None,   # system_prompt
+            True,   # json_mode
+            500,    # max_tokens
+            0.7,    # temperature
         )
         data = json.loads(response_text)
     except HTTPException:
