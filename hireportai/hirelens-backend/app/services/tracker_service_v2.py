@@ -1,4 +1,5 @@
 """SQLAlchemy-backed job application tracker service (v2)."""
+import json
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
@@ -13,6 +14,19 @@ from app.schemas.responses import TrackerApplication
 
 def _to_response(model: TrackerApplicationModel) -> TrackerApplication:
     """Convert ORM model to Pydantic response."""
+    matched = None
+    missing = None
+    if model.skills_matched:
+        try:
+            matched = json.loads(model.skills_matched)
+        except (json.JSONDecodeError, TypeError):
+            pass
+    if model.skills_missing:
+        try:
+            missing = json.loads(model.skills_missing)
+        except (json.JSONDecodeError, TypeError):
+            pass
+
     return TrackerApplication(
         id=model.id,
         company=model.company,
@@ -20,6 +34,9 @@ def _to_response(model: TrackerApplicationModel) -> TrackerApplication:
         date_applied=model.date_applied,
         ats_score=model.ats_score,
         status=model.status,
+        scan_id=model.scan_id,
+        skills_matched=matched,
+        skills_missing=missing,
         created_at=str(model.created_at),
     )
 
@@ -28,6 +45,8 @@ async def create_application(
     data: TrackerApplicationCreate,
     db: AsyncSession,
     user_id: Optional[str] = None,
+    skills_matched: Optional[List[str]] = None,
+    skills_missing: Optional[List[str]] = None,
 ) -> TrackerApplication:
     """Create a new job application."""
     app = TrackerApplicationModel(
@@ -38,10 +57,29 @@ async def create_application(
         date_applied=data.date_applied,
         ats_score=data.ats_score,
         status=data.status,
+        scan_id=data.scan_id,
+        skills_matched=json.dumps(skills_matched) if skills_matched else None,
+        skills_missing=json.dumps(skills_missing) if skills_missing else None,
     )
     db.add(app)
     await db.flush()
     return _to_response(app)
+
+
+async def find_by_scan_id(
+    scan_id: str,
+    db: AsyncSession,
+    user_id: Optional[str] = None,
+) -> Optional[TrackerApplication]:
+    """Find a tracker entry by scan_id."""
+    stmt = select(TrackerApplicationModel).where(
+        TrackerApplicationModel.scan_id == scan_id
+    )
+    if user_id:
+        stmt = stmt.where(TrackerApplicationModel.user_id == user_id)
+    result = await db.execute(stmt)
+    model = result.scalar_one_or_none()
+    return _to_response(model) if model else None
 
 
 async def get_applications(

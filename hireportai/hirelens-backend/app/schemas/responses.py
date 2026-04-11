@@ -58,6 +58,7 @@ class SkillOverlapData(BaseModel):
 class AnalysisResponse(BaseModel):
     """Full response from the /api/analyze endpoint."""
 
+    scan_id: str = ""
     ats_score: int
     grade: str
     score_breakdown: ATSScoreBreakdown
@@ -138,6 +139,9 @@ class TrackerApplication(BaseModel):
     date_applied: str
     ats_score: int
     status: str
+    scan_id: Optional[str] = None
+    skills_matched: Optional[List[str]] = None
+    skills_missing: Optional[List[str]] = None
     created_at: str
 
 

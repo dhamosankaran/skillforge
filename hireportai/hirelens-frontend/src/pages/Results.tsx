@@ -1,10 +1,12 @@
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Target, BarChart3, GitMerge, AlertTriangle, Zap,
   MessageSquare, TrendingUp, RefreshCw, FileText,
-  Brain
+  Brain, CheckCircle2
 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { ATSScoreGauge } from '@/components/dashboard/ATSScoreGauge'
 import { ScoreBreakdown } from '@/components/dashboard/ScoreBreakdown'
@@ -52,6 +54,28 @@ export default function Results() {
   const { state } = useAnalysisContext()
   const navigate = useNavigate()
   const { result, isLoading } = state
+  const toastShownRef = useRef<string | null>(null)
+
+  // Show toast when scan results load (auto-created tracker entry)
+  useEffect(() => {
+    if (!result?.scan_id || toastShownRef.current === result.scan_id) return
+    toastShownRef.current = result.scan_id
+    toast.success(
+      (t) => (
+        <span className="flex items-center gap-2 text-sm">
+          <CheckCircle2 size={14} className="text-green-400 shrink-0" />
+          Added to your Job Tracker
+          <button
+            onClick={() => { toast.dismiss(t.id); navigate('/tracker') }}
+            className="ml-1 underline text-accent-primary hover:text-accent-primary/80"
+          >
+            View
+          </button>
+        </span>
+      ),
+      { duration: 5000 },
+    )
+  }, [result?.scan_id, navigate])
 
   if (isLoading) {
     return (
@@ -193,7 +217,14 @@ export default function Results() {
                 onClick={() => navigate('/tracker')}
                 className="w-full justify-center"
               >
-                Save to Tracker
+                {result.scan_id ? (
+                  <>
+                    <CheckCircle2 size={12} className="text-green-400" />
+                    In Tracker — View
+                  </>
+                ) : (
+                  'Save to Tracker'
+                )}
               </GlowButton>
             </motion.div>
           </div>

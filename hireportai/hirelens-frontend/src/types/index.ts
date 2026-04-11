@@ -40,6 +40,7 @@ export interface SkillOverlapData {
 }
 
 export interface AnalysisResponse {
+  scan_id?: string
   ats_score: number
   grade: string
   score_breakdown: ATSScoreBreakdown
@@ -106,6 +107,9 @@ export interface TrackerApplication {
   date_applied: string
   ats_score: number
   status: ApplicationStatus
+  scan_id?: string | null
+  skills_matched?: string[] | null
+  skills_missing?: string[] | null
   created_at: string
 }
 

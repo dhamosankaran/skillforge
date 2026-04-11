@@ -1,8 +1,11 @@
 """Core resume analysis endpoint."""
 import json
+import uuid
+from datetime import date
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.response_models import (
     AnalysisResponse,
@@ -15,7 +18,9 @@ from app.models.response_models import (
 )
 from app.core.analytics import track as analytics_track
 from app.core.deps import get_current_user_optional
+from app.db.session import get_db
 from app.models.user import User
+from app.schemas.requests import TrackerApplicationCreate
 from app.services.bullet_analyzer import analyze_bullets
 from app.services.formatter_check import check_formatting
 from app.services.gap_detector import detect_gaps, get_skills_overlap_data
@@ -23,6 +28,7 @@ from app.services.keywords import get_keyword_chart_data, match_keywords
 from app.services.nlp import extract_job_requirements, extract_skills
 from app.services.parser import parse_docx, parse_pdf
 from app.services.scorer import ATSScorer
+from app.services.tracker_service_v2 import create_application, find_by_scan_id
 
 router = APIRouter()
 scorer = ATSScorer()
@@ -43,6 +49,7 @@ async def analyze_resume(
     run_rewrite: bool = Form(default=False),
     run_cover_letter: bool = Form(default=False),
     current_user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_db),
 ) -> AnalysisResponse:
     """Analyze a resume against a job description and return full ATS analysis.
 
@@ -179,6 +186,8 @@ async def analyze_resume(
         top_strengths = matched_keywords[:3] if matched_keywords else ["Relevant experience present"]
         top_gaps = missing_keywords[:3] if missing_keywords else ["Add more role-specific keywords"]
 
+    scan_id = str(uuid.uuid4())
+
     analytics_track(
         user_id=current_user.id if current_user else None,
         event="ats_scanned",
@@ -191,7 +200,40 @@ async def analyze_resume(
         },
     )
 
+    # Auto-populate the job tracker for authenticated users
+    if current_user:
+        existing = await find_by_scan_id(scan_id, db, user_id=current_user.id)
+        if not existing:
+            # Extract company/position from JD requirements
+            company = jd_requirements.get("company_name") or "Unknown Company"
+            position = jd_requirements.get("job_title") or "Position from scan"
+
+            tracker_data = TrackerApplicationCreate(
+                company=company[:200],
+                role=position[:200],
+                date_applied=date.today().isoformat(),
+                ats_score=score_result["total"],
+                status="Applied",
+                scan_id=scan_id,
+            )
+            await create_application(
+                tracker_data,
+                db,
+                user_id=current_user.id,
+                skills_matched=matched_keywords,
+                skills_missing=missing_keywords,
+            )
+            analytics_track(
+                user_id=current_user.id,
+                event="tracker_auto_created_from_scan",
+                properties={
+                    "ats_score": score_result["total"],
+                    "gaps_count": len(skill_gaps),
+                },
+            )
+
     return AnalysisResponse(
+        scan_id=scan_id,
         ats_score=score_result["total"],
         grade=score_result["grade"],
         score_breakdown=ATSScoreBreakdown(**score_result["breakdown"]),

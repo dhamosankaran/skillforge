@@ -50,6 +50,7 @@ class TrackerApplicationCreate(BaseModel):
     date_applied: str = Field(..., description="ISO date string YYYY-MM-DD")
     ats_score: int = Field(default=0, ge=0, le=100)
     status: str = Field(default="Applied", pattern="^(Applied|Interview|Offer|Rejected)$")
+    scan_id: Optional[str] = None
 
 
 class TrackerApplicationUpdate(BaseModel):
