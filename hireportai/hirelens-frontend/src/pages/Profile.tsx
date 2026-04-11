@@ -75,6 +75,7 @@ export default function Profile() {
   const [experienceText, setExperienceText] = useState<string | null>(null)
   const [experienceLoading, setExperienceLoading] = useState(false)
   const [experienceCopied, setExperienceCopied] = useState(false)
+  const [experienceError, setExperienceError] = useState<string | null>(null)
 
   useEffect(() => {
     capture('profile_viewed')
@@ -233,26 +234,34 @@ export default function Profile() {
                   {experienceCopied ? 'Copied!' : 'Copy to clipboard'}
                 </button>
                 <button
-                  onClick={() => setExperienceText(null)}
+                  onClick={() => { setExperienceText(null); setExperienceError(null) }}
                   className="ml-2 text-[11px] text-text-muted hover:text-text-secondary transition-colors"
                 >
                   Regenerate
                 </button>
               </div>
+            ) : progress !== null && progress.total_reviewed === 0 ? (
+              <p className="text-xs text-text-muted text-center py-4">
+                Study some cards first to generate your experience summary.
+              </p>
             ) : (
               <div className="flex flex-col items-center gap-3 py-2">
                 <p className="text-xs text-text-muted text-center max-w-sm">
                   Generate a resume-ready bullet point from your study history, powered by AI.
                 </p>
+                {experienceError && (
+                  <p className="text-xs text-red-400 text-center">{experienceError}</p>
+                )}
                 <button
                   onClick={async () => {
                     setExperienceLoading(true)
+                    setExperienceError(null)
                     try {
                       const res = await generateExperience({})
                       setExperienceText(res.experience_text)
                       capture('experience_generated', { topic: '', cards_studied_count: res.cards_studied })
                     } catch {
-                      // toast is handled by API interceptor
+                      setExperienceError('Failed to generate experience. Please try again.')
                     } finally {
                       setExperienceLoading(false)
                     }

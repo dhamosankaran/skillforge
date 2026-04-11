@@ -1,4 +1,5 @@
 """AI experience generator — turns study history into resume-ready narratives."""
+import asyncio
 import json
 
 from fastapi import HTTPException, status
@@ -95,10 +96,12 @@ async def generate_experience(
 
     try:
         provider = get_llm_provider()
-        response_text = provider.generate(
-            prompt, temperature=0.7, max_tokens=500, json_mode=True,
+        response_text = await asyncio.to_thread(
+            provider.generate, prompt, 0.7, 500, True,
         )
         data = json.loads(response_text)
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
