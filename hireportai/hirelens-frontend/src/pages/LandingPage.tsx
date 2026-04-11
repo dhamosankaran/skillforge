@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { motion, useInView } from "framer-motion";
 import { ScanLine, Brain, Target, ShieldCheck, BookOpen, UserCheck, Zap } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { usePricing } from "@/hooks/usePricing";
 import { capture } from "@/utils/posthog";
 
 /* ═══════════════════════════════════════════════════════════════
@@ -30,6 +31,7 @@ const stagger = {
 
 export default function LandingPage() {
   const { user } = useAuth();
+  const { pricing } = usePricing();
   const ctaTo = user ? "/study" : "/login";
 
   // Acquisition funnel entry point. Fires once per mount.
@@ -50,7 +52,7 @@ export default function LandingPage() {
       <TheLoop />
       <ThreeEngines />
       <HowItWorks />
-      <Pricing ctaTo={ctaTo} />
+      <Pricing ctaTo={ctaTo} priceDisplay={pricing.price_display} />
       <Trust />
       <FinalCTA ctaTo={ctaTo} />
       <Footer />
@@ -466,7 +468,7 @@ function HowItWorks() {
 
 /* ── PRICING ── */
 
-function Pricing({ ctaTo }: { ctaTo: string }) {
+function Pricing({ ctaTo, priceDisplay }: { ctaTo: string; priceDisplay: string }) {
   const ref = useRef<HTMLElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
 
@@ -526,7 +528,7 @@ function Pricing({ ctaTo }: { ctaTo: string }) {
             }}>MOST POPULAR</span>
             <p style={{ fontSize: 14, color: "var(--sf-text-tertiary)", fontWeight: 600, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>Pro</p>
             <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 24 }}>
-              <span style={{ fontSize: 48, fontWeight: 800, fontFamily: "var(--sf-font-display)", letterSpacing: "-0.04em" }}>$49</span>
+              <span style={{ fontSize: 48, fontWeight: 800, fontFamily: "var(--sf-font-display)", letterSpacing: "-0.04em" }}>{priceDisplay.replace('/mo', '')}</span>
               <span style={{ color: "var(--sf-text-tertiary)", fontSize: 14 }}>/month</span>
             </div>
             <ul style={{ listStyle: "none", padding: 0, margin: "0 0 32px", display: "flex", flexDirection: "column", gap: 12 }}>
@@ -551,7 +553,7 @@ function Pricing({ ctaTo }: { ctaTo: string }) {
               style={{ display: "block", textAlign: "center", textDecoration: "none", width: "100%", boxSizing: "border-box" }}
               onClick={() => capture('cta_clicked', { button: 'pricing' })}
             >
-              Start Pro — $49/mo →
+              Start Pro — {priceDisplay} →
             </Link>
             <p style={{ fontSize: 12, color: "var(--sf-text-tertiary)", textAlign: "center", marginTop: 12 }}>
               Cancel anytime. No contracts.

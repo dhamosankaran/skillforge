@@ -7,6 +7,7 @@ import clsx from 'clsx'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { useUsage } from '@/context/UsageContext'
 import type { PlanType } from '@/context/UsageContext'
+import { usePricing } from '@/hooks/usePricing'
 import { capture } from '@/utils/posthog'
 
 // ─── 3D Tilt Card ───
@@ -125,6 +126,7 @@ const cardVariants = {
 
 export default function Pricing() {
   const { usage, upgradePlan } = useUsage()
+  const { pricing } = usePricing()
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Post-checkout return from Stripe. Backend webhook flips the
@@ -139,7 +141,8 @@ export default function Pricing() {
     upgradePlan('pro')
     capture('payment_completed', {
       plan: 'pro',
-      amount_usd: 49,
+      price: pricing.price,
+      currency: pricing.currency,
       source: 'stripe_checkout_return',
     })
     toast.success('Welcome to Pro! Full library unlocked.', { duration: 5000 })
@@ -216,8 +219,12 @@ export default function Pricing() {
           animate="show"
           className="grid grid-cols-1 sm:grid-cols-2 gap-5 items-start"
         >
-          {plans.map((plan) => {
+          {plans.map((basePlan) => {
+            const plan = basePlan.planKey === 'pro'
+              ? { ...basePlan, price: pricing.price, period: '/mo' }
+              : basePlan
             const isCurrentPlan = usage.plan === plan.planKey
+            const priceSymbol = plan.planKey === 'pro' && pricing.currency === 'inr' ? '\u20b9' : '$'
             return (
               <motion.div key={plan.name} variants={cardVariants}>
                 <TiltCard className="h-full" intensity={plan.popular ? 4 : 6}>
@@ -307,7 +314,7 @@ export default function Pricing() {
                               color: 'var(--bg-base)',
                             }}
                           >
-                            ${plan.price}
+                            {priceSymbol}{plan.price}
                           </span>
                           {plan.period && (
                             <span className="text-sm text-text-muted font-medium">{plan.period}</span>

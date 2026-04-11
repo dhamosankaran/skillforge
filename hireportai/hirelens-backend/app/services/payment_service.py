@@ -51,12 +51,16 @@ def _init_stripe() -> None:
 # ── Checkout ────────────────────────────────────────────────────────────────
 
 
-async def create_checkout_session(user_id: str, db: AsyncSession) -> str:
+async def create_checkout_session(
+    user_id: str,
+    db: AsyncSession,
+    *,
+    currency: str | None = None,
+) -> str:
     """Create a Stripe Checkout Session for the Pro plan.
 
-    Returns the hosted Checkout URL. Reuses the user's existing
-    ``stripe_customer_id`` when one is already stored on their
-    Subscription row; otherwise creates a new Stripe Customer first.
+    Returns the hosted Checkout URL. When *currency* is ``"inr"``, the
+    INR Stripe price is used; otherwise the default USD price applies.
 
     Raises:
         UserNotFoundError — user_id does not exist.
@@ -66,7 +70,12 @@ async def create_checkout_session(user_id: str, db: AsyncSession) -> str:
     _init_stripe()
     settings = get_settings()
 
-    if not settings.stripe_pro_price_id:
+    if currency == "inr" and settings.stripe_pro_price_id_inr:
+        price_id = settings.stripe_pro_price_id_inr
+    else:
+        price_id = settings.stripe_pro_price_id
+
+    if not price_id:
         raise PaymentError("Stripe pro price ID is not configured")
 
     user = (
@@ -108,7 +117,7 @@ async def create_checkout_session(user_id: str, db: AsyncSession) -> str:
         session = stripe.checkout.Session.create(
             customer=customer_id,
             mode="subscription",
-            line_items=[{"price": settings.stripe_pro_price_id, "quantity": 1}],
+            line_items=[{"price": price_id, "quantity": 1}],
             success_url=(
                 f"{settings.frontend_url}/pricing?upgrade=success"
                 "&session_id={CHECKOUT_SESSION_ID}"
@@ -124,7 +133,7 @@ async def create_checkout_session(user_id: str, db: AsyncSession) -> str:
     analytics_track(
         user_id=user.id,
         event="checkout_started",
-        properties={"price_id": settings.stripe_pro_price_id, "plan": "pro"},
+        properties={"price_id": price_id, "plan": "pro"},
     )
     return session.url
 

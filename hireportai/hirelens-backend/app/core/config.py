@@ -29,10 +29,14 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
 
+    # --- Redis ---
+    redis_url: str = "redis://localhost:6379"
+
     # --- Stripe ---
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_pro_price_id: str = ""
+    stripe_pro_price_id_inr: str = ""
     stripe_enterprise_price_id: str = ""
     frontend_url: str = "http://localhost:5199"
 

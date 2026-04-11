@@ -417,14 +417,28 @@ export async function updatePersona(
  */
 // ─── Payments — Stripe Checkout ──────────────────────────────────────────────
 
+export interface PricingResponse {
+  currency: string
+  price: number
+  price_display: string
+  stripe_price_id: string
+}
+
+/** Fetch geo-based pricing for the current user's IP. */
+export async function fetchPricing(): Promise<PricingResponse> {
+  const response = await api.get<PricingResponse>('/api/v1/payments/pricing')
+  return response.data
+}
+
 export interface CheckoutSessionResponse {
   url: string
 }
 
 /** Create a Stripe Checkout Session for Pro and return the redirect URL. */
-export async function createCheckoutSession(): Promise<CheckoutSessionResponse> {
+export async function createCheckoutSession(currency?: string): Promise<CheckoutSessionResponse> {
   const response = await api.post<CheckoutSessionResponse>(
     '/api/v1/payments/checkout',
+    currency ? { currency } : {},
   )
   return response.data
 }

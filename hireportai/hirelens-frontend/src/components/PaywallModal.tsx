@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Sparkles, ArrowRight, Check, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { createCheckoutSession } from '@/services/api'
+import { usePricing } from '@/hooks/usePricing'
 import { capture } from '@/utils/posthog'
 
 export type PaywallTrigger =
@@ -61,6 +62,7 @@ export function PaywallModal({
   context,
 }: PaywallModalProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const { pricing } = usePricing()
 
   // Fire paywall_hit once whenever the modal opens. Re-fires if the same
   // modal instance is re-opened, which is the right semantic — each open
@@ -80,10 +82,11 @@ export function PaywallModal({
     capture('checkout_started', {
       trigger,
       plan: 'pro',
-      price_usd: 49,
+      price: pricing.price,
+      currency: pricing.currency,
     })
     try {
-      const { url } = await createCheckoutSession()
+      const { url } = await createCheckoutSession(pricing.currency)
       window.location.href = url
     } catch (err) {
       setIsLoading(false)
@@ -172,7 +175,7 @@ export function PaywallModal({
                 {/* Price */}
                 <div className="mb-5">
                   <span className="font-display text-3xl font-bold text-text-primary">
-                    $49
+                    {pricing.price_display.replace('/mo', '')}
                   </span>
                   <span className="text-sm text-text-muted">/month</span>
                 </div>
@@ -191,7 +194,7 @@ export function PaywallModal({
                       </>
                     ) : (
                       <>
-                        Upgrade to Pro — $49/mo
+                        Upgrade to Pro — {pricing.price_display}
                         <ArrowRight size={14} />
                       </>
                     )}
