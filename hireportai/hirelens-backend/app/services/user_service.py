@@ -14,10 +14,13 @@ async def get_or_create_user(
     name: str,
     avatar_url: Optional[str],
     db: AsyncSession,
-) -> User:
+) -> tuple[User, bool]:
     """Find an existing user by google_id or create a new one.
 
     Also ensures a default free subscription exists for new users.
+
+    Returns a tuple of ``(user, is_new)`` — ``is_new`` is True when the
+    user was just created in this call.
     """
     result = await db.execute(select(User).where(User.google_id == google_id))
     user = result.scalar_one_or_none()
@@ -27,7 +30,7 @@ async def get_or_create_user(
         user.name = name
         if avatar_url:
             user.avatar_url = avatar_url
-        return user
+        return user, False
 
     # Create new user
     user = User(google_id=google_id, email=email, name=name, avatar_url=avatar_url)
@@ -38,7 +41,7 @@ async def get_or_create_user(
     sub = Subscription(user_id=user.id, plan="free", status="active")
     db.add(sub)
 
-    return user
+    return user, True
 
 
 async def get_user_by_id(user_id: str, db: AsyncSession) -> Optional[User]:

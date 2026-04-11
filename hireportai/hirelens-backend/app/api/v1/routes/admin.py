@@ -1,12 +1,16 @@
 """Admin-only endpoints."""
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Query, Request, UploadFile, status
+from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import require_admin
 from app.core.rate_limit import limiter
 from app.db.session import get_db
+from app.models.registration_log import RegistrationLog
 from app.models.user import User
 from app.schemas.admin_card import (
     AdminCardListResponse,
@@ -20,6 +24,21 @@ from app.schemas.admin_card import (
 from app.services import ai_card_service, card_admin_service
 
 router = APIRouter()
+
+
+class RegistrationLogEntry(BaseModel):
+    id: str
+    user_id: str
+    ip_address: str
+    google_email: str
+    created_at: str
+
+
+class RegistrationLogListResponse(BaseModel):
+    items: list[RegistrationLogEntry]
+    total: int
+    page: int
+    per_page: int
 
 
 @router.get("/admin/ping")
@@ -96,3 +115,63 @@ async def generate_card(
     user: User = Depends(require_admin),
 ):
     return ai_card_service.generate_card_draft(payload)
+
+
+@router.get("/admin/registration-logs", response_model=RegistrationLogListResponse)
+async def list_registration_logs(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200),
+    ip_address: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """List registration logs with optional filters. Admin-only."""
+    query = select(RegistrationLog)
+    count_query = select(RegistrationLog)
+
+    if ip_address:
+        query = query.where(RegistrationLog.ip_address == ip_address)
+        count_query = count_query.where(RegistrationLog.ip_address == ip_address)
+    if date_from:
+        try:
+            dt = datetime.fromisoformat(date_from)
+            query = query.where(RegistrationLog.created_at >= dt)
+            count_query = count_query.where(RegistrationLog.created_at >= dt)
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            dt = datetime.fromisoformat(date_to)
+            query = query.where(RegistrationLog.created_at <= dt)
+            count_query = count_query.where(RegistrationLog.created_at <= dt)
+        except ValueError:
+            pass
+
+    from sqlalchemy import func
+    total_result = await db.execute(
+        select(func.count()).select_from(count_query.subquery())
+    )
+    total = total_result.scalar_one()
+
+    query = query.order_by(RegistrationLog.created_at.desc())
+    query = query.offset((page - 1) * per_page).limit(per_page)
+    result = await db.execute(query)
+    logs = result.scalars().all()
+
+    return RegistrationLogListResponse(
+        items=[
+            RegistrationLogEntry(
+                id=log.id,
+                user_id=log.user_id,
+                ip_address=log.ip_address,
+                google_email=log.google_email,
+                created_at=str(log.created_at),
+            )
+            for log in logs
+        ],
+        total=total,
+        page=page,
+        per_page=per_page,
+    )

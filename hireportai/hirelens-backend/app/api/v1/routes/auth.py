@@ -1,11 +1,14 @@
 """Authentication endpoints — Google OAuth + JWT."""
-from datetime import datetime
+import hashlib
+from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.analytics import track as analytics_track
 from app.core.deps import get_current_user
 from app.core.rate_limit import limiter
 from app.core.security import (
@@ -15,8 +18,12 @@ from app.core.security import (
     verify_google_token,
 )
 from app.db.session import get_db
+from app.models.registration_log import RegistrationLog
 from app.models.user import User
 from app.services.user_service import get_or_create_user
+
+_MAX_REGISTRATIONS_PER_IP = 2
+_REGISTRATION_WINDOW_DAYS = 30
 
 router = APIRouter()
 
@@ -72,6 +79,18 @@ class UpdatePersonaRequest(BaseModel):
     target_date: Optional[str] = None
 
 
+# --- Helpers ---
+
+def _client_ip(request: Request) -> str:
+    """Extract client IP from X-Forwarded-For (production) or request.client."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    if request.client:
+        return request.client.host
+    return "127.0.0.1"
+
+
 # --- Endpoints ---
 
 @router.post("/auth/google", response_model=TokenResponse)
@@ -85,13 +104,60 @@ async def google_auth(request: Request, body: GoogleAuthRequest, db: AsyncSessio
             detail="Invalid Google credential",
         )
 
-    user = await get_or_create_user(
+    # Check if user already exists (existing users are never blocked)
+    existing = (
+        await db.execute(
+            select(User).where(User.google_id == google_info["google_id"])
+        )
+    ).scalar_one_or_none()
+
+    ip = _client_ip(request)
+
+    # IP-based registration limit — only when creating a NEW account
+    if existing is None:
+        cutoff = datetime.now() - timedelta(days=_REGISTRATION_WINDOW_DAYS)
+        result = await db.execute(
+            select(func.count())
+            .select_from(RegistrationLog)
+            .where(
+                RegistrationLog.ip_address == ip,
+                RegistrationLog.created_at >= cutoff,
+            )
+        )
+        recent_count = result.scalar_one()
+
+        if recent_count >= _MAX_REGISTRATIONS_PER_IP:
+            ip_hash = hashlib.sha256(ip.encode()).hexdigest()
+            analytics_track(
+                user_id="system",
+                event="registration_blocked",
+                properties={
+                    "ip_hash": ip_hash,
+                    "existing_accounts": recent_count,
+                },
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "detail": "Account limit reached for this network. Contact support if this is an error.",
+                    "code": "IP_LIMIT_REACHED",
+                },
+            )
+
+    user, is_new = await get_or_create_user(
         google_id=google_info["google_id"],
         email=google_info["email"],
         name=google_info["name"],
         avatar_url=google_info.get("avatar_url"),
         db=db,
     )
+
+    if is_new:
+        db.add(RegistrationLog(
+            user_id=user.id,
+            ip_address=ip,
+            google_email=google_info["email"],
+        ))
 
     token_data = {"sub": user.id, "email": user.email}
     access_token = create_access_token(token_data)
