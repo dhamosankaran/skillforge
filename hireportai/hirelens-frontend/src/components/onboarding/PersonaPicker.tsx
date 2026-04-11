@@ -43,11 +43,12 @@ const stagger = {
 }
 
 interface PersonaPickerProps {
-  isModal?: boolean
+  mode?: 'onboarding' | 'settings'
   onClose?: () => void
 }
 
-export default function PersonaPicker({ isModal = false, onClose }: PersonaPickerProps) {
+export default function PersonaPicker({ mode = 'onboarding', onClose }: PersonaPickerProps) {
+  const isModal = mode === 'settings'
   const { user, updateUser } = useAuth()
   const navigate = useNavigate()
   const [selected, setSelected] = useState<Persona | null>(
@@ -77,6 +78,7 @@ export default function PersonaPicker({ isModal = false, onClose }: PersonaPicke
         capture('persona_changed', {
           from_persona: user?.persona,
           to_persona: selected,
+          mode: 'settings',
         })
         updateUser({
           persona: res.persona as Persona,
@@ -86,7 +88,7 @@ export default function PersonaPicker({ isModal = false, onClose }: PersonaPicke
         onClose?.()
       } else {
         const res = await completeOnboarding(payload)
-        capture('onboarding_persona_selected', { persona: selected })
+        capture('onboarding_persona_selected', { persona: selected, mode: 'onboarding' })
         updateUser({ persona: res.persona as Persona, onboarding_completed: true })
 
         if (selected === 'interview') {

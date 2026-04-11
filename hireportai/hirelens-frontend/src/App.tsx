@@ -37,7 +37,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
   if (isLoading) return null
   if (!user) return <Navigate to="/" replace />
-  if (!user.onboarding_completed) return <PersonaPicker />
+  if (!user.onboarding_completed) return <PersonaPicker mode="onboarding" />
   return <>{children}</>
 }
 

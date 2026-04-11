@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { BookOpen, Play, RefreshCw, AlertCircle, Filter, Target, Flame, Users, ArrowRight, Pencil } from 'lucide-react'
+import { BookOpen, Play, RefreshCw, AlertCircle, Filter, Target, Flame, Users, Pencil, Crosshair } from 'lucide-react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { GlowButton } from '@/components/ui/GlowButton'
 import { CategoryCard, CategoryCardSkeleton } from '@/components/study/CategoryCard'
@@ -10,6 +10,7 @@ import PersonaPicker from '@/components/onboarding/PersonaPicker'
 import { useStudyDashboard } from '@/hooks/useStudyDashboard'
 import { useAuth } from '@/context/AuthContext'
 import { useUsage } from '@/context/UsageContext'
+import { useGamification } from '@/context/GamificationContext'
 import { capture } from '@/utils/posthog'
 import type { Category } from '@/types'
 
@@ -18,24 +19,27 @@ import type { Category } from '@/types'
 const PERSONA_CONFIG = {
   interview: {
     icon: Target,
-    label: 'Interview Prep',
+    emoji: '🎯',
+    label: 'Interview prep',
     cssVar: 'var(--sf-accent-primary)',
     link: '/mission',
-    linkLabel: 'Go to Mission Mode',
+    linkLabel: 'Go to Mission →',
   },
   climber: {
     icon: Flame,
-    label: 'Staying Sharp',
+    emoji: '🔥',
+    label: 'Daily practice',
     cssVar: 'var(--sf-accent-secondary)',
     link: '/study/daily',
-    linkLabel: 'Start Daily Review',
+    linkLabel: 'Start Daily 5 →',
   },
   team: {
     icon: Users,
-    label: 'Team Explorer',
+    emoji: '👥',
+    label: 'Team exploration',
     cssVar: 'var(--sf-accent-warm, #f59e0b)',
     link: '/study',
-    linkLabel: 'Browse Categories',
+    linkLabel: 'Browse All →',
   },
 } as const
 
@@ -54,6 +58,7 @@ export default function StudyDashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { usage } = useUsage()
+  const { stats: gamificationStats } = useGamification()
   const { categories, isLoading, error, refetch } = useStudyDashboard()
   const [lockedCategory, setLockedCategory] = useState<Category | null>(null)
   const [showPersonaPicker, setShowPersonaPicker] = useState(false)
@@ -134,13 +139,14 @@ export default function StudyDashboard() {
         </motion.div>
 
         {/* ── Your Goal card ──────────────────────────────────────────── */}
-        {user?.persona && (() => {
+        {user?.persona ? (() => {
           const cfg = PERSONA_CONFIG[user.persona]
           const Icon = cfg.icon
           const c = cfg.cssVar
           const days = user.persona === 'interview' && user.target_date
             ? daysUntil(user.target_date)
             : null
+          const streak = gamificationStats?.current_streak ?? 0
           return (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
@@ -158,7 +164,9 @@ export default function StudyDashboard() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-text-primary">{cfg.label}</span>
+                      <span className="text-sm font-semibold text-text-primary">
+                        {cfg.emoji} {cfg.label}
+                      </span>
                       {user.persona === 'interview' && user.target_company && (
                         <span className="text-xs text-text-muted">
                           at {user.target_company}
@@ -171,9 +179,14 @@ export default function StudyDashboard() {
                           {days === 0 ? 'Today!' : `${days} day${days === 1 ? '' : 's'} left`}
                         </span>
                       )}
+                      {user.persona === 'climber' && (
+                        <span className="text-xs font-medium" style={{ color: c }}>
+                          {streak} day streak
+                        </span>
+                      )}
                       {user.persona === 'team' && !isLoading && (
                         <span className="text-xs text-text-muted">
-                          {categories.length} categories available
+                          {categories.length} categories browsed
                         </span>
                       )}
                     </div>
@@ -186,7 +199,6 @@ export default function StudyDashboard() {
                     style={{ background: `color-mix(in srgb, ${c} 12%, transparent)`, color: c }}
                   >
                     {cfg.linkLabel}
-                    <ArrowRight size={12} />
                   </button>
                   <button
                     onClick={() => setShowPersonaPicker(true)}
@@ -199,7 +211,31 @@ export default function StudyDashboard() {
               </div>
             </motion.div>
           )
-        })()}
+        })() : (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 rounded-2xl border border-contrast/[0.08] bg-contrast/[0.02]"
+          >
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-contrast/[0.06] border border-contrast/[0.1]">
+                  <Crosshair size={18} className="text-text-muted" />
+                </div>
+                <div>
+                  <span className="text-sm font-semibold text-text-primary">Your Goal</span>
+                  <p className="text-xs text-text-muted mt-0.5">Tell us what you're working towards</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPersonaPicker(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-accent-primary bg-accent-primary/10 hover:bg-accent-primary/15 transition-colors"
+              >
+                Set your goal →
+              </button>
+            </div>
+          </motion.div>
+        )}
 
         {/* ── Error state ──────────────────────────────────────────────── */}
         {error && !isLoading && (
@@ -317,7 +353,7 @@ export default function StudyDashboard() {
 
       {/* ── Persona picker modal (change goal) ────────────────────────── */}
       {showPersonaPicker && (
-        <PersonaPicker isModal onClose={() => setShowPersonaPicker(false)} />
+        <PersonaPicker mode="settings" onClose={() => setShowPersonaPicker(false)} />
       )}
     </PageWrapper>
   )
