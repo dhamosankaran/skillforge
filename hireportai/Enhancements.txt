@@ -87,20 +87,53 @@ Back
 Waiting for this project's first error
 
 
+Your remaining manual tasks before going live:
+
+Run the full manual walkthrough (Step 9 from the local testing guide) — test every feature end-to-end on localhost
+Test all 3 themes — switch between Dark, Light, and Midnight Blue, verify every page looks correct in each
+Follow the Stripe go-live runbook (docs/runbooks/stripe-go-live.md) when ready for real payments
+Set up the custom domain and update CORS, OAuth redirect URIs, Stripe webhook URL, PostHog domains
+Build the 3 PostHog funnels in the PostHog dashboard
+
 
 
 Next steps 
 - Same design and look and feel accross. Allow users to change their look and feel themes
-- Post login for any users show the dashboard with 3 options and later they should able to find them in the dashboard
+- Post login for any users show the dashboard with 3 options and later they should able to find them in the dashboard.how to add these as a feature in the app along with showing in the welcome page
+What brings you here?
+We'll tailor your experience based on your goal.
+
+
+I have an interview coming up
+Get a personalized study plan with a countdown to your target date.
+
+I want to stay sharp
+Build a daily review habit with spaced repetition.
+
+I'm exploring for my team
+Browse all categories and see what SkillForge offers.
+Continue
+
 - Check for the IP address and if the user is from US, show the US pricing, if from India, show the INR pricing
 - Check if users trying to register using different google account but from same IP address, then block them
-- 
-
+- From Analyse - Save tracker - auto populate the data in the tracker 
+- Check how many time we can allow free users to Generate Interview questions
+- Analysis Results - How to educate users about this page and the Analysis Results data and Keyword Frequency Analysis (also I see some mismatch the color coding)
+- AI Optimization - Resume rewrite and cover letter generation not working as expected especially with the format
+- Once user opted in Pro feature, missing skills in the Analysis Results should point to flashcards flows. For free users we should ask them to enroll for Pro to get the flashcards flows
+- Analysis Results Page - Check if this section can be moved top - Job Fit Explanation
+- Proffile - Generate My Experience is not working
+- Which model to use for what purpose (Gemini 2.5 Pro for reasoning, Flash for speed tasks)
 
 New features
-
+Admin features (all LLM driven)
+  - Measure the rights metrics
+  - Performance of the application
+  - User behaviour
+  - Data for driving the future enhancements or fixing the existing issues
+  - Feedback from users
 Set Content Feed Flow
-Which model to use for what purpose (Gemini 2.5 Pro for reasoning, Flash for speed tasks)
+- 
 
 Business Development
 - Marketing

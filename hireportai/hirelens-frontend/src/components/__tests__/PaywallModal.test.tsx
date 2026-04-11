@@ -11,8 +11,10 @@ vi.mock('@/utils/posthog', () => ({
 }))
 
 const mockCreateCheckoutSession = vi.fn()
+const mockFetchPricing = vi.fn()
 vi.mock('@/services/api', () => ({
   createCheckoutSession: (...args: unknown[]) => mockCreateCheckoutSession(...args),
+  fetchPricing: (...args: unknown[]) => mockFetchPricing(...args),
 }))
 
 // Stub framer-motion to avoid animation timing issues in tests.
@@ -54,6 +56,12 @@ describe('PaywallModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockCreateCheckoutSession.mockResolvedValue({ url: 'https://checkout.stripe.com/test' })
+    mockFetchPricing.mockResolvedValue({
+      currency: 'usd',
+      price: 49,
+      price_display: '$49/mo',
+      stripe_price_id: 'price_test',
+    })
   })
 
   it('renders correct headline for each trigger', () => {
@@ -146,7 +154,8 @@ describe('PaywallModal', () => {
     expect(mockCapture).toHaveBeenCalledWith('checkout_started', {
       trigger: 'card_limit',
       plan: 'pro',
-      price_usd: 49,
+      price: 49,
+      currency: 'usd',
     })
 
     locationSpy.mockRestore()
