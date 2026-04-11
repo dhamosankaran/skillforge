@@ -1,23 +1,62 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { BookOpen, Play, RefreshCw, AlertCircle, Filter } from 'lucide-react'
+import { BookOpen, Play, RefreshCw, AlertCircle, Filter, Target, Flame, Users, ArrowRight, Pencil } from 'lucide-react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { GlowButton } from '@/components/ui/GlowButton'
 import { CategoryCard, CategoryCardSkeleton } from '@/components/study/CategoryCard'
 import { PaywallModal } from '@/components/PaywallModal'
+import PersonaPicker from '@/components/onboarding/PersonaPicker'
 import { useStudyDashboard } from '@/hooks/useStudyDashboard'
+import { useAuth } from '@/context/AuthContext'
 import { useUsage } from '@/context/UsageContext'
 import { capture } from '@/utils/posthog'
 import type { Category } from '@/types'
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+const PERSONA_CONFIG = {
+  interview: {
+    icon: Target,
+    label: 'Interview Prep',
+    cssVar: 'var(--sf-accent-primary)',
+    link: '/mission',
+    linkLabel: 'Go to Mission Mode',
+  },
+  climber: {
+    icon: Flame,
+    label: 'Staying Sharp',
+    cssVar: 'var(--sf-accent-secondary)',
+    link: '/study/daily',
+    linkLabel: 'Start Daily Review',
+  },
+  team: {
+    icon: Users,
+    label: 'Team Explorer',
+    cssVar: 'var(--sf-accent-warm, #f59e0b)',
+    link: '/study',
+    linkLabel: 'Browse Categories',
+  },
+} as const
+
+function daysUntil(dateStr: string): number | null {
+  try {
+    const target = new Date(dateStr)
+    const now = new Date()
+    const diff = target.getTime() - now.getTime()
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
+  } catch {
+    return null
+  }
+}
+
 export default function StudyDashboard() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const { usage } = useUsage()
   const { categories, isLoading, error, refetch } = useStudyDashboard()
   const [lockedCategory, setLockedCategory] = useState<Category | null>(null)
+  const [showPersonaPicker, setShowPersonaPicker] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Spec #09: when arriving from the onboarding bridge, the URL carries
@@ -93,6 +132,74 @@ export default function StudyDashboard() {
             Start Daily Review
           </GlowButton>
         </motion.div>
+
+        {/* ── Your Goal card ──────────────────────────────────────────── */}
+        {user?.persona && (() => {
+          const cfg = PERSONA_CONFIG[user.persona]
+          const Icon = cfg.icon
+          const c = cfg.cssVar
+          const days = user.persona === 'interview' && user.target_date
+            ? daysUntil(user.target_date)
+            : null
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 rounded-2xl"
+              style={{ border: `1px solid color-mix(in srgb, ${c} 20%, transparent)`, background: `color-mix(in srgb, ${c} 5%, transparent)` }}
+            >
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ background: `color-mix(in srgb, ${c} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${c} 20%, transparent)` }}
+                  >
+                    <Icon size={18} style={{ color: c }} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-text-primary">{cfg.label}</span>
+                      {user.persona === 'interview' && user.target_company && (
+                        <span className="text-xs text-text-muted">
+                          at {user.target_company}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      {days !== null && (
+                        <span className="text-xs font-medium" style={{ color: c }}>
+                          {days === 0 ? 'Today!' : `${days} day${days === 1 ? '' : 's'} left`}
+                        </span>
+                      )}
+                      {user.persona === 'team' && !isLoading && (
+                        <span className="text-xs text-text-muted">
+                          {categories.length} categories available
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => navigate(cfg.link)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                    style={{ background: `color-mix(in srgb, ${c} 12%, transparent)`, color: c }}
+                  >
+                    {cfg.linkLabel}
+                    <ArrowRight size={12} />
+                  </button>
+                  <button
+                    onClick={() => setShowPersonaPicker(true)}
+                    className="flex items-center gap-1 text-xs text-text-muted hover:text-text-secondary transition-colors"
+                  >
+                    <Pencil size={11} />
+                    Change goal
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )
+        })()}
 
         {/* ── Error state ──────────────────────────────────────────────── */}
         {error && !isLoading && (
@@ -207,6 +314,11 @@ export default function StudyDashboard() {
         trigger="locked_category"
         context={{ categoryName: lockedCategory?.name }}
       />
+
+      {/* ── Persona picker modal (change goal) ────────────────────────── */}
+      {showPersonaPicker && (
+        <PersonaPicker isModal onClose={() => setShowPersonaPicker(false)} />
+      )}
     </PageWrapper>
   )
 }

@@ -21,6 +21,8 @@ class User(Base, UUIDPrimaryKeyMixin):
     onboarding_completed: Mapped[bool] = mapped_column(
         Boolean, server_default=text("false"), nullable=False
     )
+    target_company: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    target_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )

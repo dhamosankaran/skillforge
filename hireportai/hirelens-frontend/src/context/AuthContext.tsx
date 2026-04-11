@@ -30,6 +30,8 @@ export interface AuthUser {
   role: 'user' | 'admin'
   persona: 'interview' | 'climber' | 'team' | null
   onboarding_completed: boolean
+  target_company: string | null
+  target_date: string | null
 }
 
 interface AuthContextValue {

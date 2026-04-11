@@ -1,4 +1,5 @@
 """Authentication endpoints — Google OAuth + JWT."""
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -18,6 +19,23 @@ from app.models.user import User
 from app.services.user_service import get_or_create_user
 
 router = APIRouter()
+
+VALID_PERSONAS = ("interview", "climber", "team")
+
+
+def _user_dict(user: User) -> dict:
+    """Serialise a User row into the standard JSON shape."""
+    return {
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "avatar_url": user.avatar_url,
+        "role": user.role,
+        "persona": user.persona,
+        "onboarding_completed": user.onboarding_completed,
+        "target_company": user.target_company,
+        "target_date": user.target_date.isoformat() if user.target_date else None,
+    }
 
 
 # --- Request / response schemas ---
@@ -43,6 +61,12 @@ class RefreshResponse(BaseModel):
 
 
 class OnboardingRequest(BaseModel):
+    persona: str  # 'interview' | 'climber' | 'team'
+    target_company: Optional[str] = None
+    target_date: Optional[str] = None
+
+
+class UpdatePersonaRequest(BaseModel):
     persona: str  # 'interview' | 'climber' | 'team'
     target_company: Optional[str] = None
     target_date: Optional[str] = None
@@ -76,15 +100,7 @@ async def google_auth(request: Request, body: GoogleAuthRequest, db: AsyncSessio
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        user={
-            "id": user.id,
-            "email": user.email,
-            "name": user.name,
-            "avatar_url": user.avatar_url,
-            "role": user.role,
-            "persona": user.persona,
-            "onboarding_completed": user.onboarding_completed,
-        },
+        user=_user_dict(user),
     )
 
 
@@ -122,21 +138,24 @@ async def get_me(request: Request, user: User = Depends(get_current_user), db: A
     )
     sub = result.scalar_one_or_none()
 
-    return {
-        "id": user.id,
-        "email": user.email,
-        "name": user.name,
-        "avatar_url": user.avatar_url,
-        "role": user.role,
-        "persona": user.persona,
-        "onboarding_completed": user.onboarding_completed,
-        "created_at": str(user.created_at),
-        "subscription": {
-            "plan": sub.plan if sub else "free",
-            "status": sub.status if sub else "active",
-            "current_period_end": str(sub.current_period_end) if sub and sub.current_period_end else None,
-        },
+    data = _user_dict(user)
+    data["created_at"] = str(user.created_at)
+    data["subscription"] = {
+        "plan": sub.plan if sub else "free",
+        "status": sub.status if sub else "active",
+        "current_period_end": str(sub.current_period_end) if sub and sub.current_period_end else None,
     }
+    return data
+
+
+def _parse_target_date(raw: Optional[str]) -> Optional[datetime]:
+    """Parse an ISO date string (YYYY-MM-DD) into a datetime, or None."""
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(raw)
+    except ValueError:
+        return None
 
 
 @router.patch("/auth/onboarding")
@@ -148,22 +167,39 @@ async def complete_onboarding(
     db: AsyncSession = Depends(get_db),
 ):
     """Record persona selection and mark onboarding as completed."""
-    if body.persona not in ("interview", "climber", "team"):
+    if body.persona not in VALID_PERSONAS:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="persona must be one of: interview, climber, team",
         )
     user.persona = body.persona
     user.onboarding_completed = True
+    user.target_company = body.target_company
+    user.target_date = _parse_target_date(body.target_date)
     db.add(user)
     await db.commit()
     await db.refresh(user)
-    return {
-        "id": user.id,
-        "email": user.email,
-        "name": user.name,
-        "avatar_url": user.avatar_url,
-        "role": user.role,
-        "persona": user.persona,
-        "onboarding_completed": user.onboarding_completed,
-    }
+    return _user_dict(user)
+
+
+@router.patch("/auth/persona")
+@limiter.limit("10/minute")
+async def update_persona(
+    request: Request,
+    body: UpdatePersonaRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update persona selection (for users who want to change their goal)."""
+    if body.persona not in VALID_PERSONAS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="persona must be one of: interview, climber, team",
+        )
+    user.persona = body.persona
+    user.target_company = body.target_company
+    user.target_date = _parse_target_date(body.target_date)
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    return _user_dict(user)

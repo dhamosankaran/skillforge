@@ -389,6 +389,22 @@ export async function completeOnboarding(
   return response.data
 }
 
+export interface UpdatePersonaRequest {
+  persona: 'interview' | 'climber' | 'team'
+  target_company?: string
+  target_date?: string
+}
+
+export async function updatePersona(
+  req: UpdatePersonaRequest,
+): Promise<{ persona: string; target_company: string | null; target_date: string | null }> {
+  const response = await api.patch<{ persona: string; target_company: string | null; target_date: string | null }>(
+    '/api/v1/auth/persona',
+    req,
+  )
+  return response.data
+}
+
 // ─── Onboarding — ATS gap → card bridge ───────────────────────────────────────
 
 /**

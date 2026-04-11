@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { Target, Flame, Users } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Target, Flame, Users, X } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { completeOnboarding } from '@/services/api'
+import { completeOnboarding, updatePersona } from '@/services/api'
 import { capture } from '@/utils/posthog'
 
 type Persona = 'interview' | 'climber' | 'team'
@@ -42,12 +42,23 @@ const stagger = {
   visible: { transition: { staggerChildren: 0.08 } },
 }
 
-export default function PersonaPicker() {
-  const { updateUser } = useAuth()
+interface PersonaPickerProps {
+  isModal?: boolean
+  onClose?: () => void
+}
+
+export default function PersonaPicker({ isModal = false, onClose }: PersonaPickerProps) {
+  const { user, updateUser } = useAuth()
   const navigate = useNavigate()
-  const [selected, setSelected] = useState<Persona | null>(null)
-  const [targetCompany, setTargetCompany] = useState('')
-  const [targetDate, setTargetDate] = useState('')
+  const [selected, setSelected] = useState<Persona | null>(
+    isModal && user?.persona ? (user.persona as Persona) : null,
+  )
+  const [targetCompany, setTargetCompany] = useState(
+    isModal && user?.target_company ? user.target_company : '',
+  )
+  const [targetDate, setTargetDate] = useState(
+    isModal && user?.target_date ? user.target_date.split('T')[0] : '',
+  )
   const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit() {
@@ -55,51 +66,73 @@ export default function PersonaPicker() {
     setSubmitting(true)
 
     try {
-      const res = await completeOnboarding({
+      const payload = {
         persona: selected,
         ...(selected === 'interview' && targetCompany ? { target_company: targetCompany } : {}),
         ...(selected === 'interview' && targetDate ? { target_date: targetDate } : {}),
-      })
+      }
 
-      capture('onboarding_persona_selected', { persona: selected })
-      updateUser({ persona: res.persona as Persona, onboarding_completed: true })
-
-      if (selected === 'interview') {
-        const params = new URLSearchParams()
-        if (targetCompany) params.set('company', targetCompany)
-        if (targetDate) params.set('date', targetDate)
-        const qs = params.toString()
-        navigate(`/mission${qs ? `?${qs}` : ''}`, { replace: true })
-      } else if (selected === 'climber') {
-        navigate('/study/daily', { replace: true })
+      if (isModal) {
+        const res = await updatePersona(payload)
+        capture('persona_changed', {
+          from_persona: user?.persona,
+          to_persona: selected,
+        })
+        updateUser({
+          persona: res.persona as Persona,
+          target_company: res.target_company,
+          target_date: res.target_date,
+        })
+        onClose?.()
       } else {
-        navigate('/study', { replace: true })
+        const res = await completeOnboarding(payload)
+        capture('onboarding_persona_selected', { persona: selected })
+        updateUser({ persona: res.persona as Persona, onboarding_completed: true })
+
+        if (selected === 'interview') {
+          const params = new URLSearchParams()
+          if (targetCompany) params.set('company', targetCompany)
+          if (targetDate) params.set('date', targetDate)
+          const qs = params.toString()
+          navigate(`/mission${qs ? `?${qs}` : ''}`, { replace: true })
+        } else if (selected === 'climber') {
+          navigate('/study/daily', { replace: true })
+        } else {
+          navigate('/study', { replace: true })
+        }
       }
     } catch {
       setSubmitting(false)
     }
   }
 
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 200,
-        background: 'var(--sf-bg-primary)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 24,
-      }}
+  const content = (
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={stagger}
+      style={{ maxWidth: 520, width: '100%' }}
     >
-      <motion.div
-        initial="hidden"
-        animate="visible"
-        variants={stagger}
-        style={{ maxWidth: 520, width: '100%' }}
-      >
-        <motion.div variants={fadeUp} style={{ textAlign: 'center', marginBottom: 40 }}>
+      <motion.div variants={fadeUp} style={{ textAlign: 'center', marginBottom: 40 }}>
+        {isModal && onClose && (
+          <button
+            onClick={onClose}
+            style={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--sf-text-secondary)',
+              padding: 4,
+            }}
+            aria-label="Close"
+          >
+            <X size={20} />
+          </button>
+        )}
+        {!isModal && (
           <div
             style={{
               width: 40,
@@ -117,88 +150,93 @@ export default function PersonaPicker() {
           >
             S
           </div>
-          <h1
-            style={{
-              fontSize: 'clamp(24px, 4vw, 32px)',
-              fontWeight: 800,
-              fontFamily: 'var(--sf-font-display)',
-              letterSpacing: '-0.03em',
-              margin: '0 0 8px',
-            }}
-          >
-            What brings you here?
-          </h1>
-          <p style={{ color: 'var(--sf-text-secondary)', fontSize: 15 }}>
-            We'll tailor your experience based on your goal.
-          </p>
-        </motion.div>
+        )}
+        <h1
+          style={{
+            fontSize: isModal ? 'clamp(20px, 3vw, 24px)' : 'clamp(24px, 4vw, 32px)',
+            fontWeight: 800,
+            fontFamily: 'var(--sf-font-display)',
+            letterSpacing: '-0.03em',
+            margin: '0 0 8px',
+          }}
+        >
+          {isModal ? 'Change your goal' : 'What brings you here?'}
+        </h1>
+        <p style={{ color: 'var(--sf-text-secondary)', fontSize: 15 }}>
+          {isModal
+            ? 'Pick a new goal and we\'ll adjust your experience.'
+            : 'We\'ll tailor your experience based on your goal.'}
+        </p>
+      </motion.div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {personas.map((p) => {
-            const Icon = p.icon
-            const isSelected = selected === p.id
-            return (
-              <motion.button
-                key={p.id}
-                variants={fadeUp}
-                onClick={() => setSelected(p.id)}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {personas.map((p) => {
+          const Icon = p.icon
+          const isSelected = selected === p.id
+          return (
+            <motion.button
+              key={p.id}
+              variants={fadeUp}
+              onClick={() => setSelected(p.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 16,
+                padding: '20px 20px',
+                borderRadius: 'var(--sf-radius-lg)',
+                border: `2px solid ${isSelected ? p.color : 'var(--sf-border-subtle)'}`,
+                background: isSelected ? `${p.color}10` : 'var(--sf-bg-tertiary)',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'all 200ms ease',
+                width: '100%',
+                color: 'inherit',
+                fontFamily: 'inherit',
+              }}
+            >
+              <div
                 style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 'var(--sf-radius-md)',
+                  background: `${p.color}15`,
+                  border: `1px solid ${p.color}30`,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 16,
-                  padding: '20px 20px',
-                  borderRadius: 'var(--sf-radius-lg)',
-                  border: `2px solid ${isSelected ? p.color : 'var(--sf-border-subtle)'}`,
-                  background: isSelected ? `${p.color}10` : 'var(--sf-bg-tertiary)',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 200ms ease',
-                  width: '100%',
-                  color: 'inherit',
-                  fontFamily: 'inherit',
+                  justifyContent: 'center',
+                  color: p.color,
+                  flexShrink: 0,
                 }}
               >
+                <Icon size={22} />
+              </div>
+              <div>
                 <div
                   style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 'var(--sf-radius-md)',
-                    background: `${p.color}15`,
-                    border: `1px solid ${p.color}30`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: p.color,
-                    flexShrink: 0,
+                    fontWeight: 700,
+                    fontSize: 15,
+                    fontFamily: 'var(--sf-font-display)',
+                    marginBottom: 2,
                   }}
                 >
-                  <Icon size={22} />
+                  {p.title}
                 </div>
-                <div>
-                  <div
-                    style={{
-                      fontWeight: 700,
-                      fontSize: 15,
-                      fontFamily: 'var(--sf-font-display)',
-                      marginBottom: 2,
-                    }}
-                  >
-                    {p.title}
-                  </div>
-                  <div style={{ fontSize: 13, color: 'var(--sf-text-secondary)' }}>
-                    {p.desc}
-                  </div>
+                <div style={{ fontSize: 13, color: 'var(--sf-text-secondary)' }}>
+                  {p.desc}
                 </div>
-              </motion.button>
-            )
-          })}
-        </div>
+              </div>
+            </motion.button>
+          )
+        })}
+      </div>
 
-        {/* Interview extras — shown only when "interview" is selected */}
+      {/* Interview extras — shown only when "interview" is selected */}
+      <AnimatePresence>
         {selected === 'interview' && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
             style={{
               marginTop: 16,
@@ -209,6 +247,7 @@ export default function PersonaPicker() {
               display: 'flex',
               flexDirection: 'column',
               gap: 12,
+              overflow: 'hidden',
             }}
           >
             <div>
@@ -274,24 +313,77 @@ export default function PersonaPicker() {
             </div>
           </motion.div>
         )}
+      </AnimatePresence>
 
-        <motion.div variants={fadeUp} style={{ marginTop: 24 }}>
-          <button
-            onClick={handleSubmit}
-            disabled={!selected || submitting}
-            className="sf-btn-primary"
-            style={{
-              width: '100%',
-              padding: '14px 24px',
-              fontSize: 15,
-              cursor: selected && !submitting ? 'pointer' : 'not-allowed',
-              opacity: selected && !submitting ? 1 : 0.5,
-            }}
-          >
-            {submitting ? 'Setting up...' : 'Continue'}
-          </button>
-        </motion.div>
+      <motion.div variants={fadeUp} style={{ marginTop: 24 }}>
+        <button
+          onClick={handleSubmit}
+          disabled={!selected || submitting}
+          className="sf-btn-primary"
+          style={{
+            width: '100%',
+            padding: '14px 24px',
+            fontSize: 15,
+            cursor: selected && !submitting ? 'pointer' : 'not-allowed',
+            opacity: selected && !submitting ? 1 : 0.5,
+          }}
+        >
+          {submitting ? 'Saving...' : isModal ? 'Update Goal' : 'Continue'}
+        </button>
       </motion.div>
+    </motion.div>
+  )
+
+  if (isModal) {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 200,
+          background: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 24,
+        }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onClose?.()
+        }}
+      >
+        <div
+          style={{
+            position: 'relative',
+            background: 'var(--sf-bg-primary)',
+            borderRadius: 'var(--sf-radius-xl, 20px)',
+            padding: '32px 28px',
+            maxWidth: 560,
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+          }}
+        >
+          {content}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 200,
+        background: 'var(--sf-bg-primary)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+      }}
+    >
+      {content}
     </div>
   )
 }
