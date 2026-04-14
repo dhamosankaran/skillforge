@@ -13,9 +13,13 @@ reviews at optimal intervals based on individual memory patterns.
   - `app/schemas/study.py` — Pydantic schemas
 - Frontend:
   - `src/pages/DailyReview.tsx` — Daily 5 queue page
+  - `src/pages/CardViewer.tsx` — Single-card viewer page
   - `src/components/study/FlipCard.tsx` — Card flip display component
   - `src/components/study/QuizPanel.tsx` — Rating submission component
   - `src/hooks/useStudyDashboard.ts` — Study dashboard data hook
+  - `src/hooks/useCardViewer.ts` — Single-card fetcher; detects 403
+    (paywall) so the viewer can open `PaywallModal` with
+    `trigger: 'card_limit'`
 - Tests:
   - `tests/test_study_service.py` — FSRS scheduling unit tests
   - `tests/test_study_api.py` — API integration tests

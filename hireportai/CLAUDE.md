@@ -28,6 +28,17 @@
     in a row, **STOP IMMEDIATELY**. Print the exact error, explain
     your hypothesis, list 2-3 possible fixes, and wait for human
     intervention.
+11. **LLM calls go through the router**: Use
+    `generate_for_task(task=..., ...)` from `app/core/llm_router.py`
+    for every LLM call. Never call `get_llm_provider()` directly and
+    never import a provider SDK from service code. See
+    `.agent/skills/llm-strategy.md`.
+12. **Style with design tokens**: Every color / spacing / shadow in
+    frontend code must come from the design tokens
+    (`src/styles/design-tokens.ts`) via Tailwind utilities like
+    `bg-bg-surface`, `text-text-primary`, `border-border-accent`.
+    **Never hardcode a hex value.** See
+    `.agent/skills/design-system.md`.
 
 ## How to Add a Feature
 1. Check spec exists in `docs/specs/`
@@ -37,11 +48,17 @@
 5. Create Pydantic schemas in `app/schemas/`
 6. Write tests in `tests/`
 7. Implement service in `app/services/`
-8. Add PostHog events in the service layer
-9. Create API route in `app/api/routes/`
+   - **If LLM-powered:** pick the tier (fast vs reasoning), add the
+     task name to `app/core/llm_router.py` if new, then call
+     `generate_for_task(task="...", ...)`
+8. **Add a PostHog event** — name it in snake_case, pick frontend vs
+   backend, and add it to `.agent/skills/analytics.md` so the
+   catalog stays current
+9. Create API route in `app/api/routes/` or `app/api/v1/routes/`
 10. Register route in `app/main.py`
 11. Run: `python -m pytest tests/ -v`
 12. Implement frontend (page → component → hook → API client)
+    - **Style with theme tokens only** — no hardcoded colors
 13. Add PostHog `capture()` on user interactions
 14. Run: `npx vitest run`
 15. Push to main (CI/CD auto-deploys)
