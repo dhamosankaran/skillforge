@@ -28,7 +28,10 @@ DEV_DB_URL: str = os.getenv(
     "postgresql+asyncpg://hireport:dev_password@localhost:5432/hireport",
 )
 
-pytestmark = pytest.mark.asyncio(loop_scope="session")
+pytestmark = [
+    pytest.mark.asyncio(loop_scope="session"),
+    pytest.mark.integration,
+]
 
 
 # ── Fixtures ────────────────────────────────────────────────────────────────

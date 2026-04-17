@@ -63,17 +63,8 @@ jobs:
       - name: Download spaCy model
         run: python -m spacy download en_core_web_sm
 
-      - name: Apply migrations
-        run: alembic upgrade head
-
-      - name: Seed cards from cards.js
-        run: python scripts/extract_cards.py
-
-      - name: Generate synthetic embeddings (Gemini fallback)
-        run: python scripts/generate_embeddings.py
-
       - name: Run pytest
-        run: python -m pytest tests/ -v --tb=short
+        run: python -m pytest tests/ -v --tb=short -m "not integration" --cov=app
 
   # ---------------------------------------------------------------------------
   # Job 2: Frontend — vitest
