@@ -1,17 +1,12 @@
 # SESSION-STATE.md
 ## Current Status
-Last updated: 2026-04-16
+Last updated: 2026-04-17
 Phase: 1
-Current session: P1-S1a
-Last completed slice: P0-S7 — CI/CD Pipeline (Phase 0 complete)
-Next slice to run: P1-S1a — Schema closeout + soft-delete filter test
+Current session: P1-S1b (HNSW → IVFFlat decision resolved — using IVFFlat)
+Last completed slice: P1-S1a — Schema closeout + soft-delete filter test
+Next slice to run: P1-S1b — ANN index (IVFFlat) + extraction unit tests
 
 ### Pending slices
-- **P1-S1a** — Schema closeout + soft-delete filter test (~25–30 min)
-  - Add `Category.tags` JSON column + Alembic migration
-  - Patch `extract_cards.py` to seed `tags=[]`
-  - Add partial index migration on `cards (category_id) WHERE deleted_at IS NULL`
-  - Add soft-delete filter integration test
 - **P1-S1b** — ANN index + extraction unit tests (~25–30 min)
   - HNSW migration on `cards.embedding` (IVFFlat fallback if pgvector < 0.5.0)
   - UUID5 determinism unit test
@@ -20,9 +15,29 @@ Next slice to run: P1-S1a — Schema closeout + soft-delete filter test
 - **P1-S2** — (existing) Embeddings generation hardening / cards API polish
 
 ## Phase Completion Tracker
-- Phase 0: ✅ Complete (S1–S8)
-- Phase 1: 🔄 In Progress (S1 spec rewritten 2026-04-16; split into S1a/S1b; implementation pending)
+- Phase 0: ✅ Complete (local) / ⬜ Production deploy deferred (S1–S8)
+  - Note: P0-S6 and P0-S8 were marked done based on deploy-ready files existing in codebase, but Railway + Vercel were never actually provisioned. Production deployment is deferred until Phase 1 is functionally complete locally.
+- Phase 1: 🔄 In Progress (S1a complete 2026-04-16; S1b pending)
 - Phase 2–4: ⬜ Not started
+
+## Deferred Work
+
+### DEFERRED-1: Production Deployment (Railway + Vercel)
+**Original phase:** P0-S6 through P0-S8
+**Status:** ⬜ Not started — deploy-ready files exist but no Railway/Vercel projects provisioned
+**Trigger:** After Phase 1 is functionally complete and tested locally
+**Scope:**
+- Create Railway project with pgvector PostgreSQL + Redis
+- Verify pgvector version on Railway (determines HNSW vs IVFFlat for ANN index)
+- Deploy backend to Railway (env vars, release command, CORS)
+- Deploy frontend to Vercel (env vars, API base URL)
+- Configure Google OAuth redirect URIs for production domain
+- Configure Stripe webhook URL for production domain
+- Configure custom domain (theskillsforge.dev) + SSL
+- Verify end-to-end: curl production /health → 200, frontend loads, CORS works
+**Estimated time:** 1-2 hours of dashboard setup + debugging
+**Risk if deferred too long:** Every Phase 1 feature is tested only on localhost. CORS, connection pooling, env var mismatches, and Stripe webhook URL issues will all surface on first real deploy. The playbook strongly recommends deploying early to catch these incrementally rather than all at once.
+**Playbook reference:** Phase 0 Tasks 0.6-0.8, CI/CD Section 8
 
 ## Decisions Made
 | Decision | Rationale | Date |
@@ -30,12 +45,15 @@ Next slice to run: P1-S1a — Schema closeout + soft-delete filter test
 | Free tier limit reduced from 15 to 5 Foundation cards | Original 15 was sized for a 177-card library; with 15 total cards in launch deck, 15-card free tier = no paywall. 5 keeps a meaningful free-vs-Pro distinction. Will revisit when library grows past 50 cards. | 2026-04-16 |
 | Option A on content scaling — accept 15-card reality, defer bulk authoring | Content creation throughput (5–12 hours admin review for 150 cards) made Option B a multi-week side quest; Option C (defer paywall) loses Phase 1 revenue signal; Option A keeps Phase 1 on-plan with an honest pricing story (feature-driven Pro + growing library). | 2026-04-16 |
 | P1-S1 split into P1-S1a + P1-S1b | Original scope (3 migrations + 3 tests + extract_cards patch) estimated 55–70 min — exceeds the 30-min slice budget. Split along theme: S1a = schema + soft-delete; S1b = ANN index + extraction tests. | 2026-04-16 |
+| Soft-delete filter test lives in the integration suite, not CI subset | The spec left two landing zones open (CI subset via `TEST_DATABASE_URL` vs the existing integration file). Kept it alongside the other card-extraction tests in `tests/test_card_extraction.py` with `@pytest.mark.integration`, using the existing `dev_session` fixture (which never commits, so the two inserts roll back). Matches the surrounding file's pattern. | 2026-04-16 |
+| Production deploy deferred until Phase 1 complete locally | Railway + Vercel never provisioned despite P0-S6 being marked done. Trade-off: faster Phase 1 development velocity now, but deploy issues will cluster at the end instead of being caught incrementally. Accepted risk. | 2026-04-17 |
+| ANN index: use IVFFlat (not HNSW) | Production pgvector version unknown since Railway not provisioned. IVFFlat works on all pgvector >= 0.4.0. Performance difference negligible at 15-200 card scale. Revisit HNSW when: (a) prod pgvector version verified >= 0.5.0, AND (b) card volume > 1000. | 2026-04-17 |
 
 ## Enhancement Status
 - ENH-1 LLM router: ⬜ (build in P1-S4)
 - ENH-2 Geo pricing: ⬜ (build in P1-S22)
 - ENH-3 IP blocking: ⬜ (build in P1-S19)
-- ENH-4 Card soft-delete: 🔄 (Card.deleted_at column exists; filter test + partial index pending in P1-S1a)
+- ENH-4 Card soft-delete: ✅ (column + partial index `ix_cards_category_id_active` + filter test landed in P1-S1a on 2026-04-16)
 - ENH-5 Design system: ⬜ (build in P3-S3)
 - ENH-6 Free tier interview limits: ⬜ (build in P1-S19)
 - ENH-7 Tracker auto-populate: ⬜ (build in P1-S20)
@@ -59,13 +77,19 @@ The "5 Foundation cards" cap does not yet exist in code. Today's gate is categor
 Task 1.12 will need to layer a per-user card-count cap on top of these filters.
 
 ## What Was Built Last Session
-- Phase 0 closed (S7 CI/CD green; S8 partial items rolled into Phase 1)
-- Card-extraction integration tests marker-gated (`-m "not integration"` in CI)
-- Latest commit: `50f06f5 chore: close out P0-S2 — Phase 0 complete, advance SESSION-STATE to P1-S1`
+- P1-S1a landed (commit `fa10338`): hand-authored Alembic migration `d16ca29a5d08` adds `categories.tags` (JSONB NOT NULL default `'[]'::jsonb`) and partial index `ix_cards_category_id_active ON cards (category_id) WHERE deleted_at IS NULL`; `Category.tags` mapped on the ORM model; `scripts/extract_cards.py` seeds `tags=[]` on category INSERT; `test_soft_deleted_card_excluded_from_active_queries` added to `tests/test_card_extraction.py`.
+- Verified locally: migration imports cleanly; full upgrade → downgrade -1 → upgrade cycle on `hireport_test` with fresh stamp; `\d+ ix_cards_category_id_active` shows `WHERE (deleted_at IS NULL)`; CI subset 158 passed / 5 deselected; integration subset 5/5 passed; `extract_cards.py` re-run idempotent against dev DB, `SELECT … tags FROM categories` returns `[]` on all rows.
+- CI green on push: Migration Rollback + Backend Tests + Frontend Tests all ✓ (run `24545810593`).
+- Previous: Phase 0 closed, CI marker-gating for integration tests.
 
 ## Known Issues
 - `docs/specs/phase-1/03-card-extraction.md` was stale (said 177 cards, Done status). Rewritten 2026-04-16 to reflect reality (15 cards / 14 categories), marked partially-done, split work into S1a/S1b.
 - Card-extraction skill file (`.agent/skills/card-extraction.md`) still says "177 study cards" — update when the deck is authored post-P1 UX.
 
+## Known Traps
+
+### Deploy-ready ≠ deployed
+Claude Code audits confirmed P0-S6 as "✅ Done" because deploy-ready files existed (railway.toml, CORS config, URL scheme handling). But no Railway or Vercel project was ever created. Lesson: for deploy tasks, always verify against the actual infrastructure (curl the URL, check the dashboard), not just the codebase.
+
 ## Start-of-Next-Session Prompt
-Read AGENTS.md. Read CLAUDE.md. Read SESSION-STATE.md. Continue with P1-S1a per `docs/specs/phase-1/03-card-extraction.md` "Work Remaining — P1-S1a" checklist.
+Read AGENTS.md. Read CLAUDE.md. Read SESSION-STATE.md. Continue with P1-S1b per `docs/specs/phase-1/03-card-extraction.md` "Work Remaining — P1-S1b" checklist (ANN index on `cards.embedding` using **IVFFlat** — HNSW/IVFFlat decision is resolved, use IVFFlat; UUID5 determinism unit test; `_synthetic_embedding` unit test; EXPLAIN-plan integration test). Note: production deployment (Railway + Vercel) is deferred until Phase 1 is functionally complete locally — see `Deferred Work > DEFERRED-1`.
