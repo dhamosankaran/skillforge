@@ -3,7 +3,9 @@
 ## Quick Reference
 - Backend: `cd hirelens-backend && source venv/bin/activate`
 - Frontend: `cd hirelens-frontend`
-- Tests (BE): `python -m pytest tests/ -v --tb=short`
+- Tests (BE, all): `python -m pytest tests/ -v --tb=short`
+- Tests (BE, CI subset): `python -m pytest tests/ -v --tb=short -m "not integration"`
+- Tests (BE, integration only): `python -m pytest tests/ -v -m integration` *(needs live LLM keys)*
 - Tests (FE): `npx vitest run`
 - DB migrate: `alembic upgrade head`
 - Start BE: `uvicorn app.main:app --reload --port 8000`
@@ -39,6 +41,14 @@
     `bg-bg-surface`, `text-text-primary`, `border-border-accent`.
     **Never hardcode a hex value.** See
     `.agent/skills/design-system.md`.
+13. **Integration tests are marker-gated**: Tests that require live
+    LLM API keys or external services must be decorated with
+    `@pytest.mark.integration`. CI runs `-m "not integration"` so
+    these are deselected automatically. Run them locally before
+    merging changes that touch extraction, embeddings, or LLM
+    services. Coverage (`pytest-cov`) is deliberately NOT installed
+    — do not add `--cov` flags without updating `requirements-dev.txt`
+    and getting sign-off.
 
 ## How to Add a Feature
 1. Check spec exists in `docs/specs/`
