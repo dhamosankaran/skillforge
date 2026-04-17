@@ -63,6 +63,9 @@ jobs:
       - name: Download spaCy model
         run: python -m spacy download en_core_web_sm
 
+      - name: Apply migrations
+        run: alembic upgrade head
+
       - name: Seed cards from cards.js
         run: python scripts/extract_cards.py
 
