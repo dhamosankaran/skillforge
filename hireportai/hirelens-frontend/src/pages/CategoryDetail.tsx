@@ -10,10 +10,10 @@ import { capture } from '@/utils/posthog'
 /**
  * Category detail page — minimal card list for a single category.
  *
- * Closes the dead `/study/category/:id` route that `StudyDashboard`
+ * Closes the dead `/learn/category/:id` route that `StudyDashboard`
  * navigates to on tile click. Fetches the category + its cards via
  * `GET /api/v1/cards/category/{id}` and links each row into the
- * existing `CardViewer` at `/study/card/:id`.
+ * existing `CardViewer` at `/learn/card/:id`.
  */
 export default function CategoryDetail() {
   const { id } = useParams<{ id: string }>()
@@ -51,10 +51,10 @@ export default function CategoryDetail() {
 
   return (
     <PageWrapper className="min-h-screen bg-bg-base">
-      <div className="max-w-4xl mx-auto px-4 py-10 sm:px-6">
+      <div data-testid="page-category-detail" className="max-w-4xl mx-auto px-4 py-10 sm:px-6">
         {/* Breadcrumb */}
         <Link
-          to="/study"
+          to="/learn"
           className="inline-flex items-center gap-1.5 text-[11px] tracking-wide uppercase text-text-muted hover:text-text-secondary transition-colors mb-6"
         >
           <ArrowLeft size={12} />
@@ -136,7 +136,7 @@ export default function CategoryDetail() {
                     This category doesn't have any cards. Check back after scanning a resume.
                   </p>
                 </div>
-                <GlowButton variant="ghost" size="sm" onClick={() => navigate('/study')}>
+                <GlowButton variant="ghost" size="sm" onClick={() => navigate('/learn')}>
                   <ArrowLeft size={13} />
                   Back to Dashboard
                 </GlowButton>
@@ -156,7 +156,7 @@ export default function CategoryDetail() {
                       transition: { duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] },
                     }}
                     whileTap={{ scale: 0.98, transition: { duration: 0.1 } }}
-                    onClick={() => navigate(`/study/card/${card.id}`)}
+                    onClick={() => navigate(`/learn/card/${card.id}`)}
                     className="group w-full flex items-center gap-4 rounded-xl border border-contrast/[0.06] bg-bg-surface/50 p-4 sm:p-5 text-left hover:border-contrast/[0.14] hover:bg-bg-surface/70 transition-colors"
                   >
                     <div className="flex-1 min-w-0">

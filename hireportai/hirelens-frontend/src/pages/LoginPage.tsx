@@ -12,9 +12,11 @@ import { useAuth } from '@/context/AuthContext'
  * LandingPage.tsx — the "/login" links). Reuses the Google OAuth flow
  * from AuthContext, so sign-in here is identical to the Navbar button.
  *
- * After a successful sign-in, the user is redirected to /analyze.
+ * After a successful sign-in, the user is redirected to /home. The
+ * ProtectedRoute wrapper on /home then routes not-yet-onboarded users
+ * through the PersonaPicker.
  * If an already-authenticated user somehow lands here (manual URL,
- * stale tab), they're bounced to /analyze immediately.
+ * stale tab), they're bounced to /home immediately.
  */
 export default function LoginPage() {
   const { user, isLoading, signIn } = useAuth()
@@ -23,14 +25,14 @@ export default function LoginPage() {
   // After the AuthContext finishes its sign-in round-trip (updating the
   // `user` value), push the user into the app.
   useEffect(() => {
-    if (user) navigate('/analyze', { replace: true })
+    if (user) navigate('/home', { replace: true })
   }, [user, navigate])
 
   // Still hydrating auth state — avoid flashing the sign-in UI.
   if (isLoading) return null
 
   // Already signed in — send them through immediately.
-  if (user) return <Navigate to="/analyze" replace />
+  if (user) return <Navigate to="/home" replace />
 
   return (
     <div className="min-h-screen bg-bg-base text-text-primary flex items-center justify-center px-5 py-12 relative overflow-hidden">

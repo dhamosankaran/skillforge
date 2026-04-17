@@ -48,7 +48,7 @@ function PremiumGate() {
           Upgrade to Premium
         </Link>
         <Link
-          to="/results"
+          to="/prep/results"
           className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-contrast/[0.04] border border-contrast/[0.08] text-text-secondary text-sm font-medium hover:text-text-primary transition-all"
         >
           View Results
@@ -330,7 +330,7 @@ export default function Rewrite() {
           <p className="text-text-secondary mb-8">
             Run an analysis first to generate your optimized resume.
           </p>
-          <GlowButton onClick={() => navigate('/analyze')}>
+          <GlowButton onClick={() => navigate('/prep/analyze')}>
             <Zap size={14} />
             Start Analysis
           </GlowButton>
@@ -346,7 +346,7 @@ export default function Rewrite() {
 
   return (
     <PageWrapper className="min-h-screen bg-bg-base">
-      <div className="max-w-6xl mx-auto px-4 py-10">
+      <div data-testid="page-rewrite" className="max-w-6xl mx-auto px-4 py-10">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}

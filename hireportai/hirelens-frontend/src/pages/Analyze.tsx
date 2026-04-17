@@ -91,7 +91,7 @@ export default function Analyze() {
     <PageWrapper className="min-h-screen bg-bg-base">
       <AnimatePresence>{isLoading && <LoadingOverlay />}</AnimatePresence>
 
-      <div className="max-w-5xl mx-auto px-5 py-12">
+      <div data-testid="page-analyze" className="max-w-5xl mx-auto px-5 py-12">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}

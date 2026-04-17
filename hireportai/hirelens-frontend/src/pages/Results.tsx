@@ -101,7 +101,7 @@ export default function Results() {
           <CheckCircle2 size={14} className="text-green-400 shrink-0" />
           Added to your Job Tracker
           <button
-            onClick={() => { toast.dismiss(t.id); navigate('/tracker') }}
+            onClick={() => { toast.dismiss(t.id); navigate('/prep/tracker') }}
             className="ml-1 underline text-accent-primary hover:text-accent-primary/80"
           >
             View
@@ -129,7 +129,7 @@ export default function Results() {
           <Target size={48} className="text-text-muted mx-auto mb-4" />
           <h2 className="font-display text-2xl font-bold mb-2 text-text-primary">No Analysis Yet</h2>
           <p className="text-text-secondary mb-8">Upload your resume to see your results.</p>
-          <GlowButton onClick={() => navigate('/analyze')}>
+          <GlowButton onClick={() => navigate('/prep/analyze')}>
             <Zap size={14} />
             Start Analysis
           </GlowButton>
@@ -144,7 +144,7 @@ export default function Results() {
 
   return (
     <PageWrapper className="min-h-screen bg-bg-base">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div data-testid="page-results" className="max-w-7xl mx-auto px-4 py-8">
 
         {/* Page header */}
         <motion.div
@@ -162,11 +162,11 @@ export default function Results() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <GlowButton variant="ghost" size="sm" onClick={() => navigate('/analyze')}>
+            <GlowButton variant="ghost" size="sm" onClick={() => navigate('/prep/analyze')}>
               <RefreshCw size={12} />
               Re-analyze
             </GlowButton>
-<GlowButton size="sm" onClick={() => navigate('/rewrite')}>
+<GlowButton size="sm" onClick={() => navigate('/prep/rewrite')}>
               <FileText size={12} />
               Optimize
             </GlowButton>
@@ -231,7 +231,7 @@ export default function Results() {
             <motion.div variants={cardVariants} className="space-y-2">
               <GlowButton
                 size="sm"
-                onClick={() => navigate('/rewrite')}
+                onClick={() => navigate('/prep/rewrite')}
                 className="w-full justify-center"
               >
                 <Brain size={12} />
@@ -240,7 +240,7 @@ export default function Results() {
               <GlowButton
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate('/interview')}
+                onClick={() => navigate('/prep/interview')}
                 className="w-full justify-center"
               >
                 <MessageSquare size={12} />
@@ -249,7 +249,7 @@ export default function Results() {
               <GlowButton
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate('/tracker')}
+                onClick={() => navigate('/prep/tracker')}
                 className="w-full justify-center"
               >
                 {result.scan_id ? (

@@ -1,7 +1,7 @@
 /**
  * DailyReview — FSRS Daily 5 queue.
  *
- * Route: /study/daily
+ * Route: /learn/daily
  *
  * Flow:
  *   1. Fetch GET /api/v1/study/daily → up to 5 due cards + session_id
@@ -340,13 +340,13 @@ export default function DailyReview() {
             transition={{ delay: 0.3 }}
             className="flex flex-col sm:flex-row gap-3"
           >
-            <GlowButton onClick={() => navigate('/study')} size="sm">
+            <GlowButton onClick={() => navigate('/learn')} size="sm">
               Back to Dashboard
             </GlowButton>
             <GlowButton
               variant="ghost"
               size="sm"
-              onClick={() => navigate('/study')}
+              onClick={() => navigate('/learn')}
             >
               Browse all categories
             </GlowButton>
@@ -394,7 +394,7 @@ export default function DailyReview() {
 
   return (
     <PageWrapper className="min-h-screen bg-bg-base">
-      <div className="max-w-2xl mx-auto px-4 py-8 sm:px-6">
+      <div data-testid="page-daily-review" className="max-w-2xl mx-auto px-4 py-8 sm:px-6">
 
         {/* ── Header ────────────────────────────────────────────────────── */}
         <motion.div
@@ -403,7 +403,7 @@ export default function DailyReview() {
           className="flex items-center justify-between gap-3 mb-4"
         >
           <button
-            onClick={() => navigate('/study')}
+            onClick={() => navigate('/learn')}
             className="flex items-center gap-1 text-sm text-text-muted hover:text-text-secondary transition-colors"
           >
             <ChevronLeft size={14} />

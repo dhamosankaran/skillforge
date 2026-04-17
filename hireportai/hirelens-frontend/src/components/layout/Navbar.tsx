@@ -9,11 +9,11 @@ import { useAuth } from '@/context/AuthContext'
 import { StreakBadge } from '@/components/profile/StreakBadge'
 
 const navLinks = [
-  { href: '/analyze', label: 'Analyze' },
-  { href: '/results', label: 'Results' },
-  { href: '/rewrite', label: 'Rewrite' },
-  { href: '/interview', label: 'Interview' },
-  { href: '/tracker', label: 'Tracker' },
+  { href: '/prep/analyze', label: 'Analyze' },
+  { href: '/prep/results', label: 'Results' },
+  { href: '/prep/rewrite', label: 'Rewrite' },
+  { href: '/prep/interview', label: 'Interview' },
+  { href: '/prep/tracker', label: 'Tracker' },
   { href: '/pricing', label: 'Pricing' },
 ]
 

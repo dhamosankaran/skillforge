@@ -1,7 +1,7 @@
 /**
  * MissionMode — time-bound study sprint page.
  *
- * Route: /mission
+ * Route: /learn/mission
  *
  * States:
  *   loading   — fetching mission data
@@ -423,7 +423,7 @@ export default function MissionMode() {
             <GlowButton onClick={() => { setPhase('setup'); refresh() }} size="sm">
               Start New Mission
             </GlowButton>
-            <GlowButton variant="ghost" size="sm" onClick={() => navigate('/study')}>
+            <GlowButton variant="ghost" size="sm" onClick={() => navigate('/learn')}>
               Back to Dashboard
             </GlowButton>
           </motion.div>
@@ -485,7 +485,7 @@ export default function MissionMode() {
             <GlowButton onClick={() => { setPhase('active'); refresh(); refreshDaily() }} size="sm">
               Back to Mission
             </GlowButton>
-            <GlowButton variant="ghost" size="sm" onClick={() => navigate('/study')}>
+            <GlowButton variant="ghost" size="sm" onClick={() => navigate('/learn')}>
               Study Dashboard
             </GlowButton>
           </motion.div>
@@ -609,7 +609,7 @@ export default function MissionMode() {
 
   return (
     <PageWrapper className="min-h-screen bg-bg-base">
-      <div className="max-w-2xl mx-auto px-4 py-10 sm:px-6">
+      <div data-testid="page-mission-mode" className="max-w-2xl mx-auto px-4 py-10 sm:px-6">
 
         {/* Back link */}
         <motion.div
@@ -618,7 +618,7 @@ export default function MissionMode() {
           className="mb-8"
         >
           <button
-            onClick={() => navigate('/study')}
+            onClick={() => navigate('/learn')}
             className="flex items-center gap-1 text-sm text-text-muted hover:text-text-secondary transition-colors"
           >
             <ChevronLeft size={14} />

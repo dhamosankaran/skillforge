@@ -346,7 +346,7 @@ export default function Pricing() {
                       {/* CTA */}
                       {plan.planKey === 'free' ? (
                         <Link
-                          to="/analyze"
+                          to="/prep/analyze"
                           className="block w-full text-center py-3 rounded-xl text-sm font-medium transition-all duration-300 bg-contrast/[0.04] border border-contrast/[0.08] text-text-secondary hover:bg-contrast/[0.06] hover:text-text-primary hover:border-contrast/[0.14] glow-hover"
                         >
                           {isCurrentPlan ? 'Currently Active' : plan.cta}

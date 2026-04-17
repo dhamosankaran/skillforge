@@ -32,7 +32,7 @@ const stagger = {
 export default function LandingPage() {
   const { user } = useAuth();
   const { pricing } = usePricing();
-  const ctaTo = user ? "/study" : "/login";
+  const ctaTo = user ? "/home" : "/login";
 
   // Acquisition funnel entry point. Fires once per mount.
   useEffect(() => {

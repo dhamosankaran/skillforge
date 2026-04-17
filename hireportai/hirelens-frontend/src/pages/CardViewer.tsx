@@ -1,7 +1,7 @@
 /**
  * CardViewer — single card study page.
  *
- * Route: /study/card/:id
+ * Route: /learn/card/:id
  *
  * Layout:
  *   - Breadcrumb + difficulty badge
@@ -205,7 +205,7 @@ export default function CardViewer() {
     // the new XP and streak immediately after the review.
     void refreshGamification()
     // After a successful rating, wait 1.2s then navigate back to dashboard
-    setTimeout(() => navigate('/study'), 1200)
+    setTimeout(() => navigate('/learn'), 1200)
     void rating; void res // used by QuizPanel, acknowledged here
   }
 
@@ -238,7 +238,7 @@ export default function CardViewer() {
             </p>
           </div>
           <Link
-            to="/study"
+            to="/learn"
             className="flex items-center gap-1.5 text-sm text-accent-primary hover:text-accent-primary/80 transition-colors"
           >
             <ChevronLeft size={14} />
@@ -247,7 +247,7 @@ export default function CardViewer() {
         </div>
         <PaywallModal
           open
-          onClose={() => navigate('/study')}
+          onClose={() => navigate('/learn')}
           trigger="card_limit"
         />
       </PageWrapper>
@@ -267,7 +267,7 @@ export default function CardViewer() {
             <p className="text-sm text-text-muted">The card may have been removed or you may not have access.</p>
           </div>
           <Link
-            to="/study"
+            to="/learn"
             className="flex items-center gap-1.5 text-sm text-accent-primary hover:text-accent-primary/80 transition-colors"
           >
             <ChevronLeft size={14} />
@@ -318,7 +318,7 @@ export default function CardViewer() {
 
   return (
     <PageWrapper className="min-h-screen bg-bg-base">
-      <div className="max-w-2xl mx-auto px-4 py-8 sm:px-6">
+      <div data-testid="page-card-viewer" className="max-w-2xl mx-auto px-4 py-8 sm:px-6">
 
         {/* ── Breadcrumb + meta ─────────────────────────────────────────── */}
         <motion.div
@@ -328,7 +328,7 @@ export default function CardViewer() {
         >
           {/* Back link */}
           <button
-            onClick={() => navigate('/study')}
+            onClick={() => navigate('/learn')}
             className="flex items-center gap-1 text-sm text-text-muted hover:text-text-secondary transition-colors"
           >
             <ChevronLeft size={14} />

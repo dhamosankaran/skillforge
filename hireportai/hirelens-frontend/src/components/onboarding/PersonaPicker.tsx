@@ -96,11 +96,11 @@ export default function PersonaPicker({ mode = 'onboarding', onClose }: PersonaP
           if (targetCompany) params.set('company', targetCompany)
           if (targetDate) params.set('date', targetDate)
           const qs = params.toString()
-          navigate(`/mission${qs ? `?${qs}` : ''}`, { replace: true })
+          navigate(`/learn/mission${qs ? `?${qs}` : ''}`, { replace: true })
         } else if (selected === 'climber') {
-          navigate('/study/daily', { replace: true })
+          navigate('/learn/daily', { replace: true })
         } else {
-          navigate('/study', { replace: true })
+          navigate('/learn', { replace: true })
         }
       }
     } catch {

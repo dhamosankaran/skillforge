@@ -22,7 +22,7 @@ const PERSONA_CONFIG = {
     emoji: '🎯',
     label: 'Interview prep',
     cssVar: 'var(--sf-accent-primary)',
-    link: '/mission',
+    link: '/learn/mission',
     linkLabel: 'Go to Mission →',
   },
   climber: {
@@ -30,7 +30,7 @@ const PERSONA_CONFIG = {
     emoji: '🔥',
     label: 'Daily practice',
     cssVar: 'var(--sf-accent-secondary)',
-    link: '/study/daily',
+    link: '/learn/daily',
     linkLabel: 'Start Daily 5 →',
   },
   team: {
@@ -38,7 +38,7 @@ const PERSONA_CONFIG = {
     emoji: '👥',
     label: 'Team exploration',
     cssVar: 'var(--sf-accent-warm, #f59e0b)',
-    link: '/study',
+    link: '/learn',
     linkLabel: 'Browse All →',
   },
 } as const
@@ -102,7 +102,7 @@ export default function StudyDashboard() {
         studied_count: category.studied_count,
         card_count: category.card_count,
       })
-      navigate(`/study/category/${category.id}`)
+      navigate(`/learn/category/${category.id}`)
     }
   }
 
@@ -110,7 +110,7 @@ export default function StudyDashboard() {
 
   return (
     <PageWrapper className="min-h-screen bg-bg-base">
-      <div className="max-w-6xl mx-auto px-4 py-10 sm:px-6">
+      <div data-testid="page-study-dashboard" className="max-w-6xl mx-auto px-4 py-10 sm:px-6">
 
         {/* ── Header ───────────────────────────────────────────────────── */}
         <motion.div
@@ -132,7 +132,7 @@ export default function StudyDashboard() {
             </p>
           </div>
 
-          <GlowButton onClick={() => navigate('/study/daily')} size="sm" data-tour="daily-review">
+          <GlowButton onClick={() => navigate('/learn/daily')} size="sm" data-tour="daily-review">
             <Play size={13} />
             Start Daily Review
           </GlowButton>
@@ -299,7 +299,7 @@ export default function StudyDashboard() {
                     Scan your resume first — we'll build study categories from your skill gaps.
                   </p>
                 </div>
-                <GlowButton size="sm" onClick={() => navigate('/analyze')}>
+                <GlowButton size="sm" onClick={() => navigate('/prep/analyze')}>
                   Scan Resume
                 </GlowButton>
               </motion.div>

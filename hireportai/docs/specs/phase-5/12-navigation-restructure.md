@@ -242,13 +242,13 @@ No backend analytics changes.
 
 ## Files Touched (planned — no code in this slice)
 
-- `src/App.tsx` — new route tree with two namespaces + redirect block (P5-S14)
+- `src/App.tsx` — new route tree with two namespaces + redirect block (P5-S13)
 - `src/components/layout/TopNav.tsx` — new (P5-S14)
 - `src/components/layout/MobileNav.tsx` — new (P5-S14)
 - `src/components/layout/AppShell.tsx` — new or updated (P5-S14)
 - `hirelens-frontend/tests/TopNav.test.tsx` — new (P5-S14)
 - `hirelens-frontend/tests/MobileNav.test.tsx` — new (P5-S14)
-- `hirelens-frontend/tests/App.redirects.test.tsx` — new (P5-S14)
+- `hirelens-frontend/tests/App.redirects.test.tsx` — new (P5-S13)
 - Internal-reference updates across `hirelens-frontend/src/` and `hirelens-backend/app/services/email/` — P5-S13 sweep
 - `AGENTS.md` — Frontend Routes Table updated (P5-S14)
 - `SESSION-STATE.md` — slice pointer, Active Refactor Zones update, Hard Constraints "no new flat routes" reaffirmed (P5-S14)

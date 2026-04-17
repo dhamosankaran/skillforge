@@ -42,7 +42,7 @@ export default function AdminPanel() {
   const { user, isLoading: authLoading } = useAuth()
 
   if (authLoading) return null
-  if (!user || user.role !== 'admin') return <Navigate to="/analyze" replace />
+  if (!user || user.role !== 'admin') return <Navigate to="/prep/analyze" replace />
 
   return <AdminDashboard />
 }

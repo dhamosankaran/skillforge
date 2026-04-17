@@ -1,0 +1,121 @@
+# P5-S13 — Internal-reference sweep proof (AC-5)
+# Generated 2026-04-17.
+#
+# Command (adjusted from the prompt to point at the real file locations —
+# the spec referenced `app/services/email/` and `app/services/payments/`
+# as subdirectories but those live as top-level files in this repo):
+#
+#   rg -n '/analyze|/results|/rewrite|/interview|/tracker|/study|/mission' \
+#     hirelens-frontend/src/ \
+#     hirelens-frontend/.env.example \
+#     hirelens-backend/.env.example \
+#     hirelens-backend/app/services/reminder_service.py \
+#     hirelens-backend/app/services/email_service.py \
+#     hirelens-backend/app/services/payment_service.py \
+#     hirelens-backend/app/templates/daily_reminder.html
+#
+# How to read this artefact:
+#
+#   * The ONLY sweep-target matches (old frontend route strings) must come
+#     from src/App.tsx — the redirect block is intentional.
+#   * Matches in src/App.tsx also include the NEW namespaced routes
+#     (/prep/analyze, /learn/daily, etc.) that contain an old prefix as a
+#     substring — expected by design.
+#   * Matches in src/services/api.ts are BACKEND API endpoints
+#     (/api/analyze, /api/v1/study/*, /api/v1/missions/*). Those routes
+#     have NOT moved in this slice — they are the backend API surface.
+#   * Matches in component imports (@/components/study/*,
+#     @/components/tracker/*, @/components/rewrite/*,
+#     @/components/mission/*) are filesystem paths, not route paths.
+#   * Matches on '/learn/*' and '/prep/*' are the NEW route references
+#     (expected — they are where this slice routed things TO).
+#   * Doc comments referencing backend API paths ('/study/review',
+#     '/api/v1/study/daily', etc.) point at backend endpoints and are not
+#     sweep targets.
+#
+# Scanned but clean (zero matches — not shown below):
+#   hirelens-backend/app/services/reminder_service.py
+#   hirelens-backend/app/services/email_service.py
+#   hirelens-backend/app/services/payment_service.py
+#   hirelens-backend/app/templates/daily_reminder.html
+#   hirelens-frontend/.env.example
+#   hirelens-backend/.env.example
+#
+# ── rg output ───────────────────────────────────────────────────────────────
+
+hirelens-frontend/src/services/api.ts:146:  const response = await api.post<AnalysisResponse>('/api/analyze', formData, {
+hirelens-frontend/src/services/api.ts:158:  const response = await api.post<RewriteResponse>('/api/rewrite', {
+hirelens-frontend/src/services/api.ts:174:  const response = await api.get<ResumeTemplate[]>('/api/rewrite/templates')
+hirelens-frontend/src/services/api.ts:195:  const response = await api.post<InterviewPrepResponse>('/api/interview-prep', {
+hirelens-frontend/src/services/api.ts:203:  const response = await api.get<TrackerApplication[]>('/api/tracker')
+hirelens-frontend/src/services/api.ts:210:  const response = await api.post<TrackerApplication>('/api/tracker', data)
+hirelens-frontend/src/services/api.ts:218:  const response = await api.patch<TrackerApplication>(`/api/tracker/${id}`, data)
+hirelens-frontend/src/services/api.ts:223:  await api.delete(`/api/tracker/${id}`)
+hirelens-frontend/src/services/api.ts:234: * endpoint (GET /api/v1/study/dashboard) is deployed, swap the URL here
+hirelens-frontend/src/services/api.ts:243:  const response = await api.get<DailyQueueResponse>('/api/v1/study/daily')
+hirelens-frontend/src/services/api.ts:275:  const response = await api.post<ReviewResponse>('/api/v1/study/review', req)
+hirelens-frontend/src/services/api.ts:282:  const response = await api.post<MissionResponse>('/api/v1/missions/create', req)
+hirelens-frontend/src/services/api.ts:287:  const response = await api.get<MissionDetailResponse>('/api/v1/missions/active')
+hirelens-frontend/src/services/api.ts:292:  const response = await api.get<MissionDailyResponse>('/api/v1/missions/daily')
+hirelens-frontend/src/services/api.ts:297:  const response = await api.post<MissionDayCompleteResponse>('/api/v1/missions/complete-day')
+hirelens-frontend/src/services/api.ts:341:    '/api/v1/study/experience',
+hirelens-frontend/src/App.tsx:79:          <Route path="/learn/mission"      element={<ProtectedRoute><MissionMode /></ProtectedRoute>} />
+hirelens-frontend/src/App.tsx:82:          <Route path="/prep/analyze"   element={<ProtectedRoute><Analyze /></ProtectedRoute>} />
+hirelens-frontend/src/App.tsx:83:          <Route path="/prep/results"   element={<ProtectedRoute><Results /></ProtectedRoute>} />
+hirelens-frontend/src/App.tsx:84:          <Route path="/prep/rewrite"   element={<ProtectedRoute><Rewrite /></ProtectedRoute>} />
+hirelens-frontend/src/App.tsx:85:          <Route path="/prep/interview" element={<ProtectedRoute><Interview /></ProtectedRoute>} />
+hirelens-frontend/src/App.tsx:86:          <Route path="/prep/tracker"   element={<ProtectedRoute><Tracker /></ProtectedRoute>} />
+hirelens-frontend/src/App.tsx:93:          <Route path="/analyze"            element={<Navigate to="/prep/analyze" replace />} />
+hirelens-frontend/src/App.tsx:94:          <Route path="/results"            element={<Navigate to="/prep/results" replace />} />
+hirelens-frontend/src/App.tsx:95:          <Route path="/rewrite"            element={<Navigate to="/prep/rewrite" replace />} />
+hirelens-frontend/src/App.tsx:96:          <Route path="/interview"          element={<Navigate to="/prep/interview" replace />} />
+hirelens-frontend/src/App.tsx:97:          <Route path="/tracker"            element={<Navigate to="/prep/tracker" replace />} />
+hirelens-frontend/src/App.tsx:98:          <Route path="/study"              element={<Navigate to="/learn" replace />} />
+hirelens-frontend/src/App.tsx:99:          <Route path="/study/daily"        element={<Navigate to="/learn/daily" replace />} />
+hirelens-frontend/src/App.tsx:100:          <Route path="/study/category/:id" element={<Navigate to="/learn/category/:id" replace />} />
+hirelens-frontend/src/App.tsx:101:          <Route path="/study/card/:id"     element={<Navigate to="/learn/card/:id" replace />} />
+hirelens-frontend/src/App.tsx:102:          <Route path="/mission"            element={<Navigate to="/learn/mission" replace />} />
+hirelens-frontend/src/pages/CardViewer.tsx:15: *   Quiz        — interactive self-rating via QuizPanel → POST /study/review
+hirelens-frontend/src/pages/CardViewer.tsx:23:import { FlipCard } from '@/components/study/FlipCard'
+hirelens-frontend/src/pages/CardViewer.tsx:24:import { QuizPanel } from '@/components/study/QuizPanel'
+hirelens-frontend/src/pages/AdminPanel.tsx:45:  if (!user || user.role !== 'admin') return <Navigate to="/prep/analyze" replace />
+hirelens-frontend/src/pages/Tracker.tsx:6:import { KanbanBoard } from '@/components/tracker/KanbanBoard'
+hirelens-frontend/src/types/index.ts:166:/** Card as returned by GET /api/v1/study/daily */
+hirelens-frontend/src/pages/StudyDashboard.tsx:7:import { CategoryCard, CategoryCardSkeleton } from '@/components/study/CategoryCard'
+hirelens-frontend/src/pages/StudyDashboard.tsx:25:    link: '/learn/mission',
+hirelens-frontend/src/pages/StudyDashboard.tsx:302:                <GlowButton size="sm" onClick={() => navigate('/prep/analyze')}>
+hirelens-frontend/src/pages/Rewrite.tsx:8:import { ResumeEditor } from '@/components/rewrite/ResumeEditor'
+hirelens-frontend/src/pages/Rewrite.tsx:9:import { CoverLetterViewer } from '@/components/rewrite/CoverLetterViewer'
+hirelens-frontend/src/pages/Rewrite.tsx:51:          to="/prep/results"
+hirelens-frontend/src/pages/Rewrite.tsx:333:          <GlowButton onClick={() => navigate('/prep/analyze')}>
+hirelens-frontend/src/components/study/QuizPanel.tsx:8: * Submitting: Buttons disabled while POST /study/review is in-flight.
+hirelens-frontend/src/components/onboarding/PersonaPicker.tsx:99:          navigate(`/learn/mission${qs ? `?${qs}` : ''}`, { replace: true })
+hirelens-frontend/src/pages/MissionMode.tsx:4: * Route: /learn/mission
+hirelens-frontend/src/pages/MissionMode.tsx:25:import { FlipCard } from '@/components/study/FlipCard'
+hirelens-frontend/src/pages/MissionMode.tsx:26:import { QuizPanel } from '@/components/study/QuizPanel'
+hirelens-frontend/src/pages/MissionMode.tsx:27:import { MissionSetup } from '@/components/mission/MissionSetup'
+hirelens-frontend/src/pages/MissionMode.tsx:28:import { Countdown } from '@/components/mission/Countdown'
+hirelens-frontend/src/pages/MissionMode.tsx:29:import { DailyTarget } from '@/components/mission/DailyTarget'
+hirelens-frontend/src/hooks/useStudyDashboard.ts:27:      // for free-plan users. Once GET /api/v1/study/dashboard is deployed, the
+hirelens-frontend/src/pages/Onboarding.tsx:80:  // ── No scan in context → send user back to /prep/analyze ─────────────────
+hirelens-frontend/src/pages/Onboarding.tsx:82:    return <Navigate to="/prep/analyze" replace />
+hirelens-frontend/src/pages/Onboarding.tsx:245:              navigate('/prep/results')
+hirelens-frontend/src/pages/DailyReview.tsx:7: *   1. Fetch GET /api/v1/study/daily → up to 5 due cards + session_id
+hirelens-frontend/src/pages/DailyReview.tsx:24:import { FlipCard } from '@/components/study/FlipCard'
+hirelens-frontend/src/pages/DailyReview.tsx:25:import { QuizPanel } from '@/components/study/QuizPanel'
+hirelens-frontend/src/components/layout/Navbar.tsx:12:  { href: '/prep/analyze', label: 'Analyze' },
+hirelens-frontend/src/components/layout/Navbar.tsx:13:  { href: '/prep/results', label: 'Results' },
+hirelens-frontend/src/components/layout/Navbar.tsx:14:  { href: '/prep/rewrite', label: 'Rewrite' },
+hirelens-frontend/src/components/layout/Navbar.tsx:15:  { href: '/prep/interview', label: 'Interview' },
+hirelens-frontend/src/components/layout/Navbar.tsx:16:  { href: '/prep/tracker', label: 'Tracker' },
+hirelens-frontend/src/pages/Pricing.tsx:349:                          to="/prep/analyze"
+hirelens-frontend/src/pages/Results.tsx:104:            onClick={() => { toast.dismiss(t.id); navigate('/prep/tracker') }}
+hirelens-frontend/src/pages/Results.tsx:132:          <GlowButton onClick={() => navigate('/prep/analyze')}>
+hirelens-frontend/src/pages/Results.tsx:165:            <GlowButton variant="ghost" size="sm" onClick={() => navigate('/prep/analyze')}>
+hirelens-frontend/src/pages/Results.tsx:169:<GlowButton size="sm" onClick={() => navigate('/prep/rewrite')}>
+hirelens-frontend/src/pages/Results.tsx:234:                onClick={() => navigate('/prep/rewrite')}
+hirelens-frontend/src/pages/Results.tsx:243:                onClick={() => navigate('/prep/interview')}
+hirelens-frontend/src/pages/Results.tsx:252:                onClick={() => navigate('/prep/tracker')}
+hirelens-frontend/src/pages/Profile.tsx:9: *   5. Study history — counts from /api/v1/study/progress
+hirelens-frontend/src/pages/Profile.tsx:13: *   - GET /api/v1/study/progress       (fetched here, lightweight)
+hirelens-frontend/src/pages/Profile.tsx:64:  const r = await api.get<StudyProgress>('/api/v1/study/progress')

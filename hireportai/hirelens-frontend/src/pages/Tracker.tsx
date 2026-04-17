@@ -40,7 +40,7 @@ export default function Tracker() {
 
   return (
     <PageWrapper className="min-h-screen bg-bg-base">
-      <div className="max-w-7xl mx-auto px-4 py-10">
+      <div data-testid="page-tracker" className="max-w-7xl mx-auto px-4 py-10">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}

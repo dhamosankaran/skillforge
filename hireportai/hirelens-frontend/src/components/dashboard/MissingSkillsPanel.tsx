@@ -113,7 +113,7 @@ export function MissingSkillsPanel({
                           category_id: match.categoryId,
                           user_plan: 'pro',
                         })
-                        navigate(`/study?category=${match.categoryId}`)
+                        navigate(`/learn?category=${match.categoryId}`)
                       }}
                       className="flex items-center gap-1 text-xs font-medium text-accent-primary hover:text-accent-primary/80 transition-colors"
                     >

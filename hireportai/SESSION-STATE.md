@@ -24,13 +24,13 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 ## Last Completed Slice
 
-**P5-S11** — Generate My Experience fix. Bumped LLM `max_tokens` 500→2048, moved `experience_narrative` from REASONING_TASKS to FAST_TASKS (1-2 sentence bullet doesn't need reasoning tier), added empty-response guard (raises 503 instead of letting empty string flow back to FE), and added a WARNING-level log in `_call_gemini` when the model returns no text. Backend gained 2 new regression tests. Closes the known-broken Generate My Experience feature.
+**P5-S13** — Route restructure + internal-reference sweep complete. `src/App.tsx` now serves nine namespaced routes under `/learn/*` and `/prep/*`, plus a ten-entry transitional `<Navigate replace>` redirect block for the old flat paths and `/mission`. Post-login redirect target moved from `/analyze` to `/home` (LoginPage + HomeRoute). New `HomeDashboardPlaceholder` stands in at `/home` until P5-S18 ships the real dashboard. Sweep removed every old frontend-route reference from `hirelens-frontend/src/` (outside the App.tsx redirect block) and updated `hirelens-backend/app/services/reminder_service.py` so daily-reminder emails deep-link into `/learn/daily`. Sweep proof at `docs/audit/2026-04-p5-s13-sweep-proof.txt`. Frontend test count 5 → 16 (new `App.redirects.test.tsx` covers all 10 transitional redirects + `/home`); backend 174/174 unchanged.
 
 ---
 
 ## Next Slice
 
-**P5-S12** — Begin route-restructure work (P5C). See `claude-code-prompts-all-phases-v2.md` for the slice prompt and any new spec scaffolding under `docs/specs/phase-5/12-*.md`.
+**P5-S14** — Ship `TopNav` / `MobileNav` / `AppShell` components and wire them into `src/App.tsx`, replacing the current `Navbar`. Add `nav_clicked` event to the analytics catalog.
 
 After P5-S9, continue in this order:
 1. P5B (S10–S11) — cover letter, Generate My Experience
@@ -61,18 +61,18 @@ These are user-visible bugs. Don't refactor around them — they have dedicated 
 
 Currently none. As Phase 5 progresses, this list will grow:
 
-- (After P5-S12 spec): Routes about to change — avoid drive-by edits to `src/App.tsx` until P5-S14 lands.
+- (P5-S13 landed): `src/App.tsx` now carries the nine `/learn/*` + `/prep/*` namespaced routes and a ten-entry transitional redirect block. Keep drive-by edits off `src/App.tsx` until P5-S14 replaces `Navbar` with `TopNav` + `MobileNav` + `AppShell`.
 - (After P5-S15 spec): User model gaining `persona`, `interview_target_date`, **`interview_target_company`** fields — coordinate with that migration.
 
 ---
 
 ## Recently Completed (last 5)
 
-1. P5-S11 — Generate My Experience fix (max_tokens 500→2048, moved to FAST tier, empty-response 503 guard, Gemini empty-text WARNING log; +2 regression tests)
-2. P5-S10 — Cover letter fix (prompt rewritten for business-letter format: headers/greeting/signature consistent)
-3. P5-S9 — AI Resume Rewrite fix (removed 4k-char input truncation; full resume now reaches LLM)
-4. P5-S8 — Geo-pricing gaps A+C closed (Pricing page now Stripe-wired, backend checkout has IP fallback; gaps B/D/E deferred)
-5. P5-S0b — applied 10 doc-sync fixes from audit (path corrections, spec dedup, 9 placeholder specs, Tech Debt log)
+1. P5-S13 — Route restructure + internal-reference sweep: `/learn/*` and `/prep/*` namespaces live in `src/App.tsx`, 10-entry `<Navigate replace>` redirect block covers the old flat paths, post-login target now `/home`, `HomeDashboardPlaceholder` added, daily-reminder email deep-link → `/learn/daily`. Sweep proof at `docs/audit/2026-04-p5-s13-sweep-proof.txt`. Frontend tests 5 → 16 (new `App.redirects.test.tsx`); backend 174/174.
+2. P5-S11 — Generate My Experience fix (max_tokens 500→2048, moved to FAST tier, empty-response 503 guard, Gemini empty-text WARNING log; +2 regression tests)
+3. P5-S10 — Cover letter fix (prompt rewritten for business-letter format: headers/greeting/signature consistent)
+4. P5-S9 — AI Resume Rewrite fix (removed 4k-char input truncation; full resume now reaches LLM)
+5. P5-S8 — Geo-pricing gaps A+C closed (Pricing page now Stripe-wired, backend checkout has IP fallback; gaps B/D/E deferred)
 
 ---
 

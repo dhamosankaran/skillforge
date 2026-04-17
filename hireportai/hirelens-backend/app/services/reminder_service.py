@@ -40,7 +40,7 @@ def build_email_body(
 ) -> str:
     """Render the daily-reminder HTML with user-specific values."""
     app_url = os.getenv("FRONTEND_URL", "http://localhost:5199")
-    study_link = f"{app_url}/study?utm_source=email&utm_medium=daily_reminder"
+    study_link = f"{app_url}/learn/daily?utm_source=email&utm_medium=daily_reminder"
 
     template = _load_template()
     return (

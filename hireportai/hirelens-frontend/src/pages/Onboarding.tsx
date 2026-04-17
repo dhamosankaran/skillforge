@@ -77,9 +77,9 @@ export default function Onboarding() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result])
 
-  // ── No scan in context → send user back to /analyze ──────────────────────
+  // ── No scan in context → send user back to /prep/analyze ─────────────────
   if (!result) {
-    return <Navigate to="/analyze" replace />
+    return <Navigate to="/prep/analyze" replace />
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -103,12 +103,12 @@ export default function Onboarding() {
       category_name: cat.name,
     })
     fireCompleted(false)
-    navigate(`/study?category=${encodeURIComponent(cat.category_id)}`)
+    navigate(`/learn?category=${encodeURIComponent(cat.category_id)}`)
   }
 
   function handleSkip() {
     fireCompleted(true)
-    navigate('/study')
+    navigate('/home')
   }
 
   function handleRetry() {
@@ -242,7 +242,7 @@ export default function Onboarding() {
           <button
             onClick={() => {
               fireCompleted(false)
-              navigate('/results')
+              navigate('/prep/results')
             }}
             className="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-text-secondary transition-colors"
           >
