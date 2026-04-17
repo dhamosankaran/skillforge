@@ -64,6 +64,7 @@ PostHog is instrumented from Phase 1 and runs on both tiers:
 |-------|-------------|-----------|
 | `ats_scanned` | `app/api/routes/analyze.py` | `{user_id, scan_id, resume_id, job_description_length}` |
 | `tracker_auto_created_from_scan` | `app/api/routes/analyze.py` | `{user_id, company, role, matched_skills}` |
+| `resume_rewrite_generated` | `app/api/routes/rewrite.py` | `{resume_chars, missing_keywords_count, template_type}` |
 | `experience_generated` | `app/services/experience_service.py` | `{user_id, word_count}` |
 | `card_reviewed` | `app/services/study_service.py` | `{user_id, card_id, rating, ease_factor, interval_days}` |
 | `mission_created` | `app/services/mission_service.py` | `{user_id, mission_id, categories, target_date}` |

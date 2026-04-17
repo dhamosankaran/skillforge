@@ -1,155 +1,127 @@
-# SESSION-STATE.md
+# SESSION STATE — SkillForge
 
-> **Purpose**: This file is the persistent memory between Claude Code sessions.
-> Update it at the END of every session before committing.
-> Read it at the START of every session.
->
-> **Claude Code start-of-session ritual**:
-> `Read AGENTS.md. Read CLAUDE.md. Read SESSION-STATE.md.`
+> **Purpose**: This is the live "where we are right now" pointer for Claude Code. Read at the start of every session. Update at the end.
+> **Companion to**: AGENTS.md (how project works) + CLAUDE.md (how to behave) + spec file (what to build).
+> **Update cadence**: End of every implementation slice. Drift will hurt — keep this current.
 
 ---
 
-## Current Status
+## Active Phase
 
-**Last updated**: 2026-04-16
-**Phase**: 0 → 1 (Phase 0 complete, Phase 1 starting)
-**Current session**: P0-S2 close-out
-**Last completed slice**: P0-S2 — CI/CD pipeline ✅ DONE (GH Actions run 24544573466: 158 backend passed, 4 integration deselected, 5 frontend passed, migration rollback green)
-**Next slice to run**: P1-S1 — Task 1.1: Card Data Model + JSX Extraction (spec `docs/specs/phase-1/03-card-extraction.md`)
+**Phase 5: Enhancements + UX Restructure**
+
+Phases 0–4 are complete. We're now in Phase 5 which absorbs the ad-hoc enhancement work (multi-model router, geo-pricing, anti-abuse, branding, landing page) plus the UX restructure (PersonaPicker, /learn and /prep namespaces, persona-aware home dashboard).
 
 ---
 
-## Phase Completion Tracker
+## Last Completed Slice
 
-| Phase | Status | Completed date | Notes |
-|-------|--------|---------------|-------|
-| Phase 0: Foundation | ✅ Complete | 2026-04-16 | PG migration, auth unification, skeleton deploy, CI/CD all green |
-| Phase 1: Study Engine | 🔄 Starting | — | Begin with Task 1.1 (card extraction verification on new PG base) |
-| Phase 2: Retention | ⬜ Not started | — | |
-| Phase 3: Content/Marketing | ⬜ Not started | — | |
-| Phase 4: Hardening | ⬜ Not started | — | |
-
-**Enhancement status** (post-playbook features):
-
-| Enhancement | Status | Notes |
-|-------------|--------|-------|
-| ENH-1: LLM router | ⬜ | Build in P1-S4 alongside embeddings |
-| ENH-2: Geo pricing | ⬜ | Build in P1-S22 alongside Stripe |
-| ENH-3: IP blocking | ⬜ | Build in P1-S19 |
-| ENH-4: Card soft-delete | ⬜ | Build in P1-S2 (add deleted_at to Card model) |
-| ENH-5: Design system | ⬜ | Build in P3-S3 |
-| ENH-6: Free tier interview limits | ⬜ | Build in P1-S19 |
-| ENH-7: Tracker auto-populate | ⬜ | Build in P1-S20 |
-| ENH-8: Resume/cover letter fix | ⬜ | Build in P3-S7 |
+**P5-S9** — AI Resume Rewrite fix. Removed 4k-char input truncation in `gpt_service.py` + `ai_service.py` (raised to 40k), raised `max_tokens` to 8000, added `resume_rewrite_generated` PostHog event, added regression test `tests/services/test_resume_rewrite.py`. Spec: `docs/specs/phase-5/09-resume-rewrite-fix.md`.
 
 ---
 
-## What Was Built This Session
+## Next Slice
 
-*(Update after every session — most recent first)*
+**P5-S10** — Cover Letter Generation format fix. Broken today: wrong headers, missing greeting/signature blocks. Start with a diagnosis pass (mirror P5-S9 approach).
 
-### Session: P0-S2 — CI/CD Pipeline Close-out ✅ (2026-04-16)
-- GitHub Actions workflow landed and stabilised across 8 commits (996f478 → 2c1d362).
-- Three jobs green on run **24544573466**:
-  - `backend-tests` (Python 3.13): **158 passed, 4 deselected (integration), 0 failed**
-  - `frontend-tests` (Node 20): **5 passed**
-  - `migration-rollback` (Python 3.13): **success**
-- Fixed along the way:
-  - `fsrs` missing from `requirements.txt` (e9d38d6)
-  - duplicate `mission` table creates in migration `c9863b51075d` (14fc8f3)
-  - seed cards + synthetic embeddings step wired in before backend tests (11fe035)
-  - migrations applied before seed to fix ordering (87e02dd)
-  - card-extraction tests marked `@pytest.mark.integration` and deselected in CI (c11a4c3)
-  - dropped `--cov=app` flag from pytest invocation — pytest-cov wasn't installed (2c1d362)
-- Spec `docs/specs/phase-0/02b-cicd-pipeline.md` closed.
-- **Phase 0 complete.**
-
-### Session: PostgreSQL Migration (Phase 0, Task 0.1–0.3) ✅
-- Migrated SQLAlchemy from SQLite → PostgreSQL
-- Created Alembic migrations for all existing tables
-- 30 tests green after migration
-- Committed: `feat(db): migrate to PostgreSQL + pgvector`
+After P5-S10, proceed in this order:
+1. P5B remainder (S11) — Generate My Experience fix
+2. P5C (S12–S14) — route restructure
+3. P5D (S15–S19) — PersonaPicker + HomeDashboard
+4. Continue per the execution order in claude-code-prompts-all-phases-v2.md
 
 ---
 
-## Known Issues / Blockers
+## Known-Broken Features (DO NOT modify unless fixing)
 
-*(List anything that broke, was skipped, or needs attention)*
+These are user-visible bugs. Don't refactor around them — they have dedicated fix slices in Phase 5B.
 
-- **Integration tests (4) are deselected in CI** — they require live LLM API keys and external services. Must be run manually in local dev before changes to card extraction code. Marker: `@pytest.mark.integration`.
-- **pytest-cov not installed.** If we want `pytest --cov=app` in CI, pytest-cov must be added to `requirements-dev.txt` first. Currently NOT installed. Decision: skip coverage in CI for now — adds noise without driving behavior. Revisit if/when coverage targets become a CI gate.
-
----
-
-## Decisions Made
-
-*(Record any architectural or implementation decisions so Claude Code doesn't re-litigate them)*
-
-| Decision | Rationale | Date |
-|----------|-----------|------|
-| py-fsrs 4.x (not 3.x) | API changed significantly in v4 | — |
-| No Docker for local dev | Use Homebrew PostgreSQL + Redis | — |
-| Soft-delete cards via `deleted_at` | Never hard-delete — preserve data integrity | — |
-| LLM fallback: Gemini if provider key not set | Gemini is always configured; other providers optional | — |
-| Integration tests deselected in CI via `-m "not integration"` | They need live LLM keys; running them in CI would be flaky and leak spend. Run locally before merging extractor changes. | 2026-04-16 |
-| Skip coverage in CI for now | pytest-cov isn't installed; adding it adds CI noise without driving behavior. Revisit if/when coverage targets become a CI gate. | 2026-04-16 |
+| Feature | Symptom | Fix slice |
+|---------|---------|-----------|
+| Cover Letter Generation | Format inconsistent — wrong headers, missing greeting/signature blocks | P5-S10 |
+| Generate My Experience (Profile) | Button doesn't work — silent failure | P5-S11 |
 
 ---
 
-## Environment Notes
+## Active Refactor Zones (avoid drive-by changes)
 
-*(Record anything specific to your local setup)*
+Currently none. As Phase 5 progresses, this list will grow:
 
-- Project root: `/Users/kalaidhamu/Desktop/KalaiDhamu/LLM/General/SkillForge/hireportai`
-- Backend: `cd hirelens-backend && source venv/bin/activate`
-- Frontend: `cd hirelens-frontend`
-- DB: `psql -d hireport`
-- Backend port: 8000
-- Frontend port: 5199
-- Domain: theskillsforge.dev
-- Production backend: (set when Railway URL is known)
-- Production frontend: (set when Vercel URL is known)
-- CI: GitHub Actions, workflow `.github/workflows/ci.yml`, three jobs (backend-tests, frontend-tests, migration-rollback)
+- (After P5-S12 spec): Routes about to change — avoid drive-by edits to `src/App.tsx` until P5-S14 lands.
+- (After P5-S15 spec): User model gaining `persona` and `interview_target_date` fields — coordinate with that migration.
 
 ---
 
-## Start-of-Next-Session Prompt
+## Recently Completed (last 5)
 
-Copy this exact prompt to start the next Claude Code session:
-
-```
-Read AGENTS.md. Read CLAUDE.md. Read SESSION-STATE.md.
-
-Summarize:
-1. What phase and slice are we on?
-2. Any known issues from last session?
-3. Run: git log --oneline -5
-
-Then continue with: P1-S1 (Task 1.1 — Card Data Model + JSX Extraction)
-
-Full prompt:
-Read AGENTS.md. Read docs/specs/phase-1/03-card-extraction.md and the `.agent/skills/card-extraction.md` skill. CI now seeds cards + synthetic embeddings; the real extractor pipeline needs verification against the new PostgreSQL base. Confirm: (a) `python scripts/extract_cards.py` is idempotent and inserts exactly 177 rows, (b) every card has a non-null `embedding`, (c) every card has a valid `category_id`. Do NOT run the real Gemini embedding step in CI (cost + keys) — integration tests remain deselected. Report what passes, what's stale, and propose the smallest next slice. Stop before writing code so I can review.
-```
+1. P5-S9 — AI Resume Rewrite fix (removed 4k-char input truncation, raised max_tokens, added PostHog event + regression test)
+2. P5-S8 — Geo-pricing visibility + Stripe checkout wiring on pricing page + server-side currency fallback
+3. P4-S4 — Custom domain + SSL + final Phase 4 verification
+4. P4-S3 — Rate limiting + performance audit
+5. P4-S2 — PostHog dashboards
 
 ---
 
-## How to Update This File
+## Open Decisions Awaiting Dhamo
 
-At the **end of every session**, update:
-1. `Last updated` date
-2. `Last completed slice`
-3. `Next slice to run`
-4. Add a new entry under "What Was Built This Session"
-5. Add any issues or decisions
-6. Update the "Start-of-Next-Session Prompt" with the actual next prompt
-
-Then commit:
-```bash
-git add SESSION-STATE.md
-git commit -m "chore: update session state — completed P0-SX"
-git push
-```
+| Decision | Context | Blocking? |
+|----------|---------|-----------|
+| Free-tier interview question limit value | Implemented but value not validated against business model. P5-S6 will flag the current value for confirmation. | No, but should resolve before Phase 5 ends |
+| Cancellation win-back flow (50% off 3 months) | Mentioned in P5-S26 spec as optional. Decide before that slice. | No |
+| Existing-user persona migration (auto-default vs force-pick) | Recommendation in P5-S19: force-pick. Dhamo to confirm. | Yes, before P5-S19 |
 
 ---
 
-*This file is tracked in git so every session starts with full context.*
+## Hard Constraints (current sprint)
+
+These rules apply across Phase 5. Add or remove as the sprint changes.
+
+- **Routes**: All new routes go under `/learn/*` or `/prep/*`. No new flat routes.
+- **Env vars**: Any new env var requires `.env.example` update in the same commit.
+- **LLM calls**: All LLM calls go through the LLM router (`app/services/llm_router.py`). Don't bypass it. Pro for reasoning (rewrite, cover letter, gap analysis, chat-with-AI, admin insights). Flash for fast tasks (extraction, classification, simple Q&A).
+- **PostHog events**: Every new user-facing feature fires at least one event. snake_case naming.
+- **Backward compatibility**: Phase 5 cannot break existing user data. Migrations need defaults that backfill existing rows.
+- **Persona gating**: Once PersonaPicker is shipped (P5-S17), all `/learn/*` and `/prep/*` and `/home` routes require `user.persona` to be set. Exception: `/profile`.
+
+---
+
+## Test Suite Status
+
+- **Backend**: All tests passing (last run: end of Phase 4)
+- **Frontend**: All tests passing (last run: end of Phase 4)
+- **Note**: Run full suites at the start of P5-S0 to establish a baseline before Phase 5 changes begin.
+
+---
+
+## Project File Inventory (canonical references)
+
+| File | Purpose |
+|------|---------|
+| `AGENTS.md` | How this project works (stack, conventions, deploy) |
+| `CLAUDE.md` | How Claude Code should behave (rules, 3-strike, test gates) |
+| `SESSION-STATE.md` | THIS FILE — live state pointer |
+| `docs/prd.md` | Product requirements |
+| `docs/specs/phase-N/NN-feature.md` | Per-feature specs |
+| `skillforge_playbook_v2.md` | Master phased plan (v3 due after P5-S35) |
+| `claude-code-prompts-all-phases-v2.md` | Slice-by-slice prompts (THIS is the active version, v1 will move to archive at P5-S35) |
+| `local-setup-guide.md` | Local dev setup (refresh due at P5-S35) |
+| `ClaudeSkillsforge_sessiontext.docx` | Conversation transcript — **archive after Phase 5** per H.1 housekeeping item |
+
+---
+
+## Update Protocol
+
+At the end of every slice:
+1. Move the just-completed slice into "Recently Completed" (top of list, drop oldest).
+2. Update "Last Completed Slice" and "Next Slice".
+3. If a feature was fixed: remove from "Known-Broken Features".
+4. If a refactor zone is now stable: remove from "Active Refactor Zones".
+5. If a new constraint or decision emerged: add to the right section.
+6. Commit SESSION-STATE.md alongside the slice's other files.
+
+If you ever feel SESSION-STATE.md is out of sync with reality, run the contingency prompt:
+> *"Read SESSION-STATE.md. Run git log --oneline -20 and read the last 5 commit messages and any docs/specs/phase-5/ files added recently. Compare to SESSION-STATE.md. Report drift and propose updates. Do NOT modify the file until I approve."*
+
+---
+
+*Last hand-edit: 2026-04-17 — P5-S9 closed; next up P5-S10*

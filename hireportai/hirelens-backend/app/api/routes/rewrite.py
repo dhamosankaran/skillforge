@@ -1,5 +1,6 @@
 """Resume rewrite endpoint."""
 from fastapi import APIRouter, HTTPException
+from app.core.analytics import track as analytics_track
 from app.models.request_models import RewriteRequest
 from app.models.response_models import RewriteResponse
 from app.services.nlp import extract_job_requirements, extract_skills
@@ -45,6 +46,15 @@ async def rewrite_resume(body: RewriteRequest) -> RewriteResponse:
             major=body.major,
             missing_keywords=missing_keywords,
             missing_skills=missing_skills,
+        )
+        analytics_track(
+            user_id=None,
+            event="resume_rewrite_generated",
+            properties={
+                "resume_chars": len(body.resume_text),
+                "missing_keywords_count": len(missing_keywords),
+                "template_type": body.template_type or "general",
+            },
         )
         return result
     except RuntimeError as e:

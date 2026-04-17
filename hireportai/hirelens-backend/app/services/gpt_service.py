@@ -79,7 +79,7 @@ def generate_resume_rewrite(
 
     Returns the rewritten resume as clean markdown in ``full_text``.
     """
-    resume_text = resume_data.get("full_text", "")[:4000]
+    resume_text = resume_data.get("full_text", "")[:40000]
     jd_title = jd_requirements.get("job_title", "the role")
     missing_kw_str = ", ".join((missing_keywords or jd_requirements.get("all_skills", []))[:30])
 
@@ -104,7 +104,7 @@ Original resume:
 
     try:
         markdown = generate_for_task(
-            task="resume_rewrite", prompt=prompt, max_tokens=4000, temperature=0.4,
+            task="resume_rewrite", prompt=prompt, max_tokens=8000, temperature=0.4,
         )
         return RewriteResponse(
             header=RewriteHeader(),
