@@ -64,7 +64,7 @@ jobs:
         run: python -m spacy download en_core_web_sm
 
       - name: Run pytest
-        run: python -m pytest tests/ -v --tb=short -m "not integration" --cov=app
+        run: python -m pytest tests/ -v --tb=short -m "not integration"
 
   # ---------------------------------------------------------------------------
   # Job 2: Frontend — vitest
