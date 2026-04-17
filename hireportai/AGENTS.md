@@ -254,12 +254,41 @@ All under `app/models/`. Column notes list PK + high-signal columns.
 | `CardFeedback` | `card_feedback` | `user_id`, `card_id`, `vote` (up/down), `comment` |
 | `TrackerApplicationModel` | `tracker_applications_v2` | `user_id` nullable, `company`, `role`, `date_applied`, `ats_score`, `status`, `scan_id`, `skills_matched`, `skills_missing` |
 
+## LLM Router (canonical path + API)
+
+The LLM router lives at **`app/core/llm_router.py`** (not `app/services/`)
+with the call shape:
+
+```python
+from app.core.llm_router import generate_for_task
+
+text = generate_for_task(
+    task="resume_rewrite",   # classified into FAST_TASKS / REASONING_TASKS frozensets
+    prompt=...,
+    system_prompt=...,       # optional
+    json_mode=False,
+    max_tokens=4096,
+    temperature=0.7,
+)
+```
+
+Task classification is by name (string), not a TaskType enum. Unknown
+tasks default to the **fast** tier. Provider dispatch is module-level
+(`_call_gemini` / `_call_anthropic` / `_call_openai`) chosen from
+`LLM_FAST_PROVIDER` / `LLM_REASONING_PROVIDER` env vars.
+
+**Do not import `app/services/llm/factory.py`** (`get_llm_provider()`) —
+that's a legacy provider abstraction that predates the router. It will be
+consolidated in Phase 6 cleanup. Route all new LLM calls through
+`generate_for_task()`.
+
 ## Key Decisions Log
 - Auth: Google OAuth + JWT (NOT Clerk — migrating later for B2B)
 - FSRS: py-fsrs library, server-side only
-- LLM: task-tiered router — fast tier for extraction/drafting,
-  reasoning tier for long-form. Default provider Gemini; providers
-  are swappable per tier via env vars.
+- LLM: task-tiered router at `app/core/llm_router.py` — fast tier for
+  extraction/drafting, reasoning tier for long-form. Default provider
+  Gemini; providers swappable per tier via env vars. See LLM Router
+  section above.
 - Storage: R2 for files (zero egress), PostgreSQL for data
 - Analytics: PostHog Cloud (free tier), instrumented from Phase 1
 - Email: Resend for transactional (daily reminders, Phase 2)

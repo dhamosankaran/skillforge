@@ -1,96 +1,169 @@
-# SESSION-STATE.md
-## Current Status
-Last updated: 2026-04-17
-Phase: 1
-Current session: P1-S2 (Spec — Cards API)
-Last completed slice: P1-S1b — IVFFlat ANN index + extraction unit tests (parent P1-S1 now ✅ Done)
-Next slice to run: P1-S2 — Spec for user-facing Cards API (`/api/v1/cards` read endpoints)
+# SESSION STATE — SkillForge
 
-### Pending slices
-- **P1-S2** — Cards API spec + implementation (list/categories/semantic search endpoints, free-tier gating, Pydantic schemas, tests)
+> **Purpose**: This is the live "where we are right now" pointer for Claude Code. Read at the start of every session. Update at the end.
+> **Companion to**: AGENTS.md (how project works) + CLAUDE.md (how to behave) + spec file (what to build).
+> **Update cadence**: End of every implementation slice. Drift will hurt — keep this current.
 
-## Phase Completion Tracker
-- Phase 0: ✅ Complete (local) / ⬜ Production deploy deferred (S1–S8)
-  - Note: P0-S6 and P0-S8 were marked done based on deploy-ready files existing in codebase, but Railway + Vercel were never actually provisioned. Production deployment is deferred until Phase 1 is functionally complete locally.
-- Phase 1: 🔄 In Progress (S1 complete 2026-04-17 — S1a on 2026-04-16, S1b on 2026-04-17; S2 pending)
-- Phase 2–4: ⬜ Not started
+---
 
-## Deferred Work
+## Active Phase
 
-### DEFERRED-1: Production Deployment (Railway + Vercel)
-**Original phase:** P0-S6 through P0-S8
-**Status:** ⬜ Not started — deploy-ready files exist but no Railway/Vercel projects provisioned
-**Trigger:** After Phase 1 is functionally complete and tested locally
-**Scope:**
-- Create Railway project with pgvector PostgreSQL + Redis
-- Verify pgvector version on Railway (determines HNSW vs IVFFlat for ANN index)
-- Deploy backend to Railway (env vars, release command, CORS)
-- Deploy frontend to Vercel (env vars, API base URL)
-- Configure Google OAuth redirect URIs for production domain
-- Configure Stripe webhook URL for production domain
-- Configure custom domain (theskillsforge.dev) + SSL
-- Verify end-to-end: curl production /health → 200, frontend loads, CORS works
-**Estimated time:** 1-2 hours of dashboard setup + debugging
-**Risk if deferred too long:** Every Phase 1 feature is tested only on localhost. CORS, connection pooling, env var mismatches, and Stripe webhook URL issues will all surface on first real deploy. The playbook strongly recommends deploying early to catch these incrementally rather than all at once.
-**Playbook reference:** Phase 0 Tasks 0.6-0.8, CI/CD Section 8
+**Phase 5: Enhancements + UX Restructure**
 
-## Decisions Made
-| Decision | Rationale | Date |
-|----------|-----------|------|
-| Free tier limit reduced from 15 to 5 Foundation cards | Original 15 was sized for a 177-card library; with 15 total cards in launch deck, 15-card free tier = no paywall. 5 keeps a meaningful free-vs-Pro distinction. Will revisit when library grows past 50 cards. | 2026-04-16 |
-| Option A on content scaling — accept 15-card reality, defer bulk authoring | Content creation throughput (5–12 hours admin review for 150 cards) made Option B a multi-week side quest; Option C (defer paywall) loses Phase 1 revenue signal; Option A keeps Phase 1 on-plan with an honest pricing story (feature-driven Pro + growing library). | 2026-04-16 |
-| P1-S1 split into P1-S1a + P1-S1b | Original scope (3 migrations + 3 tests + extract_cards patch) estimated 55–70 min — exceeds the 30-min slice budget. Split along theme: S1a = schema + soft-delete; S1b = ANN index + extraction tests. | 2026-04-16 |
-| Soft-delete filter test lives in the integration suite, not CI subset | The spec left two landing zones open (CI subset via `TEST_DATABASE_URL` vs the existing integration file). Kept it alongside the other card-extraction tests in `tests/test_card_extraction.py` with `@pytest.mark.integration`, using the existing `dev_session` fixture (which never commits, so the two inserts roll back). Matches the surrounding file's pattern. | 2026-04-16 |
-| Production deploy deferred until Phase 1 complete locally | Railway + Vercel never provisioned despite P0-S6 being marked done. Trade-off: faster Phase 1 development velocity now, but deploy issues will cluster at the end instead of being caught incrementally. Accepted risk. | 2026-04-17 |
-| ANN index: use IVFFlat (not HNSW) | Production pgvector version unknown since Railway not provisioned. IVFFlat works on all pgvector >= 0.4.0. Performance difference negligible at 15-200 card scale. Revisit HNSW when: (a) prod pgvector version verified >= 0.5.0, AND (b) card volume > 1000. | 2026-04-17 |
+Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the UX restructure (PersonaPicker, /learn and /prep namespaces, persona-aware home dashboard) plus the v2.2 patch additions from the user-flow audit.
 
-## Enhancement Status
-- ENH-1 LLM router: ⬜ (build in P1-S4)
-- ENH-2 Geo pricing: ⬜ (build in P1-S22)
-- ENH-3 IP blocking: ⬜ (build in P1-S19)
-- ENH-4 Card soft-delete: ✅ (column + partial index `ix_cards_category_id_active` + filter test landed in P1-S1a on 2026-04-16)
-- ENH-5 Design system: ⬜ (build in P3-S3)
-- ENH-6 Free tier interview limits: ⬜ (build in P1-S19)
-- ENH-7 Tracker auto-populate: ⬜ (build in P1-S20)
-- ENH-8 Resume/cover letter fix: ⬜ (build in P3-S7)
+---
 
-## Future Considerations
+## Active Prompt Files
 
-### Content scaling timeline
-- Launch: 15 cards (current state from cards.js)
-- Pre-launch additions: user has a separate content plan to add more cards before paid launch
-- Phase 3: admin panel + AI card generation enables ongoing content scaling
-- Phase 1 paywall sized for current library (5 free / 15 total); revisit limits when library > 50
+- `claude-code-prompts-all-phases-v2.md` (v2.1) — base of Phase 5
+- `claude-code-prompts-all-phases-v2.2-patch.md` — additions from flow audit (5 new slices + 1 spec amendment)
+- Always read both when planning Phase 5 work.
 
-### Free tier gating code surface area (for Task 1.12)
-The "5 Foundation cards" cap does not yet exist in code. Today's gate is category-level only:
-- `app/services/card_service.py` — 6 call sites filtering on `Category.source == "foundation"`
-- `app/services/study_service.py` — 4 call sites with the same filter
-- `app/api/v1/routes/study.py:66` — docstring reference
-- `.agent/skills/testing.md:10` — `client_free_tier` fixture
+---
 
-Task 1.12 will need to layer a per-user card-count cap on top of these filters.
+## Last Completed Slice
 
-## What Was Built Last Session
-- P1-S1b landed (commit `e3c0c90`): hand-authored Alembic migration `59795ca196e9` creates `ix_cards_embedding_ivfflat ON cards USING ivfflat (embedding vector_cosine_ops) WITH (lists = 4) WHERE deleted_at IS NULL`; downgrade uses `DROP INDEX IF EXISTS`; upgrade is idempotent via `CREATE INDEX IF NOT EXISTS`. New `tests/test_extract_cards_unit.py` with 9 CI-safe tests (UUID5 determinism for `cat_uuid` / `card_uuid` + `_synthetic_embedding` dimensionality / determinism / distinctness / non-zero magnitude). New integration test `test_ivfflat_index_used_in_semantic_search` in `tests/test_card_extraction.py` — `SET LOCAL enable_seqscan = OFF` + `SET LOCAL enable_sort = OFF` + EXPLAIN asserts `ix_cards_embedding_ivfflat` appears in the plan.
-- Verified locally: migration module imports cleanly; full upgrade → downgrade -1 → upgrade cycle on `hireport_test`; `\di ix_cards_embedding_ivfflat` + `pg_indexes.indexdef` confirm `USING ivfflat (embedding vector_cosine_ops) WITH (lists='4') WHERE (deleted_at IS NULL)`; CI subset 167 passed / 6 deselected (up from 158/5 — +9 unit tests); integration subset 6/6 passed (including the new EXPLAIN test).
-- CI green on push: Migration Rollback + Backend Tests + Frontend Tests all ✓ (run `24563497209`).
-- Previous: P1-S1a landed `fa10338` (categories.tags + partial index); Phase 0 closed; CI marker-gating for integration tests.
+**P5-S0b** — applied 10 doc-sync fixes from audit (path corrections, spec dedup, missing spec placeholders, tech debt log). No code changes.
 
-## Known Issues
-- `docs/specs/phase-1/03-card-extraction.md` was stale (said 177 cards, Done status). Rewritten 2026-04-16 to reflect reality (15 cards / 14 categories), marked partially-done, split work into S1a/S1b.
-- Card-extraction skill file (`.agent/skills/card-extraction.md`) still says "177 study cards" — update when the deck is authored post-P1 UX.
+---
 
-## Known Traps
+## Next Slice
 
-### Deploy-ready ≠ deployed
-Claude Code audits confirmed P0-S6 as "✅ Done" because deploy-ready files existed (railway.toml, CORS config, URL scheme handling). But no Railway or Vercel project was ever created. Lesson: for deploy tasks, always verify against the actual infrastructure (curl the URL, check the dashboard), not just the codebase.
+**P5-S9** — Fix AI Resume Rewrite (first known-broken feature). Read the fresh `docs/specs/phase-3/20c-resume-cover-letter-fix.md` placeholder + `.agent/skills/ats-scanner.md` before starting.
 
-### `SET LOCAL enable_seqscan = OFF` alone is not enough to force an ANN index at low row counts
-With 15 rows, forcing the IVFFlat index for an `ORDER BY embedding <=> … LIMIT N` query requires disabling **both** `enable_seqscan` **and** `enable_sort`. Disabling seqscan alone still leaves the planner free to pick the small partial B-tree index `ix_cards_category_id_active` (from P1-S1a) and do an explicit Sort step, which is cheaper than IVFFlat at tiny scale. Disabling sort forces the planner to pick an index whose AM supports `amcanorderbyop` — which is IVFFlat/HNSW. See `tests/test_card_extraction.py::test_ivfflat_index_used_in_semantic_search`.
+After P5-S9, continue in this order:
+1. P5B (S10–S11) — cover letter, Generate My Experience
+2. P5C (S12–S14) — route restructure
+3. P5D (S15–S19, **S16-AMEND**, **S18b**, **S18c**) — PersonaPicker + HomeDashboard + state-aware + checklist
+4. P5E (S20–S22) — Analysis Results improvements
+5. P5F (S23–S26, **S26b**, **S26c**) — Interview storage + cancel sub + paywall dismissal + webhook idempotency
+6. P5G (S27–S30) — Settings + chat AI + interview date
+7. P5H (S31–S34) — Admin insights + content feed
+8. P5-FINAL (S35) — verify + housekeeping
 
-### Zero vectors and cosine distance
-A 1536-dim all-zero vector has undefined cosine similarity (zero magnitude → division by zero). When writing EXPLAIN-only tests, prefer `[1, 0, 0, …, 0]` or any single-non-zero vector over `[0, 0, …, 0]` to keep the distance expression well-defined even if the query result is never executed.
+**Bold = added in v2.2 patch.**
 
-## Start-of-Next-Session Prompt
-Read AGENTS.md. Read CLAUDE.md. Read SESSION-STATE.md. P1-S1 (cards data-layer foundations) is complete. Next slice is **P1-S2 — Cards API spec**: write/review `docs/specs/phase-1/04-cards-api.md` for the user-facing `/api/v1/cards` read endpoints (list, by category, semantic search) with free-tier gating on top of the existing `Category.source == "foundation"` filter + the forthcoming per-user card-count cap (ENH-6, Task 1.12). The ANN index from P1-S1b is available — semantic search can wire up directly. Production deployment (Railway + Vercel) is still deferred — see `Deferred Work > DEFERRED-1`.
+---
+
+## Known-Broken Features (DO NOT modify unless fixing)
+
+These are user-visible bugs. Don't refactor around them — they have dedicated fix slices.
+
+| Feature | Symptom | Fix slice |
+|---------|---------|-----------|
+| AI Resume Rewrite | Drops sections from original (work history, education) — produces summary instead of full rewrite | P5-S9 |
+| Cover Letter Generation | Format inconsistent — wrong headers, missing greeting/signature blocks | P5-S10 |
+| Generate My Experience (Profile) | Button doesn't work — silent failure | P5-S11 |
+| Geo-Pricing Visibility | Suspected — may not appear on signup page (only on checkout). Audit pending. | P5-S8 |
+| Stripe Webhook Idempotency | Possible — duplicate webhook delivery could double-grant Pro. Audit pending. | P5-S26c |
+
+---
+
+## Active Refactor Zones (avoid drive-by changes)
+
+Currently none. As Phase 5 progresses, this list will grow:
+
+- (After P5-S12 spec): Routes about to change — avoid drive-by edits to `src/App.tsx` until P5-S14 lands.
+- (After P5-S15 spec): User model gaining `persona`, `interview_target_date`, **`interview_target_company`** fields — coordinate with that migration.
+
+---
+
+## Recently Completed (last 5)
+
+1. P5-S0 — 3-way doc sync audit (backend 167/167 green, frontend 5/5 green; 6 duplicate-number pairs + 9 missing specs surfaced for P5-S0b)
+2. P4-S4 — Custom domain + SSL + final Phase 4 verification
+3. P4-S3 — Rate limiting + performance audit
+4. P4-S2 — PostHog dashboards
+5. P4-S1 — Sentry error monitoring
+
+---
+
+## Open Decisions Awaiting Dhamo
+
+| Decision | Context | Blocking? | Decide by |
+|----------|---------|-----------|-----------|
+| Free-tier interview question limit value | Implemented but value not validated against business model. P5-S6 will flag the current value for confirmation. | No | End of Phase 5 |
+| Cancellation win-back flow (50% off 3 months) | Mentioned in P5-S26 spec as optional. | No | Before P5-S26 |
+| Existing-user persona migration (auto-default vs force-pick) | Recommendation in P5-S19: force-pick. Confirm. | Yes | Before P5-S19 |
+| **Persona switch UX: modal or full-page reroute?** | Existing-user flow shows modal. P5-S17 currently says reroute. Modal is lighter; reroute is consistent. | Yes | Before P5-S17 |
+| **Daily review: counts toward free 15-card budget or not?** | If yes, Career-Climber free hits wall in 3 days. If no, daily review is unlimited for free users. Affects monetization curve. | Yes | Before P5-S22 |
+| **Auto-save scan to tracker: automatic or "Save?" prompt?** | Existing-user flow implies automatic. P5-S5 spec needs this clarified. | No | Before P5-S5 |
+| **Email deep-link redirects: do P5-S13 redirects cover Phase 2 daily-email URLs?** | Old emails point at /study/daily etc. Need 301s. | Yes | Before P5-S13 |
+| **Strategic path to $100M ARR**: B2B pivot, adjacent expansion, or geo-volume play? | See `STRATEGIC-OPTIONS.md`. Affects every Phase 6+ decision. | Not yet | Before Phase 6 planning |
+
+---
+
+## Hard Constraints (current sprint)
+
+These rules apply across Phase 5. Add or remove as the sprint changes.
+
+- **Routes**: All new routes go under `/learn/*` or `/prep/*`. No new flat routes.
+- **Env vars**: Any new env var requires `.env.example` update in the same commit.
+- **LLM calls**: All LLM calls go through the LLM router (`app/core/llm_router.py`, entry point `generate_for_task(task=..., ...)`). Don't bypass it. Pro for reasoning (rewrite, cover letter, gap analysis, chat-with-AI, admin insights). Flash for fast tasks (extraction, classification, simple Q&A).
+- **PostHog events**: Every new user-facing feature fires at least one event. snake_case naming.
+- **Backward compatibility**: Phase 5 cannot break existing user data. Migrations need defaults that backfill existing rows.
+- **Persona gating**: Once PersonaPicker is shipped (P5-S17), all `/learn/*` and `/prep/*` and `/home` routes require `user.persona` to be set. Exception: `/profile`.
+- **Stripe**: All webhook handlers must be idempotent (P5-S26c). No new webhook events without idempotency check.
+- **Frontend test coverage**: Every new page added in Phase 5 (`HomeDashboard`, `PersonaPicker` page, `CardChatPanel`, `AdminInsights`, etc.) must ship with at least one Vitest test. Current frontend test count is **5** (only `PaywallModal`) — this number must grow with every Phase 5 UI slice.
+
+---
+
+## Tech Debt (living log — tackle during P6 cleanup unless it escalates)
+
+| Item | Detail |
+|---|---|
+| Legacy LLM provider factory | `app/services/llm/factory.py` + `claude_provider.py` + `gemini_provider.py` run parallel to the real router at `app/core/llm_router.py`. Not currently breaking. Do not extend the legacy factory — route all new LLM calls through `generate_for_task()`. Consolidate in Phase 6 cleanup. Surfaced by the 2026-04-17 audit. |
+| Registration IP-blocking is DB-based, not Redis | `app/api/v1/routes/auth.py` inlines the limit check against the `registration_logs` table (30-day window query). The original playbook skill described a Redis counter. Both approaches work. Kept for P5-S4 backfill; no behavioural change planned. |
+
+---
+
+## Test Suite Status
+
+- **Backend**: All tests passing (last run: end of Phase 4)
+- **Frontend**: All tests passing (last run: end of Phase 4)
+- **Note**: Run full suites at the start of P5-S0 to establish a baseline before Phase 5 changes begin.
+
+---
+
+## Project File Inventory (canonical references)
+
+### In repo (Claude Code reads these)
+
+| File | Purpose |
+|------|---------|
+| `AGENTS.md` | How this project works (stack, conventions, deploy) |
+| `CLAUDE.md` | How Claude Code should behave (rules, 3-strike, test gates) |
+| `SESSION-STATE.md` | THIS FILE — live state pointer |
+| `STRATEGIC-OPTIONS.md` | $100M ARR strategic options analysis. Read before Phase 6 planning. |
+| `docs/prd.md` | Product requirements |
+| `docs/specs/phase-N/NN-feature.md` | Per-feature specs |
+
+### In Claude Project knowledge (Claude in chat reads these)
+
+| File | Purpose |
+|------|---------|
+| `skillforge_playbook_v2.md` | Master phased plan (v3 due after P5-S35) |
+| `claude-code-prompts-all-phases-v2.md` | v2.1 — slice-by-slice prompts (active) |
+| `claude-code-prompts-all-phases-v2.2-patch.md` | v2.2 patch — flow-audit additions |
+| `local-setup-guide.md` | Local dev setup (refresh due at P5-S35) |
+| `ClaudeSkillsforge_sessiontext.docx` | Conversation transcript — **archive after Phase 5** per H.1 |
+
+---
+
+## Update Protocol
+
+At the end of every slice:
+1. Move the just-completed slice into "Recently Completed" (top of list, drop oldest).
+2. Update "Last Completed Slice" and "Next Slice".
+3. If a feature was fixed: remove from "Known-Broken Features".
+4. If a refactor zone is now stable: remove from "Active Refactor Zones".
+5. If a new constraint or decision emerged: add to the right section.
+6. Commit SESSION-STATE.md alongside the slice's other files.
+
+If you ever feel SESSION-STATE.md is out of sync with reality, run the contingency prompt:
+> *"Read SESSION-STATE.md. Run git log --oneline -20 and read the last 5 commit messages and any docs/specs/phase-5/ files added recently. Compare to SESSION-STATE.md. Report drift and propose updates. Do NOT modify the file until I approve."*
+
+---
+
+*Last hand-edit: 2026-04-17 by Dhamo (added v2.2 patch references + flow audit decisions + STRATEGIC-OPTIONS.md reference)*

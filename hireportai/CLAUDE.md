@@ -49,6 +49,14 @@
     services. Coverage (`pytest-cov`) is deliberately NOT installed
     — do not add `--cov` flags without updating `requirements-dev.txt`
     and getting sign-off.
+14. **No new feature without a spec** — even small ones. The
+    2026-04-17 doc-sync audit exposed multiple features (LLM router,
+    geo-pricing, IP blocking, free-tier limits, tracker auto-populate,
+    soft-delete, design-system) that shipped without specs and had to
+    be reverse-engineered for backfill. Every new feature gets a spec
+    at `docs/specs/phase-N/NN-name.md` **before** code is written,
+    following the template in the playbook §3.2. No exceptions for
+    "obvious" work.
 
 ## How to Add a Feature
 1. Check spec exists in `docs/specs/`
