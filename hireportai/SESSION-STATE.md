@@ -2,12 +2,12 @@
 ## Current Status
 Last updated: 2026-04-16
 Phase: 0
-Current session: P0-Bootstrap
-Last completed slice: DB migration (30 tests green)
-Next slice to run: P0-S1 — Auth Unification Spec
+Current session: P0-S7
+Last completed slice: P0-S6 — Skeleton Deploy (live on Railway + Vercel)
+Next slice to run: P0-S7 — CI/CD Pipeline
 
 ## Phase Completion Tracker
-- Phase 0: 🔄 In Progress (tasks 0.1–0.3 done)
+- Phase 0: 🔄 In Progress (S1–S6 done, S7 in progress, S8 partial)
 - Phase 1–4: ⬜ Not started
 
 ## Enhancement Status

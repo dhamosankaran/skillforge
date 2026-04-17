@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hireportai/hirelens-backend
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: hireport
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: hireport_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U hireport"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://hireport:ci_password@localhost:5432/hireport_test
+      TEST_DATABASE_URL: postgresql+asyncpg://hireport:ci_password@localhost:5432/hireport_test
+      JWT_SECRET_KEY: test-secret-key-for-ci
+      JWT_ALGORITHM: HS256
+      LLM_FAST_PROVIDER: google
+      LLM_REASONING_PROVIDER: google
+      GEMINI_API_KEY: test-key-for-ci
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: hireportai/hirelens-backend/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: python -m pytest tests/ -v --tb=short
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hireportai/hirelens-frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: hireportai/hirelens-frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npx vitest run
+
+  migration-rollback:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hireportai/hirelens-backend
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: hireport
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: hireport_migrate
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U hireport"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://hireport:ci_password@localhost:5432/hireport_migrate
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: hireportai/hirelens-backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Upgrade → downgrade → upgrade
+        run: |
+          alembic upgrade head
+          alembic downgrade -1
+          alembic upgrade head
