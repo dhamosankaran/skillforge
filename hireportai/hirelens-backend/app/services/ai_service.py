@@ -4,6 +4,8 @@ Uses the LLM provider abstraction so the same prompts work with
 Gemini, Claude, or any future provider.
 """
 import json
+import re
+from datetime import date
 from typing import Any, Dict, List
 
 from app.schemas.responses import (
@@ -14,6 +16,22 @@ from app.schemas.responses import (
     RewriteResponse,
 )
 from app.core.llm_router import generate_for_task
+
+
+def _extract_candidate_name(resume_text: str) -> str:
+    """Best-effort candidate name from the first non-empty line of the resume.
+
+    Accepts 2–4 Title-Case tokens with no digits, email, or colon. Falls back
+    to "The Applicant" so the signature always renders something.
+    """
+    for raw in resume_text.splitlines()[:10]:
+        line = raw.strip()
+        if not line or "@" in line or ":" in line or any(c.isdigit() for c in line):
+            continue
+        tokens = line.split()
+        if 2 <= len(tokens) <= 4 and all(re.match(r"^[A-Z][A-Za-z.'-]+$", t) for t in tokens):
+            return line
+    return "The Applicant"
 
 
 def generate_job_fit_explanation(
@@ -121,31 +139,42 @@ def generate_cover_letter(
     jd_requirements: Dict[str, Any],
     tone: str = "professional",
 ) -> CoverLetterResponse:
-    """Generate a personalized cover letter in markdown."""
-    resume_text = resume_data.get("full_text", "")[:2500]
+    """Generate a personalized cover letter in traditional business-letter format."""
+    resume_text = resume_data.get("full_text", "")[:20000]
     jd_title = jd_requirements.get("job_title", "this role")
-    jd_text = jd_requirements.get("full_text", "")[:1500]
+    jd_text = jd_requirements.get("full_text", "")[:10000]
     missing_keywords = ", ".join(jd_requirements.get("missing_keywords", jd_requirements.get("all_skills", []))[:20])
+    candidate_name = _extract_candidate_name(resume_text)
+    company_name = jd_requirements.get("company_name") or "your company"
+    today = date.today().strftime("%B %d, %Y")
 
-    prompt = f"""You are an expert career coach writing a compelling cover letter.
-Write a cover letter for the candidate applying to the target role.
+    prompt = f"""You are an expert career coach writing a compelling cover letter in traditional business-letter format.
 
-Structure it as:
+STRICT FORMAT RULES:
+- Do NOT use markdown headers (no "##", no "#", no bold section titles).
+- Do NOT label sections with words like "Opening", "Why I'm a Fit", "Key Achievement", or "Closing".
+- Output plain text with blank lines between blocks.
 
-## Opening
-Hook the reader with enthusiasm for the specific company and role. 2-3 sentences.
+Exact structure, in this order:
 
-## Why I'm a Fit
-Connect 3-4 of the candidate's strongest skills and experiences to the job requirements. Use specific examples from their resume.
+1. Date line: "{today}"
+2. Blank line.
+3. Recipient block (2 lines):
+   Hiring Manager
+   {company_name}
+4. Blank line.
+5. Greeting: "Dear Hiring Manager,"
+6. Blank line.
+7. Body paragraph 1 — hook: state the role and company by name, express genuine interest, 2–3 sentences.
+8. Blank line.
+9. Body paragraph 2 — fit: connect 2–3 specific, quantified achievements from the resume to the JD requirements. Incorporate missing keywords naturally.
+10. Blank line.
+11. Body paragraph 3 — close: reiterate enthusiasm, invite an interview, thank the reader.
+12. Blank line.
+13. Sign-off line: "Sincerely,"
+14. Signature line: "{candidate_name}"
 
-## Key Achievement
-One specific, quantified accomplishment that demonstrates impact relevant to this role.
-
-## Closing
-Express enthusiasm, request an interview, professional sign-off.
-
-Keep it under 400 words. Tone: confident, specific, not generic.
-Output in clean markdown.
+Keep the total length under 400 words. Tone: {tone}.
 
 Candidate resume:
 {resume_text}
@@ -153,21 +182,25 @@ Candidate resume:
 Job description:
 {jd_text}
 
-Missing skills to address if possible:
+Missing skills to incorporate if possible:
 {missing_keywords}"""
 
     try:
-        cover_letter = generate_for_task(task="cover_letter", prompt=prompt, max_tokens=900, temperature=0.7)
+        cover_letter = generate_for_task(task="cover_letter", prompt=prompt, max_tokens=1500, temperature=0.7)
         return CoverLetterResponse(cover_letter=cover_letter.strip(), tone=tone)
     except Exception:
         return CoverLetterResponse(
             cover_letter=(
-                f"Dear Hiring Manager,\n\nI am writing to express my strong interest in the {jd_title} position. "
-                "My background aligns well with the requirements you have outlined. "
-                "I am eager to bring my expertise to your team and contribute meaningfully to your organization's goals.\n\n"
-                "Throughout my career, I have consistently delivered results through my technical expertise and collaborative approach. "
-                "I would welcome the opportunity to further discuss how my skills and experiences align with your team's goals. "
-                "Thank you for your time and consideration.\n\nSincerely,\nThe Applicant"
+                f"{today}\n\n"
+                f"Hiring Manager\n{company_name}\n\n"
+                f"Dear Hiring Manager,\n\n"
+                f"I am writing to express my strong interest in the {jd_title} position at {company_name}. "
+                "My background aligns well with the requirements you have outlined, and I am eager to contribute to your team's goals.\n\n"
+                "Throughout my career, I have consistently delivered results through technical expertise and a collaborative approach. "
+                "I believe my experience maps directly to the needs of this role.\n\n"
+                "I would welcome the opportunity to discuss how my skills and experiences align with your team. "
+                "Thank you for your time and consideration.\n\n"
+                f"Sincerely,\n{candidate_name}"
             ),
             tone=tone,
         )

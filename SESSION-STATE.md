@@ -16,19 +16,18 @@ Phases 0–4 are complete. We're now in Phase 5 which absorbs the ad-hoc enhance
 
 ## Last Completed Slice
 
-**P5-S9** — AI Resume Rewrite fix. Removed 4k-char input truncation in `gpt_service.py` + `ai_service.py` (raised to 40k), raised `max_tokens` to 8000, added `resume_rewrite_generated` PostHog event, added regression test `tests/services/test_resume_rewrite.py`. Spec: `docs/specs/phase-5/09-resume-rewrite-fix.md`.
+**P5-S10** — Cover Letter format fix. Rewrote prompt in `gpt_service.py` + `ai_service.py` to emit traditional business-letter format (date → recipient → Dear greeting → 3 body paragraphs → Sincerely → candidate name), added inline `_extract_candidate_name` helper, wired the `tone` arg into the prompt, raised resume/JD truncation caps (2.5k→20k, 1.5k→10k), raised `max_tokens` 900→1500, added `cover_letter_generated` PostHog event, added regression tests `tests/services/test_cover_letter.py`. Spec: `docs/specs/phase-5/10-cover-letter-format-fix.md`.
 
 ---
 
 ## Next Slice
 
-**P5-S10** — Cover Letter Generation format fix. Broken today: wrong headers, missing greeting/signature blocks. Start with a diagnosis pass (mirror P5-S9 approach).
+**P5-S11** — Generate My Experience (Profile) fix. Today the button is a silent no-op. Start with a diagnosis pass (mirror P5-S9 / P5-S10 approach): trace FE handler → API client → `/api/v1/...` route → `experience_service.py` → LLM call.
 
-After P5-S10, proceed in this order:
-1. P5B remainder (S11) — Generate My Experience fix
-2. P5C (S12–S14) — route restructure
-3. P5D (S15–S19) — PersonaPicker + HomeDashboard
-4. Continue per the execution order in claude-code-prompts-all-phases-v2.md
+After P5-S11, proceed in this order:
+1. P5C (S12–S14) — route restructure
+2. P5D (S15–S19) — PersonaPicker + HomeDashboard
+3. Continue per the execution order in claude-code-prompts-all-phases-v2.md
 
 ---
 
@@ -38,7 +37,6 @@ These are user-visible bugs. Don't refactor around them — they have dedicated 
 
 | Feature | Symptom | Fix slice |
 |---------|---------|-----------|
-| Cover Letter Generation | Format inconsistent — wrong headers, missing greeting/signature blocks | P5-S10 |
 | Generate My Experience (Profile) | Button doesn't work — silent failure | P5-S11 |
 
 ---
@@ -54,11 +52,11 @@ Currently none. As Phase 5 progresses, this list will grow:
 
 ## Recently Completed (last 5)
 
-1. P5-S9 — AI Resume Rewrite fix (removed 4k-char input truncation, raised max_tokens, added PostHog event + regression test)
-2. P5-S8 — Geo-pricing visibility + Stripe checkout wiring on pricing page + server-side currency fallback
-3. P4-S4 — Custom domain + SSL + final Phase 4 verification
-4. P4-S3 — Rate limiting + performance audit
-5. P4-S2 — PostHog dashboards
+1. P5-S10 — Cover Letter format fix (business-letter prompt rewrite, tone wiring, truncation raises, PostHog event + regression tests)
+2. P5-S9 — AI Resume Rewrite fix (removed 4k-char input truncation, raised max_tokens, added PostHog event + regression test)
+3. P5-S8 — Geo-pricing visibility + Stripe checkout wiring on pricing page + server-side currency fallback
+4. P4-S4 — Custom domain + SSL + final Phase 4 verification
+5. P4-S3 — Rate limiting + performance audit
 
 ---
 
@@ -124,4 +122,4 @@ If you ever feel SESSION-STATE.md is out of sync with reality, run the contingen
 
 ---
 
-*Last hand-edit: 2026-04-17 — P5-S9 closed; next up P5-S10*
+*Last hand-edit: 2026-04-17 — P5-S10 closed; next up P5-S11*
