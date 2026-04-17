@@ -2,22 +2,17 @@
 ## Current Status
 Last updated: 2026-04-17
 Phase: 1
-Current session: P1-S1b (HNSW → IVFFlat decision resolved — using IVFFlat)
-Last completed slice: P1-S1a — Schema closeout + soft-delete filter test
-Next slice to run: P1-S1b — ANN index (IVFFlat) + extraction unit tests
+Current session: P1-S2 (Spec — Cards API)
+Last completed slice: P1-S1b — IVFFlat ANN index + extraction unit tests (parent P1-S1 now ✅ Done)
+Next slice to run: P1-S2 — Spec for user-facing Cards API (`/api/v1/cards` read endpoints)
 
 ### Pending slices
-- **P1-S1b** — ANN index + extraction unit tests (~25–30 min)
-  - HNSW migration on `cards.embedding` (IVFFlat fallback if pgvector < 0.5.0)
-  - UUID5 determinism unit test
-  - `_synthetic_embedding` unit test
-  - EXPLAIN-plan integration test verifying the ANN index is used
-- **P1-S2** — (existing) Embeddings generation hardening / cards API polish
+- **P1-S2** — Cards API spec + implementation (list/categories/semantic search endpoints, free-tier gating, Pydantic schemas, tests)
 
 ## Phase Completion Tracker
 - Phase 0: ✅ Complete (local) / ⬜ Production deploy deferred (S1–S8)
   - Note: P0-S6 and P0-S8 were marked done based on deploy-ready files existing in codebase, but Railway + Vercel were never actually provisioned. Production deployment is deferred until Phase 1 is functionally complete locally.
-- Phase 1: 🔄 In Progress (S1a complete 2026-04-16; S1b pending)
+- Phase 1: 🔄 In Progress (S1 complete 2026-04-17 — S1a on 2026-04-16, S1b on 2026-04-17; S2 pending)
 - Phase 2–4: ⬜ Not started
 
 ## Deferred Work
@@ -77,10 +72,10 @@ The "5 Foundation cards" cap does not yet exist in code. Today's gate is categor
 Task 1.12 will need to layer a per-user card-count cap on top of these filters.
 
 ## What Was Built Last Session
-- P1-S1a landed (commit `fa10338`): hand-authored Alembic migration `d16ca29a5d08` adds `categories.tags` (JSONB NOT NULL default `'[]'::jsonb`) and partial index `ix_cards_category_id_active ON cards (category_id) WHERE deleted_at IS NULL`; `Category.tags` mapped on the ORM model; `scripts/extract_cards.py` seeds `tags=[]` on category INSERT; `test_soft_deleted_card_excluded_from_active_queries` added to `tests/test_card_extraction.py`.
-- Verified locally: migration imports cleanly; full upgrade → downgrade -1 → upgrade cycle on `hireport_test` with fresh stamp; `\d+ ix_cards_category_id_active` shows `WHERE (deleted_at IS NULL)`; CI subset 158 passed / 5 deselected; integration subset 5/5 passed; `extract_cards.py` re-run idempotent against dev DB, `SELECT … tags FROM categories` returns `[]` on all rows.
-- CI green on push: Migration Rollback + Backend Tests + Frontend Tests all ✓ (run `24545810593`).
-- Previous: Phase 0 closed, CI marker-gating for integration tests.
+- P1-S1b landed (commit `e3c0c90`): hand-authored Alembic migration `59795ca196e9` creates `ix_cards_embedding_ivfflat ON cards USING ivfflat (embedding vector_cosine_ops) WITH (lists = 4) WHERE deleted_at IS NULL`; downgrade uses `DROP INDEX IF EXISTS`; upgrade is idempotent via `CREATE INDEX IF NOT EXISTS`. New `tests/test_extract_cards_unit.py` with 9 CI-safe tests (UUID5 determinism for `cat_uuid` / `card_uuid` + `_synthetic_embedding` dimensionality / determinism / distinctness / non-zero magnitude). New integration test `test_ivfflat_index_used_in_semantic_search` in `tests/test_card_extraction.py` — `SET LOCAL enable_seqscan = OFF` + `SET LOCAL enable_sort = OFF` + EXPLAIN asserts `ix_cards_embedding_ivfflat` appears in the plan.
+- Verified locally: migration module imports cleanly; full upgrade → downgrade -1 → upgrade cycle on `hireport_test`; `\di ix_cards_embedding_ivfflat` + `pg_indexes.indexdef` confirm `USING ivfflat (embedding vector_cosine_ops) WITH (lists='4') WHERE (deleted_at IS NULL)`; CI subset 167 passed / 6 deselected (up from 158/5 — +9 unit tests); integration subset 6/6 passed (including the new EXPLAIN test).
+- CI green on push: Migration Rollback + Backend Tests + Frontend Tests all ✓ (run `24563497209`).
+- Previous: P1-S1a landed `fa10338` (categories.tags + partial index); Phase 0 closed; CI marker-gating for integration tests.
 
 ## Known Issues
 - `docs/specs/phase-1/03-card-extraction.md` was stale (said 177 cards, Done status). Rewritten 2026-04-16 to reflect reality (15 cards / 14 categories), marked partially-done, split work into S1a/S1b.
@@ -91,5 +86,11 @@ Task 1.12 will need to layer a per-user card-count cap on top of these filters.
 ### Deploy-ready ≠ deployed
 Claude Code audits confirmed P0-S6 as "✅ Done" because deploy-ready files existed (railway.toml, CORS config, URL scheme handling). But no Railway or Vercel project was ever created. Lesson: for deploy tasks, always verify against the actual infrastructure (curl the URL, check the dashboard), not just the codebase.
 
+### `SET LOCAL enable_seqscan = OFF` alone is not enough to force an ANN index at low row counts
+With 15 rows, forcing the IVFFlat index for an `ORDER BY embedding <=> … LIMIT N` query requires disabling **both** `enable_seqscan` **and** `enable_sort`. Disabling seqscan alone still leaves the planner free to pick the small partial B-tree index `ix_cards_category_id_active` (from P1-S1a) and do an explicit Sort step, which is cheaper than IVFFlat at tiny scale. Disabling sort forces the planner to pick an index whose AM supports `amcanorderbyop` — which is IVFFlat/HNSW. See `tests/test_card_extraction.py::test_ivfflat_index_used_in_semantic_search`.
+
+### Zero vectors and cosine distance
+A 1536-dim all-zero vector has undefined cosine similarity (zero magnitude → division by zero). When writing EXPLAIN-only tests, prefer `[1, 0, 0, …, 0]` or any single-non-zero vector over `[0, 0, …, 0]` to keep the distance expression well-defined even if the query result is never executed.
+
 ## Start-of-Next-Session Prompt
-Read AGENTS.md. Read CLAUDE.md. Read SESSION-STATE.md. Continue with P1-S1b per `docs/specs/phase-1/03-card-extraction.md` "Work Remaining — P1-S1b" checklist (ANN index on `cards.embedding` using **IVFFlat** — HNSW/IVFFlat decision is resolved, use IVFFlat; UUID5 determinism unit test; `_synthetic_embedding` unit test; EXPLAIN-plan integration test). Note: production deployment (Railway + Vercel) is deferred until Phase 1 is functionally complete locally — see `Deferred Work > DEFERRED-1`.
+Read AGENTS.md. Read CLAUDE.md. Read SESSION-STATE.md. P1-S1 (cards data-layer foundations) is complete. Next slice is **P1-S2 — Cards API spec**: write/review `docs/specs/phase-1/04-cards-api.md` for the user-facing `/api/v1/cards` read endpoints (list, by category, semantic search) with free-tier gating on top of the existing `Category.source == "foundation"` filter + the forthcoming per-user card-count cap (ENH-6, Task 1.12). The ANN index from P1-S1b is available — semantic search can wire up directly. Production deployment (Railway + Vercel) is still deferred — see `Deferred Work > DEFERRED-1`.
