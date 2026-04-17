@@ -1,0 +1,103 @@
+
+<h2 class="sr-only">End-to-end flow for existing SkillForge users showing Learn and Prep paths, subscription management, and retention loop</h2>
+<svg width="100%" viewBox="0 0 680 1120" role="img">
+<title>Existing user E2E flow</title>
+<desc>Returning user journey covering free and pro paths, Learn vs Prep sections, subscription management, and the daily retention loop</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+<text class="th" x="340" y="30" text-anchor="middle">Existing user flow</text>
+
+<g class="c-gray"><rect x="190" y="50" width="140" height="44" rx="8" stroke-width="0.5"/><text class="th" x="260" y="72" text-anchor="middle" dominant-baseline="central">Direct login</text></g>
+<g class="c-gray"><rect x="370" y="50" width="140" height="44" rx="8" stroke-width="0.5"/><text class="th" x="440" y="72" text-anchor="middle" dominant-baseline="central">Email deep link</text></g>
+
+<line x1="260" y1="94" x2="340" y2="130" class="arr" marker-end="url(#arrow)"/>
+<line x1="440" y1="94" x2="440" y2="130" class="arr" marker-end="url(#arrow)"/>
+<text class="ts" x="470" y="118" text-anchor="start">/learn/daily</text>
+
+<g class="c-blue"><rect x="220" y="130" width="240" height="56" rx="8" stroke-width="0.5"/><text class="th" x="340" y="148" text-anchor="middle" dominant-baseline="central">Smart home dashboard</text><text class="ts" x="340" y="168" text-anchor="middle" dominant-baseline="central">Persona-aware, state-aware</text></g>
+
+<text class="ts" x="100" y="200" text-anchor="middle">Change goal</text>
+<line x1="220" y1="158" x2="140" y2="220" stroke="#534AB7" stroke-width="0.5" marker-end="url(#arrow)"/>
+<g class="c-purple"><rect x="50" y="220" width="180" height="44" rx="8" stroke-width="0.5"/><text class="th" x="140" y="242" text-anchor="middle" dominant-baseline="central">Persona picker (modal)</text></g>
+<line x1="230" y1="242" x2="300" y2="210" stroke="#534AB7" stroke-width="0.5" marker-end="url(#arrow)"/>
+
+<line x1="280" y1="186" x2="180" y2="306" class="arr" marker-end="url(#arrow)"/>
+<line x1="400" y1="186" x2="500" y2="306" class="arr" marker-end="url(#arrow)"/>
+
+<text class="th" x="180" y="296" text-anchor="middle">Learn section</text>
+<text class="th" x="500" y="296" text-anchor="middle">Prep section</text>
+
+<g class="c-teal"><rect x="60" y="310" width="240" height="200" rx="14" stroke-width="0.5"/>
+<text class="ts" x="180" y="340" text-anchor="middle">Daily review (FSRS cards)</text>
+<text class="ts" x="180" y="362" text-anchor="middle">Browse categories</text>
+<text class="ts" x="180" y="384" text-anchor="middle">Mission mode (countdown)</text>
+<text class="ts" x="180" y="406" text-anchor="middle">Card viewer + quiz</text>
+<text class="ts" x="180" y="428" text-anchor="middle">Skill radar + heatmap</text>
+<text class="ts" x="180" y="450" text-anchor="middle">Streaks + XP + badges</text>
+<text class="ts" x="180" y="480" text-anchor="middle">Card feedback</text>
+</g>
+
+<g class="c-coral"><rect x="380" y="310" width="240" height="200" rx="14" stroke-width="0.5"/>
+<text class="ts" x="500" y="340" text-anchor="middle">Analyze resume + JD</text>
+<text class="ts" x="500" y="362" text-anchor="middle">Results + skill gaps</text>
+<text class="ts" x="500" y="384" text-anchor="middle">Resume rewrite (reasoning LLM)</text>
+<text class="ts" x="500" y="406" text-anchor="middle">Cover letter (reasoning LLM)</text>
+<text class="ts" x="500" y="428" text-anchor="middle">Interview questions</text>
+<text class="ts" x="500" y="450" text-anchor="middle">Application tracker</text>
+<text class="ts" x="500" y="480" text-anchor="middle">Auto-save scan to tracker</text>
+</g>
+
+<line x1="300" y1="410" x2="380" y2="380" stroke="#0F6E56" stroke-width="0.5" stroke-dasharray="4 4"/>
+<text class="ts" x="348" y="388" text-anchor="middle">Gaps link</text>
+
+<line x1="180" y1="510" x2="180" y2="550" class="arr" marker-end="url(#arrow)"/>
+<line x1="500" y1="510" x2="500" y2="550" class="arr" marker-end="url(#arrow)"/>
+
+<g class="c-amber"><rect x="120" y="550" width="120" height="44" rx="8" stroke-width="0.5"/><text class="th" x="180" y="572" text-anchor="middle" dominant-baseline="central">Free user?</text></g>
+<g class="c-amber"><rect x="440" y="550" width="120" height="44" rx="8" stroke-width="0.5"/><text class="th" x="500" y="572" text-anchor="middle" dominant-baseline="central">Free user?</text></g>
+
+<line x1="120" y1="572" x2="60" y2="620" class="arr" marker-end="url(#arrow)"/>
+<text class="ts" x="70" y="604" text-anchor="middle">Yes</text>
+<line x1="240" y1="572" x2="300" y2="620" class="arr" marker-end="url(#arrow)"/>
+<text class="ts" x="288" y="604" text-anchor="middle">No (Pro)</text>
+
+<line x1="440" y1="572" x2="400" y2="620" class="arr" marker-end="url(#arrow)"/>
+<text class="ts" x="402" y="604" text-anchor="middle">Yes</text>
+<line x1="560" y1="572" x2="600" y2="620" class="arr" marker-end="url(#arrow)"/>
+<text class="ts" x="598" y="604" text-anchor="middle">No</text>
+
+<g class="c-red"><rect x="10" y="620" width="120" height="56" rx="8" stroke-width="0.5"/><text class="th" x="70" y="638" text-anchor="middle" dominant-baseline="central">15 card wall</text><text class="ts" x="70" y="658" text-anchor="middle" dominant-baseline="central">Paywall modal</text></g>
+
+<g class="c-green"><rect x="240" y="620" width="120" height="44" rx="8" stroke-width="0.5"/><text class="th" x="300" y="642" text-anchor="middle" dominant-baseline="central">Full access</text></g>
+
+<g class="c-red"><rect x="340" y="620" width="120" height="56" rx="8" stroke-width="0.5"/><text class="th" x="400" y="638" text-anchor="middle" dominant-baseline="central">3/mo limit</text><text class="ts" x="400" y="658" text-anchor="middle" dominant-baseline="central">Interview Qs</text></g>
+
+<g class="c-green"><rect x="540" y="620" width="120" height="44" rx="8" stroke-width="0.5"/><text class="th" x="600" y="642" text-anchor="middle" dominant-baseline="central">Unlimited</text></g>
+
+<line x1="70" y1="676" x2="70" y2="710" class="arr" marker-end="url(#arrow)"/>
+<line x1="400" y1="676" x2="400" y2="710" class="arr" marker-end="url(#arrow)"/>
+
+<path d="M70 710 L70 724 L400 724 L400 710" fill="none" class="arr"/>
+<line x1="235" y1="724" x2="235" y2="760" class="arr" marker-end="url(#arrow)"/>
+
+<g class="c-amber"><rect x="140" y="760" width="190" height="56" rx="8" stroke-width="0.5"/><text class="th" x="235" y="778" text-anchor="middle" dominant-baseline="central">Upgrade to Pro</text><text class="ts" x="235" y="798" text-anchor="middle" dominant-baseline="central">$49/mo or geo-priced</text></g>
+
+<line x1="235" y1="816" x2="235" y2="850" class="arr" marker-end="url(#arrow)"/>
+
+<g class="c-green"><rect x="140" y="850" width="190" height="56" rx="8" stroke-width="0.5"/><text class="th" x="235" y="868" text-anchor="middle" dominant-baseline="central">Stripe checkout</text><text class="ts" x="235" y="888" text-anchor="middle" dominant-baseline="central">Webhook updates plan</text></g>
+
+<text class="ts" x="380" y="880" text-anchor="start">Idempotent (Phase 4)</text>
+<line x1="330" y1="878" x2="376" y2="878" stroke="var(--s)" stroke-width="0.5" stroke-dasharray="4 4"/>
+
+<line x1="235" y1="906" x2="235" y2="940" class="arr" marker-end="url(#arrow)"/>
+
+<g class="c-green"><rect x="100" y="940" width="270" height="44" rx="8" stroke-width="0.5"/><text class="th" x="235" y="962" text-anchor="middle" dominant-baseline="central">Pro: full library + mission + unlimited</text></g>
+
+<text class="th" x="340" y="1010" text-anchor="middle">Retention loop (daily)</text>
+
+<g class="c-blue"><rect x="80" y="1030" width="520" height="70" rx="14" stroke-width="0.5"/>
+<text class="ts" x="340" y="1054" text-anchor="middle">Daily email ("3 cards due, keep your 12-day streak")</text>
+<text class="ts" x="340" y="1076" text-anchor="middle">Click link  /learn/daily  review cards  streak grows  XP earned  come back tomorrow</text>
+</g>
+
+</svg>
