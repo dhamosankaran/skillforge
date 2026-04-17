@@ -120,3 +120,67 @@ async def test_embedding_dimensionality(dev_session: AsyncSession) -> None:
         f"Expected 1536-dim embedding, got {row[0]}. "
         "Check EMBEDDING_DIMS in scripts/generate_embeddings.py."
     )
+
+
+async def test_soft_deleted_card_excluded_from_active_queries(
+    dev_session: AsyncSession,
+) -> None:
+    """Soft-deleted cards must be excluded by the canonical WHERE deleted_at IS NULL filter.
+
+    Inserts two cards in the same category — one active, one with a non-null
+    deleted_at — then asserts that the canonical active-card filter returns
+    only the non-deleted row. The dev_session fixture never commits, so the
+    inserts roll back on session close and the dev DB stays clean.
+    """
+    cat_row = (
+        await dev_session.execute(sa.text("SELECT id FROM categories LIMIT 1"))
+    ).fetchone()
+    assert cat_row is not None, (
+        "No categories found — run scripts/extract_cards.py first"
+    )
+    category_id = cat_row[0]
+
+    active_id = "00000000-0000-0000-0000-0000000a0001"
+    deleted_id = "00000000-0000-0000-0000-0000000a0002"
+
+    await dev_session.execute(
+        sa.text(
+            """
+            INSERT INTO cards
+                (id, category_id, question, answer, difficulty, tags)
+            VALUES
+                (:id, :cat, :q, :a, 'Easy', CAST('[]' AS json))
+            """
+        ),
+        {"id": active_id, "cat": category_id, "q": "Q-active", "a": "A-active"},
+    )
+    await dev_session.execute(
+        sa.text(
+            """
+            INSERT INTO cards
+                (id, category_id, question, answer, difficulty, tags, deleted_at)
+            VALUES
+                (:id, :cat, :q, :a, 'Easy', CAST('[]' AS json), NOW())
+            """
+        ),
+        {"id": deleted_id, "cat": category_id, "q": "Q-deleted", "a": "A-deleted"},
+    )
+
+    rows = (
+        await dev_session.execute(
+            sa.text(
+                """
+                SELECT id FROM cards
+                WHERE id IN (:a, :d) AND deleted_at IS NULL
+                """
+            ),
+            {"a": active_id, "d": deleted_id},
+        )
+    ).fetchall()
+
+    ids = [r[0] for r in rows]
+    assert ids == [active_id], (
+        f"Expected only the non-deleted card, got {ids}"
+    )
+
+    await dev_session.rollback()

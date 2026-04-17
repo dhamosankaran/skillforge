@@ -97,8 +97,11 @@ async def seed(categories_data: dict) -> None:
             cat_id = cat_uuid(cat_name)
             result = await session.execute(
                 text("""
-                    INSERT INTO categories (id, name, icon, color, display_order, source)
-                    VALUES (:id, :name, :icon, :color, :display_order, :source)
+                    INSERT INTO categories
+                        (id, name, icon, color, display_order, source, tags)
+                    VALUES
+                        (:id, :name, :icon, :color, :display_order, :source,
+                         CAST(:tags AS jsonb))
                     ON CONFLICT (id) DO NOTHING
                     RETURNING id
                 """),
@@ -109,6 +112,7 @@ async def seed(categories_data: dict) -> None:
                     "color": cat_info.get("color", "#6366F1"),
                     "display_order": display_order,
                     "source": "foundation",
+                    "tags": json.dumps([]),
                 },
             )
             if result.fetchone():
