@@ -184,3 +184,51 @@ async def test_soft_deleted_card_excluded_from_active_queries(
     )
 
     await dev_session.rollback()
+
+
+async def test_ivfflat_index_used_in_semantic_search(
+    dev_session: AsyncSession,
+) -> None:
+    """The post-seed IVFFlat ANN index must be chosen by cosine-distance queries.
+
+    Why `SET LOCAL enable_seqscan = OFF` *and* `enable_sort = OFF`:
+    with only ~15 rows, PostgreSQL's planner correctly prefers Seq Scan (or a
+    cheap B-tree Index Scan + Sort) over an ANN index — ANN only wins at
+    scale. Disabling seqscan alone isn't enough because the partial index
+    `ix_cards_category_id_active` (from P1-S1a) plus an explicit Sort is still
+    cheaper than the ANN index at 15 rows. Disabling both forces the planner
+    to pick an index that natively provides the ORDER BY (pgvector's IVFFlat
+    is `amcanorderbyop`), which is what we actually want to assert exists and
+    is usable. `LOCAL` scopes both overrides to this transaction so global
+    settings are untouched.
+    """
+    await dev_session.execute(sa.text("SET LOCAL enable_seqscan = OFF"))
+    await dev_session.execute(sa.text("SET LOCAL enable_sort = OFF"))
+
+    # Single non-zero component keeps cosine distance well-defined (all-zero
+    # vectors have undefined cosine similarity) without needing a subquery.
+    query_vec = "[1," + ",".join(["0"] * 1535) + "]"
+
+    plan_rows = (
+        await dev_session.execute(
+            sa.text(
+                """
+                EXPLAIN
+                SELECT id
+                FROM cards
+                WHERE deleted_at IS NULL
+                ORDER BY embedding <=> CAST(:v AS vector)
+                LIMIT 5
+                """
+            ),
+            {"v": query_vec},
+        )
+    ).fetchall()
+
+    plan_text = "\n".join(row[0] for row in plan_rows)
+    assert "ix_cards_embedding_ivfflat" in plan_text, (
+        "Expected the IVFFlat ANN index to appear in the EXPLAIN plan; "
+        f"got:\n{plan_text}"
+    )
+
+    await dev_session.rollback()
