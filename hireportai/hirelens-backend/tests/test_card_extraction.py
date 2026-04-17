@@ -86,6 +86,9 @@ async def test_all_cards_have_embeddings(dev_session: AsyncSession) -> None:
     total = (
         await dev_session.execute(sa.text("SELECT count(*) FROM cards"))
     ).scalar_one()
+    assert total > 0, (
+        "No cards seeded — run scripts/extract_cards.py before this test"
+    )
 
     with_embedding = (
         await dev_session.execute(

@@ -63,6 +63,12 @@ jobs:
       - name: Download spaCy model
         run: python -m spacy download en_core_web_sm
 
+      - name: Seed cards from cards.js
+        run: python scripts/extract_cards.py
+
+      - name: Generate synthetic embeddings (Gemini fallback)
+        run: python scripts/generate_embeddings.py
+
       - name: Run pytest
         run: python -m pytest tests/ -v --tb=short
 
