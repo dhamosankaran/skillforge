@@ -121,6 +121,98 @@ async def test_requires_auth_for_checkout(client):
     assert resp.status_code == 401
 
 
+async def test_checkout_falls_back_to_geo_when_currency_missing(
+    client, test_user, monkeypatch
+):
+    """Empty body from an Indian IP picks the INR price id via get_pricing()."""
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    settings = get_settings()
+    settings.stripe_pro_price_id = "price_usd_test"
+    settings.stripe_pro_price_id_inr = "price_inr_test"
+    settings.stripe_secret_key = "sk_test_dummy"
+
+    fake_customer = SimpleNamespace(id="cus_geo_fallback")
+    fake_session = SimpleNamespace(
+        id="cs_geo_fallback",
+        url="https://checkout.stripe.com/c/pay/cs_geo_fallback",
+    )
+
+    # Patch the geo resolver at the import site in payments.py so the
+    # fallback branch is exercised without hitting ip-api.com.
+    def _fake_get_pricing(_ip: str) -> dict:
+        return {
+            "currency": "inr",
+            "price": 999,
+            "price_display": "\u20b9999/mo",
+            "stripe_price_id": "price_inr_test",
+        }
+
+    with patch(
+        "app.api.routes.payments.get_pricing", side_effect=_fake_get_pricing
+    ) as geo_mock, patch(
+        "app.services.payment_service.stripe.Customer.create",
+        return_value=fake_customer,
+    ), patch(
+        "app.services.payment_service.stripe.checkout.Session.create",
+        return_value=fake_session,
+    ) as session_mock:
+        # Empty body (no currency field).
+        resp = await client.post(
+            "/api/v1/payments/checkout",
+            headers={**_auth_header(test_user), "X-Forwarded-For": "103.21.244.0"},
+        )
+
+    assert resp.status_code == 200, resp.text
+    geo_mock.assert_called_once()
+    # Stripe line item uses the INR price, not the USD default.
+    assert session_mock.call_args.kwargs["line_items"] == [
+        {"price": "price_inr_test", "quantity": 1}
+    ]
+
+
+async def test_checkout_respects_client_currency_without_geo_lookup(
+    client, test_user, monkeypatch
+):
+    """Client-provided currency is honoured — no geo lookup happens."""
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    settings = get_settings()
+    settings.stripe_pro_price_id = "price_usd_test"
+    settings.stripe_pro_price_id_inr = "price_inr_test"
+    settings.stripe_secret_key = "sk_test_dummy"
+
+    fake_customer = SimpleNamespace(id="cus_client_override")
+    fake_session = SimpleNamespace(
+        id="cs_client_override",
+        url="https://checkout.stripe.com/c/pay/cs_client_override",
+    )
+
+    with patch(
+        "app.api.routes.payments.get_pricing"
+    ) as geo_mock, patch(
+        "app.services.payment_service.stripe.Customer.create",
+        return_value=fake_customer,
+    ), patch(
+        "app.services.payment_service.stripe.checkout.Session.create",
+        return_value=fake_session,
+    ) as session_mock:
+        resp = await client.post(
+            "/api/v1/payments/checkout",
+            headers=_auth_header(test_user),
+            json={"currency": "inr"},
+        )
+
+    assert resp.status_code == 200, resp.text
+    # Client explicitly asked for INR — the fallback must not run.
+    geo_mock.assert_not_called()
+    assert session_mock.call_args.kwargs["line_items"] == [
+        {"price": "price_inr_test", "quantity": 1}
+    ]
+
+
 # ── POST /payments/webhook ──────────────────────────────────────────────────
 
 

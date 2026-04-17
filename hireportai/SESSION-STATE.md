@@ -24,13 +24,13 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 ## Last Completed Slice
 
-**P5-S0b** — applied 10 doc-sync fixes from audit (path corrections, spec dedup, missing spec placeholders, tech debt log). No code changes.
+**P5-S8** — Geo-pricing coverage gaps A+C closed. Pricing page Pro CTA now calls Stripe with geo-aware currency (was local-state "demo mode"); backend `/payments/checkout` gained an IP-based currency fallback when the client omits it. Backend 169/169 green (+2 new tests), frontend 5/5 green. Gaps B (no price on LoginPage), D (ip-api.com rate-limit fallback), E (Free-plan `$0` symbol consistency) deferred — not blocking.
 
 ---
 
 ## Next Slice
 
-**P5-S9** — Fix AI Resume Rewrite (first known-broken feature). Read the fresh `docs/specs/phase-3/20c-resume-cover-letter-fix.md` placeholder + `.agent/skills/ats-scanner.md` before starting.
+**P5-S9** — Fix AI Resume Rewrite (first known-broken feature); see `docs/specs/phase-3/20c-resume-cover-letter-fix.md` placeholder + `.agent/skills/ats-scanner.md`.
 
 After P5-S9, continue in this order:
 1. P5B (S10–S11) — cover letter, Generate My Experience
@@ -55,7 +55,7 @@ These are user-visible bugs. Don't refactor around them — they have dedicated 
 | AI Resume Rewrite | Drops sections from original (work history, education) — produces summary instead of full rewrite | P5-S9 |
 | Cover Letter Generation | Format inconsistent — wrong headers, missing greeting/signature blocks | P5-S10 |
 | Generate My Experience (Profile) | Button doesn't work — silent failure | P5-S11 |
-| Geo-Pricing Visibility | Suspected — may not appear on signup page (only on checkout). Audit pending. | P5-S8 |
+| Geo-Pricing Visibility | Audit complete (P5-S8): A+C fixed. Remaining deferred gaps — B: no price on LoginPage; D: ip-api.com rate-limit fallback mis-prices Indian users under load; E: Free-plan shows `$0` even for INR users. | Deferred (post-P5B) |
 | Stripe Webhook Idempotency | Possible — duplicate webhook delivery could double-grant Pro. Audit pending. | P5-S26c |
 
 ---
@@ -71,11 +71,11 @@ Currently none. As Phase 5 progresses, this list will grow:
 
 ## Recently Completed (last 5)
 
-1. P5-S0 — 3-way doc sync audit (backend 167/167 green, frontend 5/5 green; 6 duplicate-number pairs + 9 missing specs surfaced for P5-S0b)
-2. P4-S4 — Custom domain + SSL + final Phase 4 verification
-3. P4-S3 — Rate limiting + performance audit
-4. P4-S2 — PostHog dashboards
-5. P4-S1 — Sentry error monitoring
+1. P5-S8 — Geo-pricing gaps A+C closed (Pricing page now Stripe-wired, backend checkout has IP fallback; gaps B/D/E deferred)
+2. P5-S0b — applied 10 doc-sync fixes from audit (path corrections, spec dedup, 9 placeholder specs, Tech Debt log)
+3. P5-S0 — 3-way doc sync audit (backend 167/167 green, frontend 5/5 green; 6 duplicate-number pairs + 9 missing specs surfaced for P5-S0b)
+4. P4-S4 — Custom domain + SSL + final Phase 4 verification
+5. P4-S3 — Rate limiting + performance audit
 
 ---
 

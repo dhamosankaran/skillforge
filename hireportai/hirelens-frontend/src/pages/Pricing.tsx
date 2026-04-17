@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, useMotionValue, useSpring } from 'framer-motion'
-import { Check, X, Sparkles, Zap, CheckCircle2 } from 'lucide-react'
+import { Check, X, Sparkles, Zap, CheckCircle2, Loader2 } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
@@ -8,6 +8,7 @@ import { PageWrapper } from '@/components/layout/PageWrapper'
 import { useUsage } from '@/context/UsageContext'
 import type { PlanType } from '@/context/UsageContext'
 import { usePricing } from '@/hooks/usePricing'
+import { createCheckoutSession } from '@/services/api'
 import { capture } from '@/utils/posthog'
 
 // ─── 3D Tilt Card ───
@@ -128,6 +129,7 @@ export default function Pricing() {
   const { usage, upgradePlan } = useUsage()
   const { pricing } = usePricing()
   const [searchParams, setSearchParams] = useSearchParams()
+  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false)
 
   // Post-checkout return from Stripe. Backend webhook flips the
   // Subscription row asynchronously — we optimistically flip the local
@@ -154,10 +156,26 @@ export default function Pricing() {
     setSearchParams(next, { replace: true })
   }, [searchParams, setSearchParams, upgradePlan])
 
-  const handleCta = (plan: PlanConfig) => {
+  const handleCta = async (plan: PlanConfig) => {
     if (plan.planKey === 'free') return
     if (usage.plan === plan.planKey) return
-    upgradePlan(plan.planKey)
+    if (isCheckoutLoading) return
+
+    setIsCheckoutLoading(true)
+    capture('checkout_started', {
+      trigger: 'pricing_page',
+      plan: plan.planKey,
+      price: pricing.price,
+      currency: pricing.currency,
+    })
+    try {
+      const { url } = await createCheckoutSession(pricing.currency)
+      window.location.href = url
+    } catch (err) {
+      setIsCheckoutLoading(false)
+      toast.error('Could not start checkout. Please try again.')
+      console.error('createCheckoutSession failed', err)
+    }
   }
 
   return (
@@ -336,17 +354,26 @@ export default function Pricing() {
                       ) : (
                         <button
                           onClick={() => handleCta(plan)}
-                          disabled={isCurrentPlan}
-                          className="relative block w-full text-center py-3 rounded-xl text-sm font-semibold transition-all duration-300 disabled:opacity-60 disabled:cursor-default overflow-hidden text-white"
+                          disabled={isCurrentPlan || isCheckoutLoading}
+                          className="relative block w-full text-center py-3 rounded-xl text-sm font-semibold transition-all duration-300 disabled:opacity-60 disabled:cursor-wait overflow-hidden text-white"
                           style={{
                             background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)',
                             boxShadow: '0 4px 20px var(--accent-glow)',
                           }}
                         >
-                          <span className="relative z-10">
-                            {isCurrentPlan ? 'Currently Active' : plan.cta}
+                          <span className="relative z-10 inline-flex items-center justify-center gap-2">
+                            {isCurrentPlan ? (
+                              'Currently Active'
+                            ) : isCheckoutLoading ? (
+                              <>
+                                <Loader2 size={14} className="animate-spin" />
+                                Starting checkout…
+                              </>
+                            ) : (
+                              plan.cta
+                            )}
                           </span>
-                          {!isCurrentPlan && (
+                          {!isCurrentPlan && !isCheckoutLoading && (
                             <div className="absolute inset-0 -translate-x-full hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-contrast/20 to-transparent" />
                           )}
                         </button>
@@ -421,9 +448,6 @@ export default function Pricing() {
               </span>
             ))}
           </div>
-          <p className="text-xs text-text-muted/40 mt-4">
-            Demo mode — no real payments. Plan saved locally.
-          </p>
         </motion.div>
       </div>
     </PageWrapper>

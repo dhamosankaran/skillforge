@@ -65,6 +65,11 @@ async def create_checkout(
 ) -> CheckoutResponse:
     """Create a Stripe Checkout Session for the Pro plan and return the URL."""
     currency = body.currency if body else None
+    # Server-side geo fallback: if the client didn't tell us which currency
+    # to bill in, resolve it from the caller's IP. Keeps Indian users from
+    # being mis-priced when a future caller forgets to pass the currency.
+    if not currency:
+        currency = get_pricing(_client_ip(request))["currency"]
     try:
         url = await create_checkout_session(user.id, db, currency=currency)
     except UserNotFoundError:
