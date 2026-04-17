@@ -86,8 +86,17 @@ Currently none. As Phase 5 progresses, this list will grow:
 | **Persona switch UX: modal or full-page reroute?** | Existing-user flow shows modal. P5-S17 currently says reroute. Modal is lighter; reroute is consistent. | Yes | Before P5-S17 |
 | **Daily review: counts toward free 15-card budget or not?** | If yes, Career-Climber free hits wall in 3 days. If no, daily review is unlimited for free users. Affects monetization curve. | Yes | Before P5-S22 |
 | **Auto-save scan to tracker: automatic or "Save?" prompt?** | Existing-user flow implies automatic. P5-S5 spec needs this clarified. | No | Before P5-S5 |
-| **Email deep-link redirects: do P5-S13 redirects cover Phase 2 daily-email URLs?** | Old emails point at /study/daily etc. Need 301s. | Yes | Before P5-S13 |
 | **Strategic path to $100M ARR**: B2B pivot, adjacent expansion, or geo-volume play? | See `STRATEGIC-OPTIONS.md`. Affects every Phase 6+ decision. | Not yet | Before Phase 6 planning |
+
+---
+
+## Resolved Decisions
+
+### Decision 3 — Resolved 2026-04-17
+Email deep-link coverage: App is pre-production, no legacy user traffic exists.
+AC-5 reframed as internal-reference sweep (email templates, PostHog config,
+hardcoded links) rather than external-facing 301 redirects. P5-S13 owns
+executing the sweep.
 
 ---
 
