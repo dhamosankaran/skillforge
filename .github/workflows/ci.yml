@@ -25,7 +25,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd="pg_isready -U hireport"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -40,6 +40,12 @@ jobs:
       # DATABASE_URL       → used by alembic/env.py (needs +asyncpg scheme).
       TEST_DATABASE_URL: postgresql+asyncpg://hireport:ci_password@localhost:5432/hireport_test
       DATABASE_URL: postgresql+asyncpg://hireport:ci_password@localhost:5432/hireport_test
+      # Auth + LLM stub values — real secrets live in GitHub Actions secrets.
+      JWT_SECRET_KEY: test-secret-key-for-ci
+      JWT_ALGORITHM: HS256
+      LLM_FAST_PROVIDER: google
+      LLM_REASONING_PROVIDER: google
+      GEMINI_API_KEY: test-key-for-ci
 
     steps:
       - uses: actions/checkout@v4
@@ -107,7 +113,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd="pg_isready -U hireport"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
