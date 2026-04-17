@@ -101,7 +101,7 @@ async def generate_experience(
             prompt,
             None,   # system_prompt
             True,   # json_mode
-            500,    # max_tokens
+            2048,   # max_tokens
             0.7,    # temperature
         )
         data = json.loads(response_text)
@@ -113,6 +113,16 @@ async def generate_experience(
             detail="Experience generation unavailable. Please try again.",
         )
 
+    experience_text = data.get("experience_text", "")
+    if not experience_text:
+        # LLM returned valid JSON but no usable bullet (e.g. missing key,
+        # empty string, or truncated by token cap). Surface as 503 so the
+        # caller retries instead of silently rendering nothing.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Experience generation returned empty — please retry.",
+        )
+
     analytics_track(
         user_id=user_id,
         event="experience_generated",
@@ -120,7 +130,7 @@ async def generate_experience(
     )
 
     return {
-        "experience_text": data.get("experience_text", ""),
+        "experience_text": experience_text,
         "summary": data.get("summary", ""),
         "cards_studied": cards_studied,
     }

@@ -24,13 +24,13 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 ## Last Completed Slice
 
-**P5-S8** — Geo-pricing coverage gaps A+C closed. Pricing page Pro CTA now calls Stripe with geo-aware currency (was local-state "demo mode"); backend `/payments/checkout` gained an IP-based currency fallback when the client omits it. Backend 169/169 green (+2 new tests), frontend 5/5 green. Gaps B (no price on LoginPage), D (ip-api.com rate-limit fallback), E (Free-plan `$0` symbol consistency) deferred — not blocking.
+**P5-S11** — Generate My Experience fix. Bumped LLM `max_tokens` 500→2048, moved `experience_narrative` from REASONING_TASKS to FAST_TASKS (1-2 sentence bullet doesn't need reasoning tier), added empty-response guard (raises 503 instead of letting empty string flow back to FE), and added a WARNING-level log in `_call_gemini` when the model returns no text. Backend gained 2 new regression tests. Closes the known-broken Generate My Experience feature.
 
 ---
 
 ## Next Slice
 
-**P5-S9** — Fix AI Resume Rewrite (first known-broken feature); see `docs/specs/phase-3/20c-resume-cover-letter-fix.md` placeholder + `.agent/skills/ats-scanner.md`.
+**P5-S12** — Begin route-restructure work (P5C). See `claude-code-prompts-all-phases-v2.md` for the slice prompt and any new spec scaffolding under `docs/specs/phase-5/12-*.md`.
 
 After P5-S9, continue in this order:
 1. P5B (S10–S11) — cover letter, Generate My Experience
@@ -52,9 +52,6 @@ These are user-visible bugs. Don't refactor around them — they have dedicated 
 
 | Feature | Symptom | Fix slice |
 |---------|---------|-----------|
-| AI Resume Rewrite | Drops sections from original (work history, education) — produces summary instead of full rewrite | P5-S9 |
-| Cover Letter Generation | Format inconsistent — wrong headers, missing greeting/signature blocks | P5-S10 |
-| Generate My Experience (Profile) | Button doesn't work — silent failure | P5-S11 |
 | Geo-Pricing Visibility | Audit complete (P5-S8): A+C fixed. Remaining deferred gaps — B: no price on LoginPage; D: ip-api.com rate-limit fallback mis-prices Indian users under load; E: Free-plan shows `$0` even for INR users. | Deferred (post-P5B) |
 | Stripe Webhook Idempotency | Possible — duplicate webhook delivery could double-grant Pro. Audit pending. | P5-S26c |
 
@@ -71,11 +68,11 @@ Currently none. As Phase 5 progresses, this list will grow:
 
 ## Recently Completed (last 5)
 
-1. P5-S8 — Geo-pricing gaps A+C closed (Pricing page now Stripe-wired, backend checkout has IP fallback; gaps B/D/E deferred)
-2. P5-S0b — applied 10 doc-sync fixes from audit (path corrections, spec dedup, 9 placeholder specs, Tech Debt log)
-3. P5-S0 — 3-way doc sync audit (backend 167/167 green, frontend 5/5 green; 6 duplicate-number pairs + 9 missing specs surfaced for P5-S0b)
-4. P4-S4 — Custom domain + SSL + final Phase 4 verification
-5. P4-S3 — Rate limiting + performance audit
+1. P5-S11 — Generate My Experience fix (max_tokens 500→2048, moved to FAST tier, empty-response 503 guard, Gemini empty-text WARNING log; +2 regression tests)
+2. P5-S10 — Cover letter fix (prompt rewritten for business-letter format: headers/greeting/signature consistent)
+3. P5-S9 — AI Resume Rewrite fix (removed 4k-char input truncation; full resume now reaches LLM)
+4. P5-S8 — Geo-pricing gaps A+C closed (Pricing page now Stripe-wired, backend checkout has IP fallback; gaps B/D/E deferred)
+5. P5-S0b — applied 10 doc-sync fixes from audit (path corrections, spec dedup, 9 placeholder specs, Tech Debt log)
 
 ---
 
@@ -115,6 +112,7 @@ These rules apply across Phase 5. Add or remove as the sprint changes.
 |---|---|
 | Legacy LLM provider factory | `app/services/llm/factory.py` + `claude_provider.py` + `gemini_provider.py` run parallel to the real router at `app/core/llm_router.py`. Not currently breaking. Do not extend the legacy factory — route all new LLM calls through `generate_for_task()`. Consolidate in Phase 6 cleanup. Surfaced by the 2026-04-17 audit. |
 | Registration IP-blocking is DB-based, not Redis | `app/api/v1/routes/auth.py` inlines the limit check against the `registration_logs` table (30-day window query). The original playbook skill described a Redis counter. Both approaches work. Kept for P5-S4 backfill; no behavioural change planned. |
+| Email-preferences API path mismatch | Frontend `hirelens-frontend/src/services/api.ts:314,321` calls `/api/v1/email-preferences`, but the backend router is mounted at `/api/v1/email-prefs` (`app/main.py`, confirmed in `AGENTS.md:187`). The endpoints currently 404 in production. Surfaced by the 2026-04-17 P5-S11 trace. Fix in a future slice — pick one canonical path (recommend the longer `/email-preferences` to match the spec at `docs/specs/phase-2/16-email-preferences.md`) and update both ends together. |
 
 ---
 

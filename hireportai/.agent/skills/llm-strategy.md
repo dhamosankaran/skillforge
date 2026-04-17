@@ -23,13 +23,15 @@ Used for high-volume, deterministic extraction / drafting:
 - `quiz_generation` — create quick quiz prompts
 - `gap_mapping` — map missing skills to flashcard categories
 - `rewrite_bullets` — rewrite resume bullets for impact
+- `experience_narrative` — 1-2 sentence "My Experience" bullet
+  (moved from reasoning tier in P5-S11; output is short and the
+  reasoning-tier model wasted budget on hidden thinking tokens)
 
 ### REASONING_TASKS — stronger reasoning model
 Used for longer, creative, or multi-step outputs:
 - `resume_rewrite` — full resume rewrite against a JD
 - `cover_letter` — tailored cover letter
 - `interview_questions` — interview prep question set
-- `experience_narrative` — "My Experience" long-form narrative
 
 Unknown task names default to the **fast** tier.
 

@@ -26,13 +26,13 @@ FAST_TASKS = frozenset([
     "quiz_generation",
     "gap_mapping",
     "rewrite_bullets",
+    "experience_narrative",
 ])
 
 REASONING_TASKS = frozenset([
     "resume_rewrite",
     "cover_letter",
     "interview_questions",
-    "experience_narrative",
 ])
 
 
@@ -77,7 +77,20 @@ def _call_gemini(
         contents=prompt,
         config=types.GenerateContentConfig(**config_kwargs),
     )
-    return response.text or ""
+    text = response.text or ""
+    if not text:
+        # Visibility for the silent-failure mode where Gemini returns no
+        # text — typically a finish_reason like MAX_TOKENS (e.g. thinking
+        # budget consumed the cap) or a SAFETY block. Callers still get
+        # an empty string; downstream JSON parse will surface 503.
+        logger.warning(
+            "Gemini returned empty text (model=%s, json_mode=%s, max_tokens=%s); raw response=%r",
+            model,
+            json_mode,
+            max_tokens,
+            response,
+        )
+    return text
 
 
 def _call_anthropic(

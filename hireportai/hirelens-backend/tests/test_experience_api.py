@@ -171,3 +171,42 @@ class TestGenerateExperience:
 
         assert resp.status_code == 503
         assert "unavailable" in resp.json()["detail"].lower()
+
+    async def test_experience_empty_llm_response_returns_503(self, client, db_session):
+        """P5-S11 regression: when the LLM returns an empty string (e.g. Gemini
+        2.5 Pro consumed the entire token budget on hidden thinking), the
+        service must surface 503, not silently render nothing on the FE."""
+        token, user_id = await _sign_in(client)
+        await _seed_study_history(db_session, user_id)
+
+        with patch(
+            "app.services.experience_service.generate_for_task",
+            return_value="",
+        ):
+            resp = await client.post(
+                "/api/v1/study/experience",
+                json={"topic": "system design"},
+                headers=_auth(token),
+            )
+
+        assert resp.status_code == 503
+
+    async def test_experience_missing_key_returns_503(self, client, db_session):
+        """P5-S11 regression: when the LLM returns valid JSON without the
+        `experience_text` key (or with an empty value), the service must raise
+        503 rather than letting an empty string flow back to the FE."""
+        token, user_id = await _sign_in(client)
+        await _seed_study_history(db_session, user_id)
+
+        with patch(
+            "app.services.experience_service.generate_for_task",
+            return_value=json.dumps({"summary": "Strong in system design."}),
+        ):
+            resp = await client.post(
+                "/api/v1/study/experience",
+                json={"topic": "system design"},
+                headers=_auth(token),
+            )
+
+        assert resp.status_code == 503
+        assert "empty" in resp.json()["detail"].lower()
