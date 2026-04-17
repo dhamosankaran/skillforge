@@ -112,8 +112,8 @@ Build a daily review habit with spaced repetition.
 
 I'm exploring for my team
 Browse all categories and see what SkillForge offers.
-Continue
 
+Continue
 - Check for the IP address and if the user is from US, show the US pricing, if from India, show the INR pricing
 - Check if users trying to register using different google account but from same IP address, then block them
 - From Analyse - Save tracker - auto populate the data in the tracker 
@@ -125,6 +125,26 @@ Continue
 - Proffile - Generate My Experience is not working
 - Which model to use for what purpose (Gemini 2.5 Pro for reasoning, Flash for speed tasks)
 
+
+
+I want to focus on upskilling
+Get a personalized study plan with a countdown to your target date.
+and Build a daily review habit with spaced repetition.
+
+and dedicate feature
+I have an interview coming up where Start with Analyze the resume with JD, followed by Results, Rewrite resume, Application tracker abd Interview preparation
+
+
+
+
+Date picker for Interview date (optional) under I have an interview coming up
+AI resume rewrite - is not working (Original is not showing all the contents)
+Interview Prep generated quesitons not stored...generate and store based on the job description
+How to retain the settings for the users who are already registered.
+How to cancel the subscription?
+Chat with AI - during flashcards study 
+
+
 New features
 Admin features (all LLM driven)
   - Measure the rights metrics
@@ -133,7 +153,13 @@ Admin features (all LLM driven)
   - Data for driving the future enhancements or fixing the existing issues
   - Feedback from users
 Set Content Feed Flow
-- 
+
+How to sync all docs with the updated codebase..
+will this be part of prompts 
+
+
+Railway - created an instances fro Postgres and backend . need to setup env variable for production
+Vercel prod is not yet setup
 
 Business Development
 - Marketing
@@ -145,4 +171,59 @@ Business Development
 - Do we need to integrate with Linked to analyse and hekp customers to share the feedback about their profile
 - Edcuate users on the best timing to take interviews
 
++++++++++++++++++++++++++++++++++++++++++++++
+Best practives for opening new chat in claude
+
+New Phase 5 working session. Continuing from prior chat where we:
+- Synced docs to v2.1 + v2.2 patch (in project knowledge)
+- Created SESSION-STATE.md and STRATEGIC-OPTIONS.md (in repo root)
+- Locked in Option D strategy (B2C focused, $5-15M ARR target, no pivot)
+- Completed P5-S0 (audit) and P5-S0b (10 doc-sync fixes applied)
+
+Confirm you have access to and have read:
+1. claude-code-prompts-all-phases-v2.md (v2.1 — battle-tested)
+2. claude-code-prompts-all-phases-v2.2-patch.md (5 new slices from flow audit)
+3. skillforge_playbook_v2.md
+4. local-setup-guide.md
+
+Ground rules for this session — apply them strictly:
+
+RULE 1 — Don't write Claude Code prompts from scratch. The v2.1 prompts
+are battle-tested. If a slice needs a tweak, amend the existing prompt
+in v2.1 or v2.2-patch — don't regenerate.
+
+RULE 2 — One slice at a time. No parallel slices, no batching multiple
+slices into a single Claude Code session. Review fatigue causes bugs.
+
+RULE 3 — If anything feels off, stop and ask. Push back on me. Push back
+on Claude Code findings. The cost of a 5-minute pause is nothing
+compared to a wrong slice that needs to be unwound.
+
+RULE 4 — No code changes from you in chat. You're advisory only. All
+code work happens in Claude Code in my terminal. You help me plan,
+review output, debug, and refine prompts.
+
+RULE 5 — Strategic decision is locked. Option D (stay the course, B2C,
+$5-15M ARR). Don't second-guess this or suggest pivots. If something
+in Phase 5 work makes you think the strategy needs revisiting, flag
+it — but don't drift toward $100M ambitions.
+
+CURRENT STATE:
+- Phase 5 base setup done (P5-S0, P5-S0b complete)
+- Backend: 167/167 tests green, Frontend: 5/5 tests green
+- Next slice scheduled: P5-S9 (Fix AI Resume Rewrite — first known-broken
+  feature, two-step prompt: report findings then fix)
+- 4 known-broken features remaining (rewrite, cover letter, Generate My
+  Experience, geo-pricing visibility audit)
+
+TODAY'S GOAL:
+[Fill this in. Examples:
+ - "Run P5-S9 step 1 (findings) and review the report with you"
+ - "Resolve 2 open decisions from SESSION-STATE.md before P5-S22"
+ - "Discuss whether to defer P5A spec backfill to after Phase 5"]
+
+Don't write code or generate Claude Code prompts until I confirm
+we're aligned on today's goal. If you see anything off in my context
+above (e.g., wrong file references, contradictions), flag it before
+we start work.
 
