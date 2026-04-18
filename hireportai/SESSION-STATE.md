@@ -86,7 +86,6 @@ Currently none. As Phase 5 progresses, this list will grow:
 | Free-tier interview question limit value | Implemented but value not validated against business model. P5-S6 will flag the current value for confirmation. | No | End of Phase 5 |
 | Cancellation win-back flow (50% off 3 months) | Mentioned in P5-S26 spec as optional. | No | Before P5-S26 |
 | Existing-user persona migration (auto-default vs force-pick) | Recommendation in P5-S19: force-pick. Confirm. | Yes | Before P5-S19 |
-| **Persona switch UX: modal or full-page reroute?** | Existing-user flow shows modal. P5-S17 currently says reroute. Modal is lighter; reroute is consistent. | Yes | Before P5-S17 |
 | **Daily review: counts toward free 15-card budget or not?** | If yes, Career-Climber free hits wall in 3 days. If no, daily review is unlimited for free users. Affects monetization curve. | Yes | Before P5-S22 |
 | **Auto-save scan to tracker: automatic or "Save?" prompt?** | Existing-user flow implies automatic. P5-S5 spec needs this clarified. | No | Before P5-S5 |
 | **Strategic path to $100M ARR**: B2B pivot, adjacent expansion, or geo-volume play? | See `STRATEGIC-OPTIONS.md`. Affects every Phase 6+ decision. | Not yet | Before Phase 6 planning |
@@ -94,6 +93,19 @@ Currently none. As Phase 5 progresses, this list will grow:
 ---
 
 ## Resolved Decisions
+
+### Decision 1 — Persona switch UX (resolved 2026-04-17)
+
+**Resolution:** Full-page reroute to `/onboarding/persona`, not modal.
+
+**Rationale:**
+- New-user flow lands fresh; no page behind a modal worth seeing.
+- Existing-user migration UX (P5-S19) fits better as a page with banner than as a modal with banner-header.
+- PersonaGate becomes a clean `<Navigate to="/onboarding/persona" replace />` redirect — route-based gating is simpler to test than render-based overlay.
+- Three fields on the surface (persona + `interview_target_date` + `interview_target_company` per v2.2 S16-AMEND) argue for page not modal.
+- Mobile: full-screen modal ≈ full page, so the pattern matters on desktop where page wins.
+
+**Affected slices:** P5-S15 (spec describes full-page UX), P5-S17 (PersonaGate implemented as redirect, not overlay), P5-S19 (existing-user banner sits at top of page).
 
 ### Decision 3 — Resolved 2026-04-17
 Email deep-link coverage: App is pre-production, no legacy user traffic exists.
