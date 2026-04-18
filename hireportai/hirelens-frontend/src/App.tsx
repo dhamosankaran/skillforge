@@ -19,7 +19,7 @@ import CategoryDetail from '@/pages/CategoryDetail'
 import CardViewer from '@/pages/CardViewer'
 import DailyReview from '@/pages/DailyReview'
 import Onboarding from '@/pages/Onboarding'
-import HomeDashboardPlaceholder from '@/pages/HomeDashboardPlaceholder'
+import HomeDashboard from '@/pages/HomeDashboard'
 
 // Lazy-loaded pages — not on the critical path (Spec #25)
 const Profile = lazy(() => import('@/pages/Profile'))
@@ -71,8 +71,8 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/pricing" element={<Pricing />} />
 
-          {/* Persona-aware home (placeholder — P5-S18 ships real HomeDashboard) */}
-          <Route path="/home" element={<ProtectedRoute><HomeDashboardPlaceholder /></ProtectedRoute>} />
+          {/* Persona-aware home (real dashboard — P5-S18) */}
+          <Route path="/home" element={<ProtectedRoute><HomeDashboard /></ProtectedRoute>} />
 
           {/* Onboarding (sits outside the two namespaces by design) */}
           <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />

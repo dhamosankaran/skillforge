@@ -17,7 +17,7 @@ vi.mock('@/pages/DailyReview',              () => ({ default: () => <div data-te
 vi.mock('@/pages/CategoryDetail',           () => ({ default: () => <div data-testid="page-category-detail" /> }))
 vi.mock('@/pages/CardViewer',               () => ({ default: () => <div data-testid="page-card-viewer" /> }))
 vi.mock('@/pages/MissionMode',              () => ({ default: () => <div data-testid="page-mission-mode" /> }))
-vi.mock('@/pages/HomeDashboardPlaceholder', () => ({ default: () => <div data-testid="home-placeholder" /> }))
+vi.mock('@/pages/HomeDashboard',            () => ({ default: () => <div data-testid="page-home-dashboard" /> }))
 vi.mock('@/pages/LandingPage',              () => ({ default: () => <div data-testid="page-landing" /> }))
 vi.mock('@/pages/LoginPage',                () => ({ default: () => <div data-testid="page-login" /> }))
 vi.mock('@/pages/Pricing',                  () => ({ default: () => <div data-testid="page-pricing" /> }))
@@ -117,12 +117,12 @@ describe('App transitional redirects', () => {
     expect(screen.getByTestId('location-probe')).toHaveAttribute('data-pathname', '/learn/card/xyz-789')
   })
 
-  it('renders the home placeholder at /home', async () => {
+  it('renders the HomeDashboard at /home', async () => {
     render(
       <MemoryRouter initialEntries={['/home']}>
         <App />
       </MemoryRouter>,
     )
-    expect(await screen.findByTestId('home-placeholder')).toBeInTheDocument()
+    expect(await screen.findByTestId('page-home-dashboard')).toBeInTheDocument()
   })
 })

@@ -200,7 +200,7 @@ Two namespaces after P5-S13: `/learn/*` (study engine) and `/prep/*` (interview 
 | `/` | `LandingPage` (guests) / redirect to `/home` (auth) | Public |
 | `/login` | `LoginPage` | Public |
 | `/pricing` | `Pricing` | Public |
-| `/home` | `HomeDashboardPlaceholder` (real dashboard ships in P5-S18) | Protected |
+| `/home` | `HomeDashboard` (persona-aware, 3 render modes; P5-S18) | Protected |
 | `/onboarding` | `Onboarding` | Protected |
 | `/onboarding/persona` | `PersonaPicker` (full-page; shipped in P5-S17) | Protected |
 | `/learn` | `StudyDashboard` | Protected |
