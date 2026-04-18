@@ -24,13 +24,15 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 ## Last Completed Slice
 
-**P5-S13** — Route restructure + internal-reference sweep complete. `src/App.tsx` now serves nine namespaced routes under `/learn/*` and `/prep/*`, plus a ten-entry transitional `<Navigate replace>` redirect block for the old flat paths and `/mission`. Post-login redirect target moved from `/analyze` to `/home` (LoginPage + HomeRoute). New `HomeDashboardPlaceholder` stands in at `/home` until P5-S18 ships the real dashboard. Sweep removed every old frontend-route reference from `hirelens-frontend/src/` (outside the App.tsx redirect block) and updated `hirelens-backend/app/services/reminder_service.py` so daily-reminder emails deep-link into `/learn/daily`. Sweep proof at `docs/audit/2026-04-p5-s13-sweep-proof.txt`. Frontend test count 5 → 16 (new `App.redirects.test.tsx` covers all 10 transitional redirects + `/home`); backend 174/174 unchanged.
+**P5-S14** — Shipped `TopNav` / `MobileNav` / `AppShell` at `src/components/layout/` and wired them into `src/App.tsx` (replacing the old `Navbar`). TopNav renders `Home · Learn · Prep · Profile` on `md:` and up with `Admin` appended iff `user.role === 'admin'`; MobileNav is a fixed bottom bar (`h-16`, `pb-[env(safe-area-inset-bottom)]`) with the same tabs + filled-icon active state. Active-state logic: `/home` exact-match, others startsWith. Chrome hidden on `/`, `/login`, `/pricing` by AppShell. New `nav_clicked` event (`{namespace, from_path, to_path}`) fires from every nav tap. All styling via design tokens — no hex literals. New tests: `tests/TopNav.test.tsx` (admin role + five active-state paths + /home exact-match = 8 cases) and `tests/MobileNav.test.tsx` (3 cases). The redirect block in `src/App.tsx` was not touched (P5-S13 domain). AGENTS.md Frontend Routes Table updated. Frontend test count 16 → 27.
+
+**P5-S13 gap flagged:** the transitional `deprecated_route_hit` event defined in the spec (§Analytics) is not wired in the `<Navigate>` redirect nodes. Analytics catalog notes the gap but the backfill is out of scope for P5-S14.
 
 ---
 
 ## Next Slice
 
-**P5-S14** — Ship `TopNav` / `MobileNav` / `AppShell` components and wire them into `src/App.tsx`, replacing the current `Navbar`. Add `nav_clicked` event to the analytics catalog.
+**P5-S15** — PersonaPicker + HomeDashboard prerequisite migration (User model adds `persona`, `interview_target_date`, **`interview_target_company`** fields). See Active Refactor Zones.
 
 After P5-S9, continue in this order:
 1. P5B (S10–S11) — cover letter, Generate My Experience
@@ -61,18 +63,19 @@ These are user-visible bugs. Don't refactor around them — they have dedicated 
 
 Currently none. As Phase 5 progresses, this list will grow:
 
-- (P5-S13 landed): `src/App.tsx` now carries the nine `/learn/*` + `/prep/*` namespaced routes and a ten-entry transitional redirect block. Keep drive-by edits off `src/App.tsx` until P5-S14 replaces `Navbar` with `TopNav` + `MobileNav` + `AppShell`.
+- (P5-S13 landed): `src/App.tsx` carries the nine `/learn/*` + `/prep/*` namespaced routes and a ten-entry transitional redirect block. The redirect block is P5-S13's domain — do not edit it as part of unrelated work.
+- (P5-S14 landed): `src/components/layout/TopNav.tsx`, `MobileNav.tsx`, `AppShell.tsx` are the nav source of truth. The legacy `src/components/layout/Navbar.tsx` is no longer imported by `App.tsx` but still sits on disk — delete it when we're sure no other callers exist (Phase 6 cleanup candidate).
 - (After P5-S15 spec): User model gaining `persona`, `interview_target_date`, **`interview_target_company`** fields — coordinate with that migration.
 
 ---
 
 ## Recently Completed (last 5)
 
-1. P5-S13 — Route restructure + internal-reference sweep: `/learn/*` and `/prep/*` namespaces live in `src/App.tsx`, 10-entry `<Navigate replace>` redirect block covers the old flat paths, post-login target now `/home`, `HomeDashboardPlaceholder` added, daily-reminder email deep-link → `/learn/daily`. Sweep proof at `docs/audit/2026-04-p5-s13-sweep-proof.txt`. Frontend tests 5 → 16 (new `App.redirects.test.tsx`); backend 174/174.
-2. P5-S11 — Generate My Experience fix (max_tokens 500→2048, moved to FAST tier, empty-response 503 guard, Gemini empty-text WARNING log; +2 regression tests)
-3. P5-S10 — Cover letter fix (prompt rewritten for business-letter format: headers/greeting/signature consistent)
-4. P5-S9 — AI Resume Rewrite fix (removed 4k-char input truncation; full resume now reaches LLM)
-5. P5-S8 — Geo-pricing gaps A+C closed (Pricing page now Stripe-wired, backend checkout has IP fallback; gaps B/D/E deferred)
+1. P5-S14 — `TopNav` / `MobileNav` / `AppShell` shipped and wired into `src/App.tsx` (replacing `Navbar`). Four tabs (Home/Learn/Prep/Profile) + Admin for admins. `nav_clicked` event (`{namespace, from_path, to_path}`) fires on every tap. MobileNav is a fixed bottom bar with safe-area padding. All colors via design tokens — no hex literals. Tests: `TopNav.test.tsx` + `MobileNav.test.tsx`; frontend count 16 → 27. Flagged: transitional `deprecated_route_hit` event from the nav spec is not wired in the redirect block (P5-S13 gap, backfill out of scope).
+2. P5-S13 — Route restructure + internal-reference sweep: `/learn/*` and `/prep/*` namespaces live in `src/App.tsx`, 10-entry `<Navigate replace>` redirect block covers the old flat paths, post-login target now `/home`, `HomeDashboardPlaceholder` added, daily-reminder email deep-link → `/learn/daily`. Sweep proof at `docs/audit/2026-04-p5-s13-sweep-proof.txt`. Frontend tests 5 → 16 (new `App.redirects.test.tsx`); backend 174/174.
+3. P5-S11 — Generate My Experience fix (max_tokens 500→2048, moved to FAST tier, empty-response 503 guard, Gemini empty-text WARNING log; +2 regression tests)
+4. P5-S10 — Cover letter fix (prompt rewritten for business-letter format: headers/greeting/signature consistent)
+5. P5-S9 — AI Resume Rewrite fix (removed 4k-char input truncation; full resume now reaches LLM)
 
 ---
 
@@ -104,7 +107,7 @@ executing the sweep.
 
 These rules apply across Phase 5. Add or remove as the sprint changes.
 
-- **Routes**: All new routes go under `/learn/*` or `/prep/*`. No new flat routes.
+- **Routes**: All new routes go under `/learn/*` or `/prep/*`. **No new flat routes.** (Reaffirmed at P5-S14 — `TopNav` / `MobileNav` only surface `/home`, `/learn`, `/prep`, `/profile`, `/admin`; any new flat path would have no nav home.)
 - **Env vars**: Any new env var requires `.env.example` update in the same commit.
 - **LLM calls**: All LLM calls go through the LLM router (`app/core/llm_router.py`, entry point `generate_for_task(task=..., ...)`). Don't bypass it. Pro for reasoning (rewrite, cover letter, gap analysis, chat-with-AI, admin insights). Flash for fast tasks (extraction, classification, simple Q&A).
 - **PostHog events**: Every new user-facing feature fires at least one event. snake_case naming.
@@ -112,6 +115,12 @@ These rules apply across Phase 5. Add or remove as the sprint changes.
 - **Persona gating**: Once PersonaPicker is shipped (P5-S17), all `/learn/*` and `/prep/*` and `/home` routes require `user.persona` to be set. Exception: `/profile`.
 - **Stripe**: All webhook handlers must be idempotent (P5-S26c). No new webhook events without idempotency check.
 - **Frontend test coverage**: Every new page added in Phase 5 (`HomeDashboard`, `PersonaPicker` page, `CardChatPanel`, `AdminInsights`, etc.) must ship with at least one Vitest test. Current frontend test count is **5** (only `PaywallModal`) — this number must grow with every Phase 5 UI slice.
+
+---
+
+## Deferred Hygiene Items
+
+- `deprecated_route_hit` PostHog event not wired in the 10 `<Navigate>` redirect nodes in `src/App.tsx`. Defined in spec #12 §Analytics but deferred from P5-S13. Blocks Phase 6 redirect-block cleanup (no signal to confirm when old paths stop receiving hits).
 
 ---
 

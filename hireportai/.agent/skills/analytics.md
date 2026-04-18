@@ -57,6 +57,9 @@ PostHog is instrumented from Phase 1 and runs on both tiers:
 | `experience_generated` | `pages/Profile.tsx` | `{topic, cards_studied_count}` |
 | `email_preferences_viewed` | `pages/EmailPreferences.tsx` | — |
 | `email_preferences_saved` | `pages/EmailPreferences.tsx` | `{daily_reminder}` / `{timezone}` |
+| `nav_clicked` | `components/layout/TopNav.tsx`, `components/layout/MobileNav.tsx` | `{namespace: 'home'\|'learn'\|'prep'\|'profile'\|'admin', from_path, to_path}` |
+
+> **P5-S14 note (deprecated_route_hit):** the navigation-restructure spec (`docs/specs/phase-5/12-navigation-restructure.md` §Analytics) also defines a transitional `deprecated_route_hit` event to fire from each `<Navigate>` node in `src/App.tsx`'s redirect block. It is **not currently wired** (P5-S13 landed the redirect block without it). If we want to measure when the old paths stop receiving hits before dropping the block in Phase 6, we need to backfill — out of scope for P5-S14, flagged here as a P5-S13 gap.
 
 ### Backend events (`app/**/*.py`)
 

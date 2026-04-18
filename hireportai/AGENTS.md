@@ -193,25 +193,31 @@ mounted; v1 is authoritative for new work.
 
 ### Frontend — routes in `src/App.tsx`
 
+Two namespaces after P5-S13: `/learn/*` (study engine) and `/prep/*` (interview prep). `/home` is the post-login landing page. Transitional `<Navigate replace>` redirects cover the old flat paths until Phase 6 cleanup.
+
 | Path | Component | Access |
 |------|-----------|--------|
-| `/` | `LandingPage` | Public |
+| `/` | `LandingPage` (guests) / redirect to `/home` (auth) | Public |
 | `/login` | `LoginPage` | Public |
 | `/pricing` | `Pricing` | Public |
-| `/analyze` | `Analyze` | Protected |
-| `/results` | `Results` | Protected |
-| `/rewrite` | `Rewrite` | Protected |
-| `/tracker` | `Tracker` | Protected |
-| `/interview` | `Interview` | Protected |
+| `/home` | `HomeDashboardPlaceholder` (real dashboard ships in P5-S18) | Protected |
 | `/onboarding` | `Onboarding` | Protected |
-| `/study` | `StudyDashboard` | Protected |
-| `/study/daily` | `DailyReview` | Protected |
-| `/study/category/:id` | `CategoryDetail` | Protected |
-| `/study/card/:id` | `CardViewer` | Protected |
-| `/mission` | `MissionMode` | Protected (lazy) |
+| `/learn` | `StudyDashboard` | Protected |
+| `/learn/daily` | `DailyReview` | Protected |
+| `/learn/category/:id` | `CategoryDetail` | Protected |
+| `/learn/card/:id` | `CardViewer` | Protected |
+| `/learn/mission` | `MissionMode` | Protected (lazy) |
+| `/prep/analyze` | `Analyze` | Protected |
+| `/prep/results` | `Results` | Protected |
+| `/prep/rewrite` | `Rewrite` | Protected |
+| `/prep/interview` | `Interview` | Protected |
+| `/prep/tracker` | `Tracker` | Protected |
 | `/profile` | `Profile` | Protected (lazy) |
 | `/admin` | `AdminPanel` | Protected (admin only, lazy) |
+| `/analyze` `/results` `/rewrite` `/interview` `/tracker` `/study` `/study/daily` `/study/category/:id` `/study/card/:id` `/mission` | `<Navigate replace>` → new namespaced path | Transitional (drop in Phase 6) |
 | `*` | redirect to `/` | Catch-all |
+
+Nav chrome is rendered by `src/components/layout/AppShell.tsx`, which mounts `TopNav` on desktop (`md:` and up) and `MobileNav` on mobile. Chrome hides on `/`, `/login`, `/pricing`.
 
 ## Middleware
 Stack order in `app/main.py`:

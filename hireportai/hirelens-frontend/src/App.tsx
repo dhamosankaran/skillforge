@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
-import { Navbar } from '@/components/layout/Navbar'
+import { AppShell } from '@/components/layout/AppShell'
 import { useAuth } from '@/context/AuthContext'
 import PersonaPicker from '@/components/onboarding/PersonaPicker'
 import LandingPage from '@/pages/LandingPage'
@@ -59,14 +59,13 @@ function HomeRoute() {
 
 export default function App() {
   const location = useLocation()
-  const isLanding = location.pathname === '/'
 
   return (
     <div className="min-h-screen bg-bg-base text-text-primary font-body">
-      {!isLanding && <Navbar />}
-      <AnimatePresence mode="wait">
-        <Suspense fallback={<LazyFallback />}>
-        <Routes location={location} key={location.pathname}>
+      <AppShell>
+        <AnimatePresence mode="wait">
+          <Suspense fallback={<LazyFallback />}>
+          <Routes location={location} key={location.pathname}>
           {/* Public routes */}
           <Route path="/" element={<HomeRoute />} />
           <Route path="/login" element={<LoginPage />} />
@@ -109,9 +108,10 @@ export default function App() {
           <Route path="/mission"            element={<Navigate to="/learn/mission" replace />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        </Suspense>
-      </AnimatePresence>
+          </Routes>
+          </Suspense>
+        </AnimatePresence>
+      </AppShell>
     </div>
   )
 }
