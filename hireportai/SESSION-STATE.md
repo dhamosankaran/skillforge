@@ -107,11 +107,33 @@ Currently none. As Phase 5 progresses, this list will grow:
 
 **Affected slices:** P5-S15 (spec describes full-page UX), P5-S17 (PersonaGate implemented as redirect, not overlay), P5-S19 (existing-user banner sits at top of page).
 
+### Decision 2 — Persona count (resolved 2026-04-17)
+
+**Resolution:** Stay at 3 personas: Interview-Prepper, Career-Climber, Team Lead. No "New User" persona.
+
+**Rationale:**
+- PRD §1.3 lists 3. Playbook v2 lines 36-40, 207, 1231 consistent. v2.2 patch consistent.
+- v2.1 P5-S15 prompt's "4 personas including New User" was a documentation bug — conflated the no-persona state with a persona value.
+- "New User" is a state (no activity yet), not a durable intent. Handled by P5-S18b state-aware dashboard logic, not by a persona enum value.
+
+**Affected slices:** P5-S15 spec (amended), P5-S16 (PersonaEnum has 3 values), P5-S17 (picker has 3 cards), P5-S18 (widget catalog has 3 modes).
+
 ### Decision 3 — Resolved 2026-04-17
 Email deep-link coverage: App is pre-production, no legacy user traffic exists.
 AC-5 reframed as internal-reference sweep (email templates, PostHog config,
 hardcoded links) rather than external-facing 301 redirects. P5-S13 owns
 executing the sweep.
+
+### Decision 4 — Legacy `target_*` column overlap (resolved 2026-04-17)
+
+**Resolution:** Rename in the P5-S16 migration. `target_company → interview_target_company` (String(255) → String(100)); `target_date → interview_target_date` (DateTime → Date). Via `op.alter_column`.
+
+**Rationale:**
+- Pre-production; row-data risk ≈ zero. `alter_column` preserves data regardless.
+- Duplicate schema is tech debt "Phase 6 cleanup" will never actually reach.
+- Small surface: model, migration, `/auth/me` serialiser. No legacy frontend UX reads the columns.
+
+**Affected slices:** P5-S15 spec (amended — rename rather than keep-separate), P5-S16 (migration does rename + retype, with a pre-flight row-count diagnostic).
 
 ---
 
