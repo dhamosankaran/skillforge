@@ -90,9 +90,64 @@ These are user-visible bugs. Don't refactor around them — they have dedicated 
 | Free-tier interview question limit value | Implemented but value not validated against business model. P5-S6 will flag the current value for confirmation. | No | End of Phase 5 |
 | Cancellation win-back flow (50% off 3 months) | Mentioned in P5-S26 spec as optional. | No | Before P5-S26 |
 | Existing-user persona migration (auto-default vs force-pick) | Recommendation in P5-S19: force-pick. Confirm. | Yes | Before P5-S19 |
-| **Daily review: counts toward free 15-card budget or not?** | If yes, Career-Climber free hits wall in 3 days. If no, daily review is unlimited for free users. Affects monetization curve. | Yes | Before P5-S22 |
-| **Auto-save scan to tracker: automatic or "Save?" prompt?** | Existing-user flow implies automatic. P5-S5 spec needs this clarified. | No | Before P5-S5 |
 | **Strategic path to $100M ARR**: B2B pivot, adjacent expansion, or geo-volume play? | See `STRATEGIC-OPTIONS.md`. Affects every Phase 6+ decision. | Not yet | Before Phase 6 planning |
+
+---
+
+## Locked Decisions
+
+### Decision: Daily review budget + free-tier scope
+**Locked:** 2026-04-18
+**Affected slices:** P5-S22 (FSRS Pro-gating), Phase 1 paywall logic (retroactive doc)
+
+**1A — Free tier scope: CATEGORY-GATED (status quo).**
+Free users are scoped to the Foundation category. No per-day review counter. No per-session counter. Daily Review for free users is unlimited within Foundation. The paywall trigger is non-Foundation category access, not review consumption.
+
+Rationale: Career-Climber's conversion lever is breadth (full library access), not friction on the daily habit. Adding a per-day review counter would punish the most retentive persona and undermine the retention engine the product is built around. Category-based gating is already in the codebase (verified Step 2) and is the right default.
+
+Implication for P5-S26b (paywall dismissal): the dismissal flow applies to category-access paywalls, not review-consumption paywalls (which don't exist).
+
+**1B — FSRS daily-cap: HARD CAP at 20 cards/day, all plans.**
+The Daily Review query (`get_daily_review`) returns at most 20 cards/day, all plans, free or Pro. Applies to:
+- Daily Review queue (`/learn/daily`)
+- Auto-injection of new cards (state=new)
+
+Ordering inside the cap: due-review cards (state=review/learning/relearning) placed first, ordered by due_date ASC. New cards (state=new) fill remaining slots up to 20.
+
+Mission Mode is exempt: the mission's daily_target wins inside `/learn/mission`. Mission cards are scoped to the mission's selected categories and don't double-count against the Daily Review cap on the same day. (Decision: Mission and Daily Review are separate queues. If user does Mission Mode that day, Daily Review still shows up to 20 of whatever's due outside the mission.)
+
+Rationale: 20 cards × ~45 sec ≈ 15-min session = sweet spot for daily habit formation. Above this, FSRS death spiral risk (user opens app, sees 47 due, closes app, breaks streak). 20 is conservative headroom above the "Daily 5" brand framing.
+
+Catch-up mode (offer to review backlog beyond 20) is deferred to a Phase 6 slice once we have data on overflow frequency.
+
+**Implementation note for P5-S22:**
+- Update `get_daily_review(user_id)` to apply `LIMIT 20` after ordering.
+- Add unit test `test_daily_review_caps_at_20_when_overdue` (seed 30 due cards, assert response length == 20, assert oldest due_date returned first).
+- Add unit test `test_daily_review_prefers_due_over_new` (seed 15 due + 10 new, assert response is 15 due + 5 new in that order).
+- Update `study-engine.md` skill: change "Daily 5 = ... LIMIT 5" line to reflect 20-cap.
+
+---
+
+### Decision: Auto-save scan to tracker
+**Locked:** 2026-04-18
+**Affected slices:** P5-S5 spec amendment (tracker auto-populate), any future scan flow work
+
+**Rule:** Auto-save when JD is provided, dedupe on `(user_id, jd_hash)`.
+
+Behavior:
+- Scan with JD pasted/uploaded → on scan-complete, upsert a tracker entry. Hash the normalized JD (whitespace-normalized, casefold, then SHA256) as `jd_hash`. If a tracker entry with `(user_id, jd_hash)` already exists, UPDATE it (`last_scan_id`, `current_ats_score`, `current_gaps`, `last_scanned_at`); do not create a duplicate.
+- Scan without JD (resume-only / exploratory) → no tracker entry created. No prompt. User can scan again with a JD if they want it tracked.
+- Inline confirmation toast on results page when auto-save fires: `"Saved to your tracker → [View]"`. Non-blocking, dismissible, ~4s auto-hide.
+
+Rationale: A scan with a JD is, by definition, an application or close to one — high-value path, no friction. Resume-only scans are exploratory; auto-saving them pollutes the tracker and trains users to ignore it. Dedupe prevents the "scanned the same JD 4 times while iterating my resume" pollution. JD-hashing reuses the pattern already specified in spec #35 (interview question storage), so it's a familiar primitive.
+
+**Implementation note for P5-S5 spec amendment:**
+- Reuse the `hash_jd(text)` helper pattern from spec #35 (or extract to a shared util `app/utils/text_hash.py` if it doesn't already exist).
+- On the tracker model, add unique constraint on `(user_id, jd_hash)` if not already present.
+- Add toast component to scan results page; reuse existing toast primitive if available.
+- PostHog: `tracker_autosaved` (with `is_update: bool`), `tracker_autosave_skipped_no_jd`.
+
+**Deferred (S5-flag):** if PostHog later shows resume-only scans are a meaningful chunk of free-tier behavior, add a "Tracking an application? Add the JD" inline nudge on the results page. Not blocking.
 
 ---
 
