@@ -3,8 +3,9 @@ import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-do
 import { AnimatePresence } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
+import { PersonaGate } from '@/components/PersonaGate'
 import { useAuth } from '@/context/AuthContext'
-import PersonaPicker from '@/components/onboarding/PersonaPicker'
+import PersonaPicker from '@/pages/PersonaPicker'
 import LandingPage from '@/pages/LandingPage'
 import LoginPage from '@/pages/LoginPage'
 import Analyze from '@/pages/Analyze'
@@ -33,13 +34,12 @@ function LazyFallback() {
   )
 }
 
-/** Redirects unauthenticated users to /. Shows PersonaPicker if onboarding not done. */
+/** Redirects unauthenticated users to /. PersonaGate handles persona-null routing. */
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
   if (isLoading) return null
   if (!user) return <Navigate to="/" replace />
-  if (!user.onboarding_completed) return <PersonaPicker mode="onboarding" />
-  return <>{children}</>
+  return <PersonaGate>{children}</PersonaGate>
 }
 
 /** Redirect helper that substitutes dynamic segments into the target. `<Navigate to="/foo/:id">` would
@@ -76,6 +76,7 @@ export default function App() {
 
           {/* Onboarding (sits outside the two namespaces by design) */}
           <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+          <Route path="/onboarding/persona" element={<ProtectedRoute><PersonaPicker /></ProtectedRoute>} />
 
           {/* /learn/* — study engine */}
           <Route path="/learn"              element={<ProtectedRoute><StudyDashboard /></ProtectedRoute>} />

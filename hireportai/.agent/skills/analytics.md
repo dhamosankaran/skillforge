@@ -18,6 +18,9 @@ PostHog is instrumented from Phase 1 and runs on both tiers:
 - Frontend auto-identifies on login via PostHog identify.
 - Backend events always pass `user_id` explicitly as the first arg.
 - Every user-facing feature **must** fire an event (see CLAUDE.md rule 8).
+- Events marked **(DEPRECATED `<slice>`)** stopped firing at the given
+  commit but are preserved in this catalog for historical PostHog data
+  and dashboard cross-reference. Do not remove — deprecate, don't rename.
 
 ## Complete Event Catalog
 
@@ -27,8 +30,8 @@ PostHog is instrumented from Phase 1 and runs on both tiers:
 |-------|-------------|-----------|
 | `landing_page_viewed` | `pages/LandingPage.tsx` | — |
 | `cta_clicked` | `pages/LandingPage.tsx` | `{button: 'hero' \| 'how_it_works' \| 'pricing'}` |
-| `persona_changed` | `components/PersonaPicker.tsx` | `{from, to}` |
-| `onboarding_persona_selected` | `components/PersonaPicker.tsx` | `{persona, mode: 'onboarding'}` |
+| `persona_picker_shown` | `pages/PersonaPicker.tsx` | `{is_new_user: boolean}` |
+| `persona_selected` | `pages/PersonaPicker.tsx` | `{persona, has_target_date, has_target_company}` |
 | `onboarding_started` | `pages/Onboarding.tsx` | `{persona}` |
 | `onboarding_completed` | `pages/Onboarding.tsx` | `{persona, cards_count, skill_gaps}` |
 | `onboarding_tour_completed` | `components/GuidedTour.tsx` | — |
@@ -60,6 +63,19 @@ PostHog is instrumented from Phase 1 and runs on both tiers:
 | `nav_clicked` | `components/layout/TopNav.tsx`, `components/layout/MobileNav.tsx` | `{namespace: 'home'\|'learn'\|'prep'\|'profile'\|'admin', from_path, to_path}` |
 
 > **P5-S14 note (deprecated_route_hit):** the navigation-restructure spec (`docs/specs/phase-5/12-navigation-restructure.md` §Analytics) also defines a transitional `deprecated_route_hit` event to fire from each `<Navigate>` node in `src/App.tsx`'s redirect block. It is **not currently wired** (P5-S13 landed the redirect block without it). If we want to measure when the old paths stop receiving hits before dropping the block in Phase 6, we need to backfill — out of scope for P5-S14, flagged here as a P5-S13 gap.
+
+#### Deprecated Frontend Events
+
+Preserved for historical PostHog data cross-reference. Source files no longer exist in the repo.
+
+| Event | Source file (deleted) | Properties |
+|-------|-----------------------|-----------|
+| `persona_changed` **(DEPRECATED P5-S17)** | `components/PersonaPicker.tsx` | `{from, to}` |
+| `onboarding_persona_selected` **(DEPRECATED P5-S17)** | `components/PersonaPicker.tsx` | `{persona, mode: 'onboarding'}` |
+
+> **`persona_changed` (DEPRECATED P5-S17, commit b5f42c2 — source component deleted; historical PostHog data preserved. Replaced by `persona_selected`.)**
+
+> **`onboarding_persona_selected` (DEPRECATED P5-S17, commit b5f42c2 — source component deleted; historical PostHog data preserved. Replaced by `persona_selected`. Referenced by `docs/specs/phase-4/24-posthog-dashboards.md` event #13 — update that spec in a separate slice if dashboard is decommissioned.)**
 
 ### Backend events (`app/**/*.py`)
 

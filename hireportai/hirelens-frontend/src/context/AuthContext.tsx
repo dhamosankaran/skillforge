@@ -22,20 +22,16 @@ import {
 } from 'react'
 import axios from 'axios'
 
+export type Persona = 'interview_prepper' | 'career_climber' | 'team_lead'
+
 export interface AuthUser {
   id: string
   email: string
   name: string
   avatar_url: string | null
   role: 'user' | 'admin'
-  persona: 'interview' | 'climber' | 'team' | null
+  persona: Persona | null
   onboarding_completed: boolean
-  // Legacy field names — kept until P5-S17 sweeps the consumers
-  // (StudyDashboard + legacy onboarding/PersonaPicker component).
-  target_company?: string | null
-  target_date?: string | null
-  // New field names written by PATCH /api/v1/users/me/persona and
-  // returned by GET /auth/me after P5-S16.
   interview_target_company?: string | null
   interview_target_date?: string | null
 }

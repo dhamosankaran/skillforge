@@ -30,6 +30,8 @@ import type {
 import {
   STORAGE_KEY_ACCESS,
   STORAGE_KEY_REFRESH,
+  type AuthUser,
+  type Persona,
 } from '@/context/AuthContext'
 
 const STORAGE_KEY_USER = 'skillforge_user'
@@ -371,37 +373,16 @@ export async function submitCardFeedback(
   return response.data
 }
 
-// ─── Onboarding — Persona picker ──────────────────────────────────────────────
+// ─── Persona picker ───────────────────────────────────────────────────────────
 
-export interface CompleteOnboardingRequest {
-  persona: 'interview' | 'climber' | 'team'
-  target_company?: string
-  target_date?: string
+export interface PersonaUpdateRequest {
+  persona: Persona
+  interview_target_date?: string | null
+  interview_target_company?: string | null
 }
 
-export async function completeOnboarding(
-  req: CompleteOnboardingRequest,
-): Promise<{ persona: string; onboarding_completed: boolean }> {
-  const response = await api.patch<{ persona: string; onboarding_completed: boolean }>(
-    '/api/v1/auth/onboarding',
-    req,
-  )
-  return response.data
-}
-
-export interface UpdatePersonaRequest {
-  persona: 'interview' | 'climber' | 'team'
-  target_company?: string
-  target_date?: string
-}
-
-export async function updatePersona(
-  req: UpdatePersonaRequest,
-): Promise<{ persona: string; target_company: string | null; target_date: string | null }> {
-  const response = await api.patch<{ persona: string; target_company: string | null; target_date: string | null }>(
-    '/api/v1/auth/persona',
-    req,
-  )
+export async function updatePersona(req: PersonaUpdateRequest): Promise<AuthUser> {
+  const response = await api.patch<AuthUser>('/api/v1/users/me/persona', req)
   return response.data
 }
 

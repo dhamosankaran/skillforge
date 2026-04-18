@@ -1,12 +1,11 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { BookOpen, Play, RefreshCw, AlertCircle, Filter, Target, Flame, Users, Pencil, Crosshair } from 'lucide-react'
+import { BookOpen, Play, RefreshCw, AlertCircle, Filter, Target, Flame, Users, Crosshair } from 'lucide-react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { GlowButton } from '@/components/ui/GlowButton'
 import { CategoryCard, CategoryCardSkeleton } from '@/components/study/CategoryCard'
 import { PaywallModal } from '@/components/PaywallModal'
-import PersonaPicker from '@/components/onboarding/PersonaPicker'
 import { useStudyDashboard } from '@/hooks/useStudyDashboard'
 import { useAuth } from '@/context/AuthContext'
 import { useUsage } from '@/context/UsageContext'
@@ -17,7 +16,7 @@ import type { Category } from '@/types'
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 const PERSONA_CONFIG = {
-  interview: {
+  interview_prepper: {
     icon: Target,
     emoji: '🎯',
     label: 'Interview prep',
@@ -25,7 +24,7 @@ const PERSONA_CONFIG = {
     link: '/learn/mission',
     linkLabel: 'Go to Mission →',
   },
-  climber: {
+  career_climber: {
     icon: Flame,
     emoji: '🔥',
     label: 'Daily practice',
@@ -33,7 +32,7 @@ const PERSONA_CONFIG = {
     link: '/learn/daily',
     linkLabel: 'Start Daily 5 →',
   },
-  team: {
+  team_lead: {
     icon: Users,
     emoji: '👥',
     label: 'Team exploration',
@@ -61,7 +60,6 @@ export default function StudyDashboard() {
   const { stats: gamificationStats } = useGamification()
   const { categories, isLoading, error, refetch } = useStudyDashboard()
   const [lockedCategory, setLockedCategory] = useState<Category | null>(null)
-  const [showPersonaPicker, setShowPersonaPicker] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Spec #09: when arriving from the onboarding bridge, the URL carries
@@ -143,8 +141,8 @@ export default function StudyDashboard() {
           const cfg = PERSONA_CONFIG[user.persona]
           const Icon = cfg.icon
           const c = cfg.cssVar
-          const days = user.persona === 'interview' && user.target_date
-            ? daysUntil(user.target_date)
+          const days = user.persona === 'interview_prepper' && user.interview_target_date
+            ? daysUntil(user.interview_target_date)
             : null
           const streak = gamificationStats?.current_streak ?? 0
           return (
@@ -167,9 +165,9 @@ export default function StudyDashboard() {
                       <span className="text-sm font-semibold text-text-primary">
                         {cfg.emoji} {cfg.label}
                       </span>
-                      {user.persona === 'interview' && user.target_company && (
+                      {user.persona === 'interview_prepper' && user.interview_target_company && (
                         <span className="text-xs text-text-muted">
-                          at {user.target_company}
+                          at {user.interview_target_company}
                         </span>
                       )}
                     </div>
@@ -179,12 +177,12 @@ export default function StudyDashboard() {
                           {days === 0 ? 'Today!' : `${days} day${days === 1 ? '' : 's'} left`}
                         </span>
                       )}
-                      {user.persona === 'climber' && (
+                      {user.persona === 'career_climber' && (
                         <span className="text-xs font-medium" style={{ color: c }}>
                           {streak} day streak
                         </span>
                       )}
-                      {user.persona === 'team' && !isLoading && (
+                      {user.persona === 'team_lead' && !isLoading && (
                         <span className="text-xs text-text-muted">
                           {categories.length} categories browsed
                         </span>
@@ -199,13 +197,6 @@ export default function StudyDashboard() {
                     style={{ background: `color-mix(in srgb, ${c} 12%, transparent)`, color: c }}
                   >
                     {cfg.linkLabel}
-                  </button>
-                  <button
-                    onClick={() => setShowPersonaPicker(true)}
-                    className="flex items-center gap-1 text-xs text-text-muted hover:text-text-secondary transition-colors"
-                  >
-                    <Pencil size={11} />
-                    Change goal
                   </button>
                 </div>
               </div>
@@ -227,12 +218,6 @@ export default function StudyDashboard() {
                   <p className="text-xs text-text-muted mt-0.5">Tell us what you're working towards</p>
                 </div>
               </div>
-              <button
-                onClick={() => setShowPersonaPicker(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-accent-primary bg-accent-primary/10 hover:bg-accent-primary/15 transition-colors"
-              >
-                Set your goal →
-              </button>
             </div>
           </motion.div>
         )}
@@ -350,11 +335,6 @@ export default function StudyDashboard() {
         trigger="locked_category"
         context={{ categoryName: lockedCategory?.name }}
       />
-
-      {/* ── Persona picker modal (change goal) ────────────────────────── */}
-      {showPersonaPicker && (
-        <PersonaPicker mode="settings" onClose={() => setShowPersonaPicker(false)} />
-      )}
     </PageWrapper>
   )
 }

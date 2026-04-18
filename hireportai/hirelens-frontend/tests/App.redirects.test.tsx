@@ -28,13 +28,12 @@ vi.mock('@/pages/AdminPanel',               () => ({ default: () => <div data-te
 // Navbar is presentational; skip it so we don't need UsageContext / auth UI.
 vi.mock('@/components/layout/Navbar', () => ({ Navbar: () => null }))
 
-// PersonaPicker only renders when ProtectedRoute sees an un-onboarded user;
-// our mocked auth always returns onboarding_completed=true, but stub anyway.
-vi.mock('@/components/onboarding/PersonaPicker', () => ({
+// PersonaPicker page — stubbed so ProtectedRoute redirects don't need its internals.
+vi.mock('@/pages/PersonaPicker', () => ({
   default: () => <div data-testid="persona-picker" />,
 }))
 
-// Authenticated, onboarded user — ProtectedRoute lets the target page render.
+// Authenticated user with a persona set — PersonaGate lets the target page render.
 vi.mock('@/context/AuthContext', () => ({
   useAuth: () => ({
     user: {
@@ -43,10 +42,8 @@ vi.mock('@/context/AuthContext', () => ({
       name: 'Test',
       avatar_url: null,
       role: 'user',
-      persona: 'climber',
+      persona: 'career_climber',
       onboarding_completed: true,
-      target_company: null,
-      target_date: null,
     },
     isLoading: false,
     signIn: vi.fn(),

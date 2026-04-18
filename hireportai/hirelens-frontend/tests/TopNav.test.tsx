@@ -29,10 +29,8 @@ function userFixture(overrides: Partial<AuthUser> = {}): AuthUser {
     name: 'Test',
     avatar_url: null,
     role: 'user',
-    persona: 'climber',
+    persona: 'career_climber',
     onboarding_completed: true,
-    target_company: null,
-    target_date: null,
     ...overrides,
   }
 }

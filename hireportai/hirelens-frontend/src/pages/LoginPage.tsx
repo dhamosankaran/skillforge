@@ -13,8 +13,8 @@ import { useAuth } from '@/context/AuthContext'
  * from AuthContext, so sign-in here is identical to the Navbar button.
  *
  * After a successful sign-in, the user is redirected to /home. The
- * ProtectedRoute wrapper on /home then routes not-yet-onboarded users
- * through the PersonaPicker.
+ * PersonaGate wrapper then routes users without a persona selection to
+ * /onboarding/persona before any protected page renders.
  * If an already-authenticated user somehow lands here (manual URL,
  * stale tab), they're bounced to /home immediately.
  */
