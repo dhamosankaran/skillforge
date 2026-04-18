@@ -30,8 +30,14 @@ export interface AuthUser {
   role: 'user' | 'admin'
   persona: 'interview' | 'climber' | 'team' | null
   onboarding_completed: boolean
-  target_company: string | null
-  target_date: string | null
+  // Legacy field names — kept until P5-S17 sweeps the consumers
+  // (StudyDashboard + legacy onboarding/PersonaPicker component).
+  target_company?: string | null
+  target_date?: string | null
+  // New field names written by PATCH /api/v1/users/me/persona and
+  // returned by GET /auth/me after P5-S16.
+  interview_target_company?: string | null
+  interview_target_date?: string | null
 }
 
 interface AuthContextValue {

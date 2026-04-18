@@ -35,7 +35,7 @@ stay clean.
 | Scope | Limit |
 |-------|-------|
 | Global default | **100 req/min** per IP |
-| Auth endpoints (`/auth/google`, `/auth/refresh`, `/auth/logout`, `/auth/me`, `/auth/onboarding`, `/auth/persona`) | **10 req/min** |
+| Auth endpoints (`/auth/google`, `/auth/refresh`, `/auth/logout`, `/auth/me`) + `PATCH /users/me/persona` | **10 req/min** |
 | LLM-backed admin endpoint (`POST /admin/cards/generate`) | **5 req/min** |
 
 - Returns `429 Too Many Requests` with `Retry-After` header.

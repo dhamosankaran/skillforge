@@ -1,7 +1,6 @@
 """Authentication endpoints — Google OAuth + JWT."""
 import hashlib
 from datetime import datetime, timedelta
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
@@ -27,8 +26,6 @@ _REGISTRATION_WINDOW_DAYS = 30
 
 router = APIRouter()
 
-VALID_PERSONAS = ("interview", "climber", "team")
-
 
 def _user_dict(user: User) -> dict:
     """Serialise a User row into the standard JSON shape."""
@@ -40,8 +37,12 @@ def _user_dict(user: User) -> dict:
         "role": user.role,
         "persona": user.persona,
         "onboarding_completed": user.onboarding_completed,
-        "target_company": user.target_company,
-        "target_date": user.target_date.isoformat() if user.target_date else None,
+        "interview_target_company": user.interview_target_company,
+        "interview_target_date": (
+            user.interview_target_date.isoformat()
+            if user.interview_target_date
+            else None
+        ),
     }
 
 
@@ -65,18 +66,6 @@ class RefreshRequest(BaseModel):
 class RefreshResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-
-
-class OnboardingRequest(BaseModel):
-    persona: str  # 'interview' | 'climber' | 'team'
-    target_company: Optional[str] = None
-    target_date: Optional[str] = None
-
-
-class UpdatePersonaRequest(BaseModel):
-    persona: str  # 'interview' | 'climber' | 'team'
-    target_company: Optional[str] = None
-    target_date: Optional[str] = None
 
 
 # --- Helpers ---
@@ -212,60 +201,3 @@ async def get_me(request: Request, user: User = Depends(get_current_user), db: A
         "current_period_end": str(sub.current_period_end) if sub and sub.current_period_end else None,
     }
     return data
-
-
-def _parse_target_date(raw: Optional[str]) -> Optional[datetime]:
-    """Parse an ISO date string (YYYY-MM-DD) into a datetime, or None."""
-    if not raw:
-        return None
-    try:
-        return datetime.fromisoformat(raw)
-    except ValueError:
-        return None
-
-
-@router.patch("/auth/onboarding")
-@limiter.limit("10/minute")
-async def complete_onboarding(
-    request: Request,
-    body: OnboardingRequest,
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Record persona selection and mark onboarding as completed."""
-    if body.persona not in VALID_PERSONAS:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="persona must be one of: interview, climber, team",
-        )
-    user.persona = body.persona
-    user.onboarding_completed = True
-    user.target_company = body.target_company
-    user.target_date = _parse_target_date(body.target_date)
-    db.add(user)
-    await db.commit()
-    await db.refresh(user)
-    return _user_dict(user)
-
-
-@router.patch("/auth/persona")
-@limiter.limit("10/minute")
-async def update_persona(
-    request: Request,
-    body: UpdatePersonaRequest,
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Update persona selection (for users who want to change their goal)."""
-    if body.persona not in VALID_PERSONAS:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="persona must be one of: interview, climber, team",
-        )
-    user.persona = body.persona
-    user.target_company = body.target_company
-    user.target_date = _parse_target_date(body.target_date)
-    db.add(user)
-    await db.commit()
-    await db.refresh(user)
-    return _user_dict(user)

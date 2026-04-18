@@ -24,15 +24,15 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 ## Last Completed Slice
 
-**P5-S14** — Shipped `TopNav` / `MobileNav` / `AppShell` at `src/components/layout/` and wired them into `src/App.tsx` (replacing the old `Navbar`). TopNav renders `Home · Learn · Prep · Profile` on `md:` and up with `Admin` appended iff `user.role === 'admin'`; MobileNav is a fixed bottom bar (`h-16`, `pb-[env(safe-area-inset-bottom)]`) with the same tabs + filled-icon active state. Active-state logic: `/home` exact-match, others startsWith. Chrome hidden on `/`, `/login`, `/pricing` by AppShell. New `nav_clicked` event (`{namespace, from_path, to_path}`) fires from every nav tap. All styling via design tokens — no hex literals. New tests: `tests/TopNav.test.tsx` (admin role + five active-state paths + /home exact-match = 8 cases) and `tests/MobileNav.test.tsx` (3 cases). The redirect block in `src/App.tsx` was not touched (P5-S13 domain). AGENTS.md Frontend Routes Table updated. Frontend test count 16 → 27.
+**P5-S16** — Persona backend foundations. Alembic migration `02bf7265b387_rename_users_target_columns_and_migrate_.py` renames `users.target_company → interview_target_company` (String(255)→String(100)) and `users.target_date → interview_target_date` (DateTime→Date) via `op.alter_column`, migrates legacy persona values (`interview → interview_prepper`, `climber → career_climber`, `team → team_lead`) via `op.execute`, and widens `persona` from String(20) → String(30) for future headroom. Downgrade roundtrip verified. Pre-flight diagnostic returned 0 rows with legacy target_* data and 1 row with `persona='team'` (migrated in place). New Pydantic schema `PersonaEnum` + `PersonaUpdateRequest` at `app/schemas/user.py`; new router `app/api/v1/routes/users.py` exposes `PATCH /api/v1/users/me/persona` (10/min, JWT-required, persona-enum validated, `interview_target_company` max_length=100 + whitespace→None, `onboarding_completed` flipped to True only when previous persona was NULL). `_user_dict` in `auth.py` now returns `interview_target_company` + `interview_target_date` (legacy `target_*` keys removed from the serializer). Legacy endpoints `PATCH /auth/onboarding` and `PATCH /auth/persona` plus `VALID_PERSONAS` and `_parse_target_date` are deleted. Frontend `AuthUser` additively gains optional `interview_target_company?` / `interview_target_date?` fields — the literal persona union is NOT narrowed and the legacy `target_*` fields remain so StudyDashboard and the legacy PersonaPicker component keep compiling (P5-S17 will sweep the consumers). `.agent/skills/security.md` rate-limit row updated to point at the new endpoint. Backend tests: +10 (`tests/test_users_persona.py`) → **184 unit passed, 6 integration deselected**. Frontend tsc green, vitest 27/27 unchanged. `S16-AMEND` is a no-op per Decision 4 — folded into S16. **Important:** v2.2-patch P5-S16-AMEND (add `interview_target_company`) is now a no-op — do not run.
 
-**P5-S13 gap flagged:** the transitional `deprecated_route_hit` event defined in the spec (§Analytics) is not wired in the `<Navigate>` redirect nodes. Analytics catalog notes the gap but the backfill is out of scope for P5-S14.
+**Known runtime breakage until P5-S17:** `src/pages/StudyDashboard.tsx` `PERSONA_CONFIG` is keyed on the legacy values (`interview`, `climber`, `team`), but the DB now stores the snake_case values. `PERSONA_CONFIG[user.persona]` returns `undefined` for any user whose persona was set after this slice. TypeScript still compiles because `AuthUser.persona` retains the legacy literal union. Tests are unaffected. Manual UI is broken for the "Your Goal" card on `/learn` until P5-S17 replaces the legacy consumer.
 
 ---
 
 ## Next Slice
 
-**P5-S15** — PersonaPicker + HomeDashboard prerequisite migration (User model adds `persona`, `interview_target_date`, **`interview_target_company`** fields). See Active Refactor Zones.
+**P5-S17** — PersonaPicker page at `/onboarding/persona`, `PersonaGate` redirect wrapper, AppShell hide-list extension, and the sweep of legacy consumers (StudyDashboard + `src/components/onboarding/PersonaPicker.tsx`) to the new persona values and field names. Narrow `AuthUser.persona` to the snake_case union and remove the legacy `target_*` fields when the sweep lands.
 
 After P5-S9, continue in this order:
 1. P5B (S10–S11) — cover letter, Generate My Experience
@@ -65,17 +65,17 @@ Currently none. As Phase 5 progresses, this list will grow:
 
 - (P5-S13 landed): `src/App.tsx` carries the nine `/learn/*` + `/prep/*` namespaced routes and a ten-entry transitional redirect block. The redirect block is P5-S13's domain — do not edit it as part of unrelated work.
 - (P5-S14 landed): `src/components/layout/TopNav.tsx`, `MobileNav.tsx`, `AppShell.tsx` are the nav source of truth. The legacy `src/components/layout/Navbar.tsx` is no longer imported by `App.tsx` but still sits on disk — delete it when we're sure no other callers exist (Phase 6 cleanup candidate).
-- (After P5-S15 spec): User model gaining `persona`, `interview_target_date`, **`interview_target_company`** fields — coordinate with that migration.
+- (P5-S16 landed): `src/pages/StudyDashboard.tsx` + `src/components/onboarding/PersonaPicker.tsx` still read legacy persona values and `target_*` field names — P5-S17 owns the sweep. Until then, `AuthUser` keeps optional `target_*` fields + the wide persona literal union for backward compat. Do not narrow the type here as part of unrelated work.
 
 ---
 
 ## Recently Completed (last 5)
 
-1. P5-S14 — `TopNav` / `MobileNav` / `AppShell` shipped and wired into `src/App.tsx` (replacing `Navbar`). Four tabs (Home/Learn/Prep/Profile) + Admin for admins. `nav_clicked` event (`{namespace, from_path, to_path}`) fires on every tap. MobileNav is a fixed bottom bar with safe-area padding. All colors via design tokens — no hex literals. Tests: `TopNav.test.tsx` + `MobileNav.test.tsx`; frontend count 16 → 27. Flagged: transitional `deprecated_route_hit` event from the nav spec is not wired in the redirect block (P5-S13 gap, backfill out of scope).
-2. P5-S13 — Route restructure + internal-reference sweep: `/learn/*` and `/prep/*` namespaces live in `src/App.tsx`, 10-entry `<Navigate replace>` redirect block covers the old flat paths, post-login target now `/home`, `HomeDashboardPlaceholder` added, daily-reminder email deep-link → `/learn/daily`. Sweep proof at `docs/audit/2026-04-p5-s13-sweep-proof.txt`. Frontend tests 5 → 16 (new `App.redirects.test.tsx`); backend 174/174.
-3. P5-S11 — Generate My Experience fix (max_tokens 500→2048, moved to FAST tier, empty-response 503 guard, Gemini empty-text WARNING log; +2 regression tests)
-4. P5-S10 — Cover letter fix (prompt rewritten for business-letter format: headers/greeting/signature consistent)
-5. P5-S9 — AI Resume Rewrite fix (removed 4k-char input truncation; full resume now reaches LLM)
+1. P5-S16 — Persona backend foundations: Alembic migration `02bf7265b387` renames `target_*` → `interview_target_*` + retypes (DateTime→Date, String(255)→String(100)) + migrates legacy persona values (`team` → `team_lead`) + widens persona to String(30); new `PATCH /api/v1/users/me/persona` endpoint (JWT, 10/min) with `PersonaEnum` validation and conditional `onboarding_completed` flip; `/auth/onboarding` + `/auth/persona` deleted; `_user_dict` now returns `interview_target_*` instead of legacy keys. Frontend additively gains optional `interview_target_*` fields on `AuthUser` — persona literal union and legacy target_* kept to preserve StudyDashboard / legacy PersonaPicker typecheck until P5-S17. Backend tests +10 → 184/184 (6 integration deselected). Frontend 27/27 unchanged. S16-AMEND folded in.
+2. P5-S14 — `TopNav` / `MobileNav` / `AppShell` shipped and wired into `src/App.tsx` (replacing `Navbar`). Four tabs (Home/Learn/Prep/Profile) + Admin for admins. `nav_clicked` event (`{namespace, from_path, to_path}`) fires on every tap. MobileNav is a fixed bottom bar with safe-area padding. All colors via design tokens — no hex literals. Tests: `TopNav.test.tsx` + `MobileNav.test.tsx`; frontend count 16 → 27. Flagged: transitional `deprecated_route_hit` event from the nav spec is not wired in the redirect block (P5-S13 gap, backfill out of scope).
+3. P5-S13 — Route restructure + internal-reference sweep: `/learn/*` and `/prep/*` namespaces live in `src/App.tsx`, 10-entry `<Navigate replace>` redirect block covers the old flat paths, post-login target now `/home`, `HomeDashboardPlaceholder` added, daily-reminder email deep-link → `/learn/daily`. Sweep proof at `docs/audit/2026-04-p5-s13-sweep-proof.txt`. Frontend tests 5 → 16 (new `App.redirects.test.tsx`); backend 174/174.
+4. P5-S11 — Generate My Experience fix (max_tokens 500→2048, moved to FAST tier, empty-response 503 guard, Gemini empty-text WARNING log; +2 regression tests)
+5. P5-S10 — Cover letter fix (prompt rewritten for business-letter format: headers/greeting/signature consistent)
 
 ---
 
@@ -170,8 +170,8 @@ These rules apply across Phase 5. Add or remove as the sprint changes.
 
 ## Test Suite Status
 
-- **Backend**: All tests passing (last run: end of Phase 4)
-- **Frontend**: All tests passing (last run: end of Phase 4)
+- **Backend**: 184 unit passed, 6 integration deselected (last run: P5-S16)
+- **Frontend**: 27/27 passing (last run: P5-S16)
 - **Note**: Run full suites at the start of P5-S0 to establish a baseline before Phase 5 changes begin.
 
 ---

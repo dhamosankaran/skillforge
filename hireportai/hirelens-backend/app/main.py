@@ -37,6 +37,7 @@ from app.api.v1.routes import (
     rewrite as v1_rewrite,
     study as v1_study,
     tracker as v1_tracker,
+    users as v1_users,
 )
 from app.core.config import get_settings
 
@@ -124,6 +125,7 @@ def create_app() -> FastAPI:
 
     # v1 routers — /api/v1/*
     app.include_router(v1_auth.router, prefix="/api/v1", tags=["v1 Auth"])
+    app.include_router(v1_users.router, prefix="/api/v1", tags=["v1 Users"])
     app.include_router(v1_admin.router, prefix="/api/v1", tags=["v1 Admin"])
     app.include_router(v1_analyze.router, prefix="/api/v1", tags=["v1 Analysis"])
     app.include_router(v1_rewrite.router, prefix="/api/v1", tags=["v1 Rewrite"])

@@ -1,7 +1,7 @@
 """User ORM model."""
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import Boolean, DateTime, String, func, text
+from sqlalchemy import Boolean, Date, DateTime, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, UUIDPrimaryKeyMixin
@@ -17,12 +17,12 @@ class User(Base, UUIDPrimaryKeyMixin):
     role: Mapped[str] = mapped_column(
         String(20), server_default=text("'user'"), nullable=False
     )
-    persona: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    persona: Mapped[str | None] = mapped_column(String(30), nullable=True)
     onboarding_completed: Mapped[bool] = mapped_column(
         Boolean, server_default=text("false"), nullable=False
     )
-    target_company: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    target_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    interview_target_company: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    interview_target_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )
