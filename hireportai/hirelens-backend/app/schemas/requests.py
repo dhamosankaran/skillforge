@@ -40,6 +40,10 @@ class InterviewPrepRequest(BaseModel):
 
     resume_text: str = Field(..., min_length=50)
     job_description: str = Field(..., min_length=50)
+    force_regenerate: bool = Field(
+        default=False,
+        description="Bypass the per-JD cache and regenerate. Spec #49.",
+    )
 
 
 class TrackerApplicationCreate(BaseModel):

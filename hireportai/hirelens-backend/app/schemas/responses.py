@@ -128,6 +128,9 @@ class InterviewPrepResponse(BaseModel):
     """Interview prep questions response."""
 
     questions: List[InterviewQuestion]
+    cached: bool = False
+    generated_at: str = ""
+    model_used: str = ""
 
 
 class TrackerApplication(BaseModel):
