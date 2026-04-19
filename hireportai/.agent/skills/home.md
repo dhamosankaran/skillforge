@@ -109,3 +109,48 @@ All three are added to `.agent/skills/analytics.md` in this slice.
   nothing is visual noise.
 - **Error / empty `states[]`:** silent fallback — render nothing.
   The S18 static layout is a valid home page.
+
+## Widget Empty-State Contract
+
+Codified in [spec #44](../../docs/specs/phase-5/44-home-widget-empty-states.md).
+Applies to every widget under `src/components/home/widgets/` — existing
+and future. Reviewers cite this section.
+
+**The rule.** Every home-dashboard widget MUST:
+
+1. Accept at least one of the four states defined by
+   `DashboardWidget`: `loading`, `data`, `empty`, `error`. A widget
+   that fetches any async data MUST branch on all four.
+2. Source all user-scoped data from an **authenticated endpoint** that
+   filters by the current user's id (or from auth-derived context like
+   `AuthContext` / `GamificationContext`). A widget MUST NOT read from
+   a global, unfiltered, or `user_id=None` bucket. The `/api/tracker`
+   legacy route is one such bucket — do not consume it from a widget.
+3. In the `empty` state, either:
+   - (a) render a CTA that invites the user to create the data
+     (e.g., "Scan your resume to see your ATS score →"), OR
+   - (b) hide the widget entirely (return `null` or don't mount it).
+4. In the `empty` or `error` state, NEVER render company names,
+   scores, dates, counts, or any other data that resembles real user
+   content.
+5. In the `loading` state, render a skeleton (via the primitive's
+   `SkeletonCard`), not cached or stale data from a previous user.
+
+**Why.** Rule 2 prevents the cross-user data leak that motivated spec
+#44 (the LastScan "Wells Fargo · 54%" report on a user who never
+scanned). Rule 3 turns empty states into first-session CTAs instead
+of blank cards. Rule 4 gives tests a crisp structural check.
+
+### Per-widget compliance (current)
+
+| Widget | Data source | Rule-2 (auth-scoped)? |
+|---|---|---|
+| `TodaysReviewWidget` | `fetchDailyQueue()` → `/api/v1/study/daily` | ✓ |
+| `StreakWidget` | `useGamification()` (clears on sign-out) | ✓ |
+| `WeeklyProgressWidget` | `useGamification()` + `ActivityHeatmap` | ✓ |
+| `LastScanWidget` | `fetchUserApplications()` → `/api/v1/tracker` (post-spec #44) | ✓ |
+| `InterviewTargetWidget` | `user.interview_target_*` (AuthContext) | ✓ |
+| `CountdownWidget` | `user.interview_target_date` + `fetchActiveMission()` | ✓ |
+| `TeamComingSoonWidget` | static copy | n/a |
+| State-aware widgets (6) | `useHomeState()` → `/api/v1/home/state` | ✓ |
+| `InterviewPrepperChecklist` | `useOnboardingChecklist()` → `/api/v1/onboarding/checklist` | ✓ |

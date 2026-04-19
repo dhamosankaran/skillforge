@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { DashboardWidget, type WidgetState } from '@/components/home/DashboardWidget'
-import { getApplications } from '@/services/api'
+import { fetchUserApplications } from '@/services/api'
 import type { Persona } from '@/context/AuthContext'
 import type { TrackerApplication } from '@/types'
 
@@ -14,7 +14,7 @@ export function LastScanWidget({ persona }: LastScanWidgetProps) {
 
   const load = useCallback(() => {
     setState('loading')
-    getApplications()
+    fetchUserApplications()
       .then((apps) => {
         if (apps.length === 0) {
           setLatest(null)

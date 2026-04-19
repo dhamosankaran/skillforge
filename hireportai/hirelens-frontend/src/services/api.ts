@@ -206,6 +206,15 @@ export async function getApplications(): Promise<TrackerApplication[]> {
   return response.data
 }
 
+// Widget-scoped tracker fetch. Hits the authenticated /api/v1/tracker
+// so the response is filtered to the caller's user_id. getApplications()
+// above still points at the legacy unauth /api/tracker for Tracker.tsx
+// until that migration ships. See docs/specs/phase-5/44-home-widget-empty-states.md.
+export async function fetchUserApplications(): Promise<TrackerApplication[]> {
+  const response = await api.get<TrackerApplication[]>('/api/v1/tracker')
+  return response.data
+}
+
 export async function createApplication(
   data: Omit<TrackerApplication, 'id' | 'created_at'>
 ): Promise<TrackerApplication> {
