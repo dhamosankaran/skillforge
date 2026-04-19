@@ -443,6 +443,26 @@ export async function createBillingPortalSession(): Promise<BillingPortalRespons
   return response.data
 }
 
+export interface ChecklistStep {
+  id: string
+  title: string
+  description: string
+  link_target: string
+  complete: boolean
+}
+
+export interface ChecklistResponse {
+  steps: ChecklistStep[]
+  all_complete: boolean
+  completed_at: string | null
+}
+
+/** Interview-Prepper onboarding checklist (Spec #41). */
+export async function fetchOnboardingChecklist(): Promise<ChecklistResponse> {
+  const response = await api.get<ChecklistResponse>('/api/v1/onboarding/checklist')
+  return response.data
+}
+
 export async function fetchOnboardingRecommendations(
   gaps: string[],
   scanId?: string,

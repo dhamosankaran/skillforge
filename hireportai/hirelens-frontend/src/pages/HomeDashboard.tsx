@@ -9,6 +9,7 @@ import { InterviewTargetWidget } from '@/components/home/widgets/InterviewTarget
 import { CountdownWidget } from '@/components/home/widgets/CountdownWidget'
 import { TeamComingSoonWidget } from '@/components/home/widgets/TeamComingSoonWidget'
 import { StateAwareWidgets } from '@/components/home/StateAwareWidgets'
+import { InterviewPrepperChecklist } from '@/components/home/widgets/InterviewPrepperChecklist'
 
 const GRID = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
 
@@ -22,12 +23,15 @@ function InterviewPrepperMode({
   date: string | null | undefined
 }) {
   return (
-    <div data-testid="home-mode-interview_prepper" className={GRID}>
-      <CountdownWidget persona={persona} date={date} />
-      <InterviewTargetWidget persona={persona} company={company} date={date} />
-      <TodaysReviewWidget persona={persona} />
-      <LastScanWidget persona={persona} />
-    </div>
+    <>
+      <InterviewPrepperChecklist />
+      <div data-testid="home-mode-interview_prepper" className={GRID}>
+        <CountdownWidget persona={persona} date={date} />
+        <InterviewTargetWidget persona={persona} company={company} date={date} />
+        <TodaysReviewWidget persona={persona} />
+        <LastScanWidget persona={persona} />
+      </div>
+    </>
   )
 }
 

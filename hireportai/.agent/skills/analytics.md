@@ -59,6 +59,10 @@ PostHog is instrumented from Phase 1 and runs on both tiers:
 | `profile_viewed` | `pages/Profile.tsx` | — |
 | `experience_generated` | `pages/Profile.tsx` | `{topic, cards_studied_count}` |
 | `subscription_portal_opened` | `pages/Profile.tsx` | — — fires on "Manage subscription" click before the Stripe-portal redirect (P5-S26b, spec #36). |
+| `checklist_shown` | `components/home/widgets/InterviewPrepperChecklist.tsx` | `{complete_count, all_complete}` — fires once per mount when the Interview-Prepper checklist renders (P5-S18c, spec #41). |
+| `checklist_step_clicked` | `components/home/widgets/InterviewPrepperChecklist.tsx` | `{step_id}` — fires on each step row click (spec #41). |
+| `checklist_completed` | `components/home/widgets/InterviewPrepperChecklist.tsx` | `{completed_at}` — fires once when all 5 steps flip to complete (spec #41). |
+| `checklist_skipped` | `components/home/widgets/InterviewPrepperChecklist.tsx` | `{complete_count}` — fires on "Skip checklist" click (spec #41). |
 | `email_preferences_viewed` | `pages/EmailPreferences.tsx` | — |
 | `email_preferences_saved` | `pages/EmailPreferences.tsx` | `{daily_reminder}` / `{timezone}` |
 | `nav_clicked` | `components/layout/TopNav.tsx`, `components/layout/MobileNav.tsx` | `{namespace: 'home'\|'learn'\|'prep'\|'profile'\|'admin', from_path, to_path}` |

@@ -20,7 +20,7 @@ purely for analytics correlation and is echoed back in the response.
 """
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +28,10 @@ from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.services.gap_mapping_service import GapMapping, map_gaps_to_categories
+from app.services.onboarding_checklist_service import (
+    WrongPersonaError,
+    get_checklist,
+)
 
 router = APIRouter()
 
@@ -37,6 +41,20 @@ class OnboardingRecommendationsResponse(BaseModel):
 
     scan_id: Optional[str] = None
     results: list[GapMapping]
+
+
+class ChecklistStep(BaseModel):
+    id: str
+    title: str
+    description: str
+    link_target: str
+    complete: bool
+
+
+class ChecklistResponse(BaseModel):
+    steps: list[ChecklistStep]
+    all_complete: bool
+    completed_at: Optional[str] = None
 
 
 @router.get(
@@ -67,3 +85,27 @@ async def get_recommendations(
     """
     results = await map_gaps_to_categories(gaps, db=db)
     return OnboardingRecommendationsResponse(scan_id=scan_id, results=results)
+
+
+@router.get(
+    "/onboarding/checklist",
+    response_model=ChecklistResponse,
+    summary="Interview-Prepper 5-step onboarding checklist (Spec #41)",
+)
+async def get_checklist_endpoint(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> ChecklistResponse:
+    """Return the checklist state for an Interview-Prepper user.
+
+    Returns 403 for users on any other persona; the widget is scoped
+    to Interview-Prepper per spec #41 §2.
+    """
+    try:
+        payload = await get_checklist(user, db)
+    except WrongPersonaError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Checklist is only available for Interview-Prepper users",
+        )
+    return ChecklistResponse(**payload)
