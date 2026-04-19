@@ -5,6 +5,33 @@ SkillForge (under HirePort AI) is an AI-powered career acceleration
 platform combining ATS scanning, spaced-repetition flashcard learning,
 and interview prep. Built with FastAPI + React + PostgreSQL + pgvector.
 
+## Source of Truth Hierarchy
+
+When sources disagree, the higher-numbered authority wins. Lower
+authorities are reference only — never act on them when they conflict
+with something higher.
+
+1. **The actual codebase** (`hirelens-backend/`, `hirelens-frontend/`)
+   — running code is ground truth.
+2. **On-disk specs** (`docs/specs/phase-N/NN-*.md`) — describe intended
+   behavior; if code diverges, fix one or the other and log it.
+3. **On-disk rules + state** (`AGENTS.md`, `CLAUDE.md`,
+   `SESSION-STATE.md`, `BACKLOG.md`)
+4. **On-disk skills** (`.agent/skills/*.md`)
+5. **On-disk code reality snapshot** (`CODE-REALITY.md`) — machine-generated index of live codebase state (routes, models, component graph, dead code). Two homes that must stay in sync:
+   - `hireportai/CODE-REALITY.md` (repo) — authoritative. Claude Code regenerates it whenever a slice changes live state (routes, models, top-level types, `App.tsx`, layouts).
+   - Chat Project knowledge (uploaded copy) — reference for chat-Claude when drafting prompts.
+
+   **Sync rule:** Whenever Claude Code regenerates the repo copy, Dhamo re-uploads to the chat Project *before the next planning-level conversation*. Treat either copy as stale if its commit sha doesn't match HEAD. If the two copies disagree, the repo copy wins — the chat copy is stale and must be re-uploaded.
+6. **Chat-Claude project knowledge** (playbook, prompt files, PRD
+   uploaded to the chat Project) — reference only; never authoritative.
+7. **Chat-Claude memory and conversation context** — lossy; verify
+   against disk before acting.
+
+When you find drift between any two sources, do not silently reconcile.
+Flag it in `SESSION-STATE.md` under "Drift flags" and surface it in your
+next response so Dhamo can decide which side wins.
+
 ## Architecture
 - Backend: FastAPI (Python 3.13) at `hirelens-backend/`
 - Frontend: React 18 + TypeScript + Vite at `hirelens-frontend/`
@@ -20,7 +47,6 @@ and interview prep. Built with FastAPI + React + PostgreSQL + pgvector.
 - CI/CD: GitHub Actions (push to main → test → deploy)
 
 ## Directory Structure
-```
 hireportai/
 ├── AGENTS.md                    ← YOU ARE HERE
 ├── CLAUDE.md                    ← Claude Code project rules
@@ -58,7 +84,6 @@ hireportai/
 │   └── workflows/
 │       └── ci.yml               ← CI/CD pipeline
 └── scripts/                     ← Dev utility scripts
-```
 
 ## Coding Conventions
 

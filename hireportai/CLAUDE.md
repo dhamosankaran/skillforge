@@ -58,6 +58,28 @@
     following the template in the playbook §3.2. No exceptions for
     "obvious" work.
 
+15. **Backlog-first**: Every implementation prompt must reference the
+    `BACKLOG.md` item ID(s) it closes (e.g., `closes B-005, E-002`).
+    If no item exists, create one in `BACKLOG.md` first, then proceed.
+    Status field updates (🔴 → 🟡 → ✅) are the only `BACKLOG.md`
+    edits Claude Code may make autonomously — priority, scope, and new
+    rows require Dhamo. Closing an item means status → ✅ and a
+    one-liner: `closed by <commit-sha> on <YYYY-MM-DD>`.
+16. **Audit-scoped step 1**: Every implementation prompt's step 1
+    must be an audit calibrated to the blast radius of the change.
+    Minimum scope by change type:
+    - Backend model change → audit callers + migrations + dependent
+      services
+    - Frontend type change → audit the **live component graph**
+      (which pages/components consume the type), not just declarations
+    - Route change → audit navigation graph + redirects + email deep
+      links
+    - Service change → audit dependents + tests + LLM task names if
+      `llm_router` is involved
+    Reference `CODE-REALITY.md` for the live state. If
+    `CODE-REALITY.md` is older than the current HEAD, regenerate it
+    before drafting the audit.
+
 ## How to Add a Feature
 1. Check spec exists in `docs/specs/`
 2. Create/update backend models in `app/models/`
