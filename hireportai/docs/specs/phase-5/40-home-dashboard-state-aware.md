@@ -146,10 +146,10 @@ Cold-path upper bound: ~20ms of DB + serialization + eval logic → ~80–120ms 
 | Event | File | Trigger point | Call |
 |---|---|---|---|
 | `card_reviewed` | `hirelens-backend/app/services/study_service.py` | End of `review_card()` after DB flush, alongside existing `award_xp` call | `home_state_service.invalidate(user_id)` |
-| `mission_lifecycle` | `hirelens-backend/app/services/mission_service.py` | End of `create_mission()`, `record_mission_day_completion()`, and `abandon_mission()` | same |
-| `scan_completed` | `hirelens-backend/app/api/v1/routes/analyze.py` | After successful scan, alongside existing auto-tracker upsert (post spec #5 amendment) | same |
+| `mission_lifecycle` | `hirelens-backend/app/services/mission_service.py` | End of `create_mission()` (line ~211) and `complete_mission_day()` (line ~470). (No `abandon_mission` function exists in the codebase as of commit 55ac7bd; if one is added, mirror the hook.) | same |
+| `scan_completed` | `hirelens-backend/app/api/routes/analyze.py` (line ~234) | After successful scan, alongside existing auto-tracker upsert (post spec #5 amendment). (`hirelens-backend/app/api/v1/routes/analyze.py` is a re-export shim — hook lives with the actual handler.) | same |
 | `plan_changed` | `hirelens-backend/app/services/payment_service.py` | Inside `_handle_checkout_completed()` and `_handle_subscription_deleted()` after plan flip | same (useful for future plan-dependent states even though no current state reads plan-change timestamp) |
-| `persona_updated` | `hirelens-backend/app/api/v1/routes/auth.py` (the `PATCH /users/me/persona` handler, per AGENTS.md route table) | After successful persona mutation | same (useful for future persona-dependent states) |
+| `persona_updated` | `hirelens-backend/app/api/v1/routes/users.py` (line ~46) — the `PATCH /users/me/persona` handler | After successful persona mutation | same (useful for future persona-dependent states) |
 
 Implementation pattern: a small `home_state_service.invalidate(user_id: str, redis: Redis) -> None` helper called from each site. **Do not** try to recompute on invalidate — just delete the key; the next `GET /home/state` recomputes. Each call is fire-and-forget; failure is logged but does not block the primary operation.
 
