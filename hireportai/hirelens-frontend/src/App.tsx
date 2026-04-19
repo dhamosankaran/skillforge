@@ -6,6 +6,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { PersonaGate } from '@/components/PersonaGate'
 import { useAuth } from '@/context/AuthContext'
 import PersonaPicker from '@/pages/PersonaPicker'
+import FirstAction from '@/pages/FirstAction'
 import LandingPage from '@/pages/LandingPage'
 import LoginPage from '@/pages/LoginPage'
 import Analyze from '@/pages/Analyze'
@@ -77,6 +78,7 @@ export default function App() {
           {/* Onboarding (sits outside the two namespaces by design) */}
           <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
           <Route path="/onboarding/persona" element={<ProtectedRoute><PersonaPicker /></ProtectedRoute>} />
+          <Route path="/first-action" element={<ProtectedRoute><FirstAction /></ProtectedRoute>} />
 
           {/* /learn/* — study engine */}
           <Route path="/learn"              element={<ProtectedRoute><StudyDashboard /></ProtectedRoute>} />

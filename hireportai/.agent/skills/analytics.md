@@ -69,6 +69,9 @@ PostHog is instrumented from Phase 1 and runs on both tiers:
 | `home_dashboard_viewed` | `pages/HomeDashboard.tsx` | `{persona: 'interview_prepper'\|'career_climber'\|'team_lead'}` — fires once on mount via `useRef` idempotency guard so Strict Mode's double-invoked effect captures once (P5-S18). |
 | `home_state_evaluated` | `hooks/useHomeState.ts` | `{persona, states: string[], state_count, cache_hit}` — fires once per resolved fetch; deduped by fingerprint of `persona\|states` so refetch-with-same-result doesn't re-fire (P5-S18c). |
 | `home_state_widget_clicked` | `components/home/widgets/{StreakAtRisk,MissionActive,MissionOverdue,ResumeStale,InactiveReturner,FirstSessionDone}Widget.tsx` | `{state, cta}` — fires on the priority-slot widget's CTA click, alongside the route navigation (P5-S18c). |
+| `first_action_viewed` | `pages/FirstAction.tsx` | `{persona}` — fires once per mount via `useRef` idempotency guard; bypassed when the `first_action_seen` localStorage flag is already set (P5-S22, spec #46). |
+| `first_action_primary_clicked` | `pages/FirstAction.tsx` | `{persona, cta_route}` — fires on primary CTA click before navigation (spec #46). |
+| `first_action_secondary_clicked` | `pages/FirstAction.tsx` | `{persona}` — fires on "Take me to the dashboard instead" click before navigation (spec #46). |
 
 > **P5-S14 note (deprecated_route_hit):** the navigation-restructure spec (`docs/specs/phase-5/12-navigation-restructure.md` §Analytics) also defines a transitional `deprecated_route_hit` event to fire from each `<Navigate>` node in `src/App.tsx`'s redirect block. It is **not currently wired** (P5-S13 landed the redirect block without it). If we want to measure when the old paths stop receiving hits before dropping the block in Phase 6, we need to backfill — out of scope for P5-S14, flagged here as a P5-S13 gap.
 

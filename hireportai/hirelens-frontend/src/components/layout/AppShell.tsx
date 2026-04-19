@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { TopNav } from './TopNav'
 import { MobileNav } from './MobileNav'
 
-const CHROMELESS_PATHS = new Set(['/', '/login', '/pricing', '/onboarding/persona'])
+const CHROMELESS_PATHS = new Set(['/', '/login', '/pricing', '/onboarding/persona', '/first-action'])
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()

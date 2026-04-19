@@ -5,6 +5,7 @@ import { Target, Flame, Users } from 'lucide-react'
 import { useAuth, type Persona } from '@/context/AuthContext'
 import { updatePersona } from '@/services/api'
 import { capture } from '@/utils/posthog'
+import { FIRST_ACTION_SEEN_KEY } from '@/pages/FirstAction'
 
 interface PersonaCard {
   id: Persona
@@ -69,7 +70,10 @@ export default function PersonaPicker() {
         has_target_company: selected === 'interview_prepper' && !!trimmedCompany,
       })
       updateUser(updated)
-      navigate('/home', { replace: true })
+      const seen =
+        typeof window !== 'undefined' &&
+        window.localStorage.getItem(FIRST_ACTION_SEEN_KEY) === 'true'
+      navigate(seen ? '/home' : '/first-action', { replace: true })
     } catch {
       setError("Couldn't save your selection. Please try again.")
       setSubmitting(false)

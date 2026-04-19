@@ -202,6 +202,7 @@ Two namespaces after P5-S13: `/learn/*` (study engine) and `/prep/*` (interview 
 | `/home` | `HomeDashboard` (persona-aware, 3 render modes; P5-S18) | Protected |
 | `/onboarding` | `Onboarding` | Protected |
 | `/onboarding/persona` | `PersonaPicker` (full-page; shipped in P5-S17) | Protected |
+| `/first-action` | `FirstAction` (full-page one-CTA interstitial, spec #46) | Protected |
 | `/learn` | `StudyDashboard` | Protected |
 | `/learn/daily` | `DailyReview` | Protected |
 | `/learn/category/:id` | `CategoryDetail` | Protected |
@@ -217,7 +218,7 @@ Two namespaces after P5-S13: `/learn/*` (study engine) and `/prep/*` (interview 
 | `/analyze` `/results` `/rewrite` `/interview` `/tracker` `/study` `/study/daily` `/study/category/:id` `/study/card/:id` `/mission` | `<Navigate replace>` → new namespaced path | Transitional (drop in Phase 6) |
 | `*` | redirect to `/` | Catch-all |
 
-Nav chrome is rendered by `src/components/layout/AppShell.tsx`, which mounts `TopNav` on desktop (`md:` and up) and `MobileNav` on mobile. Chrome hides on `/`, `/login`, `/pricing`, `/onboarding/persona`.
+Nav chrome is rendered by `src/components/layout/AppShell.tsx`, which mounts `TopNav` on desktop (`md:` and up) and `MobileNav` on mobile. Chrome hides on `/`, `/login`, `/pricing`, `/onboarding/persona`, `/first-action`.
 
 ## Middleware
 Stack order in `app/main.py`:

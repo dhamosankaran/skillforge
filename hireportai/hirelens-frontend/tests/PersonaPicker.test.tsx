@@ -59,6 +59,7 @@ beforeEach(() => {
   updateUser.mockReset()
   navigate.mockReset()
   mockUser = userFixture()
+  window.localStorage.clear()
 })
 
 function renderPicker() {
@@ -109,7 +110,7 @@ describe('PersonaPicker', () => {
     expect(screen.queryByTestId('interview-target-company-input')).not.toBeInTheDocument()
   })
 
-  it('submits selected persona and navigates to /home with replace:true', async () => {
+  it('submits selected persona and navigates to /first-action when the seen flag is absent', async () => {
     const user = userEvent.setup()
     const apiResponse: AuthUser = userFixture({
       persona: 'career_climber',
@@ -123,7 +124,9 @@ describe('PersonaPicker', () => {
 
     await waitFor(() => expect(updatePersona).toHaveBeenCalledTimes(1))
     expect(updatePersona).toHaveBeenCalledWith({ persona: 'career_climber' })
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/home', { replace: true }))
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith('/first-action', { replace: true }),
+    )
     expect(updateUser).toHaveBeenCalledWith(apiResponse)
     expect(capture).toHaveBeenCalledWith('persona_picker_shown', { is_new_user: true })
     expect(capture).toHaveBeenCalledWith('persona_selected', {
@@ -131,5 +134,24 @@ describe('PersonaPicker', () => {
       has_target_date: false,
       has_target_company: false,
     })
+  })
+
+  it('navigates straight to /home when first_action_seen is already set (persona-switch path)', async () => {
+    const user = userEvent.setup()
+    const apiResponse: AuthUser = userFixture({
+      persona: 'team_lead',
+      onboarding_completed: true,
+    })
+    updatePersona.mockResolvedValueOnce(apiResponse)
+    window.localStorage.setItem('first_action_seen', 'true')
+
+    renderPicker()
+    await user.click(screen.getByTestId('persona-card-team_lead'))
+    await user.click(screen.getByTestId('persona-continue'))
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith('/home', { replace: true }),
+    )
+    expect(navigate).not.toHaveBeenCalledWith('/first-action', expect.anything())
   })
 })
