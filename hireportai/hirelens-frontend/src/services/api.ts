@@ -433,6 +433,16 @@ export async function createCheckoutSession(currency?: string): Promise<Checkout
   return response.data
 }
 
+export interface BillingPortalResponse {
+  url: string
+}
+
+/** Create a Stripe billing portal session (Pro-only) and return the URL. */
+export async function createBillingPortalSession(): Promise<BillingPortalResponse> {
+  const response = await api.post<BillingPortalResponse>('/api/v1/payments/portal')
+  return response.data
+}
+
 export async function fetchOnboardingRecommendations(
   gaps: string[],
   scanId?: string,

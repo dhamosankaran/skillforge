@@ -58,6 +58,7 @@ PostHog is instrumented from Phase 1 and runs on both tiers:
 | `badge_earned` | `context/GamificationContext.tsx` | `{badge_id, badge_name}` |
 | `profile_viewed` | `pages/Profile.tsx` | — |
 | `experience_generated` | `pages/Profile.tsx` | `{topic, cards_studied_count}` |
+| `subscription_portal_opened` | `pages/Profile.tsx` | — — fires on "Manage subscription" click before the Stripe-portal redirect (P5-S26b, spec #36). |
 | `email_preferences_viewed` | `pages/EmailPreferences.tsx` | — |
 | `email_preferences_saved` | `pages/EmailPreferences.tsx` | `{daily_reminder}` / `{timezone}` |
 | `nav_clicked` | `components/layout/TopNav.tsx`, `components/layout/MobileNav.tsx` | `{namespace: 'home'\|'learn'\|'prep'\|'profile'\|'admin', from_path, to_path}` |

@@ -489,6 +489,82 @@ async def test_handler_exception_rolls_back_stripe_event_row(
     assert sub_after.plan == "pro"
 
 
+# ── POST /payments/portal (Spec #36) ────────────────────────────────────────
+
+
+async def test_create_portal_session_for_pro_user(client, test_user, db_session):
+    """Pro user gets a Stripe-hosted billing portal URL back."""
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    settings = get_settings()
+    settings.stripe_secret_key = "sk_test_dummy"
+    settings.frontend_url = "https://app.example.com"
+
+    sub = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == test_user.id)
+        )
+    ).scalar_one()
+    sub.plan = "pro"
+    sub.status = "active"
+    sub.stripe_customer_id = "cus_portal_abc"
+    await db_session.flush()
+
+    fake_session = SimpleNamespace(
+        id="bps_test_xyz",
+        url="https://billing.stripe.com/p/session/bps_test_xyz",
+    )
+
+    with patch(
+        "app.services.payment_service.stripe.billing_portal.Session.create",
+        return_value=fake_session,
+    ) as portal_mock:
+        resp = await client.post(
+            "/api/v1/payments/portal", headers=_auth_header(test_user)
+        )
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"url": fake_session.url}
+
+    portal_mock.assert_called_once()
+    kwargs = portal_mock.call_args.kwargs
+    assert kwargs["customer"] == "cus_portal_abc"
+    assert kwargs["return_url"] == "https://app.example.com/profile"
+
+
+async def test_portal_session_403_for_free_user(client, test_user, db_session):
+    """Free user (no stripe_customer_id) is rejected with 403."""
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    settings = get_settings()
+    settings.stripe_secret_key = "sk_test_dummy"
+
+    # test_user fixture already seeds plan='free' with no customer_id.
+    # No Stripe API calls should be made — patch to assert no-call.
+    with patch(
+        "app.services.payment_service.stripe.billing_portal.Session.create",
+    ) as portal_mock:
+        resp = await client.post(
+            "/api/v1/payments/portal", headers=_auth_header(test_user)
+        )
+
+    assert resp.status_code == 403, resp.text
+    portal_mock.assert_not_called()
+
+
+async def test_portal_session_401_for_unauth(client):
+    """Unauthenticated requests are rejected with 401, no Stripe call."""
+    with patch(
+        "app.services.payment_service.stripe.billing_portal.Session.create",
+    ) as portal_mock:
+        resp = await client.post("/api/v1/payments/portal")
+
+    assert resp.status_code == 401
+    portal_mock.assert_not_called()
+
+
 async def test_webhook_rejects_invalid_signature(client):
     """A signature verification failure returns 400 and does not mutate state."""
     import stripe

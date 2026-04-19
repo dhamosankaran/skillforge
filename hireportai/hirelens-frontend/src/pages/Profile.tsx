@@ -17,14 +17,16 @@
  * what to aim for; earned badges show the date and a glow.
  */
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Flame, Lock, Trophy, BookOpen, Sparkles, Radar, CalendarDays, Settings, FileText, Copy, Check, Loader2 } from 'lucide-react'
+import { Flame, Lock, Trophy, BookOpen, Sparkles, Radar, CalendarDays, Settings, FileText, Copy, Check, Loader2, CreditCard } from 'lucide-react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { XPBar } from '@/components/profile/XPBar'
 import { useGamification } from '@/context/GamificationContext'
 import { useAuth } from '@/context/AuthContext'
+import { useUsage } from '@/context/UsageContext'
 import { capture } from '@/utils/posthog'
-import api, { generateExperience } from '@/services/api'
+import api, { createBillingPortalSession, generateExperience } from '@/services/api'
 import { SkillRadar } from '@/components/progress/SkillRadar'
 import { ActivityHeatmap } from '@/components/progress/ActivityHeatmap'
 import { EmailPreferences } from '@/components/settings/EmailPreferences'
@@ -69,6 +71,8 @@ async function fetchStudyProgress(): Promise<StudyProgress> {
 
 export default function Profile() {
   const { user } = useAuth()
+  const { usage } = useUsage()
+  const navigate = useNavigate()
   const { stats, isLoading, refresh } = useGamification()
   const [progress, setProgress] = useState<StudyProgress | null>(null)
   const [progressError, setProgressError] = useState<string | null>(null)
@@ -76,6 +80,23 @@ export default function Profile() {
   const [experienceLoading, setExperienceLoading] = useState(false)
   const [experienceCopied, setExperienceCopied] = useState(false)
   const [experienceError, setExperienceError] = useState<string | null>(null)
+  const [portalLoading, setPortalLoading] = useState(false)
+  const [portalError, setPortalError] = useState<string | null>(null)
+
+  const isPro = usage.plan === 'pro'
+
+  async function handleManageSubscription() {
+    setPortalLoading(true)
+    setPortalError(null)
+    capture('subscription_portal_opened')
+    try {
+      const res = await createBillingPortalSession()
+      window.location.href = res.url
+    } catch {
+      setPortalError("Couldn't open billing portal. Please try again.")
+      setPortalLoading(false)
+    }
+  }
 
   useEffect(() => {
     capture('profile_viewed')
@@ -315,6 +336,60 @@ export default function Profile() {
         {/* ── Theme ─────────────────────────────────────────────── */}
         <section>
           <ThemePicker />
+        </section>
+
+        {/* ── Subscription ──────────────────────────────────────── */}
+        <section data-testid="subscription-section">
+          <div className="flex items-center gap-2 mb-3">
+            <CreditCard size={14} className="text-accent-primary" />
+            <h2 className="text-[11px] uppercase tracking-[0.15em] text-text-secondary font-semibold">
+              Subscription
+            </h2>
+          </div>
+          <div className="rounded-2xl border border-contrast/[0.08] bg-bg-surface/60 p-5">
+            {isPro ? (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-text-primary">Pro plan</p>
+                  <p className="text-[11px] text-text-muted mt-1">Active</p>
+                </div>
+                <div className="flex flex-col items-start sm:items-end gap-1">
+                  <button
+                    onClick={handleManageSubscription}
+                    disabled={portalLoading}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-accent-primary/10 border border-accent-primary/25 text-accent-primary text-sm font-semibold hover:bg-accent-primary/18 transition-colors disabled:opacity-40"
+                  >
+                    {portalLoading ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        Opening…
+                      </>
+                    ) : (
+                      'Manage subscription'
+                    )}
+                  </button>
+                  {portalError && (
+                    <p className="text-[11px] text-danger">{portalError}</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-text-primary">Free plan</p>
+                  <p className="text-[11px] text-text-muted mt-1">
+                    Unlock Pro for full library access and unlimited scans.
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate('/pricing')}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-accent-primary/10 border border-accent-primary/25 text-accent-primary text-sm font-semibold hover:bg-accent-primary/18 transition-colors"
+                >
+                  Upgrade to Pro
+                </button>
+              </div>
+            )}
+          </div>
         </section>
 
         {/* ── Settings ──────────────────────────────────────────── */}

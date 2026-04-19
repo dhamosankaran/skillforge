@@ -45,6 +45,14 @@ class UserNotFoundError(PaymentError):
     """No user matched the provided ID."""
 
 
+class NotProSubscriberError(PaymentError):
+    """Billing portal can only be opened for an active Pro subscriber.
+
+    Raised when a non-Pro user (or a user without a Stripe customer id)
+    attempts to open a portal session. The route layer maps this to 403.
+    """
+
+
 def _init_stripe() -> None:
     stripe.api_key = get_settings().stripe_secret_key
 
@@ -136,6 +144,53 @@ async def create_checkout_session(
         event="checkout_started",
         properties={"price_id": price_id, "plan": "pro"},
     )
+    return session.url
+
+
+# ── Billing portal ──────────────────────────────────────────────────────────
+
+
+async def create_billing_portal_session(
+    user_id: str,
+    db: AsyncSession,
+) -> str:
+    """Create a Stripe hosted billing portal session for a Pro user.
+
+    Returns the portal URL. The portal lets the user cancel, update
+    payment methods, and view invoice history on Stripe's hosted UI.
+    Cancellation timing is Stripe's default (at period end).
+
+    Raises:
+        UserNotFoundError — user_id does not exist.
+        NotProSubscriberError — user is not on the Pro plan, or has no
+                                stripe_customer_id (never upgraded).
+        PaymentError — Stripe API call failed.
+    """
+    _init_stripe()
+    settings = get_settings()
+
+    user = (
+        await db.execute(select(User).where(User.id == user_id))
+    ).scalar_one_or_none()
+    if user is None:
+        raise UserNotFoundError(user_id)
+
+    sub = (
+        await db.execute(select(Subscription).where(Subscription.user_id == user.id))
+    ).scalar_one_or_none()
+
+    if sub is None or sub.plan != "pro" or not sub.stripe_customer_id:
+        raise NotProSubscriberError(user.id)
+
+    try:
+        session = stripe.billing_portal.Session.create(
+            customer=sub.stripe_customer_id,
+            return_url=f"{settings.frontend_url}/profile",
+        )
+    except stripe.error.StripeError as exc:  # type: ignore[attr-defined]
+        logger.exception("Stripe billing portal session creation failed")
+        raise PaymentError(f"Stripe error: {exc}") from exc
+
     return session.url
 
 

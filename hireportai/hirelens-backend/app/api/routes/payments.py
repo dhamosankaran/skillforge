@@ -14,8 +14,10 @@ from app.models.user import User
 from app.services.geo_pricing_service import get_pricing
 from app.services.payment_service import (
     InvalidSignatureError,
+    NotProSubscriberError,
     PaymentError,
     UserNotFoundError,
+    create_billing_portal_session,
     create_checkout_session,
     handle_webhook,
 )
@@ -28,6 +30,10 @@ class CheckoutRequest(BaseModel):
 
 
 class CheckoutResponse(BaseModel):
+    url: str
+
+
+class PortalResponse(BaseModel):
     url: str
 
 
@@ -81,6 +87,30 @@ async def create_checkout(
             status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)
         )
     return CheckoutResponse(url=url)
+
+
+@router.post("/payments/portal", response_model=PortalResponse)
+async def create_portal(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> PortalResponse:
+    """Create a Stripe hosted billing portal session for the Pro user."""
+    try:
+        url = await create_billing_portal_session(user.id, db)
+    except NotProSubscriberError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Billing portal is only available to Pro subscribers",
+        )
+    except UserNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+    except PaymentError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)
+        )
+    return PortalResponse(url=url)
 
 
 @router.post("/payments/webhook")
