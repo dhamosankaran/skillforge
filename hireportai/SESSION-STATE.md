@@ -61,7 +61,6 @@ These are user-visible bugs. Don't refactor around them — they have dedicated 
 | Feature | Symptom | Fix slice |
 |---------|---------|-----------|
 | Geo-Pricing Visibility | Audit complete (P5-S8): A+C fixed. Remaining deferred gaps — B: no price on LoginPage; D: ip-api.com rate-limit fallback mis-prices Indian users under load; E: Free-plan shows `$0` even for INR users. | Deferred (post-P5B) |
-| Stripe Webhook Idempotency | Possible — duplicate webhook delivery could double-grant Pro. Audit pending. | P5-S26c |
 
 ---
 
@@ -208,6 +207,7 @@ Slices that were in the backlog but are no longer needed. Do **not** ship them.
 Infra / data events outside the slice flow. Keep concise.
 
 - **2026-04-19 — Local dev-DB user-data wipe.** Ran `scripts/wipe_local_user_data.py` against `localhost:5432/hireport`. Deleted 77 rows across 16 user-gen tables (users=3, subscriptions=3, card_progress=26, missions=1, mission_days=22, mission_categories=7, user_badges=6, gamification_stats=3, email_preferences=3, usage_logs=1, tracker_applications_v2=2, plus 5 empty tables). Preserved 38 content rows (cards=15, categories=14, badges=9) and `alembic_version` (1). Transaction-wrapped, committed cleanly. Railway and all remote DBs untouched. Stripe test-mode customer orphans accepted — no API cleanup. Motivation: unblock obsoleting P5-S19 existing-user migration; also clears stale dev state ahead of P5-S18b.
+- **2026-04-19 — Spec #43 backfill (Stripe webhook idempotency).** Step-2 audit of P5-S26c found idempotency was already shipped (SELECT-first pattern + `stripe_events` table + one existing test). No code change needed. Drafted `docs/specs/phase-5/43-stripe-webhook-idempotency.md` documenting the existing implementation, added AC-4 test `test_handler_exception_rolls_back_stripe_event_row` (uses SAVEPOINT to mirror production rollback), fixed stale "Spec #22" citation in `payments.md` → Spec #43, dropped the stale Known-Broken row. Rule-14 doc-sync debt closed for webhook idempotency. Concurrent-delivery INSERT-first refactor deferred — see `[S26c-defer]` in Deferred Hygiene Items.
 
 ---
 
@@ -239,6 +239,7 @@ These rules apply across Phase 5. Add or remove as the sprint changes.
 - **[S35-flag, P5-S18]** Spec #35 §API Contract lists Last Scan as `/api/v1/tracker`, but the existing `getApplications()` helper hits the legacy `/api/tracker`. P5-S18 reused the existing helper unchanged — migrating the helper to `/api/v1/tracker` is an orthogonal slice that affects every `Tracker.tsx` consumer. Align when the tracker migration is scheduled.
 - **[S18-flag]** WeeklyProgress empty-state heuristic: currently uses `stats.total_xp === 0 && longest_streak === 0` as a proxy for "no review history" to avoid duplicating `ActivityHeatmap`'s fetch (`/api/v1/progress/heatmap?days=90`). Edge-case false negatives possible for users with XP from non-review sources or stale streak + empty current window. Fix: expose review-count from `ActivityHeatmap` via a render prop or callback, subscribe from widget.
 - **[S18-flag]** `DashboardWidget` contract: `action` prop is hidden when `state === 'error'` (only "Try again" renders). This is sensible UX but not documented in spec #35 §Solution. Document when the primitive's contract is next touched, either in the spec or in a new design-system skill entry.
+- **[S26c-defer]** Concurrent-delivery INSERT-first refactor for Stripe webhook. Current SELECT-first pattern can produce a transient 500 on rare concurrent duplicate deliveries hitting separate DB connections — Stripe's retry self-heals. Revisit only if production logs show this occurring with non-trivial frequency; tiny blast radius today. See spec #43 §Out of Scope for the INSERT-first-catch-IntegrityError alternative.
 
 ---
 

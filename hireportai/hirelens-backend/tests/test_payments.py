@@ -379,6 +379,116 @@ async def test_duplicate_webhook_is_idempotent(client, test_user, db_session):
     assert len(event_rows) == 1
 
 
+async def test_handler_exception_rolls_back_stripe_event_row(
+    test_user, db_session
+):
+    """Dispatch failure rolls back the stripe_events row; retry runs cleanly.
+
+    Spec #43 AC-4. Invariant under test: if the event dispatcher raises
+    after the idempotency row has been flushed but before the transaction
+    commits, the row must be rolled back along with any partial mutation.
+    A subsequent delivery of the same ``event.id`` must be processed as
+    a first delivery (not silently skipped as a duplicate from the failed
+    attempt).
+
+    This test invokes ``payment_service.handle_webhook`` directly rather
+    than through the HTTP client, and wraps the failing call in a
+    SAVEPOINT (``begin_nested``) to mirror what ``app.db.session.get_db``
+    does in production — ``except Exception: await session.rollback()``
+    — without tearing down the shared ``db_session`` fixture state.
+    """
+    # Seed a customer_id on the test user's subscription so the real
+    # dispatcher (second call) can locate the subscription by customer.
+    sub = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == test_user.id)
+        )
+    ).scalar_one()
+    sub.stripe_customer_id = "cus_rollback_abc"
+    await db_session.flush()
+
+    event_id = "evt_rollback_test_001"
+    fake_event = {
+        "id": event_id,
+        "type": "checkout.session.completed",
+        "data": {
+            "object": {
+                "client_reference_id": test_user.id,
+                "customer": "cus_rollback_abc",
+                "subscription": "sub_rollback_123",
+                "amount_total": 4900,
+                "currency": "usd",
+                "metadata": {"user_id": test_user.id, "plan": "pro"},
+            }
+        },
+    }
+    payload = json.dumps(fake_event).encode()
+    signature = "t=1,v1=fake"
+
+    from app.services import payment_service
+
+    class DispatchFailure(RuntimeError):
+        pass
+
+    # First delivery: force the dispatcher to raise mid-transaction.
+    # The SAVEPOINT here is the test-environment equivalent of the
+    # per-request transaction boundary in production's get_db.
+    savepoint = await db_session.begin_nested()
+    try:
+        with patch(
+            "app.services.payment_service.stripe.Webhook.construct_event",
+            return_value=fake_event,
+        ), patch(
+            "app.services.payment_service._handle_checkout_completed",
+            new=AsyncMock(side_effect=DispatchFailure("simulated dispatch failure")),
+        ):
+            with pytest.raises(DispatchFailure):
+                await payment_service.handle_webhook(
+                    payload, signature, db_session
+                )
+    finally:
+        await savepoint.rollback()
+
+    # The idempotency row must not have survived the failed transaction.
+    rows_after_failure = (
+        await db_session.execute(
+            select(StripeEvent).where(StripeEvent.id == event_id)
+        )
+    ).scalars().all()
+    assert rows_after_failure == []
+
+    # Second delivery of the same event.id: no patch on the dispatcher,
+    # it runs normally. The handler must NOT short-circuit as a duplicate.
+    with patch(
+        "app.services.payment_service.stripe.Webhook.construct_event",
+        return_value=fake_event,
+    ):
+        result = await payment_service.handle_webhook(
+            payload, signature, db_session
+        )
+
+    assert result == {
+        "received": True,
+        "event_type": "checkout.session.completed",
+    }
+
+    # Exactly one idempotency row exists now — from the successful retry.
+    rows_after_success = (
+        await db_session.execute(
+            select(StripeEvent).where(StripeEvent.id == event_id)
+        )
+    ).scalars().all()
+    assert len(rows_after_success) == 1
+
+    # And the dispatcher actually ran — the plan flipped to pro.
+    sub_after = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == test_user.id)
+        )
+    ).scalar_one()
+    assert sub_after.plan == "pro"
+
+
 async def test_webhook_rejects_invalid_signature(client):
     """A signature verification failure returns 400 and does not mutate state."""
     import stripe

@@ -50,15 +50,23 @@ India → INR ₹999/mo; everyone else → USD $49/mo. See
   `subscription_cancelled`
 - `invoice.payment_failed` → acknowledged but not yet acted on
 
-## Webhook Idempotency (Spec #22)
-- Dedup table: `stripe_events` (`app/models/stripe_event.py`)
-- Primary key = Stripe event id (`evt_…`)
-- Flow in `payment_service.handle_webhook()`:
-  1. Verify signature with `STRIPE_WEBHOOK_SECRET`.
+## Webhook Idempotency (Spec #43)
+- Dedup table: `stripe_events` (`app/models/stripe_event.py`) — PK = Stripe event id (`evt_…`).
+- Pattern: **SELECT-first, then flush-before-dispatch** in `payment_service.handle_webhook()`
+  (`app/services/payment_service.py:174-204`):
+  1. Verify signature with `STRIPE_WEBHOOK_SECRET` (upstream of the dedup block).
   2. `SELECT` from `stripe_events` by event id.
-  3. If present → return `{status: "duplicate"}`, do nothing.
-  4. Otherwise insert row + process body in the same transaction.
+  3. If present → return `{received: True, event_type}` with no side effect.
+  4. Otherwise `db.add(StripeEvent(...))` + `db.flush()`, then dispatch the
+     event handler. Both happen inside the per-request transaction from
+     `app/db/session.py:get_db`, so a dispatch failure rolls the dedup
+     row back along with the mutation — Stripe's next retry processes
+     cleanly.
 - Safe to replay the entire Stripe event log.
+- Narrow edge case deferred: under true concurrent duplicates on separate
+  DB connections, one delivery can see a transient 500 while the other
+  wins; Stripe's retry self-heals. See spec #43 §Out of Scope
+  (`[S26c-defer]`).
 
 ## Usage Limits (Free Tier)
 - Model: `app/models/usage_log.py` — rows per (user, feature, timestamp)
