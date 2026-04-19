@@ -1,0 +1,104 @@
+# SkillForge Backlog
+
+> Single source of truth for all work items: bugs, enhancements, and tech debt.
+> Spec files in `docs/specs/` describe the *what* and *how*. This file tracks the *what's-next* and *what's-done*.
+
+## Rules
+- **IDs are immutable.** Once assigned, a B-### or E-### never changes, never gets reused.
+- **One row per item.** Don't split, don't merge. Spawn a new ID if scope splinters.
+- **Status is the only field Claude Code may flip autonomously** (🔴 → 🟡 → ✅). All other fields require human edit.
+- **Closing an item:** status → ✅ + append a one-liner to Notes: `closed by <commit-sha> on <YYYY-MM-DD>`.
+- **Priority is a product decision.** Set by Dhamo only.
+- **Spec column is the on-disk path** (`docs/specs/phase-N/NN-name.md`). Empty if no spec exists yet — create one before implementation.
+
+## Status legend
+- 🔴 Pending (not started)
+- 🟡 In progress / partial / blocked
+- ✅ Done
+- ⚪ Won't do / deferred indefinitely
+
+## Priority legend
+- **P0** — broken in production, blocking users, blocking next milestone
+- **P1** — committed for this phase
+- **P2** — wanted, not committed
+- **P3** — someday / nice-to-have
+
+---
+
+## Active backlog
+
+### Bugs (B-)
+
+| ID | Area | Title | Priority | Status | Spec | Source slice | Notes |
+|----|------|-------|----------|--------|------|--------------|-------|
+| B-001 | ats-scanner | AI resume rewrite drops original sections (work history, education) | P0 | 🔴 | | P5-S9 | Output is a summary, not a full rewrite. Suspect prompt or token limit. |
+| B-002 | interview | Cover letter generation format malformed (headers, paragraphs, signature block) | P0 | 🔴 | | P5-S10 | Free-form output. Move to structured JSON response. |
+| B-003 | profile | "Generate My Experience" button non-functional on Profile page | P0 | 🔴 | | P5-S11 | Trace: button wiring → API → service. May need empty-state for users with no study history. |
+| B-004 | results | Keyword Frequency Analysis colors don't match the legend | P1 | 🔴 | | P5-S21 (part) | Likely swapped variable or className. |
+| B-005 | billing | Stripe webhook handler is non-idempotent — duplicate delivery risk | P0 | 🔴 | | P5-S26c | Production data corruption risk. Needs `stripe_processed_events` table + UNIQUE constraint. |
+| B-006 | settings | Existing registered users may lose settings when new fields are added | P1 | 🔴 | | P5-S27 | Audit migrations for backfill defaults; integration test for round-trip. |
+| B-008 | nav | `deprecated_route_hit` not wired in 10 Navigate redirect nodes | P2 | 🔴 | | (post-P5-S13) | Tracked in deferred hygiene. Telemetry on legacy URL hits. |
+| B-009 | docs | AGENTS.md:95 contradicts CLAUDE.md Rule 13 | P2 | 🔴 | | | Doc-only conflict. Pick one and align. |
+| B-010 | frontend | Orphan `Navbar.tsx` still in repo after TopNav migration | P3 | 🔴 | | | Dead code. Delete after confirming zero imports. |
+| B-011 | docs | Spec numbering on disk diverges from v2.1 doc | P2 | 🔴 | | | Captured in deferred hygiene; resolve during next doc sync pass. |
+| B-012 | playbook | v2.1 doc-bug audit pending | P2 | 🔴 | | | Several known errors in v2.1 prompts. Audit + patch in v2.3. |
+| B-013 | docs | Repo-root ambiguity in AGENTS.md + CLAUDE.md + prompt templates | P2 | 🔴 | | (from D-004) | AGENTS.md directory diagram and git-command examples implicitly treat `hireportai/` as repo root, but actual git root is parent. Audit and either (a) document the monorepo layout explicitly, or (b) add a "CWD vs git-path" note to CLAUDE.md. |
+
+### Enhancements (E-)
+
+| ID | Area | Title | Priority | Status | Spec | Source slice | Notes |
+|----|------|-------|----------|--------|------|--------------|-------|
+| E-001 | docs | Master doc audit + sync (playbook ↔ codebase) | P0 | 🔴 | | P5-S0, P5-S0b | Mandatory before more enhancement work. Output: `docs/audit/2026-04-doc-sync-audit.md`. |
+| E-002 | nav | Restructure routes to `/learn/*` and `/prep/*` namespaces | P0 | 🔴 | docs/specs/phase-5/33-navigation-restructure.md | P5-S12, S13, S14 | Includes 301 redirects from old flat paths + new TopNav. Unblocks E-003 and E-004. |
+| E-004 | persona | Add `interview_target_company` field to User model | P1 | 🔴 | docs/specs/phase-5/34-persona-picker-and-home.md | P5-S16-AMEND | Amends E-003 spec. New-user flow promises company + date capture. |
+| E-005 | home | Persona-aware HomeDashboard at `/home` | P1 | 🔴 | docs/specs/phase-5/34-persona-picker-and-home.md | P5-S18 | Depends on E-003. |
+| E-006 | home | State-aware widget logic on HomeDashboard | P1 | 🔴 | docs/specs/phase-5/40-home-dashboard-state-aware.md | P5-S18b | Layered on top of E-005. |
+| E-007 | home | Interview-Prepper guided 5-step checklist widget | P1 | 🔴 | docs/specs/phase-5/41-interview-prepper-checklist.md | P5-S18c | Depends on E-005. |
+| E-008 | persona | Existing-user PersonaPicker migration UX (banner + opt-in) | P1 | 🔴 | docs/specs/phase-5/34-persona-picker-and-home.md | P5-S19 | Don't auto-default. |
+| E-009 | results | Move Job Fit Explanation above the fold | P1 | 🔴 | | P5-S20 | High-leverage conversion fix. |
+| E-010 | results | Add education layer (info icons + first-visit guided tour) | P1 | 🔴 | | P5-S21 (part) | Pairs with B-004. |
+| E-011 | results | Plan-aware "missing skills → flashcards" CTA | P1 | 🔴 | | P5-S22 | Pro: deep link. Free: upgrade modal. Reuses ATS-card-bridge mapping. |
+| E-012 | interview | Persist generated interview question sets per (user, JD hash) | P1 | 🔴 | docs/specs/phase-5/35-interview-question-storage.md | P5-S23, S24, S25 | Free-tier counter applies to fresh generations only, not cache hits. |
+| E-013 | billing | Subscription cancellation flow (with reason picker) | P1 | 🔴 | docs/specs/phase-5/36-subscription-cancellation.md | P5-S26 | `cancel_at_period_end=true`. Optional win-back modal. |
+| E-014 | billing | Paywall dismissal flow + win-back email | P1 | 🔴 | docs/specs/phase-5/42-paywall-dismissal.md | P5-S26b | Dismissal logged; re-prompt only after N actions; win-back email at 3rd dismissal. |
+| E-015 | settings | Settings persistence audit + harden | P1 | 🔴 | | P5-S27 | Pairs with B-006. |
+| E-016 | study | Chat with AI on flashcards (per-card chat panel) | P2 | 🔴 | docs/specs/phase-5/37-chat-with-ai-flashcards.md | P5-S28, S29 | Free-tier daily message cap. Uses LLM router → Pro. |
+| E-017 | persona | Verify interview date picker + add Profile-side editor | P1 | 🔴 | docs/specs/phase-5/34-persona-picker-and-home.md | P5-S30 | Depends on E-003. |
+| E-018 | admin | LLM-driven analytics insights dashboard | P2 | 🔴 | docs/specs/phase-5/38-admin-analytics.md | P5-S31, S32, S33 | Five sections: metrics, performance, behavior, enhancement signal, feedback themes. |
+| E-019 | admin | Content Feed Flow (bulk topic → AI draft → review queue) | P2 | 🔴 | docs/specs/phase-5/39-content-feed-flow.md | P5-S34 | Lowest user impact, ship last in Phase 5. |
+| E-020 | results | Audit geo-pricing visibility on signup vs checkout | P1 | 🟡 | docs/specs/phase-5/27-geo-pricing.md | P5-S8 | Audit-only first; fix gaps in follow-up. |
+| E-021 | docs | Backfill spec — Multi-model LLM router | P3 | 🔴 | docs/specs/phase-5/25-llm-router.md | P5-S1 | Spec backfill for already-shipped feature. Optional. |
+| E-022 | docs | Backfill spec — Three-theme design system | P3 | 🔴 | docs/specs/phase-5/26-design-system.md | P5-S2 | Optional. |
+| E-023 | docs | Backfill spec — Geo-based pricing | P3 | 🔴 | docs/specs/phase-5/27-geo-pricing.md | P5-S3 | Optional. |
+| E-024 | docs | Backfill spec — Anti-abuse registration block | P3 | 🔴 | docs/specs/phase-5/28-anti-abuse-registration.md | P5-S4 | Optional. |
+| E-025 | docs | Backfill spec — Job tracker auto-populate from ATS | P3 | 🔴 | docs/specs/phase-5/29-tracker-autopopulate.md | P5-S5 | Optional. |
+| E-026 | docs | Backfill spec — Free-tier interview question limits | P3 | 🔴 | docs/specs/phase-5/30-free-tier-interview-limits.md | P5-S6 | Optional. Verify the actual limit value matches intent. |
+| E-027 | docs | Backfill spec — Branding + Midnight Forge landing page | P3 | 🔴 | docs/specs/phase-5/31-branding-skillforge.md, docs/specs/phase-5/32-landing-page-midnight-forge.md | P5-S7 | Optional. |
+| E-028 | infra | Create `.agent/skills/backend.md` for infra slices with no domain skill | P2 | 🔴 | | (deferred hygiene) | Currently no fallback skill for pure-infra slices. |
+| E-029 | learn | Lift `/learn/progress` out of Profile into its own page | P2 | 🔴 | | (deferred hygiene) | Skill radar + heatmap currently live inside Profile. |
+
+---
+
+## Closed (most recent first)
+
+| ID | Title | Closed by | Date | Notes |
+|----|-------|-----------|------|-------|
+| E-003 | Mandatory PersonaPicker on first login + persona model | 2c01cc7 | 2026-04-18 | P5-S17 full FE migration. closed by 2c01cc7 on 2026-04-18 |
+| B-007 | StudyDashboard PERSONA_CONFIG undefined for snake_case persona values | 2c01cc7 | 2026-04-18 | Closed alongside E-003. closed by 2c01cc7 on 2026-04-18 |
+
+---
+
+## Open decisions awaiting Dhamo
+
+These block specific items. Mirrors the v2.2 patch list — keep both in sync.
+
+| Decision | Affects | Default if not decided |
+|----------|---------|------------------------|
+| Persona switch UX: full-page reroute or modal? | E-003 (P5-S17) | Full-page reroute (current spec) |
+| Daily review consumes 15-card free budget, or browse-only? | E-011, Phase 1 paywall logic | Browse-only (more generous) |
+| Auto-save scan to tracker — automatic or "Save?" prompt? | E-025 (P5-S5 spec) | Automatic (current behavior) |
+| Old Phase 2 email deep links — covered by P5-S13 redirects? | E-002 (P5-S13) | Yes, must be covered |
+
+---
+
+*Last updated: 2026-04-19. Initial seed from v2.1 Phase 5 status table + v2.2 patch + known bugs in memory.*

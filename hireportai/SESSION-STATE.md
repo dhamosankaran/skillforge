@@ -6,6 +6,32 @@
 
 ---
 
+## Session Header
+
+| Field | Value |
+|-------|-------|
+| **HEAD commit** | `3ad9c90` |
+| **Branch** | `main` |
+| **CODE-REALITY.md sha** | `f09be80` (generated 2026-04-19) |
+| **CODE-REALITY stale?** | No |
+| **Last hand-edit** | 2026-04-19 — D-001 + D-003 + D-004 resolution |
+
+> **Stale-marking rule**: Mark CODE-REALITY stale at the end of any slice that touched routes, models, top-level types, `App.tsx`, or layout components. Regenerate before drafting the next plan-level prompt.
+
+---
+
+## Drift flags
+
+> Append-only. When code, specs, docs, and chat-knowledge disagree, log it here. Don't silently reconcile. Resolve in a follow-up commit and close the flag with a one-liner.
+
+| # | Date | Source A | Source B | What disagrees | Resolution / status |
+|---|------|----------|----------|----------------|---------------------|
+| D-001 | 2026-04-19 | SESSION-STATE.md (stale) | AGENTS.md routes table + git log | AGENTS.md said PersonaPicker shipped in P5-S17; stale SESSION-STATE treated it as upcoming. | ✅ RESOLVED 2026-04-19 — AGENTS.md was authoritative; PersonaPicker shipped in P5-S17 (commit 2c01cc7). SESSION-STATE restored from HEAD (3ad9c90) and forward-patched. |
+| D-003 | 2026-04-19 | Chat-Claude prompt | Claude Code pre-flight | Prompt assumed last-good SESSION-STATE was at commit effc980 based on its commit subject. Reality: bad version was uncommitted; HEAD itself was last-good. Following the prompt would have regressed ~10 slices. | ✅ RESOLVED 2026-04-19 — restored from HEAD instead. Lesson: when a working-tree change is uncommitted, "last good" is HEAD, not a prior commit. Future drift-resolution prompts should diff working tree vs HEAD before reaching for git log. |
+| D-004 | 2026-04-19 | Session prompts + AGENTS.md (implicit) | Actual git repo layout | Prompts and docs treat `hireportai/` as repo root, but the git repo root is the parent directory. Git-path commands (`git show HEAD:X`) resolve against true root, not CWD. | 🟡 PARTIAL — this instance resolved by using `HEAD:hireportai/SESSION-STATE.md`. Root cause (docs imply repo-root = `hireportai/`) still present. Follow-up tracked as B-013. |
+
+---
+
 ## Active Phase
 
 **Phase 5: Enhancements + UX Restructure**
