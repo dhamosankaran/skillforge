@@ -131,3 +131,50 @@ def test_full_resume_reaches_llm_prompt():
     assert captured["max_tokens"] is None or captured["max_tokens"] >= 8000, (
         f"max_tokens={captured['max_tokens']} is below the P5-S9 floor of 8000."
     )
+
+
+# ── Spec #47 AC-2: the prompt's preservation contract must survive refactors ──
+#
+# Rules 1, 7, and 8 of the resume-rewrite prompt tell the LLM to keep every
+# section, add nothing, and remove nothing. Dropping any of them is how the
+# v2.1 "missing original content" bug would silently come back — the input
+# would reach the model intact (AC-1) but the model would be free to summarise.
+PRESERVATION_CLAUSES = (
+    "Maintain the EXACT same sections as the original",
+    "Do NOT add sections that weren't in the original resume",
+    "Do NOT remove any jobs, education entries, or skills",
+)
+
+
+def test_prompt_includes_preservation_rules():
+    """Every preservation clause from spec #47 §2.3 must appear in the prompt."""
+    resume_data = {
+        "full_text": "## Summary\nShort resume.\n\n## Experience\nAcme — Engineer\n",
+        "skills": [],
+        "sections": {},
+    }
+    jd_requirements = {"job_title": "Engineer", "all_skills": []}
+
+    captured = {}
+
+    def fake_generate(*, task, prompt, **kwargs):
+        captured["prompt"] = prompt
+        return "## Summary\nRewritten."
+
+    with patch(
+        "app.services.gpt_service.generate_for_task",
+        side_effect=fake_generate,
+    ):
+        generate_resume_rewrite(
+            resume_data=resume_data,
+            jd_requirements=jd_requirements,
+            template_type="general",
+        )
+
+    prompt = captured["prompt"]
+    for clause in PRESERVATION_CLAUSES:
+        assert clause in prompt, (
+            f"Preservation clause missing from rewrite prompt: {clause!r}. "
+            "Dropping this rule risks reintroducing the v2.1 "
+            "'missing original content' regression. See spec #47 AC-2."
+        )
