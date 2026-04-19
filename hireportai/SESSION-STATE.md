@@ -43,7 +43,7 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 After P5-S9, continue in this order:
 1. P5B (S10–S11) — cover letter, Generate My Experience
 2. P5C (S12–S14) — route restructure
-3. P5D (S15–S19, **S16-AMEND**, **S18b**, **S18c**) — PersonaPicker + HomeDashboard + state-aware + checklist
+3. P5D (S15–S18, **S16-AMEND**, **S18b**, **S18c**) — PersonaPicker + HomeDashboard + state-aware + checklist. *(S19 obsoleted — see "Obsolete Slices".)*
 4. P5E (S20–S22) — Analysis Results improvements
 5. P5F (S23–S26, **S26b**, **S26c**) — Interview storage + cancel sub + paywall dismissal + webhook idempotency
 6. P5G (S27–S30) — Settings + chat AI + interview date
@@ -89,7 +89,6 @@ These are user-visible bugs. Don't refactor around them — they have dedicated 
 |----------|---------|-----------|-----------|
 | Free-tier interview question limit value | Implemented but value not validated against business model. P5-S6 will flag the current value for confirmation. | No | End of Phase 5 |
 | Cancellation win-back flow (50% off 3 months) | Mentioned in P5-S26 spec as optional. | No | Before P5-S26 |
-| Existing-user persona migration (auto-default vs force-pick) | Recommendation in P5-S19: force-pick. Confirm. | Yes | Before P5-S19 |
 | **Strategic path to $100M ARR**: B2B pivot, adjacent expansion, or geo-volume play? | See `STRATEGIC-OPTIONS.md`. Affects every Phase 6+ decision. | Not yet | Before Phase 6 planning |
 
 ---
@@ -193,6 +192,22 @@ executing the sweep.
 - Small surface: model, migration, `/auth/me` serialiser. No legacy frontend UX reads the columns.
 
 **Affected slices:** P5-S15 spec (amended — rename rather than keep-separate), P5-S16 (migration does rename + retype, with a pre-flight row-count diagnostic).
+
+---
+
+## Obsolete Slices
+
+Slices that were in the backlog but are no longer needed. Do **not** ship them.
+
+- **P5-S19 — Existing-user persona migration.** Obsoleted 2026-04-19 by local dev-DB wipe (77 user-gen rows removed; see Ops Log). No pre-S17 users exist in any environment: local is freshly wiped and production has never been opened to real traffic (Railway DB never accumulated users per prior decisions). The "auto-default vs force-pick" open decision is moot — `PersonaGate` (shipped in P5-S17) already redirects every `user.persona === null` session to `/onboarding/persona`, so all future users pick a persona at first login. Re-evaluate only if/when production users accumulate **before** a future persona-schema change requires backfill.
+
+---
+
+## Ops Log
+
+Infra / data events outside the slice flow. Keep concise.
+
+- **2026-04-19 — Local dev-DB user-data wipe.** Ran `scripts/wipe_local_user_data.py` against `localhost:5432/hireport`. Deleted 77 rows across 16 user-gen tables (users=3, subscriptions=3, card_progress=26, missions=1, mission_days=22, mission_categories=7, user_badges=6, gamification_stats=3, email_preferences=3, usage_logs=1, tracker_applications_v2=2, plus 5 empty tables). Preserved 38 content rows (cards=15, categories=14, badges=9) and `alembic_version` (1). Transaction-wrapped, committed cleanly. Railway and all remote DBs untouched. Stripe test-mode customer orphans accepted — no API cleanup. Motivation: unblock obsoleting P5-S19 existing-user migration; also clears stale dev state ahead of P5-S18b.
 
 ---
 
