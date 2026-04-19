@@ -202,14 +202,10 @@ export async function generateInterviewPrep(
 }
 
 export async function getApplications(): Promise<TrackerApplication[]> {
-  const response = await api.get<TrackerApplication[]>('/api/tracker')
+  const response = await api.get<TrackerApplication[]>('/api/v1/tracker')
   return response.data
 }
 
-// Widget-scoped tracker fetch. Hits the authenticated /api/v1/tracker
-// so the response is filtered to the caller's user_id. getApplications()
-// above still points at the legacy unauth /api/tracker for Tracker.tsx
-// until that migration ships. See docs/specs/phase-5/44-home-widget-empty-states.md.
 export async function fetchUserApplications(): Promise<TrackerApplication[]> {
   const response = await api.get<TrackerApplication[]>('/api/v1/tracker')
   return response.data
@@ -218,7 +214,7 @@ export async function fetchUserApplications(): Promise<TrackerApplication[]> {
 export async function createApplication(
   data: Omit<TrackerApplication, 'id' | 'created_at'>
 ): Promise<TrackerApplication> {
-  const response = await api.post<TrackerApplication>('/api/tracker', data)
+  const response = await api.post<TrackerApplication>('/api/v1/tracker', data)
   return response.data
 }
 
@@ -226,12 +222,12 @@ export async function updateApplication(
   id: string,
   data: Partial<Omit<TrackerApplication, 'id' | 'created_at'>>
 ): Promise<TrackerApplication> {
-  const response = await api.patch<TrackerApplication>(`/api/tracker/${id}`, data)
+  const response = await api.patch<TrackerApplication>(`/api/v1/tracker/${id}`, data)
   return response.data
 }
 
 export async function deleteApplication(id: string): Promise<void> {
-  await api.delete(`/api/tracker/${id}`)
+  await api.delete(`/api/v1/tracker/${id}`)
 }
 
 // ─── Study / Cards ────────────────────────────────────────────────────────────

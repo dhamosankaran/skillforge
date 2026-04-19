@@ -1,7 +1,6 @@
 """SQLAlchemy-backed job application tracker service (v2)."""
 import json
 import uuid
-from datetime import datetime, timezone
 from typing import List, Optional
 
 from sqlalchemy import select
@@ -10,6 +9,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.tracker import TrackerApplicationModel
 from app.schemas.requests import TrackerApplicationCreate, TrackerApplicationUpdate
 from app.schemas.responses import TrackerApplication
+
+
+def _require_user_id(user_id: str) -> None:
+    """Reject calls that would operate across every tenant.
+
+    Every read/write in this service is tenant-scoped. A None user_id
+    would silently produce cross-tenant results; fail fast instead.
+    """
+    if user_id is None:
+        raise ValueError("user_id is required; tracker_service_v2 is tenant-scoped")
 
 
 def _to_response(model: TrackerApplicationModel) -> TrackerApplication:
@@ -44,11 +53,12 @@ def _to_response(model: TrackerApplicationModel) -> TrackerApplication:
 async def create_application(
     data: TrackerApplicationCreate,
     db: AsyncSession,
-    user_id: Optional[str] = None,
+    user_id: str,
     skills_matched: Optional[List[str]] = None,
     skills_missing: Optional[List[str]] = None,
 ) -> TrackerApplication:
-    """Create a new job application."""
+    """Create a new job application for the given user."""
+    _require_user_id(user_id)
     app = TrackerApplicationModel(
         id=str(uuid.uuid4()),
         user_id=user_id,
@@ -69,14 +79,15 @@ async def create_application(
 async def find_by_scan_id(
     scan_id: str,
     db: AsyncSession,
-    user_id: Optional[str] = None,
+    user_id: str,
 ) -> Optional[TrackerApplication]:
-    """Find a tracker entry by scan_id."""
-    stmt = select(TrackerApplicationModel).where(
-        TrackerApplicationModel.scan_id == scan_id
+    """Find a tracker entry by scan_id within the user's own rows."""
+    _require_user_id(user_id)
+    stmt = (
+        select(TrackerApplicationModel)
+        .where(TrackerApplicationModel.scan_id == scan_id)
+        .where(TrackerApplicationModel.user_id == user_id)
     )
-    if user_id:
-        stmt = stmt.where(TrackerApplicationModel.user_id == user_id)
     result = await db.execute(stmt)
     model = result.scalar_one_or_none()
     return _to_response(model) if model else None
@@ -84,12 +95,15 @@ async def find_by_scan_id(
 
 async def get_applications(
     db: AsyncSession,
-    user_id: Optional[str] = None,
+    user_id: str,
 ) -> List[TrackerApplication]:
-    """Get all applications, optionally filtered by user."""
-    stmt = select(TrackerApplicationModel).order_by(TrackerApplicationModel.created_at.desc())
-    if user_id:
-        stmt = stmt.where(TrackerApplicationModel.user_id == user_id)
+    """List all applications owned by the given user."""
+    _require_user_id(user_id)
+    stmt = (
+        select(TrackerApplicationModel)
+        .where(TrackerApplicationModel.user_id == user_id)
+        .order_by(TrackerApplicationModel.created_at.desc())
+    )
     result = await db.execute(stmt)
     return [_to_response(row) for row in result.scalars().all()]
 
@@ -97,12 +111,15 @@ async def get_applications(
 async def get_application_by_id(
     app_id: str,
     db: AsyncSession,
-    user_id: Optional[str] = None,
+    user_id: str,
 ) -> Optional[TrackerApplication]:
-    """Get a single application by ID."""
-    stmt = select(TrackerApplicationModel).where(TrackerApplicationModel.id == app_id)
-    if user_id:
-        stmt = stmt.where(TrackerApplicationModel.user_id == user_id)
+    """Get a single application by ID within the user's own rows."""
+    _require_user_id(user_id)
+    stmt = (
+        select(TrackerApplicationModel)
+        .where(TrackerApplicationModel.id == app_id)
+        .where(TrackerApplicationModel.user_id == user_id)
+    )
     result = await db.execute(stmt)
     model = result.scalar_one_or_none()
     return _to_response(model) if model else None
@@ -112,12 +129,15 @@ async def update_application(
     app_id: str,
     data: TrackerApplicationUpdate,
     db: AsyncSession,
-    user_id: Optional[str] = None,
+    user_id: str,
 ) -> Optional[TrackerApplication]:
-    """Update an existing application."""
-    stmt = select(TrackerApplicationModel).where(TrackerApplicationModel.id == app_id)
-    if user_id:
-        stmt = stmt.where(TrackerApplicationModel.user_id == user_id)
+    """Update an existing application owned by the given user."""
+    _require_user_id(user_id)
+    stmt = (
+        select(TrackerApplicationModel)
+        .where(TrackerApplicationModel.id == app_id)
+        .where(TrackerApplicationModel.user_id == user_id)
+    )
     result = await db.execute(stmt)
     model = result.scalar_one_or_none()
     if not model:
@@ -133,12 +153,15 @@ async def update_application(
 async def delete_application(
     app_id: str,
     db: AsyncSession,
-    user_id: Optional[str] = None,
+    user_id: str,
 ) -> bool:
-    """Delete an application. Returns True if deleted."""
-    stmt = select(TrackerApplicationModel).where(TrackerApplicationModel.id == app_id)
-    if user_id:
-        stmt = stmt.where(TrackerApplicationModel.user_id == user_id)
+    """Delete an application owned by the given user. Returns True if deleted."""
+    _require_user_id(user_id)
+    stmt = (
+        select(TrackerApplicationModel)
+        .where(TrackerApplicationModel.id == app_id)
+        .where(TrackerApplicationModel.user_id == user_id)
+    )
     result = await db.execute(stmt)
     model = result.scalar_one_or_none()
     if not model:

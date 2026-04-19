@@ -172,7 +172,6 @@ mounted; v1 is authoritative for new work.
 | `/api/rewrite` | `app/api/routes/rewrite.py` | Legacy bullet rewrite |
 | `/api/cover_letter` | `app/api/routes/cover_letter.py` | Legacy |
 | `/api/interview` | `app/api/routes/interview.py` | Legacy |
-| `/api/tracker` | `app/api/routes/tracker.py` | Legacy |
 | `/api/v1/auth` | `app/api/v1/routes/auth.py` | Google OAuth + JWT + IP blocking |
 | `/api/v1/admin` | `app/api/v1/routes/admin.py` | Admin card CRUD + card draft AI |
 | `/api/v1/analyze` | `app/api/v1/routes/analyze.py` | ATS scan + auto tracker |

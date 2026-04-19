@@ -19,7 +19,6 @@ from app.api.routes import (
     onboarding,
     payments,
     rewrite,
-    tracker,
 )
 from app.api.v1.routes import (
     admin as v1_admin,
@@ -122,7 +121,6 @@ def create_app() -> FastAPI:
     app.include_router(rewrite.router, prefix="/api", tags=["Rewrite"])
     app.include_router(cover_letter.router, prefix="/api", tags=["Cover Letter"])
     app.include_router(interview.router, prefix="/api", tags=["Interview Prep"])
-    app.include_router(tracker.router, prefix="/api", tags=["Tracker"])
 
     # v1 routers — /api/v1/*
     app.include_router(v1_auth.router, prefix="/api/v1", tags=["v1 Auth"])

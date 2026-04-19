@@ -148,7 +148,7 @@ of blank cards. Rule 4 gives tests a crisp structural check.
 | `TodaysReviewWidget` | `fetchDailyQueue()` → `/api/v1/study/daily` | ✓ |
 | `StreakWidget` | `useGamification()` (clears on sign-out) | ✓ |
 | `WeeklyProgressWidget` | `useGamification()` + `ActivityHeatmap` | ✓ |
-| `LastScanWidget` | `fetchUserApplications()` → `/api/v1/tracker` (post-spec #44) | ✓ |
+| `LastScanWidget` | `fetchUserApplications()` → `/api/v1/tracker` | ✓ |
 | `InterviewTargetWidget` | `user.interview_target_*` (AuthContext) | ✓ |
 | `CountdownWidget` | `user.interview_target_date` + `fetchActiveMission()` | ✓ |
 | `TeamComingSoonWidget` | static copy | n/a |

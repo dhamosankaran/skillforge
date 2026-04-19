@@ -128,9 +128,9 @@ curl -X POST http://localhost:8000/api/v1/resume/<resume_id>/optimize \
 | POST | `/api/rewrite` | AI resume rewrite |
 | POST | `/api/cover-letter` | Cover letter generation |
 | POST | `/api/interview-prep` | Interview questions + STAR framework |
-| GET/POST/PATCH/DELETE | `/api/tracker` | Job application tracker CRUD |
 
-These same endpoints are also available at `/api/v1/*`.
+These same endpoints are also available at `/api/v1/*`. Tracker CRUD is
+authenticated-only at `/api/v1/tracker` (GET/POST/PATCH/DELETE).
 
 ---
 
