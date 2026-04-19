@@ -12,6 +12,7 @@ from app.core.rate_limit import limiter
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.user import PersonaUpdateRequest
+from app.services import home_state_service
 
 router = APIRouter()
 
@@ -41,4 +42,5 @@ async def update_persona(
     db.add(user)
     await db.commit()
     await db.refresh(user)
+    home_state_service.invalidate(user.id)
     return _user_dict(user)

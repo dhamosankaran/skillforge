@@ -310,6 +310,15 @@ export async function fetchGamificationStats(): Promise<GamificationStats> {
   return response.data
 }
 
+// ─── Home dashboard — state-aware widgets (P5-S18c, spec #40) ────────────────
+
+import type { HomeStateResponse } from '@/types/homeState'
+
+export async function fetchHomeState(): Promise<HomeStateResponse> {
+  const response = await api.get<HomeStateResponse>('/api/v1/home/state')
+  return response.data
+}
+
 // ─── Email Preferences ──────────────────────────────────────────────────────
 
 export async function fetchEmailPreferences(): Promise<EmailPreference> {

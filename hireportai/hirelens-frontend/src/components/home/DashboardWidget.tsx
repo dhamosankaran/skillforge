@@ -85,6 +85,7 @@ export function DashboardWidget({
             {action.href ? (
               <Link
                 to={action.href}
+                onClick={action.onClick}
                 className="text-sm font-medium text-accent-primary hover:underline"
               >
                 {action.label}

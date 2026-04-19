@@ -62,6 +62,8 @@ PostHog is instrumented from Phase 1 and runs on both tiers:
 | `email_preferences_saved` | `pages/EmailPreferences.tsx` | `{daily_reminder}` / `{timezone}` |
 | `nav_clicked` | `components/layout/TopNav.tsx`, `components/layout/MobileNav.tsx` | `{namespace: 'home'\|'learn'\|'prep'\|'profile'\|'admin', from_path, to_path}` |
 | `home_dashboard_viewed` | `pages/HomeDashboard.tsx` | `{persona: 'interview_prepper'\|'career_climber'\|'team_lead'}` — fires once on mount via `useRef` idempotency guard so Strict Mode's double-invoked effect captures once (P5-S18). |
+| `home_state_evaluated` | `hooks/useHomeState.ts` | `{persona, states: string[], state_count, cache_hit}` — fires once per resolved fetch; deduped by fingerprint of `persona\|states` so refetch-with-same-result doesn't re-fire (P5-S18c). |
+| `home_state_widget_clicked` | `components/home/widgets/{StreakAtRisk,MissionActive,MissionOverdue,ResumeStale,InactiveReturner,FirstSessionDone}Widget.tsx` | `{state, cta}` — fires on the priority-slot widget's CTA click, alongside the route navigation (P5-S18c). |
 
 > **P5-S14 note (deprecated_route_hit):** the navigation-restructure spec (`docs/specs/phase-5/12-navigation-restructure.md` §Analytics) also defines a transitional `deprecated_route_hit` event to fire from each `<Navigate>` node in `src/App.tsx`'s redirect block. It is **not currently wired** (P5-S13 landed the redirect block without it). If we want to measure when the old paths stop receiving hits before dropping the block in Phase 6, we need to backfill — out of scope for P5-S14, flagged here as a P5-S13 gap.
 
@@ -103,6 +105,7 @@ Preserved for historical PostHog data cross-reference. Source files no longer ex
 | `email_sent` | `app/services/reminder_service.py` | `{user_id, type, cards_due, streak}` |
 | `email_unsubscribed` | `app/api/v1/routes/email_prefs.py` | `{user_id, method}` |
 | `email_resubscribed` | `app/api/v1/routes/email_prefs.py` | `{user_id}` |
+| `home_state_evaluation_failed` | `app/services/home_state_service.py` | `{user_id, error_code}` — fires when the state evaluator's compute path raises; the API still returns 200 with `states: []` (P5-S18c). |
 
 ## Key Funnels (Phase 4 dashboards)
 1. **Acquisition:** `landing_page_viewed` → `cta_clicked` → sign-in →

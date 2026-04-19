@@ -32,6 +32,11 @@ vi.mock('@/components/home/widgets/CountdownWidget', () => ({
 vi.mock('@/components/home/widgets/TeamComingSoonWidget', () => ({
   TeamComingSoonWidget: () => <div data-testid="widget-team-coming-soon" />,
 }))
+// State-aware slot is exercised by its own test file. Stub it to a no-op
+// here so this file's tests stay focused on shell behavior + widget order.
+vi.mock('@/components/home/StateAwareWidgets', () => ({
+  StateAwareWidgets: () => null,
+}))
 
 let mockUser: AuthUser | null = null
 vi.mock('@/context/AuthContext', async () => {

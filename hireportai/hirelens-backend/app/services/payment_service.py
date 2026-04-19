@@ -28,6 +28,7 @@ from app.core.config import get_settings
 from app.models.stripe_event import StripeEvent
 from app.models.subscription import Subscription
 from app.models.user import User
+from app.services import home_state_service
 
 logger = logging.getLogger(__name__)
 
@@ -237,6 +238,7 @@ async def _handle_checkout_completed(data: dict, db: AsyncSession) -> None:
             "currency": data.get("currency"),
         },
     )
+    home_state_service.invalidate(sub.user_id)
 
 
 async def _handle_subscription_deleted(data: dict, db: AsyncSession) -> None:
@@ -261,6 +263,7 @@ async def _handle_subscription_deleted(data: dict, db: AsyncSession) -> None:
         event="subscription_cancelled",
         properties={"plan": "free"},
     )
+    home_state_service.invalidate(sub.user_id)
 
 
 async def _find_subscription(

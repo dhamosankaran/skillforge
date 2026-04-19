@@ -30,7 +30,7 @@ from app.models.card import Card
 from app.models.card_progress import CardProgress
 from app.models.category import Category
 from app.schemas.study import DailyCardItem, DailyReviewResponse, ReviewResponse, StudyProgressResponse
-from app.services import gamification_service
+from app.services import gamification_service, home_state_service
 
 # Daily 5 = the size of the daily review queue. Crossing this count earns the
 # `daily_complete` XP bonus exactly once per UTC day.
@@ -377,6 +377,8 @@ async def review_card(
             source="daily_complete",
             db=db,
         )
+
+    home_state_service.invalidate(user_id)
 
     return ReviewResponse(
         card_id=card_id,

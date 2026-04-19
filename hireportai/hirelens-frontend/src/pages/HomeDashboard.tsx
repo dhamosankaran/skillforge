@@ -8,6 +8,7 @@ import { LastScanWidget } from '@/components/home/widgets/LastScanWidget'
 import { InterviewTargetWidget } from '@/components/home/widgets/InterviewTargetWidget'
 import { CountdownWidget } from '@/components/home/widgets/CountdownWidget'
 import { TeamComingSoonWidget } from '@/components/home/widgets/TeamComingSoonWidget'
+import { StateAwareWidgets } from '@/components/home/StateAwareWidgets'
 
 const GRID = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
 
@@ -74,6 +75,7 @@ export default function HomeDashboard() {
         <h1 className="font-display text-2xl sm:text-3xl font-bold text-text-primary mb-8">
           {greeting}
         </h1>
+        <StateAwareWidgets persona={user.persona} />
         {user.persona === 'interview_prepper' && (
           <InterviewPrepperMode
             persona={user.persona}

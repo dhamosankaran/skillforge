@@ -28,6 +28,7 @@ from app.services.keywords import get_keyword_chart_data, match_keywords
 from app.services.nlp import extract_job_requirements, extract_skills
 from app.services.parser import parse_docx, parse_pdf
 from app.services.scorer import ATSScorer
+from app.services import home_state_service
 from app.services.tracker_service_v2 import create_application, find_by_scan_id
 
 router = APIRouter()
@@ -231,6 +232,7 @@ async def analyze_resume(
                     "gaps_count": len(skill_gaps),
                 },
             )
+        home_state_service.invalidate(current_user.id)
 
     return AnalysisResponse(
         scan_id=scan_id,

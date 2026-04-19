@@ -19,7 +19,7 @@ from app.models.card import Card
 from app.models.card_progress import CardProgress
 from app.models.category import Category
 from app.models.mission import Mission, MissionDay, mission_categories
-from app.services import gamification_service
+from app.services import gamification_service, home_state_service
 
 
 # ── Errors ──────────────────────────────────────────────────────────────────
@@ -207,6 +207,8 @@ async def create_mission(
             "daily_target": daily_target,
         },
     )
+
+    home_state_service.invalidate(user_id)
 
     return mission
 
@@ -466,5 +468,7 @@ async def complete_mission_day(
         )
 
     await db.flush()
+
+    home_state_service.invalidate(user_id)
 
     return mission, today_day, xp_amount
