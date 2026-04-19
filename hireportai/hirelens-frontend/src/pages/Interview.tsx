@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   MessageSquare, ChevronDown, ChevronUp, Zap,
-  BookOpen, Brain, Target, RefreshCw, User, Briefcase
+  BookOpen, Brain, Target, RefreshCw, User, Briefcase, Database
 } from 'lucide-react'
 import clsx from 'clsx'
 import { PageWrapper } from '@/components/layout/PageWrapper'
@@ -10,7 +10,10 @@ import { GlowButton } from '@/components/ui/GlowButton'
 import { AnimatedCard, containerVariants } from '@/components/ui/AnimatedCard'
 import { PaywallModal } from '@/components/PaywallModal'
 import { useAnalysisContext } from '@/context/AnalysisContext'
+import { useUsage } from '@/context/UsageContext'
 import { useInterview } from '@/hooks/useInterview'
+import { capture } from '@/utils/posthog'
+import { jdHashPrefix } from '@/utils/jdHash'
 
 type CategoryFilter = 'all' | 'behavioral' | 'technical' | 'role-specific'
 
@@ -33,6 +36,19 @@ function detectCategory(question: string): CategoryFilter {
   if (q.includes('tell me about') || q.includes('describe a time') || q.includes('how do you handle') || q.includes('give an example')) return 'behavioral'
   if (q.includes('implement') || q.includes('algorithm') || q.includes('data structure') || q.includes('complexity') || q.includes('design') || q.includes('code') || q.includes('technical') || q.includes('difference between') || q.includes('explain how') || q.includes('what is')) return 'technical'
   return 'role-specific'
+}
+
+function formatRelativeTime(iso: string): string {
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return ''
+  const diffMs = Date.now() - then
+  const diffMin = Math.max(0, Math.round(diffMs / 60000))
+  if (diffMin < 1) return 'just now'
+  if (diffMin < 60) return `${diffMin} minute${diffMin === 1 ? '' : 's'} ago`
+  const diffHr = Math.round(diffMin / 60)
+  if (diffHr < 24) return `${diffHr} hour${diffHr === 1 ? '' : 's'} ago`
+  const diffDay = Math.round(diffHr / 24)
+  return `${diffDay} day${diffDay === 1 ? '' : 's'} ago`
 }
 
 interface QuestionCardProps {
@@ -123,6 +139,7 @@ function QuestionCard({ question, starFramework, index }: QuestionCardProps) {
 
 export default function Interview() {
   const { state } = useAnalysisContext()
+  const { usage } = useUsage()
   const { interviewResult, isLoading, limitInfo, runInterviewPrep, reset } = useInterview()
   const [showPaywall, setShowPaywall] = useState(false)
 
@@ -136,10 +153,47 @@ export default function Interview() {
   const jobDescription: string = hasContext ? (state.jobDescription ?? '') : manualJD
 
   const canGenerate = resumeText.trim().length > 50 && jobDescription.trim().length > 50
+  const isFreeTier = usage.plan === 'free'
 
   const handleGenerate = () => {
     runInterviewPrep(resumeText, jobDescription)
   }
+
+  const handleRegenerate = () => {
+    if (isFreeTier) {
+      const remainingCopy = limitInfo
+        ? `${limitInfo.remaining}`
+        : 'your monthly free'
+      const ok = window.confirm(
+        `This will use 1 of ${remainingCopy} free generations. Continue?`,
+      )
+      if (!ok) return
+      capture('interview_questions_regenerated', {
+        from_free_tier: true,
+        remaining_free_quota: limitInfo?.remaining,
+      })
+    } else {
+      capture('interview_questions_regenerated', { from_free_tier: false })
+    }
+    runInterviewPrep(resumeText, jobDescription, { forceRegenerate: true })
+  }
+
+  // Fire one analytics event per cached-served result. Dedupe by generated_at
+  // so re-renders during the same response don't spam PostHog.
+  const lastCachedAtRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!interviewResult?.cached || !interviewResult.generated_at) return
+    if (lastCachedAtRef.current === interviewResult.generated_at) return
+    lastCachedAtRef.current = interviewResult.generated_at
+    const ageMs = Math.max(0, Date.now() - new Date(interviewResult.generated_at).getTime())
+    const ageHours = Math.round((ageMs / 36e5) * 10) / 10
+    jdHashPrefix(jobDescription).then((prefix) => {
+      capture('interview_questions_cached_served', {
+        jd_hash_prefix: prefix,
+        generated_at_age_hours: ageHours,
+      })
+    })
+  }, [interviewResult, jobDescription])
 
   const allQuestions = interviewResult?.questions ?? []
   const filteredQuestions = activeFilter === 'all'
@@ -147,6 +201,12 @@ export default function Interview() {
     : allQuestions.filter(q => detectCategory(q.question) === activeFilter)
 
   const filters: CategoryFilter[] = ['all', 'behavioral', 'technical', 'role-specific']
+
+  const showCachedChip = interviewResult?.cached === true && !!interviewResult.generated_at
+  const showFreshFreeUsageChip =
+    interviewResult !== null &&
+    interviewResult.cached === false &&
+    isFreeTier
 
   return (
     <PageWrapper className="min-h-screen bg-bg-base">
@@ -293,6 +353,29 @@ export default function Interview() {
         {/* Results */}
         {interviewResult && !isLoading && (
           <motion.div variants={containerVariants} initial="hidden" animate="show">
+            {/* Cache + plan-aware status row */}
+            {(showCachedChip || showFreshFreeUsageChip) && (
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                {showCachedChip && (
+                  <span
+                    data-testid="cached-chip"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-accent-primary/20 bg-accent-primary/[0.08] px-2.5 py-1 text-[11px] font-medium text-accent-primary"
+                  >
+                    <Database size={10} />
+                    Cached — generated {formatRelativeTime(interviewResult!.generated_at!)}
+                  </span>
+                )}
+                {showFreshFreeUsageChip && (
+                  <span
+                    data-testid="free-usage-chip"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-warning/20 bg-warning/[0.08] px-2.5 py-1 text-[11px] font-medium text-warning"
+                  >
+                    Used 1 of your monthly free generations
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Stats bar */}
             <div className="flex items-center justify-between mb-5">
               <p className="text-sm text-text-secondary">
@@ -361,7 +444,7 @@ export default function Interview() {
               transition={{ delay: 0.5 }}
               className="mt-8 text-center"
             >
-              <GlowButton variant="ghost" size="sm" onClick={handleGenerate} isLoading={isLoading}>
+              <GlowButton variant="ghost" size="sm" onClick={handleRegenerate} isLoading={isLoading}>
                 <RefreshCw size={13} />
                 Regenerate Questions
               </GlowButton>

@@ -192,12 +192,15 @@ export async function generateCoverLetter(
 
 export async function generateInterviewPrep(
   resumeText: string,
-  jdText: string
+  jdText: string,
+  options?: { forceRegenerate?: boolean }
 ): Promise<InterviewPrepResponse> {
-  const response = await api.post<InterviewPrepResponse>('/api/interview-prep', {
+  const body: Record<string, unknown> = {
     resume_text: resumeText,
     job_description: jdText,
-  })
+  }
+  if (options?.forceRegenerate) body.force_regenerate = true
+  const response = await api.post<InterviewPrepResponse>('/api/interview-prep', body)
   return response.data
 }
 

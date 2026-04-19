@@ -96,6 +96,9 @@ export interface InterviewQuestion {
 
 export interface InterviewPrepResponse {
   questions: InterviewQuestion[]
+  cached?: boolean
+  generated_at?: string
+  model_used?: string
 }
 
 export type ApplicationStatus = 'Applied' | 'Interview' | 'Offer' | 'Rejected'
