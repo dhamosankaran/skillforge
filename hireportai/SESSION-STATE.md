@@ -126,6 +126,18 @@ Catch-up mode (offer to review backlog beyond 20) is deferred to a Phase 6 slice
 
 ---
 
+### Decision: Phase-5 status is authoritative on disk
+**Locked:** 2026-04-19
+**Affected slices:** every future slice that ships, closes, or obsoletes a v2.1 or v2.2-patch item
+
+**Rule:** `docs/PHASE-5-STATUS.md` is the on-disk source of truth for v2.1 / v2.2-patch / post-playbook Phase-5 status. Chat-side artifacts (`claude-code-prompts-all-phases-v2.md`, `claude-code-prompts-all-phases-v2.2-patch.md`, `skillforge_playbook_v2.md` status table) are frozen snapshots — when they disagree with the status doc, trust the status doc.
+
+Update protocol: at the end of any slice that ships, closes, or obsoletes a listed item, update the corresponding row in `docs/PHASE-5-STATUS.md` (status marker + evidence + commit SHA) in the same commit as the code change. Do not let status and code diverge across commits.
+
+Rationale: chat-Claude's project knowledge drifts; the v2.1 table had at least eight items marked 🔴 PENDING that were already shipped on disk. The 2026-04-19 reconciliation (this decision) produced the status doc and closed v2.1 item 5.9 (doc audit + sync). Pattern documented in `docs/specs/phase-5/48-doc-audit-pattern.md` — run again every 5–10 slices or when chat-Claude's priority calls feel wrong.
+
+---
+
 ### Decision: Auto-save scan to tracker
 **Locked:** 2026-04-18
 **Affected slices:** P5-S5 spec amendment (tracker auto-populate), any future scan flow work
@@ -207,6 +219,7 @@ Slices that were in the backlog but are no longer needed. Do **not** ship them.
 Infra / data events outside the slice flow. Keep concise.
 
 - **2026-04-19 — Local dev-DB user-data wipe.** Ran `scripts/wipe_local_user_data.py` against `localhost:5432/hireport`. Deleted 77 rows across 16 user-gen tables (users=3, subscriptions=3, card_progress=26, missions=1, mission_days=22, mission_categories=7, user_badges=6, gamification_stats=3, email_preferences=3, usage_logs=1, tracker_applications_v2=2, plus 5 empty tables). Preserved 38 content rows (cards=15, categories=14, badges=9) and `alembic_version` (1). Transaction-wrapped, committed cleanly. Railway and all remote DBs untouched. Stripe test-mode customer orphans accepted — no API cleanup. Motivation: unblock obsoleting P5-S19 existing-user migration; also clears stale dev state ahead of P5-S18b.
+- **2026-04-19 — Phase-5 status reconciliation (spec #48, closes v2.1 item 5.9).** Audited all 26 v2.1 Phase-5 items + 5 v2.2-patch items + 4 post-playbook slices (S44–S47) against `main` (post-`f1bcf94`). Produced `docs/PHASE-5-STATUS.md` as the authoritative on-disk status doc (Decision "Phase-5 status is authoritative on disk" in Locked Decisions). Totals: 22 ✅ SHIPPED, 3 🟡 PARTIAL (5.3, 5.13, 5.19 + S26b), 4 🔴 PENDING (5.17, 5.24, 5.25, 5.26), 3 ❓ AMBIGUOUS (5.19, 5.20, 5.23). Surfaced surprises: (a) interview-question storage (5.17) has no spec **and** no code — further behind than playbook implied; (b) spec #36 frontmatter / v2.1 item 5.22 numbering drift (P5-S26a vs P5-S26b) — SHIPPED either way. Pattern captured as spec #48. No product code touched; tests unchanged.
 - **2026-04-19 — Spec #47 backfill (resume rewrite content preservation — v2.1 flag closure).** Audited the v2.1 🟡 PARTIAL "missing original content" flag against `main` (`fc933d1`). Bug does not reproduce: P5-S9 (spec #09) already raised the input cap to 40k chars and `max_tokens` to 8k, and the prompt carries explicit preservation rules (rules 1/7/8). Drafted `docs/specs/phase-5/47-resume-rewrite-content-preservation.md` retroactively documenting why the bug no longer reproduces, and added AC-2 regression test `test_prompt_includes_preservation_rules` in `tests/services/test_resume_rewrite.py` pinning the three preservation clauses verbatim. Complements the existing P5-S9 input-truncation test (AC-1). No production code changed. BE tests 241 → 242 (non-integration, +1). FE unchanged at 111. v2.1 resume-rewrite flag closed.
 - **2026-04-19 — Spec #43 backfill (Stripe webhook idempotency).** Step-2 audit of P5-S26c found idempotency was already shipped (SELECT-first pattern + `stripe_events` table + one existing test). No code change needed. Drafted `docs/specs/phase-5/43-stripe-webhook-idempotency.md` documenting the existing implementation, added AC-4 test `test_handler_exception_rolls_back_stripe_event_row` (uses SAVEPOINT to mirror production rollback), fixed stale "Spec #22" citation in `payments.md` → Spec #43, dropped the stale Known-Broken row. Rule-14 doc-sync debt closed for webhook idempotency. Concurrent-delivery INSERT-first refactor deferred — see `[S26c-defer]` in Deferred Hygiene Items.
 
@@ -240,6 +253,8 @@ These rules apply across Phase 5. Add or remove as the sprint changes.
 - **[S18-flag]** WeeklyProgress empty-state heuristic: currently uses `stats.total_xp === 0 && longest_streak === 0` as a proxy for "no review history" to avoid duplicating `ActivityHeatmap`'s fetch (`/api/v1/progress/heatmap?days=90`). Edge-case false negatives possible for users with XP from non-review sources or stale streak + empty current window. Fix: expose review-count from `ActivityHeatmap` via a render prop or callback, subscribe from widget.
 - **[S18-flag]** `DashboardWidget` contract: `action` prop is hidden when `state === 'error'` (only "Try again" renders). This is sensible UX but not documented in spec #35 §Solution. Document when the primitive's contract is next touched, either in the spec or in a new design-system skill entry.
 - **[S26c-defer]** Concurrent-delivery INSERT-first refactor for Stripe webhook. Current SELECT-first pattern can produce a transient 500 on rare concurrent duplicate deliveries hitting separate DB connections — Stripe's retry self-heals. Revisit only if production logs show this occurring with non-trivial frequency; tiny blast radius today. See spec #43 §Out of Scope for the INSERT-first-catch-IntegrityError alternative.
+- **[S47-defer]** Confirm `app/services/ai_service.py` is dead code and delete it. It duplicates `app/services/gpt_service.py::generate_resume_rewrite`/`generate_cover_letter`/`generate_interview_questions`/`rewrite_bullets_gpt` and is only imported by `app/api/v1/routes/resume.py::optimize_resume` (enterprise-only path with no frontend caller). Pair the deletion with verifying `/api/v1/resume/{id}/optimize` has no live traffic; if we keep the enterprise path, refactor it to call `gpt_service` instead of duplicating. Surfaced during the spec #47 audit.
+- **[local-setup-guide] ruff not installed in backend venv by default setup.** `python -m ruff check` fails with `No module named ruff` in the backend venv; repo has no alternative linter wired in the standard gate path either. Either add `ruff` to `requirements-dev.txt` and document `python -m ruff check app/` in the Makefile / local-setup-guide, or remove ruff from quality-gate expectations in future slice prompts. Surfaced during the spec #47 slice.
 
 ---
 
