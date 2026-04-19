@@ -1,7 +1,7 @@
 # SESSION STATE — SkillForge
 
 > **Purpose**: This is the live "where we are right now" pointer for Claude Code. Read at the start of every session. Update at the end.
-> **Companion to**: AGENTS.md (how project works) + CLAUDE.md (how to behave) + spec file (what to build).
+> **Companion to**: AGENTS.md (how project works) + CLAUDE.md (how to behave) + BACKLOG.md (what's queued) + CODE-REALITY.md (what code looks like right now) + spec file (what to build).
 > **Update cadence**: End of every implementation slice. Drift will hurt — keep this current.
 
 ---
@@ -12,11 +12,12 @@
 |-------|-------|
 | **HEAD commit** | `3ad9c90` |
 | **Branch** | `main` |
-| **CODE-REALITY.md sha** | `f09be80` (generated 2026-04-19) |
-| **CODE-REALITY stale?** | No |
-| **Last hand-edit** | 2026-04-19 — D-001 + D-003 + D-004 resolution |
+| **CODE-REALITY.md sha (repo)** | `f09be80` (generated 2026-04-19) |
+| **CODE-REALITY.md in chat Project** | Synced ✅ / Stale ❌ — re-upload before next planning prompt |
+| **CODE-REALITY stale (either copy)?** | No |
+| **Last hand-edit** | 2026-04-19 — D-001 + D-003 + D-004 resolution; added CODE-REALITY sync marker + Hard Constraints R12/R16 |
 
-> **Stale-marking rule**: Mark CODE-REALITY stale at the end of any slice that touched routes, models, top-level types, `App.tsx`, or layout components. Regenerate before drafting the next plan-level prompt.
+> **Stale-marking rule**: Mark CODE-REALITY stale at the end of any slice that touched routes, models, top-level types, `App.tsx`, or layout components. Regenerate the repo copy AND re-upload to the chat Project before the next plan-level prompt.
 
 ---
 
@@ -45,6 +46,7 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 - `claude-code-prompts-all-phases-v2.md` (v2.1) — base of Phase 5
 - `claude-code-prompts-all-phases-v2.2-patch.md` — additions from flow audit (5 new slices + 1 spec amendment)
 - Always read both when planning Phase 5 work.
+- **On-disk status doc (`docs/PHASE-5-STATUS.md`) is authoritative** when it disagrees with either prompt file — see Locked Decisions.
 
 ---
 
@@ -60,7 +62,7 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 **P5-S17** — Frontend PersonaPicker page + PersonaGate + AppShell hide-list + legacy cleanup. New full-page picker at `/onboarding/persona` (`src/pages/PersonaPicker.tsx`) renders 3 cards using PRD §1.3 copy (Interview-Prepper, Career-Climber, Team Lead); Interview-Prepper card expands with optional `<input type="date">` and a `maxLength={100}` company input (live counter). Continue calls `updatePersona()` → `PATCH /api/v1/users/me/persona`, merges the response into AuthContext via `updateUser`, then `navigate('/home', { replace: true })`. Inline error on API failure, selection preserved. Fires `persona_picker_shown` on mount and `persona_selected` after 2xx (both new, added to `.agent/skills/analytics.md`). New `src/components/PersonaGate.tsx` wraps the protected subtree inside `ProtectedRoute` — redirects `user.persona === null` to `/onboarding/persona` on every protected path except `/`, `/login`, `/onboarding/persona`. `AppShell.CHROMELESS_PATHS` now includes `/onboarding/persona` so TopNav/MobileNav hide there. `AuthUser.persona` narrowed to `Persona = 'interview_prepper' | 'career_climber' | 'team_lead'`; legacy `target_company?`/`target_date?` fields dropped. `services/api.ts` `completeOnboarding` + legacy `updatePersona` (+ their request types) deleted; new `updatePersona(body): Promise<AuthUser>` targets the new endpoint. `StudyDashboard` `PERSONA_CONFIG` rekeyed to snake_case, literal comparisons updated (`'interview_prepper' | 'career_climber' | 'team_lead'`), field reads renamed to `user.interview_target_*`; settings-modal launchers ("Change goal" button + "Set your goal →" button) + `showPersonaPicker` state + legacy import all removed. `LoginPage` doc comment refreshed. Legacy `src/components/onboarding/PersonaPicker.tsx` deleted; `components/onboarding/` kept (holds `GuidedTour.tsx`). Existing test fixtures (`TopNav.test.tsx`, `MobileNav.test.tsx`, `App.redirects.test.tsx`) updated — dropped legacy fields, `'climber' → 'career_climber'`, and `App.redirects.test.tsx` now stubs `@/pages/PersonaPicker` instead of the deleted path. Analytics catalog: `persona_picker_shown` + `persona_selected` added to the active table; the two legacy events (`persona_changed`, `onboarding_persona_selected`) preserved in a new `#### Deprecated Frontend Events` subsection with commit-b5f42c2 markers so historical PostHog data + the Phase-4 dashboards spec stay cross-referenced (post-amend). AGENTS.md Frontend Routes table gained a `/onboarding/persona` row and the nav-chrome-hides sentence now lists the new path. Test counts: FE **38/38** (27 → 38: +6 PersonaPicker, +3 PersonaGate, +2 AppShell); BE unchanged at **184 unit + 6 integration deselected**. TypeScript clean, `npm run build` succeeds.
 
-**Shipped:** pending — commit pending user push. (Previous slice P5-S17: commit `2c01cc7` (amend of `b5f42c2`) pushed to `origin/main` at 2026-04-18 19:49 UTC.) Auto-deploys to Vercel (frontend) + Railway (backend — no-op this slice) per CLAUDE.md §Rule 9. Resolves the known S16-leftover runtime breakage on `/learn` (`PERSONA_CONFIG[user.persona]` returning `undefined` for snake_case persona values).
+**Shipped:** P5-S17 committed as `2c01cc7` (amend of `b5f42c2`) pushed to `origin/main` at 2026-04-18 19:49 UTC. Auto-deploys to Vercel (frontend) + Railway (backend — no-op this slice) per CLAUDE.md §Rule 9. Resolves the known S16-leftover runtime breakage on `/learn` (`PERSONA_CONFIG[user.persona]` returning `undefined` for snake_case persona values).
 
 ---
 
@@ -68,34 +70,33 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 **P5-S18b** — State-aware dashboard variants (new user / returning user / streak-at-risk / interview-imminent). Layers state detection on top of the static P5-S18 layout. S18 shipped the widget grid + primitive; S18b adds persona-state branching inside widgets so content adapts to "new user no activity" vs. "returning user 7-day streak" vs. "interview in 5 days." See v2.2 patch file for the spec stub.
 
-After P5-S9, continue in this order:
-1. P5B (S10–S11) — cover letter, Generate My Experience
-2. P5C (S12–S14) — route restructure
-3. P5D (S15–S18, **S16-AMEND**, **S18b**, **S18c**) — PersonaPicker + HomeDashboard + state-aware + checklist. *(S19 obsoleted — see "Obsolete Slices".)*
-4. P5E (S20–S22) — Analysis Results improvements
-5. P5F (S23–S26, **S26b**, **S26c**) — Interview storage + cancel sub + paywall dismissal + webhook idempotency
-6. P5G (S27–S30) — Settings + chat AI + interview date
-7. P5H (S31–S34) — Admin insights + content feed
-8. P5-FINAL (S35) — verify + housekeeping
+After P5-S18b, continue per the execution order in `claude-code-prompts-all-phases-v2.md` and the v2.2 patch file, reconciled against `docs/PHASE-5-STATUS.md`. Remaining high-level chunks:
 
-**Bold = added in v2.2 patch.**
+1. P5D — P5-S18c (Interview-Prepper checklist)
+2. P5E (S20–S22) — Analysis Results improvements
+3. P5F (S23–S26, **S26b**, **S26c**) — Interview storage polish + cancel sub + paywall dismissal + webhook idempotency
+4. P5G (S27–S30) — Settings + chat AI + interview date
+5. P5H (S31–S34) — Admin insights + content feed
+6. P5-FINAL (S35) — verify + housekeeping
+
+**Bold = added in v2.2 patch.** P5-S9/S10/S11/S12/S13/S14/S16/S17/S18 all shipped.
 
 ---
 
 ## Known-Broken Features (DO NOT modify unless fixing)
 
-These are user-visible bugs. Don't refactor around them — they have dedicated fix slices.
+User-visible bugs with dedicated fix slices. Cross-reference: BACKLOG.md.
 
-| Feature | Symptom | Fix slice |
-|---------|---------|-----------|
-| Geo-Pricing Visibility | Audit complete (P5-S8): A+C fixed. Remaining deferred gaps — B: no price on LoginPage; D: ip-api.com rate-limit fallback mis-prices Indian users under load; E: Free-plan shows `$0` even for INR users. | Deferred (post-P5B) |
+| Feature | Symptom | Fix slice | Backlog ID |
+|---------|---------|-----------|------------|
+| Geo-Pricing Visibility | Audit complete (P5-S8): A+C fixed. Remaining deferred gaps — B: no price on LoginPage; D: ip-api.com rate-limit fallback mis-prices Indian users under load; E: Free-plan shows `$0` even for INR users. | Deferred (post-P5B) | E-020 |
 
 ---
 
 ## Active Refactor Zones (avoid drive-by changes)
 
 - (P5-S13 landed): `src/App.tsx` carries the nine `/learn/*` + `/prep/*` namespaced routes and a ten-entry transitional redirect block. The redirect block is P5-S13's domain — do not edit it as part of unrelated work.
-- (P5-S14 landed): `src/components/layout/TopNav.tsx`, `MobileNav.tsx`, `AppShell.tsx` are the nav source of truth. The legacy `src/components/layout/Navbar.tsx` is no longer imported by `App.tsx` but still sits on disk — delete it when we're sure no other callers exist (Phase 6 cleanup candidate).
+- (P5-S14 landed): `src/components/layout/TopNav.tsx`, `MobileNav.tsx`, `AppShell.tsx` are the nav source of truth. The legacy `src/components/layout/Navbar.tsx` is no longer imported by `App.tsx` but still sits on disk — delete it when we're sure no other callers exist (Phase 6 cleanup candidate; tracked as B-010).
 - (P5-S17 landed): `src/pages/PersonaPicker.tsx` and `src/components/PersonaGate.tsx` are the persona onboarding surface. The picker ships without a "change persona" affordance by design (spec #34 Out of Scope) — do not add one here; the switch UX is a post-spec follow-up (see Deferred Hygiene Items).
 
 ---
@@ -104,13 +105,15 @@ These are user-visible bugs. Don't refactor around them — they have dedicated 
 
 1. P5-S18 — HomeDashboard + widget catalog. `DashboardWidget` primitive (`loading/data/empty/error` states). Seven widgets under `src/components/home/widgets/`: TodaysReview, Streak, WeeklyProgress, LastScan, InterviewTarget (display-only), Countdown (Mode 1 inline date-setter → `updatePersona({persona, interview_target_date})`; Mode 2 wraps `mission/Countdown` + active-mission CTA), TeamComingSoon (action-less — no waitlist component on disk). Persona-keyed render modes (`home-mode-<persona>`), 1/2/3 responsive grid, greeting with first-name fallback, `home_dashboard_viewed` with useRef guard. `App.tsx` swapped `HomeDashboardPlaceholder` → `HomeDashboard`; placeholder deleted; `tests/App.redirects.test.tsx` updated. FE tests 38 → 78 (+40). BE 184/184 unchanged. AC-9 persona-in-PATCH-body regression assertion in `CountdownWidget.test.tsx`.
 2. P5-S17 — Frontend PersonaPicker page + PersonaGate + AppShell hide-list + legacy cleanup. New `/onboarding/persona` route renders three persona cards (PRD §1.3 copy); Interview-Prepper expands with optional `interview_target_date` + `interview_target_company` (maxLength 100 + live counter); Continue → `PATCH /api/v1/users/me/persona` → merge into AuthContext → `navigate('/home', { replace: true })`. `PersonaGate` redirects null-persona users from all protected paths except `/`, `/login`, `/onboarding/persona`. `AppShell` hides chrome on `/onboarding/persona`. `AuthUser.persona` narrowed to `Persona` union; legacy `target_*` fields + legacy onboarding component (`src/components/onboarding/PersonaPicker.tsx`) + legacy `completeOnboarding`/`updatePersona` api helpers deleted. `StudyDashboard` PERSONA_CONFIG + persona comparisons rekeyed to snake_case; settings-modal launchers removed (no replacement — persona-switch UX is post-spec). Analytics: `persona_picker_shown` + `persona_selected` added; two legacy events removed (source file deleted). FE tests 27 → 38 (+6 PersonaPicker, +3 PersonaGate, +2 AppShell hide-list). Backend unchanged at 184+6.
-2. P5-S16 — Persona backend foundations: Alembic migration `02bf7265b387` renames `target_*` → `interview_target_*` + retypes (DateTime→Date, String(255)→String(100)) + migrates legacy persona values (`team` → `team_lead`) + widens persona to String(30); new `PATCH /api/v1/users/me/persona` endpoint (JWT, 10/min) with `PersonaEnum` validation and conditional `onboarding_completed` flip; `/auth/onboarding` + `/auth/persona` deleted; `_user_dict` now returns `interview_target_*` instead of legacy keys. Frontend additively gains optional `interview_target_*` fields on `AuthUser` — persona literal union and legacy target_* kept to preserve StudyDashboard / legacy PersonaPicker typecheck until P5-S17. Backend tests +10 → 184/184 (6 integration deselected). Frontend 27/27 unchanged. S16-AMEND folded in.
-3. P5-S14 — `TopNav` / `MobileNav` / `AppShell` shipped and wired into `src/App.tsx` (replacing `Navbar`). Four tabs (Home/Learn/Prep/Profile) + Admin for admins. `nav_clicked` event (`{namespace, from_path, to_path}`) fires on every tap. MobileNav is a fixed bottom bar with safe-area padding. All colors via design tokens — no hex literals. Tests: `TopNav.test.tsx` + `MobileNav.test.tsx`; frontend count 16 → 27. Flagged: transitional `deprecated_route_hit` event from the nav spec is not wired in the redirect block (P5-S13 gap, backfill out of scope).
-4. P5-S13 — Route restructure + internal-reference sweep: `/learn/*` and `/prep/*` namespaces live in `src/App.tsx`, 10-entry `<Navigate replace>` redirect block covers the old flat paths, post-login target now `/home`, `HomeDashboardPlaceholder` added, daily-reminder email deep-link → `/learn/daily`. Sweep proof at `docs/audit/2026-04-p5-s13-sweep-proof.txt`. Frontend tests 5 → 16 (new `App.redirects.test.tsx`); backend 174/174.
+3. P5-S16 — Persona backend foundations: Alembic migration `02bf7265b387` renames `target_*` → `interview_target_*` + retypes (DateTime→Date, String(255)→String(100)) + migrates legacy persona values (`team` → `team_lead`) + widens persona to String(30); new `PATCH /api/v1/users/me/persona` endpoint (JWT, 10/min) with `PersonaEnum` validation and conditional `onboarding_completed` flip; `/auth/onboarding` + `/auth/persona` deleted; `_user_dict` now returns `interview_target_*` instead of legacy keys. Frontend additively gains optional `interview_target_*` fields on `AuthUser` — persona literal union and legacy target_* kept to preserve StudyDashboard / legacy PersonaPicker typecheck until P5-S17. Backend tests +10 → 184/184 (6 integration deselected). Frontend 27/27 unchanged. S16-AMEND folded in.
+4. P5-S14 — `TopNav` / `MobileNav` / `AppShell` shipped and wired into `src/App.tsx` (replacing `Navbar`). Four tabs (Home/Learn/Prep/Profile) + Admin for admins. `nav_clicked` event (`{namespace, from_path, to_path}`) fires on every tap. MobileNav is a fixed bottom bar with safe-area padding. All colors via design tokens — no hex literals. Tests: `TopNav.test.tsx` + `MobileNav.test.tsx`; frontend count 16 → 27. Flagged: transitional `deprecated_route_hit` event from the nav spec is not wired in the redirect block (P5-S13 gap, backfill out of scope; tracked as B-008).
+5. P5-S13 — Route restructure + internal-reference sweep: `/learn/*` and `/prep/*` namespaces live in `src/App.tsx`, 10-entry `<Navigate replace>` redirect block covers the old flat paths, post-login target now `/home`, `HomeDashboardPlaceholder` added, daily-reminder email deep-link → `/learn/daily`. Sweep proof at `docs/audit/2026-04-p5-s13-sweep-proof.txt`. Frontend tests 5 → 16 (new `App.redirects.test.tsx`); backend 174/174.
 
 ---
 
 ## Open Decisions Awaiting Dhamo
+
+Canonical list lives in **`BACKLOG.md` → "Open decisions awaiting Dhamo"**. Items below are session-scoped; anything blocking a Phase 5 slice should also exist in BACKLOG.md.
 
 | Decision | Context | Blocking? | Decide by |
 |----------|---------|-----------|-----------|
@@ -140,7 +143,7 @@ The Daily Review query (`get_daily_review`) returns at most 20 cards/day, all pl
 
 Ordering inside the cap: due-review cards (state=review/learning/relearning) placed first, ordered by due_date ASC. New cards (state=new) fill remaining slots up to 20.
 
-Mission Mode is exempt: the mission's daily_target wins inside `/learn/mission`. Mission cards are scoped to the mission's selected categories and don't double-count against the Daily Review cap on the same day. (Decision: Mission and Daily Review are separate queues. If user does Mission Mode that day, Daily Review still shows up to 20 of whatever's due outside the mission.)
+Mission Mode is exempt: the mission's daily_target wins inside `/learn/mission`. Mission cards are scoped to the mission's selected categories and don't double-count against the Daily Review cap on the same day.
 
 Rationale: 20 cards × ~45 sec ≈ 15-min session = sweet spot for daily habit formation. Above this, FSRS death spiral risk (user opens app, sees 47 due, closes app, breaks streak). 20 is conservative headroom above the "Daily 5" brand framing.
 
@@ -204,7 +207,7 @@ Rationale: A scan with a JD is, by definition, an application or close to one �
 - Three fields on the surface (persona + `interview_target_date` + `interview_target_company` per v2.2 S16-AMEND) argue for page not modal.
 - Mobile: full-screen modal ≈ full page, so the pattern matters on desktop where page wins.
 
-**Affected slices:** P5-S15 (spec describes full-page UX), P5-S17 (PersonaGate implemented as redirect, not overlay), P5-S19 (existing-user banner sits at top of page).
+**Affected slices:** P5-S15 (spec describes full-page UX), P5-S17 (PersonaGate implemented as redirect, not overlay), P5-S19 (existing-user banner sits at top of page — later obsoleted).
 
 ### Decision 2 — Persona count (resolved 2026-04-17)
 
@@ -264,18 +267,21 @@ These rules apply across Phase 5. Add or remove as the sprint changes.
 
 - **Routes**: All new routes go under `/learn/*` or `/prep/*`. **No new flat routes.** (Reaffirmed at P5-S14 — `TopNav` / `MobileNav` only surface `/home`, `/learn`, `/prep`, `/profile`, `/admin`; any new flat path would have no nav home.)
 - **Env vars**: Any new env var requires `.env.example` update in the same commit.
-- **LLM calls**: All LLM calls go through the LLM router (`app/core/llm_router.py`, entry point `generate_for_task(task=..., ...)`). Don't bypass it. Pro for reasoning (rewrite, cover letter, gap analysis, chat-with-AI, admin insights). Flash for fast tasks (extraction, classification, simple Q&A).
-- **PostHog events**: Every new user-facing feature fires at least one event. snake_case naming.
+- **LLM calls**: All LLM calls go through the router — `generate_for_task()` in `app/core/llm_router.py`. Do not import a provider SDK (Gemini / Anthropic / OpenAI) directly from service code, and do not call `get_llm_provider()` from the legacy `app/services/llm/factory.py`. Pro/reasoning tier for rewrite, cover letter, gap analysis, chat-with-AI, admin insights. Flash/fast tier for extraction, classification, simple Q&A.
+- **Design tokens**: Every color / spacing / shadow in frontend code must come from design tokens (`src/styles/design-tokens.ts`) via Tailwind utilities (`bg-bg-surface`, `text-text-primary`, `border-border-accent`). No hardcoded hex values. (CLAUDE.md R12.)
+- **PostHog events**: Every new user-facing feature fires at least one event. snake_case naming. Add the event to `.agent/skills/analytics.md` so the catalog stays current.
 - **Backward compatibility**: Phase 5 cannot break existing user data. Migrations need defaults that backfill existing rows.
-- **Persona gating**: Once PersonaPicker is shipped (P5-S17), all `/learn/*` and `/prep/*` and `/home` routes require `user.persona` to be set. Exception: `/profile`.
-- **Stripe**: All webhook handlers must be idempotent (P5-S26c). No new webhook events without idempotency check.
-- **Frontend test coverage**: Every new page added in Phase 5 (`HomeDashboard`, `PersonaPicker` page, `CardChatPanel`, `AdminInsights`, etc.) must ship with at least one Vitest test. Current frontend test count is **5** (only `PaywallModal`) — this number must grow with every Phase 5 UI slice.
+- **Persona gating**: PersonaPicker shipped in P5-S17 — all `/learn/*`, `/prep/*`, and `/home` routes require `user.persona` to be set. Exception: `/profile`.
+- **Stripe**: All webhook handlers must be idempotent (see spec #43). No new webhook events without idempotency check.
+- **Frontend test coverage**: Every new page added in Phase 5 must ship with at least one Vitest test. Current frontend count: **114/114** (last run: slice 5.17b). Grow with every UI slice.
+- **Backlog discipline**: Every implementation prompt must reference the BACKLOG ID(s) it closes (CLAUDE.md R15). Status flips to ✅ + `closed by <commit-sha> on <date>` + move to Closed table.
+- **Audit-scoped step 1**: Every implementation prompt's first step is an audit calibrated to blast radius (CLAUDE.md R16). Frontend type changes MUST surface the live component graph from CODE-REALITY.md. If CODE-REALITY is stale (sha ≠ HEAD or chat Project copy not synced), regenerate + re-upload before drafting the audit.
 
 ---
 
 ## Deferred Hygiene Items
 
-- `deprecated_route_hit` PostHog event not wired in the 10 `<Navigate>` redirect nodes in `src/App.tsx`. Defined in spec #12 §Analytics but deferred from P5-S13. Blocks Phase 6 redirect-block cleanup (no signal to confirm when old paths stop receiving hits).
+- `deprecated_route_hit` PostHog event not wired in the 10 `<Navigate>` redirect nodes in `src/App.tsx`. Defined in spec #12 §Analytics but deferred from P5-S13. Blocks Phase 6 redirect-block cleanup (no signal to confirm when old paths stop receiving hits). Tracked as B-008.
 - **AGENTS.md Models table User row (S16 retrofit)** — line 243 still lists legacy `target_company`, `target_date` column names. These were renamed by the P5-S16 migration (`02bf7265b387`) to `interview_target_company` (String(100)) and `interview_target_date` (Date). Update when the Models table is next edited. Surfaced during P5-S17 amend; out of scope for S17 itself.
 - **Persona-switch UX from `/profile`** — post-P5-S17 follow-up (spec #34 Out of Scope). P5-S17 removed the legacy in-place "Change goal" modal from StudyDashboard (plus the "Set your goal →" CTA from the `user.persona === null` empty state on `/learn`). No replacement shipped; the persona-switch UX will reuse `/onboarding/persona` (likely `?mode=switch`) when the flow is specced. Until then, users cannot change persona post-pick.
 - **StudyDashboard empty-state CTA gap** — the `user.persona === null` branch on `/learn` had its "Set your goal →" CTA button removed in P5-S17 (it launched the deleted settings-modal PersonaPicker). The surrounding "Your Goal / Tell us what you're working towards" card still renders but is now action-less. `PersonaGate` makes this branch effectively unreachable, so the visual gap is theoretical — but revisit with the next `/learn` empty-state redesign.
@@ -306,9 +312,10 @@ These rules apply across Phase 5. Add or remove as the sprint changes.
 
 ## Test Suite Status
 
-- **Backend**: 248 unit passed, 6 integration deselected (last run: slice 5.17b — unchanged; no backend touched)
-- **Frontend**: 114/114 passing (last run: slice 5.17b — 111 → 114 with new `tests/Interview.test.tsx`)
-- **Note**: Run full suites at the start of P5-S0 to establish a baseline before Phase 5 changes begin.
+- **Backend (CI subset, `-m "not integration"`)**: 248 passed (last run: slice 5.17b — no backend touched)
+- **Backend (integration, `-m integration`)**: 6 deselected in CI; requires live LLM keys — run locally before LLM/extraction/embedding changes
+- **Frontend (Vitest)**: 114/114 passing (last run: slice 5.17b — 111 → 114 with new `tests/Interview.test.tsx`)
+- **Coverage tooling**: `pytest-cov` is intentionally NOT installed (CLAUDE.md R13). Do not add `--cov` flags without updating `requirements-dev.txt` and getting sign-off.
 
 ---
 
@@ -316,40 +323,49 @@ These rules apply across Phase 5. Add or remove as the sprint changes.
 
 ### In repo (Claude Code reads these)
 
-| File | Purpose |
-|------|---------|
-| `AGENTS.md` | How this project works (stack, conventions, deploy) |
-| `CLAUDE.md` | How Claude Code should behave (rules, 3-strike, test gates) |
-| `SESSION-STATE.md` | THIS FILE — live state pointer |
-| `STRATEGIC-OPTIONS.md` | $100M ARR strategic options analysis. Read before Phase 6 planning. |
-| `docs/prd.md` | Product requirements |
-| `docs/specs/phase-N/NN-feature.md` | Per-feature specs |
+| File | Purpose | Owner |
+|------|---------|-------|
+| `AGENTS.md` | How this project works (stack, conventions, source-of-truth hierarchy) | Dhamo (hand-edit) |
+| `CLAUDE.md` | How Claude Code should behave (16 rules, 3-strike, test gates) | Dhamo (hand-edit) |
+| `BACKLOG.md` | Bugs + enhancements + open decisions; immutable IDs | Dhamo authors; Claude Code flips status only |
+| `SESSION-STATE.md` | THIS FILE — live session pointer + drift log | Claude Code updates every slice |
+| `CODE-REALITY.md` | Generated snapshot of live codebase (routes, models, component graph, dead code) | Claude Code regenerates on demand |
+| `WORKFLOW-MODES.md` | Decision tree for which Claude Code workflow mode to use per slice type | Dhamo (hand-edit) |
+| `STRATEGIC-OPTIONS.md` | $100M ARR strategic options analysis. Read before Phase 6 planning. | Dhamo |
+| `docs/prd.md` | Product requirements | Dhamo |
+| `docs/PHASE-5-STATUS.md` | On-disk authoritative status for all Phase-5 items | Claude Code per Locked Decision |
+| `docs/specs/phase-N/NN-feature.md` | Per-feature specs (authored before code per CLAUDE.md R14) | Authored per slice |
+| `.agent/skills/*.md` | Subsystem-level domain knowledge | Slow-changing reference |
 
-### In Claude Project knowledge (Claude in chat reads these)
+### In Claude chat Project knowledge (Claude in chat reads these)
 
-| File | Purpose |
-|------|---------|
-| `skillforge_playbook_v2.md` | Master phased plan (v3 due after P5-S35) |
-| `claude-code-prompts-all-phases-v2.md` | v2.1 — slice-by-slice prompts (active) |
-| `claude-code-prompts-all-phases-v2.2-patch.md` | v2.2 patch — flow-audit additions |
-| `local-setup-guide.md` | Local dev setup (refresh due at P5-S35) |
-| `ClaudeSkillsforge_sessiontext.docx` | Conversation transcript — **archive after Phase 5** per H.1 |
+| File | Purpose | Sync state |
+|------|---------|------------|
+| `skillforge_playbook_v2.md` | Master phased plan (v3 due after P5-S35) | Static |
+| `claude-code-prompts-all-phases-v2.md` | v2.1 — slice-by-slice prompts (active) | Static |
+| `claude-code-prompts-all-phases-v2.2-patch.md` | v2.2 patch — flow-audit additions | Static |
+| `prd.md` | Mirror of `docs/prd.md` | Re-upload on PRD changes |
+| `CODE-REALITY.md` | Mirror of repo CODE-REALITY.md | Re-upload when repo copy regenerates (see Session Header sync field) |
+
+Removed from chat Project (previously listed): `claude-code-prompts-all-phases.md` (v1 — superseded by v2.1); `local-setup-guide.md` (setup is Claude Code's concern, not chat-Claude's); `ClaudeSkillsforge_sessiontext.docx` (chat transcript — not an agent artifact).
 
 ---
 
 ## Update Protocol
 
 At the end of every slice:
-1. Move the just-completed slice into "Recently Completed" (top of list, drop oldest).
-2. Update "Last Completed Slice" and "Next Slice".
-3. If a feature was fixed: remove from "Known-Broken Features".
-4. If a refactor zone is now stable: remove from "Active Refactor Zones".
-5. If a new constraint or decision emerged: add to the right section.
-6. Commit SESSION-STATE.md alongside the slice's other files.
+1. Update **Session Header**: HEAD commit sha, mark CODE-REALITY stale if routes/models/types/App.tsx/layouts changed, flag chat Project copy for re-upload if repo copy regenerated.
+2. Move the just-completed slice into "Recently Completed" (top of list, drop oldest).
+3. Update "Last Completed Slice" and "Next Slice". Reference the BACKLOG ID(s) closed.
+4. If a feature was fixed: remove from "Known-Broken Features" and confirm BACKLOG status flipped to ✅.
+5. If a refactor zone is now stable: remove from "Active Refactor Zones".
+6. If you noticed any drift between sources: append a row to **Drift flags**.
+7. If a new constraint or decision emerged: add to the right section.
+8. Commit SESSION-STATE.md alongside the slice's other files.
 
 If you ever feel SESSION-STATE.md is out of sync with reality, run the contingency prompt:
-> *"Read SESSION-STATE.md. Run git log --oneline -20 and read the last 5 commit messages and any docs/specs/phase-5/ files added recently. Compare to SESSION-STATE.md. Report drift and propose updates. Do NOT modify the file until I approve."*
+> *"Read SESSION-STATE.md. Run `git log --oneline -20` and read the last 5 commit messages and any `docs/specs/phase-5/` files added recently. Read CODE-REALITY.md and check whether its commit sha matches HEAD. Compare all of the above to SESSION-STATE.md. Report drift and propose updates. Do NOT modify the file until I approve."*
 
 ---
 
-*Last hand-edit: 2026-04-17 by Dhamo (added v2.2 patch references + flow audit decisions + STRATEGIC-OPTIONS.md reference)*
+*Last hand-edit: 2026-04-19 — D-001/D-003/D-004 resolution; added Drift flags discipline; Session Header now tracks CODE-REALITY sync state for both repo and chat Project copies; Hard Constraints aligned with CLAUDE.md R12/R13/R15/R16; Project File Inventory expanded to include BACKLOG, CODE-REALITY, WORKFLOW-MODES, PHASE-5-STATUS and the chat Project mirror/sync state.*

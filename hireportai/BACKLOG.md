@@ -35,7 +35,6 @@
 | B-002 | interview | Cover letter generation format malformed (headers, paragraphs, signature block) | P0 | 🔴 | | P5-S10 | Free-form output. Move to structured JSON response. |
 | B-003 | profile | "Generate My Experience" button non-functional on Profile page | P0 | 🔴 | | P5-S11 | Trace: button wiring → API → service. May need empty-state for users with no study history. |
 | B-004 | results | Keyword Frequency Analysis colors don't match the legend | P1 | 🔴 | | P5-S21 (part) | Likely swapped variable or className. |
-| B-005 | billing | Stripe webhook handler is non-idempotent — duplicate delivery risk | P0 | 🔴 | | P5-S26c | Production data corruption risk. Needs `stripe_processed_events` table + UNIQUE constraint. |
 | B-006 | settings | Existing registered users may lose settings when new fields are added | P1 | 🔴 | | P5-S27 | Audit migrations for backfill defaults; integration test for round-trip. |
 | B-008 | nav | `deprecated_route_hit` not wired in 10 Navigate redirect nodes | P2 | 🔴 | | (post-P5-S13) | Tracked in deferred hygiene. Telemetry on legacy URL hits. |
 | B-009 | docs | AGENTS.md:95 contradicts CLAUDE.md Rule 13 | P2 | 🔴 | | | Doc-only conflict. Pick one and align. |
@@ -83,6 +82,7 @@
 
 | ID | Title | Closed by | Date | Notes |
 |----|-------|-----------|------|-------|
+| B-005 | Stripe webhook handler is non-idempotent — duplicate delivery risk | f615eb6 | 2026-04-19 | spec docs/specs/phase-5/43-stripe-webhook-idempotency.md — closed by f615eb6 on 2026-04-19 — spec backfilled retroactively; idempotency was shipped prior to backlog creation (original impl 43d40d9 on 2026-04-10). |
 | E-003 | Mandatory PersonaPicker on first login + persona model | 2c01cc7 | 2026-04-18 | P5-S17 full FE migration. closed by 2c01cc7 on 2026-04-18 |
 | B-007 | StudyDashboard PERSONA_CONFIG undefined for snake_case persona values | 2c01cc7 | 2026-04-18 | Closed alongside E-003. closed by 2c01cc7 on 2026-04-18 |
 
