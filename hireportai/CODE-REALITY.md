@@ -9,9 +9,9 @@
 
 | Field | Value |
 |-------|-------|
-| Commit sha (short) | `d155dcb` |
-| Branch | `main` (9 ahead of `origin/main`) |
-| Generated | 2026-04-20 |
+| Commit sha (short) | `7770d45` |
+| Branch | `main` (13 ahead of `origin/main`) |
+| Generated | 2026-04-20 (targeted pre-P5-S26b-impl-BE refresh: metadata only; backend sections still reflect `d155dcb` snapshot — accurate because commits since then are P5-S22b frontend-only + two docs-only commits) |
 | Backend model files | 17 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models`) |
 | Backend service files | 29 top-level + 3 under `services/llm/` = 32 |
 | Backend router files | 17 v1 + 6 legacy = 23 |
@@ -19,7 +19,7 @@
 | Alembic revisions | 19 |
 | Frontend pages | 19 |
 | Frontend components (`.tsx` under `src/components/`, excl. `__tests__`) | 60 |
-| Specs on disk (`docs/specs/**/*.md`) | 69 |
+| Specs on disk (`docs/specs/**/*.md`) | 70 (added `phase-5/42-paywall-dismissal.md` in commit `eae7ff7`) |
 | Skill files (`.agent/skills/*.md`) | 20 |
 
 ---
