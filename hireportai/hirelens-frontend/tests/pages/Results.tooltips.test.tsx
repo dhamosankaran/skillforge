@@ -22,6 +22,17 @@ vi.mock('@/context/UsageContext', () => ({
   UsageProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
 }))
 
+vi.mock('@/context/AuthContext', () => ({
+  useAuth: () => ({
+    user: { id: 'u1', email: 't@e.com', name: 'T' },
+    isLoading: false,
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+    updateUser: vi.fn(),
+  }),
+  AuthProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
+}))
+
 const RESULT: AnalysisResponse = {
   scan_id: 'scan-1',
   ats_score: 80,

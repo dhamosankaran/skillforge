@@ -1,16 +1,33 @@
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { AlertCircle, Info, Star, ExternalLink, BookOpen, Lock } from 'lucide-react'
+import {
+  AlertCircle,
+  Info,
+  Star,
+  ExternalLink,
+  BookOpen,
+  LogIn,
+} from 'lucide-react'
 import { getImportanceBg, getImportanceColor } from '@/utils/formatters'
 import { getSkillResource } from '@/utils/skillResources'
 import { capture } from '@/utils/posthog'
 import type { SkillGap, GapMapping } from '@/types'
 import { containerVariants, cardVariants } from '@/components/ui/AnimatedCard'
 
+export type MissingSkillsPlan = 'anonymous' | 'free' | 'pro'
+
 interface MissingSkillsPanelProps {
   skillGaps: SkillGap[]
   gapMappings?: GapMapping[]
-  isPro?: boolean
+  /** Three-state plan derived by the consumer from useAuth + useUsage. */
+  plan: MissingSkillsPlan
+  /** Current URL scan_id, used to build the anonymous `return_to` param.
+   *  Source is the URL — not `result.scan_id` — per spec #22 AC-8. */
+  scanId?: string | null
+  /** Accepted for backwards-compat with consumers that still hold an
+   *  upgrade-modal callback for other Results surfaces. Not invoked by
+   *  this component — the Missing Skills CTA routes, never paywalls
+   *  (spec #22 AC-5). */
   onUpgradeClick?: () => void
 }
 
@@ -20,12 +37,49 @@ const IMPORTANCE_ICONS = {
   'nice-to-have': Info,
 }
 
+interface CtaCopy {
+  label: string
+  aria: string
+  Icon: typeof BookOpen
+}
+
+function ctaCopyFor(plan: MissingSkillsPlan, skill: string): CtaCopy {
+  switch (plan) {
+    case 'anonymous':
+      return {
+        label: 'Sign in to study',
+        aria: `Sign in to study cards for ${skill}`,
+        Icon: LogIn,
+      }
+    case 'pro':
+      return {
+        label: 'Study these cards',
+        aria: `Study cards for ${skill}`,
+        Icon: BookOpen,
+      }
+    case 'free':
+    default:
+      return {
+        label: 'Study these cards — free preview',
+        aria: `Study cards for ${skill}, free-tier preview`,
+        Icon: BookOpen,
+      }
+  }
+}
+
+function signInReturnToUrl(scanId: string | null | undefined): string {
+  const target = scanId ? `/prep/results?scan_id=${scanId}` : '/prep/results'
+  return `/login?return_to=${encodeURIComponent(target)}`
+}
+
 export function MissingSkillsPanel({
   skillGaps,
   gapMappings = [],
-  isPro = false,
-  onUpgradeClick,
+  plan,
+  scanId = null,
+  onUpgradeClick: _onUpgradeClick,
 }: MissingSkillsPanelProps) {
+  void _onUpgradeClick // Prop retained for back-compat; CTA routes, never paywalls.
   const navigate = useNavigate()
 
   if (skillGaps.length === 0) {
@@ -40,7 +94,8 @@ export function MissingSkillsPanel({
     )
   }
 
-  // Build a lookup from gap name to its first matching category
+  // Build a lookup from gap name (lowercased) to its first matching category.
+  // AC-4: only entries whose match_type !== 'none' count as matched.
   const gapCategoryMap = new Map<string, { categoryId: string; categoryName: string }>()
   for (const mapping of gapMappings) {
     if (mapping.match_type !== 'none' && mapping.matching_categories.length > 0) {
@@ -60,10 +115,27 @@ export function MissingSkillsPanel({
       className="grid grid-cols-1 sm:grid-cols-2 gap-3"
     >
       {skillGaps.map((gap) => {
-        const Icon = IMPORTANCE_ICONS[gap.importance]
+        const ImportanceIcon = IMPORTANCE_ICONS[gap.importance]
         const color = getImportanceColor(gap.importance)
         const bg = getImportanceBg(gap.importance)
         const match = gapCategoryMap.get(gap.skill.toLowerCase())
+        const copy = ctaCopyFor(plan, gap.skill)
+        const categoryId = match ? match.categoryId : null
+        const disabled = categoryId === null
+
+        function handleClick() {
+          if (disabled) return
+          capture('missing_skills_cta_clicked', {
+            plan,
+            skill: gap.skill,
+            category_id: categoryId,
+          })
+          if (plan === 'anonymous') {
+            navigate(signInReturnToUrl(scanId))
+          } else {
+            navigate(`/learn?category=${categoryId}`)
+          }
+        }
 
         return (
           <motion.div
@@ -75,7 +147,7 @@ export function MissingSkillsPanel({
               borderColor: `${color}25`,
             }}
           >
-            <Icon size={14} style={{ color, marginTop: 2, flexShrink: 0 }} />
+            <ImportanceIcon size={14} style={{ color, marginTop: 2, flexShrink: 0 }} />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-text-primary truncate">{gap.skill}</p>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -102,42 +174,19 @@ export function MissingSkillsPanel({
                   ) : null
                 })()}
               </div>
-              {/* Study link — Pro: navigate, Free: upgrade prompt */}
-              {match && (
-                <div className="mt-2">
-                  {isPro ? (
-                    <button
-                      onClick={() => {
-                        capture('gap_study_clicked', {
-                          gap_name: gap.skill,
-                          category_id: match.categoryId,
-                          user_plan: 'pro',
-                        })
-                        navigate(`/learn?category=${match.categoryId}`)
-                      }}
-                      className="flex items-center gap-1 text-xs font-medium text-accent-primary hover:text-accent-primary/80 transition-colors"
-                    >
-                      <BookOpen size={10} />
-                      Study this
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        capture('gap_study_clicked', {
-                          gap_name: gap.skill,
-                          category_id: match.categoryId,
-                          user_plan: 'free',
-                        })
-                        onUpgradeClick?.()
-                      }}
-                      className="flex items-center gap-1 text-xs text-text-muted hover:text-text-secondary transition-colors"
-                    >
-                      <Lock size={10} />
-                      Upgrade to study
-                    </button>
-                  )}
-                </div>
-              )}
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={handleClick}
+                  disabled={disabled}
+                  aria-label={disabled ? `${gap.skill} — no matching study content yet` : copy.aria}
+                  title={disabled ? 'No matching study content yet' : undefined}
+                  className="flex items-center gap-1 text-xs font-medium text-accent-primary hover:text-accent-primary/80 transition-colors disabled:text-text-muted disabled:cursor-not-allowed disabled:hover:text-text-muted"
+                >
+                  <copy.Icon size={10} />
+                  {copy.label}
+                </button>
+              </div>
             </div>
           </motion.div>
         )

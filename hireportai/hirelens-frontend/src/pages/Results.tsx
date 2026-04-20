@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Target, BarChart3, GitMerge, AlertTriangle, Zap,
@@ -9,7 +9,9 @@ import {
 import toast from 'react-hot-toast'
 import { fetchOnboardingRecommendations } from '@/services/api'
 import { PaywallModal } from '@/components/PaywallModal'
+import { useAuth } from '@/context/AuthContext'
 import { useUsage } from '@/context/UsageContext'
+import type { MissingSkillsPlan } from '@/components/dashboard/MissingSkillsPanel'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { ATSScoreGauge } from '@/components/dashboard/ATSScoreGauge'
 import { ScoreBreakdown } from '@/components/dashboard/ScoreBreakdown'
@@ -39,11 +41,23 @@ export default function Results() {
   const { state } = useAnalysisContext()
   const navigate = useNavigate()
   const { canUsePro } = useUsage()
+  const { user } = useAuth()
+  const [searchParams] = useSearchParams()
   const { result, isLoading } = state
   const toastShownRef = useRef<string | null>(null)
   const jobFitViewedRef = useRef(false)
   const [showPaywall, setShowPaywall] = useState(false)
   const [gapMappings, setGapMappings] = useState<import('@/types').GapMapping[]>([])
+
+  // Three-state plan for the Missing Skills CTA (spec #22 §Plan Detection).
+  // Composed from the two live plan-surfaces — `AuthContext.user` signals
+  // anonymity, `UsageContext.canUsePro` signals pro. `AuthUser` has no
+  // `subscription` field on the frontend, so the spec's `user.subscription?.plan`
+  // wording is satisfied via the existing `canUsePro` derivation.
+  const missingSkillsPlan: MissingSkillsPlan =
+    user === null ? 'anonymous' : canUsePro ? 'pro' : 'free'
+  // AC-8: `return_to` is derived from the URL's scan_id, not from result state.
+  const urlScanId = searchParams.get('scan_id')
 
   // Fetch gap-to-category mappings when results load
   useEffect(() => {
@@ -225,8 +239,8 @@ export default function Results() {
               <MissingSkillsPanel
                 skillGaps={result.skill_gaps}
                 gapMappings={gapMappings}
-                isPro={canUsePro}
-                onUpgradeClick={() => setShowPaywall(true)}
+                plan={missingSkillsPlan}
+                scanId={urlScanId}
               />
             </PanelSection>
           </motion.div>

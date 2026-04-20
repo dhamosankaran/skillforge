@@ -37,7 +37,7 @@ PostHog is instrumented from Phase 1 and runs on both tiers:
 | `onboarding_tour_completed` | `components/GuidedTour.tsx` | — |
 | `onboarding_tour_skipped` | `components/GuidedTour.tsx` | — |
 | `gap_card_clicked` | `pages/Onboarding.tsx` | `{gap_id, gap_name}` |
-| `gap_study_clicked` | `components/MissingSkillsPanel.tsx` | `{skill_id, category_name}` |
+| `gap_study_clicked` **(DEPRECATED P5-S22b)** | `components/dashboard/MissingSkillsPanel.tsx` | `{gap_name, category_id, user_plan}` — replaced by `missing_skills_cta_clicked` (see below). No longer fires after commit `fd4ca3d`. |
 | `paywall_hit` | `components/PaywallModal.tsx` | `{trigger, category_name?, cards_viewed?}` |
 | `checkout_started` | `components/PaywallModal.tsx` | `{trigger, plan, price, currency}` |
 | `payment_completed` | `pages/Pricing.tsx` | `{plan, price, currency, source: 'stripe_checkout_return'}` |
@@ -77,6 +77,7 @@ PostHog is instrumented from Phase 1 and runs on both tiers:
 | `results_tooltip_opened` | `components/dashboard/PanelSection.tsx` (mounted by `pages/Results.tsx`) | `{section: 'ats_score' \| 'score_breakdown' \| 'job_fit' \| 'keywords' \| 'skills_radar' \| 'bullets' \| 'missing_skills' \| 'formatting' \| 'improvements'}` — fires on each open of a section info-icon tooltip on `/prep/results`. Does NOT fire on close; open-count is the signal. `section` is passed by the Results page as a prop to `PanelSection`; if absent (non-Results callers), the event does not fire (P5-S21b, spec #21). |
 | `job_fit_explanation_viewed` | `pages/Results.tsx` | `{view_position: 'above_fold'}` — fires once per mount via `useRef` idempotency guard when Analysis Results renders with a loaded `result` (matches `home_dashboard_viewed` / `first_action_viewed` convention). `view_position` is fixed at `"above_fold"` after P5-S20; leaves headroom for a scroll-triggered or below-fold variant without needing a new event name (P5-S20, BACKLOG E-009). |
 | `daily_card_wall_hit` | `components/study/QuizPanel.tsx` | `{resets_at_hours_from_now: int}` — fires when the daily-card wall modal opens on a 402 response with `trigger="daily_review"` (spec #50, P5-S22-WALL). `resets_at_hours_from_now` is the integer hours between now and the server-provided `resets_at` ISO timestamp, rounded toward zero. Fires open-only (re-open = re-fire), matching the `paywall_hit` convention in `PaywallModal.tsx:78`. |
+| `missing_skills_cta_clicked` | `components/dashboard/MissingSkillsPanel.tsx` | `{plan: 'anonymous'\|'free'\|'pro', skill: string, category_id: string\|null}` — fires on each Missing Skills CTA click on `/prep/results` (spec #22, P5-S22b). `category_id` is the resolved `matching_categories[0].category_id` from the first `GapMapping` whose gap matches the skill case-insensitively with `match_type !== 'none'`, else `null`. Disabled CTAs do not fire. Replaces the deprecated `gap_study_clicked` event (see Deprecated Frontend Events below). |
 
 > **P5-S14 note (deprecated_route_hit):** the navigation-restructure spec (`docs/specs/phase-5/12-navigation-restructure.md` §Analytics) also defines a transitional `deprecated_route_hit` event to fire from each `<Navigate>` node in `src/App.tsx`'s redirect block. It is **not currently wired** (P5-S13 landed the redirect block without it). If we want to measure when the old paths stop receiving hits before dropping the block in Phase 6, we need to backfill — out of scope for P5-S14, flagged here as a P5-S13 gap.
 
@@ -92,6 +93,8 @@ Preserved for historical PostHog data cross-reference. Source files no longer ex
 > **`persona_changed` (DEPRECATED P5-S17, commit b5f42c2 — source component deleted; historical PostHog data preserved. Replaced by `persona_selected`.)**
 
 > **`onboarding_persona_selected` (DEPRECATED P5-S17, commit b5f42c2 — source component deleted; historical PostHog data preserved. Replaced by `persona_selected`. Referenced by `docs/specs/phase-4/24-posthog-dashboards.md` event #13 — update that spec in a separate slice if dashboard is decommissioned.)**
+
+> **`gap_study_clicked` (DEPRECATED P5-S22b, commit `fd4ca3d` — source component (`components/dashboard/MissingSkillsPanel.tsx`) still exists but no longer emits this event. Replaced by `missing_skills_cta_clicked` with a three-state `plan` prop (anonymous / free / pro) per spec #22.)**
 
 ### Backend events (`app/**/*.py`)
 
