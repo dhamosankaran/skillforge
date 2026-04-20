@@ -75,7 +75,7 @@ India → INR ₹999/mo; everyone else → USD $49/mo. See
 - **Free plan caps:**
   - ATS scans: small monthly allowance (configured per deploy)
   - Interview questions: **3 per month**
-  - Foundation cards: 15 lifetime
+  - Foundation cards: **15 card reviews per day** for free users. Counter resets at the user's local midnight (via `EmailPreference.timezone`). Enforced server-side via Redis counter keyed by `daily_cards:{user_id}:{YYYY-MM-DD}` (per spec #50). Wall returns HTTP 402 with paywall payload. Pro/Enterprise/admin bypass.
 - Pro/Enterprise: unlimited (`usage_limit` row absent or very high).
 - On cap hit, the service raises a 403 that the frontend catches and
   converts into a PaywallModal with the matching `trigger`.

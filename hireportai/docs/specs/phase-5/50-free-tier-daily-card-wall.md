@@ -37,6 +37,8 @@ This slice's authoring prompt (P5-S22-WALL-a) resolves the ambiguity explicitly 
 
 Drift flag implication — `.agent/skills/payments.md:78` also reads "Foundation cards: **15 lifetime**", which aligns with LD-001's second phrasing but contradicts this spec's per-day reading. That skill-doc line will need amendment in the P5-S22-WALL-b commit (or a follow-up docs-sync slice) to say "15 per day (user-local midnight reset)". This amendment is **not** in scope for P5-S22-WALL-a (spec only). Logged as a spec-author observation; a Drift flag can be appended by the impl slice when it lands.
 
+**Resolution:** Ambiguity resolved in the follow-up amendment commit. LD-001 now unambiguously states per-day budget with user-local-midnight reset. `.agent/skills/payments.md` line updated in the same commit. See Ops Log entry dated 2026-04-19.
+
 ## Solution
 
 Per-user per-day counter that increments on FSRS review submit. When the counter reaches 15 for a free user on their local calendar day, the next submit returns HTTP 402 with a structured paywall payload. Counter resets at the user's local midnight. Pro / Enterprise / admin bypass the check entirely.
@@ -247,6 +249,7 @@ Expected frontend test count delta at P5-S22-WALL-b ship: **+5** (142 → 147).
 - **Redis counter persistence for historical analytics** — PostHog handles analytics; don't duplicate. The 48h TTL is intentional — the key is transient session state, not a log.
 - **Grace period on first-day-of-wall** (e.g., warn at 13, wall at 15) — simpler to ship without; revisit if wall-hit UX testing shows friction.
 - **Migrating `check_and_increment` call-sites from 403 → 402** for free-tier-cap consistency — separate cleanup slice; this spec explicitly uses 402 for the wall while leaving other caps at 403 for now.
+- **403→402 migration for the existing interview-prep monthly cap** — tracked as future hygiene; not in this slice, not in P5-S22-WALL-b.
 - **Streak-vs-wall midnight alignment** — flagged in §Timezone Handling as a product inconsistency. Needs a Locked Decision (unify both to user-local midnight, or unify both to UTC). Not blocking P5-S22-WALL-b ship.
 - **`.agent/skills/payments.md:78` "Foundation cards: 15 **lifetime**" amendment** — needs update to "15 per day (user-local midnight reset)" per this spec's Interpretation note. Include in P5-S22-WALL-b commit or a follow-up docs-sync slice.
 - **`.agent/skills/study-engine.md` Daily-5 line update** — already flagged in the existing 2026-04-18 Locked Decision §1B implementation note ("Update study-engine.md skill: change 'Daily 5 = ... LIMIT 5' line to reflect 20-cap"). Orthogonal to this spec; bundled cleanup candidate if P5-S22-WALL-b touches that skill file anyway.
