@@ -451,6 +451,55 @@ export async function createBillingPortalSession(): Promise<BillingPortalRespons
   return response.data
 }
 
+// ─── Paywall dismissal (spec #42) ─────────────────────────────────────────────
+
+export interface PaywallDismissResponse {
+  logged: boolean
+  dismissal_id: string
+  dismissals_in_window: number
+}
+
+/** Log a paywall dismissal for the given trigger. LD-8 60s idempotency BE-side. */
+export async function dismissPaywall(
+  trigger: string,
+  actionCountAtDismissal?: number | null,
+): Promise<PaywallDismissResponse> {
+  const response = await api.post<PaywallDismissResponse>(
+    '/api/v1/payments/paywall-dismiss',
+    {
+      trigger,
+      action_count_at_dismissal: actionCountAtDismissal ?? null,
+    },
+  )
+  return response.data
+}
+
+export interface ShouldShowPaywallResponse {
+  show: boolean
+  attempts_until_next: number
+}
+
+/**
+ * Ask the backend whether to render the full paywall modal or the silent
+ * inline nudge for (user, trigger). Strategy A: FE tracks the grace counter
+ * and passes it as `attempts_since_dismiss`.
+ */
+export async function shouldShowPaywall(
+  trigger: string,
+  attemptsSinceDismiss: number = 0,
+): Promise<ShouldShowPaywallResponse> {
+  const response = await api.get<ShouldShowPaywallResponse>(
+    '/api/v1/payments/should-show-paywall',
+    {
+      params: {
+        trigger,
+        attempts_since_dismiss: attemptsSinceDismiss,
+      },
+    },
+  )
+  return response.data
+}
+
 export interface ChecklistStep {
   id: string
   title: string

@@ -12,9 +12,11 @@ vi.mock('@/utils/posthog', () => ({
 
 const mockCreateCheckoutSession = vi.fn()
 const mockFetchPricing = vi.fn()
+const mockDismissPaywall = vi.fn()
 vi.mock('@/services/api', () => ({
   createCheckoutSession: (...args: unknown[]) => mockCreateCheckoutSession(...args),
   fetchPricing: (...args: unknown[]) => mockFetchPricing(...args),
+  dismissPaywall: (...args: unknown[]) => mockDismissPaywall(...args),
 }))
 
 // Stub framer-motion to avoid animation timing issues in tests.
@@ -61,6 +63,11 @@ describe('PaywallModal', () => {
       price: 49,
       price_display: '$49/mo',
       stripe_price_id: 'price_test',
+    })
+    mockDismissPaywall.mockResolvedValue({
+      logged: true,
+      dismissal_id: 'dismissal-1',
+      dismissals_in_window: 1,
     })
   })
 
@@ -134,7 +141,77 @@ describe('PaywallModal', () => {
 
     await user.click(screen.getByRole('button', { name: /not now/i }))
 
-    expect(onClose).toHaveBeenCalledOnce()
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledOnce()
+    })
+  })
+
+  // ─── Spec #42 dismissal wiring ────────────────────────────────────────────
+
+  it('Not now click calls dismissPaywall with the trigger', async () => {
+    const user = userEvent.setup()
+    renderModal({ trigger: 'daily_review' })
+
+    await user.click(screen.getByRole('button', { name: /not now/i }))
+
+    await waitFor(() => {
+      expect(mockDismissPaywall).toHaveBeenCalledWith('daily_review')
+    })
+  })
+
+  it('Not now click fires paywall_dismissed event with BE window count', async () => {
+    const user = userEvent.setup()
+    mockDismissPaywall.mockResolvedValueOnce({
+      logged: true,
+      dismissal_id: 'd-42',
+      dismissals_in_window: 2,
+    })
+    renderModal({ trigger: 'daily_review' })
+
+    await user.click(screen.getByRole('button', { name: /not now/i }))
+
+    await waitFor(() => {
+      expect(mockCapture).toHaveBeenCalledWith('paywall_dismissed', {
+        trigger: 'daily_review',
+        dismissals_in_window: 2,
+        action_count_at_dismissal: null,
+        will_get_winback: false,
+      })
+    })
+  })
+
+  it('Not now closes modal on dismiss API failure (graceful degradation)', async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mockDismissPaywall.mockRejectedValueOnce(new Error('network down'))
+
+    renderModal({ onClose, trigger: 'daily_review' })
+
+    await user.click(screen.getByRole('button', { name: /not now/i }))
+
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledOnce()
+    })
+    expect(errorSpy).toHaveBeenCalled()
+    // Event should NOT fire when the API call failed — cleaner analytics.
+    const dismissEvent = mockCapture.mock.calls.find(
+      (c) => c[0] === 'paywall_dismissed',
+    )
+    expect(dismissEvent).toBeUndefined()
+
+    errorSpy.mockRestore()
+  })
+
+  it('X close button also wires through handleDismiss', async () => {
+    const user = userEvent.setup()
+    renderModal({ trigger: 'daily_review' })
+
+    await user.click(screen.getByRole('button', { name: /close paywall/i }))
+
+    await waitFor(() => {
+      expect(mockDismissPaywall).toHaveBeenCalledWith('daily_review')
+    })
   })
 
   it('fires checkout_started event on CTA click', async () => {

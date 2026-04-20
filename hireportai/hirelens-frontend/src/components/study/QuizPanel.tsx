@@ -8,14 +8,16 @@
  * Submitting: Buttons disabled while POST /study/review is in-flight.
  * Done:       Shows next-review result; parent is notified via onRated.
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Eye, CheckCircle, AlertCircle, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { AxiosError } from 'axios'
 import clsx from 'clsx'
-import { submitReview, submitCardFeedback } from '@/services/api'
+import { shouldShowPaywall, submitReview, submitCardFeedback } from '@/services/api'
 import { capture } from '@/utils/posthog'
 import { PaywallModal } from '@/components/PaywallModal'
+import { WallInlineNudge } from '@/components/study/WallInlineNudge'
+import { useUsage } from '@/context/UsageContext'
 import type { FsrsRating, ReviewResponse } from '@/types'
 
 interface RatingOption {
@@ -127,6 +129,14 @@ function formatResetsAt(resetsAtIso: string): string {
   return `Resets at ${localTime}`
 }
 
+// Paywall-dismissal orchestration state (spec #42 §5.4). After a 402,
+// QuizPanel asks the backend whether to render the full modal or the
+// silent inline nudge. Grace counter lives in React state (Strategy A
+// per spec §5.3): each walled retry after a dismissal increments a
+// local counter that gets echoed back to the BE on the next
+// should-show-paywall call.
+type WallUi = 'modal' | 'nudge'
+
 export function QuizPanel({
   cardId,
   question,
@@ -139,8 +149,13 @@ export function QuizPanel({
   const [result, setResult] = useState<ReviewResponse | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [wall, setWall] = useState<DailyWallPayload | null>(null)
+  const [wallUi, setWallUi] = useState<WallUi | null>(null)
+  // LD-3 grace counter — walled retries since last dismissal. Resets to 0
+  // on dismissal (PaywallModal onClose → QuizPanel resets wall state).
+  const attemptsSinceDismissRef = useRef<number>(0)
+  const { canUsePro } = useUsage()
 
-  // Fire `daily_card_wall_hit` on modal open (spec #50 AC-10 frontend side).
+  // Fire `daily_card_wall_hit` on 402 (spec #50 AC-10 frontend side).
   // Matches the existing `paywall_hit` open-semantic in PaywallModal.tsx:78.
   useEffect(() => {
     if (wall === null) return
@@ -178,14 +193,47 @@ export function QuizPanel({
       const payload = extractWallPayload(err)
       if (payload !== null) {
         // Free-tier daily-card wall (spec #50). The backend did not mutate
-        // card_progress or FSRS state — we mirror that and open the modal.
+        // card_progress or FSRS state — we mirror that and route the user
+        // into either the full modal or the silent inline nudge based on
+        // spec #42's dismissal grace window.
         setWall(payload)
         setState('revealed')
+
+        // Pro/Enterprise defense-in-depth: if the BE ever 402s a Pro user
+        // (plan-transition race, clock skew), silently drop — do not
+        // render modal or nudge. Spec §5.4 + LD-7.
+        if (canUsePro) {
+          setWallUi(null)
+          return
+        }
+
+        try {
+          const decision = await shouldShowPaywall(
+            'daily_review',
+            attemptsSinceDismissRef.current,
+          )
+          setWallUi(decision.show ? 'modal' : 'nudge')
+        } catch (shouldErr) {
+          // Fail-safe to the existing modal behavior so free users never
+          // get silently softened past the 402. Matches spec §5.3 fail-
+          // safe note.
+          console.error('shouldShowPaywall failed', shouldErr)
+          setWallUi('modal')
+        }
         return
       }
       setSubmitError('Failed to save rating. Please try again.')
       setState('revealed') // let user retry
     }
+  }
+
+  // PaywallModal onClose and inline-nudge lifecycle both clear the wall
+  // state. The grace counter increments so the next walled retry reports
+  // a higher `attempts_since_dismiss` to the BE.
+  function handleWallClose() {
+    attemptsSinceDismissRef.current += 1
+    setWall(null)
+    setWallUi(null)
   }
 
   return (
@@ -304,7 +352,7 @@ export function QuizPanel({
         )}
       </AnimatePresence>
 
-      {/* ── Daily-card wall modal (spec #50) ───────────────────────────── */}
+      {/* ── Daily-card wall UI (spec #50 modal, spec #42 orchestration) ── */}
       {wall !== null && (
         <>
           <p
@@ -314,11 +362,14 @@ export function QuizPanel({
           >
             {formatResetsAt(wall.resets_at)}
           </p>
-          <PaywallModal
-            open
-            onClose={() => setWall(null)}
-            trigger="daily_review"
-          />
+          {wallUi === 'modal' && (
+            <PaywallModal
+              open
+              onClose={handleWallClose}
+              trigger="daily_review"
+            />
+          )}
+          {wallUi === 'nudge' && <WallInlineNudge trigger="daily_review" />}
         </>
       )}
     </div>

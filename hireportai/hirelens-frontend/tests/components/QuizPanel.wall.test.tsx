@@ -15,6 +15,8 @@ const submitReview = vi.fn()
 const createCheckoutSession = vi.fn()
 const fetchPricing = vi.fn()
 const submitCardFeedback = vi.fn()
+const dismissPaywall = vi.fn()
+const shouldShowPaywall = vi.fn()
 
 vi.mock('@/services/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/api')>()
@@ -24,9 +26,28 @@ vi.mock('@/services/api', async (importOriginal) => {
     createCheckoutSession: (...args: unknown[]) => createCheckoutSession(...args),
     fetchPricing: (...args: unknown[]) => fetchPricing(...args),
     submitCardFeedback: (...args: unknown[]) => submitCardFeedback(...args),
+    dismissPaywall: (...args: unknown[]) => dismissPaywall(...args),
+    shouldShowPaywall: (...args: unknown[]) => shouldShowPaywall(...args),
   }
 })
 
+let mockCanUsePro = false
+vi.mock('@/context/UsageContext', () => ({
+  useUsage: () => ({
+    usage: { plan: mockCanUsePro ? 'pro' : 'free', scansUsed: 0, maxScans: 3 },
+    canScan: true,
+    canUsePro: mockCanUsePro,
+    canUsePremium: mockCanUsePro,
+    incrementScan: vi.fn(),
+    upgradePlan: vi.fn(),
+    showUpgradeModal: false,
+    setShowUpgradeModal: vi.fn(),
+    checkAndPromptUpgrade: vi.fn(),
+    openPaywall: vi.fn(),
+  }),
+}))
+
+import { MemoryRouter } from 'react-router-dom'
 import { QuizPanel } from '@/components/study/QuizPanel'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -54,14 +75,16 @@ function makeAxios402(resetsAt: string): AxiosError {
 
 function renderQuiz() {
   return render(
-    <QuizPanel
-      cardId="card-1"
-      question="Q?"
-      answer="A."
-      sessionId="sess-1"
-      startTimeMs={Date.now()}
-      onRated={vi.fn()}
-    />,
+    <MemoryRouter>
+      <QuizPanel
+        cardId="card-1"
+        question="Q?"
+        answer="A."
+        sessionId="sess-1"
+        startTimeMs={Date.now()}
+        onRated={vi.fn()}
+      />
+    </MemoryRouter>,
   )
 }
 
@@ -78,11 +101,24 @@ beforeEach(() => {
   createCheckoutSession.mockReset()
   fetchPricing.mockReset()
   submitCardFeedback.mockReset()
+  dismissPaywall.mockReset()
+  shouldShowPaywall.mockReset()
+  mockCanUsePro = false
   fetchPricing.mockResolvedValue({
     currency: 'usd',
     price: 49,
     price_display: '$49/mo',
     stripe_price_id: 'price_123',
+  })
+  // Default: BE says show the modal (existing wall behaviour).
+  shouldShowPaywall.mockResolvedValue({
+    show: true,
+    attempts_until_next: 3,
+  })
+  dismissPaywall.mockResolvedValue({
+    logged: true,
+    dismissal_id: 'dismissal-default',
+    dismissals_in_window: 1,
   })
 })
 
@@ -181,6 +217,94 @@ describe('Daily-card review wall — frontend (spec #50)', () => {
       )
       expect(wallHitCall).toBeTruthy()
       expect(wallHitCall![1]).toEqual({ resets_at_hours_from_now: 5 })
+    })
+  })
+})
+
+// ─── Spec #42 dismissal orchestration (P5-S26b-impl-FE) ─────────────────────
+
+describe('QuizPanel dismissal orchestration (spec #42)', () => {
+  it('402 with should-show {show: true} renders PaywallModal', async () => {
+    shouldShowPaywall.mockResolvedValueOnce({
+      show: true,
+      attempts_until_next: 3,
+    })
+    renderQuiz()
+    await triggerWalledSubmit(new Date(Date.now() + 3600_000).toISOString())
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+    expect(screen.queryByTestId('wall-inline-nudge')).not.toBeInTheDocument()
+    expect(shouldShowPaywall).toHaveBeenCalledWith('daily_review', 0)
+  })
+
+  it('402 with should-show {show: false} renders inline nudge (not modal)', async () => {
+    shouldShowPaywall.mockResolvedValueOnce({
+      show: false,
+      attempts_until_next: 2,
+    })
+    renderQuiz()
+    await triggerWalledSubmit(new Date(Date.now() + 3600_000).toISOString())
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wall-inline-nudge')).toBeInTheDocument()
+    })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    // LD-6 guard: inline nudge must not fire paywall_hit.
+    const paywallHitCall = capture.mock.calls.find(
+      (c) => c[0] === 'paywall_hit',
+    )
+    expect(paywallHitCall).toBeUndefined()
+  })
+
+  it('should-show-paywall failure defaults to modal (fail-safe)', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    shouldShowPaywall.mockRejectedValueOnce(new Error('network down'))
+    renderQuiz()
+    await triggerWalledSubmit(new Date(Date.now() + 3600_000).toISOString())
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+    expect(screen.queryByTestId('wall-inline-nudge')).not.toBeInTheDocument()
+    expect(errorSpy).toHaveBeenCalled()
+    errorSpy.mockRestore()
+  })
+
+  it('Pro user 402 renders nothing and never calls shouldShowPaywall', async () => {
+    mockCanUsePro = true
+    renderQuiz()
+    await triggerWalledSubmit(new Date(Date.now() + 3600_000).toISOString())
+
+    // daily_card_wall_hit still fires because the 402 itself fired (AC-10
+    // regression).
+    await waitFor(() => {
+      const wallHitCall = capture.mock.calls.find(
+        (c) => c[0] === 'daily_card_wall_hit',
+      )
+      expect(wallHitCall).toBeTruthy()
+    })
+    // But no modal, no nudge, no BE round-trip.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('wall-inline-nudge')).not.toBeInTheDocument()
+    expect(shouldShowPaywall).not.toHaveBeenCalled()
+  })
+
+  it('existing daily_card_wall_hit event still fires (regression)', async () => {
+    shouldShowPaywall.mockResolvedValueOnce({
+      show: true,
+      attempts_until_next: 3,
+    })
+    renderQuiz()
+    const resetsAt = new Date(Date.now() + 2 * 3600_000).toISOString()
+    await triggerWalledSubmit(resetsAt)
+
+    await waitFor(() => {
+      const wallHitCall = capture.mock.calls.find(
+        (c) => c[0] === 'daily_card_wall_hit',
+      )
+      expect(wallHitCall).toBeTruthy()
     })
   })
 })

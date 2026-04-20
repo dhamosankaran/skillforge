@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Sparkles, ArrowRight, Check, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { createCheckoutSession } from '@/services/api'
+import { createCheckoutSession, dismissPaywall } from '@/services/api'
 import { usePricing } from '@/hooks/usePricing'
 import { capture } from '@/utils/posthog'
 
@@ -104,6 +104,29 @@ export function PaywallModal({
     }
   }
 
+  // Dismissal (spec #42 §5.4). Fires on both "Not now" and the X close —
+  // both are the same semantic: user declined this paywall instance. API
+  // failure does not trap the user in the modal; we close regardless and
+  // log the error. `will_get_winback` is hardcoded false pending E-031
+  // (BE response does not yet expose the eligibility flag; spec §6
+  // contract will be amended when win-back activates).
+  async function handleDismiss() {
+    if (isLoading) return
+    try {
+      const result = await dismissPaywall(trigger)
+      capture('paywall_dismissed', {
+        trigger,
+        dismissals_in_window: result.dismissals_in_window,
+        action_count_at_dismissal: null,
+        will_get_winback: false,
+      })
+    } catch (err) {
+      console.error('dismissPaywall failed', err)
+    } finally {
+      onClose()
+    }
+  }
+
   const headline =
     trigger === 'locked_category' && context?.categoryName
       ? `Unlock ${context.categoryName}`
@@ -118,7 +141,7 @@ export function PaywallModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={isLoading ? undefined : onClose}
+            onClick={isLoading ? undefined : handleDismiss}
             className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm"
           />
 
@@ -139,7 +162,7 @@ export function PaywallModal({
 
               {/* Close */}
               <button
-                onClick={onClose}
+                onClick={handleDismiss}
                 disabled={isLoading}
                 className="absolute top-4 right-4 p-1.5 rounded-lg text-text-muted hover:text-text-secondary hover:bg-contrast/[0.04] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 aria-label="Close paywall"
@@ -208,7 +231,7 @@ export function PaywallModal({
                     )}
                   </button>
                   <button
-                    onClick={onClose}
+                    onClick={handleDismiss}
                     disabled={isLoading}
                     className="w-full py-2 text-sm text-text-muted hover:text-text-secondary transition-colors disabled:opacity-40"
                   >
