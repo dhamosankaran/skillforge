@@ -9,17 +9,17 @@
 
 | Field | Value |
 |-------|-------|
-| Commit sha (short) | `7770d45` |
-| Branch | `main` (13 ahead of `origin/main`) |
-| Generated | 2026-04-20 (targeted pre-P5-S26b-impl-BE refresh: metadata only; backend sections still reflect `d155dcb` snapshot — accurate because commits since then are P5-S22b frontend-only + two docs-only commits) |
-| Backend model files | 17 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models`) |
-| Backend service files | 29 top-level + 3 under `services/llm/` = 32 |
+| Commit sha (short) | `dda860a` |
+| Branch | `main` (17 ahead of `origin/main`) |
+| Generated | 2026-04-20 (pre-P5-S26b-impl-FE refresh: Sections 1-5 updated for the backend additions in `7cb2221` — `paywall_dismissal` model, `users.downgraded_at` column, two new `/payments/*` endpoints, `paywall_service.py`, migration `1176cc179bf0`. Sections 6-12 untouched since no frontend code has landed in this slice yet.) |
+| Backend model files | 18 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models`) |
+| Backend service files | 30 top-level + 3 under `services/llm/` = 33 |
 | Backend router files | 17 v1 + 6 legacy = 23 |
-| Backend endpoints (total) | 56 (52 unique decorators; `analyze` / `rewrite` / `cover_letter` / `interview` legacy routers are each mounted at both `/api/*` and `/api/v1/*`, so 4 paths appear twice) |
-| Alembic revisions | 19 |
+| Backend endpoints (total) | 58 (54 unique decorators; `analyze` / `rewrite` / `cover_letter` / `interview` legacy routers are each mounted at both `/api/*` and `/api/v1/*`, so 4 paths appear twice) |
+| Alembic revisions | 20 |
 | Frontend pages | 19 |
 | Frontend components (`.tsx` under `src/components/`, excl. `__tests__`) | 60 |
-| Specs on disk (`docs/specs/**/*.md`) | 70 (added `phase-5/42-paywall-dismissal.md` in commit `eae7ff7`) |
+| Specs on disk (`docs/specs/**/*.md`) | 70 |
 | Skill files (`.agent/skills/*.md`) | 20 |
 
 ---
@@ -206,6 +206,23 @@ Two models + one secondary table (`mission_categories`).
 | status | String(30) | NOT NULL |
 | created_at | DateTime | NOT NULL |
 
+### `paywall_dismissal.py`
+**Class:** `PaywallDismissal`  **Table:** `paywall_dismissals`
+
+| Column | Type | Nullable / Default |
+|--------|------|--------------------|
+| id | UUID (PK) | — |
+| user_id | String (FK `users.id` ON DELETE CASCADE) | NOT NULL |
+| trigger | String(64) | NOT NULL |
+| dismissed_at | DateTime(timezone=True) | NOT NULL, server default `now()` |
+| action_count_at_dismissal | Integer | nullable (telemetry only) |
+
+**Indexes:** `ix_paywall_dismissals_user_trigger_time` on `(user_id, trigger, dismissed_at)` — serves the 60s LD-8 dedup read and the "dismissal exists?" check inside `paywall_service.should_show_paywall`.
+
+**Relationships:** none (no back_populates — `User` does not expose a `dismissals` collection; the table is read/written exclusively through `paywall_service`).
+
+Purpose: append-only log of user paywall dismissals. Consumed by `paywall_service` (see Section 4) to drive the per-trigger 3-attempt grace window. Win-back consumption is deferred (BACKLOG E-031). Spec: `docs/specs/phase-5/42-paywall-dismissal.md`.
+
 ### `registration_log.py`
 **Class:** `RegistrationLog`  **Table:** `registration_logs`
 
@@ -305,6 +322,7 @@ Two models + one secondary table (`mission_categories`).
 | onboarding_completed | Boolean | NOT NULL, default: `False` |
 | interview_target_company | String(100) | nullable |
 | interview_target_date | Date | nullable |
+| downgraded_at | DateTime(timezone=True) | nullable, default `None` (set by `customer.subscription.deleted` webhook per spec #42 LD-5; dormant until win-back slice E-031 activates) |
 | created_at | DateTime | NOT NULL |
 
 **Relationships:** `subscription → Subscription` (uselist=False), `resumes → list[Resume]`, `usage_logs → list[UsageLog]`, `tracker_applications → list[TrackerApplicationModel]`.
@@ -326,7 +344,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | `/api/interview-prep` | `app/api/routes/interview.py` | 1 | `get_current_user_optional` |
 | `/api/rewrite` | `app/api/routes/rewrite.py` | 1 | none |
 | `/api/v1/onboarding` | `app/api/routes/onboarding.py` *(legacy folder, v1 mount)* | 2 | `get_current_user` |
-| `/api/v1/payments` | `app/api/routes/payments.py` *(legacy folder, v1 mount)* | 4 | `get_current_user` (2), none (2) |
+| `/api/v1/payments` | `app/api/routes/payments.py` *(legacy folder, v1 mount)* | 6 | `get_current_user` (4), none (2) |
 | `/api/v1/admin` | `app/api/v1/routes/admin.py` | 8 | `require_admin` (8) |
 | `/api/v1/analyze` | `app/api/v1/routes/analyze.py` | 1 | `get_current_user_optional` |
 | `/api/v1/auth` | `app/api/v1/routes/auth.py` | 4 | `get_current_user` (1), none (3) |
@@ -388,7 +406,9 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | POST | /api/v1/payments/checkout | create_checkout | get_current_user | v1 Payments |
 | GET | /api/v1/payments/pricing | get_pricing_endpoint | none | v1 Payments |
 | POST | /api/v1/payments/portal | create_portal | get_current_user | v1 Payments |
-| POST | /api/v1/payments/webhook | stripe_webhook | none | v1 Payments |
+| POST | /api/v1/payments/paywall-dismiss | paywall_dismiss | get_current_user | v1 Payments *(spec #42, P5-S26b-impl-BE — fires `paywall_dismissed` PostHog on logged=true; LD-8 60s dedup)* |
+| GET | /api/v1/payments/should-show-paywall | should_show_paywall | get_current_user | v1 Payments *(spec #42, P5-S26b-impl-BE — Pro/admin bypass returns `{show: false, attempts_until_next: 0}`; free-user grace via `attempts_since_dismiss` query param, Strategy A)* |
+| POST | /api/v1/payments/webhook | stripe_webhook | none | v1 Payments *(spec #43 idempotency; spec #42 — `customer.subscription.deleted` branch also stamps `user.downgraded_at`)* |
 | GET | /api/v1/progress/heatmap | get_heatmap | get_current_user | v1 Progress |
 | GET | /api/v1/progress/radar | get_radar | get_current_user | v1 Progress |
 | GET | /api/v1/resume/{resume_id} | get_resume | get_current_user | v1 Resume |
@@ -434,7 +454,8 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | nlp.py | NLP pipeline using spaCy for entity extraction and skill detection. | get_nlp, extract_entities, extract_skills, extract_job_requirements, calculate_similarity | — |
 | onboarding_checklist_service.py | Interview-Prepper onboarding checklist from telemetry-derived state. | get_checklist, WrongPersonaError | — |
 | parser.py | Resume parser supporting PDF and DOCX formats. | parse_pdf, parse_docx, detect_sections, extract_bullets, extract_contact_info | — |
-| payment_service.py | Payment service — thin wrapper around Stripe. | create_checkout_session, create_billing_portal_session, handle_webhook, PaymentError, InvalidSignatureError, UserNotFoundError, NotProSubscriberError | Stripe |
+| payment_service.py | Payment service — thin wrapper around Stripe. `_handle_subscription_deleted` also writes `user.downgraded_at` per spec #42 LD-5 (dormant until win-back E-031 activates). | create_checkout_session, create_billing_portal_session, handle_webhook, PaymentError, InvalidSignatureError, UserNotFoundError, NotProSubscriberError | Stripe |
+| paywall_service.py | Paywall dismissal service (spec #42). `record_dismissal` with LD-8 60s idempotency per (user_id, trigger); `should_show_paywall` with Pro/admin bypass + Strategy A grace counter via FE-passed `attempts_since_dismiss`. Win-back eligibility + send are DEFERRED to BACKLOG E-031 (🟦 back-burner). | record_dismissal, should_show_paywall, RecordDismissalResult, ShouldShowPaywallResult, GRACE_ATTEMPTS, IDEMPOTENCY_WINDOW_SECONDS | — |
 | progress_service.py | Progress analytics service with category radar and activity heatmap. [INFERRED] | get_category_coverage, get_activity_heatmap | — |
 | reminder_service.py | Daily email reminder service. | get_users_needing_reminder, build_email_body, build_subject, send_daily_reminders | Resend |
 | resume_templates.py | Resume template definitions for AI-powered rewriting. | get_template, get_template_names, auto_select_template | — |
@@ -477,8 +498,9 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | 17 | 59795ca196e9 | add IVFFlat ANN index on cards.embedding | d16ca29a5d08 | yes |
 | 18 | 02bf7265b387 | rename users target columns + migrate persona enum values | 59795ca196e9 | yes |
 | 19 | f3350dcba3a5 | add interview_question_sets table | 02bf7265b387 | yes |
+| 20 | 1176cc179bf0 | add paywall_dismissals and user.downgraded_at | f3350dcba3a5 | yes |
 
-Head = `f3350dcba3a5`.
+Head = `1176cc179bf0`.
 
 ---
 
