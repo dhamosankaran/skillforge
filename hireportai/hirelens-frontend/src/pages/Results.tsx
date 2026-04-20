@@ -25,6 +25,7 @@ import { AnimatedCard, containerVariants, cardVariants } from '@/components/ui/A
 import { GlowButton } from '@/components/ui/GlowButton'
 import { SkeletonDashboard } from '@/components/ui/SkeletonLoader'
 import { useAnalysisContext } from '@/context/AnalysisContext'
+import { capture } from '@/utils/posthog'
 
 /** Quick navigation anchors for the left sidebar */
 const NAV_ITEMS = [
@@ -40,6 +41,7 @@ export default function Results() {
   const { canUsePro } = useUsage()
   const { result, isLoading } = state
   const toastShownRef = useRef<string | null>(null)
+  const jobFitViewedRef = useRef(false)
   const [showPaywall, setShowPaywall] = useState(false)
   const [gapMappings, setGapMappings] = useState<import('@/types').GapMapping[]>([])
 
@@ -51,6 +53,16 @@ export default function Results() {
       .then((res) => setGapMappings(res.results))
       .catch(() => {})
   }, [result?.skill_gaps, result?.scan_id])
+
+  // Fire job-fit-viewed once per mount. Matches home_dashboard_viewed /
+  // first_action_viewed convention — useRef idempotency guard so Strict Mode
+  // double-invoke captures once. view_position distinguishes this from a
+  // future below-fold or scroll-triggered variant.
+  useEffect(() => {
+    if (!result || jobFitViewedRef.current) return
+    jobFitViewedRef.current = true
+    capture('job_fit_explanation_viewed', { view_position: 'above_fold' })
+  }, [result])
 
   // Show toast when scan results load (auto-created tracker entry)
   useEffect(() => {
@@ -136,7 +148,11 @@ export default function Results() {
           </div>
         </motion.div>
 
-        {/* ── Three-column grid ───────────────────────────────────────── */}
+        {/* Flattened grid: DOM order IS the mobile / tab order.
+            Desktop layout reconstructed via explicit col-start / row-start.
+            - base (<lg):  1-col, DOM order = visual order
+            - lg (2-col):  [sidebar 240px | main 1fr], right-panel rows span both cols below
+            - xl (3-col):  [sidebar 240px | main 1fr | right 280px] */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -144,244 +160,271 @@ export default function Results() {
           className="grid grid-cols-1 lg:grid-cols-[240px_1fr] xl:grid-cols-[240px_1fr_280px] gap-5 items-start"
         >
 
-          {/* ── LEFT SIDEBAR ──────────────────────────────────────────── */}
-          <div className="lg:sticky lg:top-20 space-y-4 z-10">
-            {/* ATS Score Gauge */}
-            <motion.div variants={cardVariants} id="ats-score">
-              <PanelSection
-                title="ATS Score"
-                icon={Target}
-                section="ats_score"
-                tooltip={{
-                  what: 'Estimated resume-to-JD match strength, 0–100.',
-                  how: 'Aim for 75+ before applying; under 60 needs rewrite.',
-                  why: 'Filters auto-reject below a recruiter-set cutoff, often 70.',
-                }}
-              >
-                <div className="flex justify-center overflow-hidden">
-                  <ATSScoreGauge score={result.ats_score} grade={result.grade} />
+          {/* 1. ATS Score — mobile 1st · lg col-1 row-1 · xl sticky */}
+          <motion.div
+            variants={cardVariants}
+            id="ats-score"
+            className="lg:col-start-1 lg:row-start-1 lg:sticky lg:top-20 z-10"
+          >
+            <PanelSection
+              title="ATS Score"
+              icon={Target}
+              section="ats_score"
+              tooltip={{
+                what: 'Estimated resume-to-JD match strength, 0–100.',
+                how: 'Aim for 75+ before applying; under 60 needs rewrite.',
+                why: 'Filters auto-reject below a recruiter-set cutoff, often 70.',
+              }}
+            >
+              <div className="flex justify-center overflow-hidden">
+                <ATSScoreGauge score={result.ats_score} grade={result.grade} />
+              </div>
+            </PanelSection>
+          </motion.div>
+
+          {/* 2. Job Fit — mobile 2nd · lg/xl col-2 row-1 HERO */}
+          <motion.div
+            variants={cardVariants}
+            id="job-fit"
+            className="min-w-0 lg:col-start-2 lg:row-start-1"
+          >
+            <PanelSection
+              title="Job Fit Explanation"
+              icon={MessageSquare}
+              section="job_fit"
+              tooltip={{
+                what: 'AI summary of how your experience maps to the role.',
+                how: 'Read the gaps list; reframe bullets to cover them.',
+                why: 'Recruiters skim this exact framing in their first 10 seconds.',
+              }}
+            >
+              <JobFitExplanation
+                explanation={result.job_fit_explanation}
+                topStrengths={result.top_strengths}
+                topGaps={result.top_gaps}
+              />
+            </PanelSection>
+          </motion.div>
+
+          {/* 3. Missing Skills — mobile 3rd · lg spans both cols at row-5 · xl col-3 row-1 sticky */}
+          <motion.div
+            variants={cardVariants}
+            id="missing-skills"
+            className="lg:col-span-2 lg:col-start-1 lg:row-start-5 xl:col-start-3 xl:col-span-1 xl:row-start-1 xl:sticky xl:top-20 z-10"
+          >
+            <PanelSection
+              title="Missing Skills"
+              icon={TrendingUp}
+              section="missing_skills"
+              tooltip={{
+                what: 'JD skills not found in your resume.',
+                how: 'Either add if you have them, or study via flashcards.',
+                why: 'Unaddressed gaps are the fastest reason to skip an application.',
+              }}
+            >
+              <MissingSkillsPanel
+                skillGaps={result.skill_gaps}
+                gapMappings={gapMappings}
+                isPro={canUsePro}
+                onUpgradeClick={() => setShowPaywall(true)}
+              />
+            </PanelSection>
+          </motion.div>
+
+          {/* 4. Keywords — mobile 4th · lg/xl col-2 row-2 */}
+          <motion.div
+            variants={cardVariants}
+            id="keywords"
+            className="min-w-0 lg:col-start-2 lg:row-start-2"
+          >
+            <PanelSection
+              title="Keyword Frequency Analysis"
+              icon={BarChart3}
+              section="keywords"
+              tooltip={{
+                what: 'Which JD keywords appear in your resume vs. don\'t.',
+                how: 'Add missing keywords where the evidence supports it.',
+                why: 'ATS keyword-match drives the biggest single score component.',
+              }}
+            >
+              {hasKeywordData && (
+                <div className="mb-3 flex items-center gap-4 text-xs text-text-muted">
+                  {KEYWORD_LEGEND.map((entry) => (
+                    <span key={entry.id} className="flex items-center gap-1.5">
+                      <span
+                        data-testid={`legend-swatch-${entry.id}`}
+                        className="w-2 h-2 rounded-sm"
+                        style={{ backgroundColor: rgbaFromCssVar(entry.cssVarName, entry.alpha) }}
+                      />
+                      {entry.label}
+                    </span>
+                  ))}
                 </div>
-              </PanelSection>
-            </motion.div>
+              )}
+              <KeywordChart data={result.keyword_chart_data} />
+            </PanelSection>
+          </motion.div>
 
-            {/* Score breakdown */}
-            <motion.div variants={cardVariants} id="score-breakdown">
-              <PanelSection
-                title="Score Breakdown"
-                icon={BarChart3}
-                section="score_breakdown"
-                tooltip={{
-                  what: 'Which dimensions (keywords, skills, format) drove your score.',
-                  how: 'Target the lowest bar first; biggest score gain per edit.',
-                  why: 'Shows why your score is what it is, not just the number.',
-                }}
-              >
-                <ScoreBreakdown breakdown={result.score_breakdown} />
-              </PanelSection>
-            </motion.div>
+          {/* 5. Score Breakdown — mobile 5th · lg/xl col-1 row-2 */}
+          <motion.div
+            variants={cardVariants}
+            id="score-breakdown"
+            className="lg:col-start-1 lg:row-start-2"
+          >
+            <PanelSection
+              title="Score Breakdown"
+              icon={BarChart3}
+              section="score_breakdown"
+              tooltip={{
+                what: 'Which dimensions (keywords, skills, format) drove your score.',
+                how: 'Target the lowest bar first; biggest score gain per edit.',
+                why: 'Shows why your score is what it is, not just the number.',
+              }}
+            >
+              <ScoreBreakdown breakdown={result.score_breakdown} />
+            </PanelSection>
+          </motion.div>
 
-            {/* Quick nav */}
-            <motion.div variants={cardVariants}>
-              <AnimatedCard className="p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted px-2 mb-2">
-                  Jump to section
-                </p>
-                {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
-                  <button
-                    key={id}
-                    onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] text-text-muted hover:text-text-primary hover:bg-contrast/[0.04] transition-all text-left"
-                  >
-                    <Icon size={12} />
-                    {label}
-                  </button>
-                ))}
-              </AnimatedCard>
-            </motion.div>
+          {/* 6. Skills Radar — mobile 6th · lg/xl col-2 row-3 */}
+          <motion.div
+            variants={cardVariants}
+            id="skills"
+            className="min-w-0 lg:col-start-2 lg:row-start-3"
+          >
+            <PanelSection
+              title="Skills Coverage Radar"
+              icon={GitMerge}
+              section="skills_radar"
+              tooltip={{
+                what: 'Visual overlap between your skills and JD requirements.',
+                how: 'Close gaps on axes where JD demand is high.',
+                why: 'Spots category-level holes that bullet-level edits miss.',
+              }}
+            >
+              <SkillOverlapChart data={result.skills_overlap_data} />
+            </PanelSection>
+          </motion.div>
 
-            {/* CTA */}
-            <motion.div variants={cardVariants} className="space-y-2">
-              <GlowButton
-                size="sm"
-                onClick={() => navigate('/prep/rewrite')}
-                className="w-full justify-center"
-              >
-                <Brain size={12} />
-                AI Rewrite
-              </GlowButton>
-              <GlowButton
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/prep/interview')}
-                className="w-full justify-center"
-              >
-                <MessageSquare size={12} />
-                Interview Prep
-              </GlowButton>
-              <GlowButton
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/prep/tracker')}
-                className="w-full justify-center"
-              >
-                {result.scan_id ? (
-                  <>
-                    <CheckCircle2 size={12} className="text-green-400" />
-                    In Tracker — View
-                  </>
-                ) : (
-                  'Save to Tracker'
-                )}
-              </GlowButton>
-            </motion.div>
-          </div>
+          {/* 7. Bullets — mobile 7th · lg/xl col-2 row-4 */}
+          <motion.div
+            variants={cardVariants}
+            id="bullets"
+            className="min-w-0 lg:col-start-2 lg:row-start-4"
+          >
+            <PanelSection
+              title="Bullet Point Analysis"
+              icon={Zap}
+              section="bullets"
+              tooltip={{
+                what: 'Which bullets are weak (no metrics, weak verbs).',
+                how: 'Rewrite flagged bullets with numbers and outcome verbs.',
+                why: 'Strong bullets are the #1 driver of human screener yes/no.',
+              }}
+            >
+              <BulletAnalyzer bullets={result.bullet_analysis} />
+            </PanelSection>
+          </motion.div>
 
-          {/* ── MAIN PANEL ────────────────────────────────────────────── */}
-          <div className="space-y-5 min-w-0">
+          {/* 8. Formatting — mobile 8th · lg spans both cols at row-6 · xl col-3 row-2 */}
+          <motion.div
+            variants={cardVariants}
+            id="formatting"
+            className="lg:col-span-2 lg:col-start-1 lg:row-start-6 xl:col-start-3 xl:col-span-1 xl:row-start-2"
+          >
+            <PanelSection
+              title="ATS Formatting Issues"
+              icon={AlertTriangle}
+              section="formatting"
+              tooltip={{
+                what: 'Structural problems (tables, images, headers).',
+                how: 'Fix before re-scanning; some ATSes drop formatted content entirely.',
+                why: 'One table can cost you the whole scan, not just a section.',
+              }}
+            >
+              <FormattingIssues issues={result.formatting_issues} />
+            </PanelSection>
+          </motion.div>
 
-            {/* Job fit — most actionable, shown first */}
-            <div id="job-fit">
-              <PanelSection
-                title="Job Fit Explanation"
-                icon={MessageSquare}
-                section="job_fit"
-                tooltip={{
-                  what: 'AI summary of how your experience maps to the role.',
-                  how: 'Read the gaps list; reframe bullets to cover them.',
-                  why: 'Recruiters skim this exact framing in their first 10 seconds.',
-                }}
-              >
-                <JobFitExplanation
-                  explanation={result.job_fit_explanation}
-                  topStrengths={result.top_strengths}
-                  topGaps={result.top_gaps}
-                />
-              </PanelSection>
-            </div>
+          {/* 9. Improvements — mobile 9th · lg spans both cols at row-7 · xl col-3 row-3 */}
+          <motion.div
+            variants={cardVariants}
+            id="improvements"
+            className="lg:col-span-2 lg:col-start-1 lg:row-start-7 xl:col-start-3 xl:col-span-1 xl:row-start-3"
+          >
+            <PanelSection
+              title="Improvement Suggestions"
+              icon={TrendingUp}
+              section="improvements"
+              tooltip={{
+                what: 'Prioritized concrete edits to lift your score.',
+                how: 'Work top-to-bottom; highest-leverage first.',
+                why: 'Saves you guessing what to fix next.',
+              }}
+            >
+              <ImprovementSuggestions
+                missingKeywords={result.missing_keywords}
+                skillGaps={result.skill_gaps}
+              />
+            </PanelSection>
+          </motion.div>
 
-            {/* Keywords */}
-            <div id="keywords">
-              <PanelSection
-                title="Keyword Frequency Analysis"
-                icon={BarChart3}
-                section="keywords"
-                tooltip={{
-                  what: 'Which JD keywords appear in your resume vs. don\'t.',
-                  how: 'Add missing keywords where the evidence supports it.',
-                  why: 'ATS keyword-match drives the biggest single score component.',
-                }}
-              >
-                {hasKeywordData && (
-                  <div className="mb-3 flex items-center gap-4 text-xs text-text-muted">
-                    {KEYWORD_LEGEND.map((entry) => (
-                      <span key={entry.id} className="flex items-center gap-1.5">
-                        <span
-                          data-testid={`legend-swatch-${entry.id}`}
-                          className="w-2 h-2 rounded-sm"
-                          style={{ backgroundColor: rgbaFromCssVar(entry.cssVarName, entry.alpha) }}
-                        />
-                        {entry.label}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <KeywordChart data={result.keyword_chart_data} />
-              </PanelSection>
-            </div>
+          {/* Jump-to-section nav — mobile 10th · lg/xl col-1 row-3 */}
+          <motion.div variants={cardVariants} className="lg:col-start-1 lg:row-start-3">
+            <AnimatedCard className="p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted px-2 mb-2">
+                Jump to section
+              </p>
+              {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[13px] text-text-muted hover:text-text-primary hover:bg-contrast/[0.04] transition-all text-left"
+                >
+                  <Icon size={12} />
+                  {label}
+                </button>
+              ))}
+            </AnimatedCard>
+          </motion.div>
 
-            {/* Skills radar */}
-            <div id="skills">
-              <PanelSection
-                title="Skills Coverage Radar"
-                icon={GitMerge}
-                section="skills_radar"
-                tooltip={{
-                  what: 'Visual overlap between your skills and JD requirements.',
-                  how: 'Close gaps on axes where JD demand is high.',
-                  why: 'Spots category-level holes that bullet-level edits miss.',
-                }}
-              >
-                <SkillOverlapChart data={result.skills_overlap_data} />
-              </PanelSection>
-            </div>
-
-            {/* Bullet analysis */}
-            <div id="bullets">
-              <PanelSection
-                title="Bullet Point Analysis"
-                icon={Zap}
-                section="bullets"
-                tooltip={{
-                  what: 'Which bullets are weak (no metrics, weak verbs).',
-                  how: 'Rewrite flagged bullets with numbers and outcome verbs.',
-                  why: 'Strong bullets are the #1 driver of human screener yes/no.',
-                }}
-              >
-                <BulletAnalyzer bullets={result.bullet_analysis} />
-              </PanelSection>
-            </div>
-          </div>
-
-          {/* ── RIGHT PANEL ───────────────────────────────────────────── */}
-          <div className="xl:sticky xl:top-20 space-y-4 lg:col-span-2 xl:col-span-1 z-10">
-
-            {/* Missing skills */}
-            <div id="missing-skills">
-              <PanelSection
-                title="Missing Skills"
-                icon={TrendingUp}
-                section="missing_skills"
-                tooltip={{
-                  what: 'JD skills not found in your resume.',
-                  how: 'Either add if you have them, or study via flashcards.',
-                  why: 'Unaddressed gaps are the fastest reason to skip an application.',
-                }}
-              >
-                <MissingSkillsPanel
-                  skillGaps={result.skill_gaps}
-                  gapMappings={gapMappings}
-                  isPro={canUsePro}
-                  onUpgradeClick={() => setShowPaywall(true)}
-                />
-              </PanelSection>
-            </div>
-
-            {/* Formatting issues */}
-            <div id="formatting">
-              <PanelSection
-                title="ATS Formatting Issues"
-                icon={AlertTriangle}
-                section="formatting"
-                tooltip={{
-                  what: 'Structural problems (tables, images, headers).',
-                  how: 'Fix before re-scanning; some ATSes drop formatted content entirely.',
-                  why: 'One table can cost you the whole scan, not just a section.',
-                }}
-              >
-                <FormattingIssues issues={result.formatting_issues} />
-              </PanelSection>
-            </div>
-
-            {/* Improvement suggestions */}
-            <div id="improvements">
-              <PanelSection
-                title="Improvement Suggestions"
-                icon={TrendingUp}
-                section="improvements"
-                tooltip={{
-                  what: 'Prioritized concrete edits to lift your score.',
-                  how: 'Work top-to-bottom; highest-leverage first.',
-                  why: 'Saves you guessing what to fix next.',
-                }}
-              >
-                <ImprovementSuggestions
-                  missingKeywords={result.missing_keywords}
-                  skillGaps={result.skill_gaps}
-                />
-              </PanelSection>
-            </div>
-
-          </div>
+          {/* CTAs — mobile 11th · lg/xl col-1 row-4 */}
+          <motion.div
+            variants={cardVariants}
+            className="space-y-2 lg:col-start-1 lg:row-start-4"
+          >
+            <GlowButton
+              size="sm"
+              onClick={() => navigate('/prep/rewrite')}
+              className="w-full justify-center"
+            >
+              <Brain size={12} />
+              AI Rewrite
+            </GlowButton>
+            <GlowButton
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/prep/interview')}
+              className="w-full justify-center"
+            >
+              <MessageSquare size={12} />
+              Interview Prep
+            </GlowButton>
+            <GlowButton
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/prep/tracker')}
+              className="w-full justify-center"
+            >
+              {result.scan_id ? (
+                <>
+                  <CheckCircle2 size={12} className="text-green-400" />
+                  In Tracker — View
+                </>
+              ) : (
+                'Save to Tracker'
+              )}
+            </GlowButton>
+          </motion.div>
         </motion.div>
       </div>
 
