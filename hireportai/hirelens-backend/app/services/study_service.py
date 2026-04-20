@@ -17,20 +17,28 @@ Fields tracked by us (not available on py-fsrs v6 Card):
   scheduled_days — days from current review to new due_date
   fsrs_step     — py-fsrs Card.step (learning/relearning step index; None for Review)
 """
+import logging
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import datetime, time, timedelta, timezone
+from typing import Any, Optional
+from zoneinfo import ZoneInfo
 
+import redis
 from fsrs import Card as FsrsCard, Rating, Scheduler, State
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.analytics import track as analytics_track
+from app.core.config import get_settings
 from app.models.card import Card
 from app.models.card_progress import CardProgress
 from app.models.category import Category
+from app.models.user import User
 from app.schemas.study import DailyCardItem, DailyReviewResponse, ReviewResponse, StudyProgressResponse
 from app.services import gamification_service, home_state_service
+from app.utils.timezone import get_user_timezone
+
+logger = logging.getLogger(__name__)
 
 # Daily 5 = the size of the daily review queue. Crossing this count earns the
 # `daily_complete` XP bonus exactly once per UTC day.
@@ -113,6 +121,157 @@ class CardForbiddenError(Exception):
     def __init__(self, card_id: str) -> None:
         self.card_id = card_id
         super().__init__(f"Card {card_id!r} requires a Pro plan")
+
+
+class DailyReviewLimitError(Exception):
+    """Raised when a free user exceeds the daily 15-card review budget (spec #50)."""
+
+    def __init__(self, payload: dict[str, Any]) -> None:
+        self.payload = payload
+        super().__init__("Daily review limit reached")
+
+
+# ── Daily-card review wall (spec #50) ─────────────────────────────────────────
+
+_DAILY_CARD_LIMIT = 15
+# 48h safety floor — longer than the widest plausible timezone swing
+# (~14h between UTC-12 and UTC+14) plus headroom. The key's date advances
+# at user-local midnight so old keys age out naturally.
+_DAILY_CARD_KEY_TTL_SECONDS = 48 * 3600
+
+
+def _utcnow() -> datetime:
+    """Module-level seam for time-mocking in tests."""
+    return datetime.now(timezone.utc)
+
+
+def _get_redis() -> Optional[redis.Redis]:
+    """Return a Redis client, or None if unavailable.
+
+    Mirrors the pattern in ``home_state_service`` and
+    ``geo_pricing_service`` — graceful degradation when Redis is offline
+    so tests and dev without a Redis container still work.
+    """
+    settings = get_settings()
+    if not settings.redis_url:
+        return None
+    try:
+        client = redis.from_url(settings.redis_url, decode_responses=True)
+        client.ping()
+        return client
+    except Exception:
+        logger.debug("Redis unavailable — daily-card wall counter disabled")
+        return None
+
+
+def _next_local_midnight(now_utc: datetime, tz: ZoneInfo) -> datetime:
+    """Next user-local midnight as a tz-aware datetime in the user's tz."""
+    local_now = now_utc.astimezone(tz)
+    tomorrow = (local_now + timedelta(days=1)).date()
+    return datetime.combine(tomorrow, time(0, 0, 0), tzinfo=tz)
+
+
+async def _check_daily_wall(user: User, db: AsyncSession) -> None:
+    """Enforce the free-tier 15-card-per-day review wall (spec #50).
+
+    Invariants:
+      * Admins (``user.role == "admin"``) bypass unconditionally (AC-9).
+      * Pro / Enterprise users skip the Redis call entirely — §Counter
+        Scope Option 2 (AC-3).
+      * Counter key is scoped to ``user.id + YYYY-MM-DD`` in the user's
+        local timezone so midnight resets track the user's day.
+      * Redis outage fails open: the review proceeds and the
+        ``daily_card_submit`` event carries ``counter_unavailable=True``
+        so the outage is still observable in PostHog.
+
+    Raises:
+        DailyReviewLimitError — free user's post-increment count exceeds
+        the cap; caller must translate to HTTP 402 without mutating any
+        FSRS / card_progress state.
+    """
+    if (user.role or "user") == "admin":
+        return
+
+    sub = user.subscription
+    is_free = sub is None or sub.status != "active" or sub.plan == "free"
+    if not is_free:
+        return
+
+    plan = sub.plan if sub is not None else "free"
+
+    r = _get_redis()
+    if r is None:
+        analytics_track(
+            user_id=user.id,
+            event="daily_card_submit",
+            properties={
+                "plan": plan,
+                "count_after": None,
+                "was_walled": False,
+                "counter_unavailable": True,
+            },
+        )
+        logger.warning(
+            "daily-card wall counter unavailable (redis down) for user %s", user.id
+        )
+        return
+
+    now_utc = _utcnow()
+    tz = await get_user_timezone(user.id, db)
+    local_date = now_utc.astimezone(tz).date()
+    key = f"daily_cards:{user.id}:{local_date.isoformat()}"
+
+    try:
+        count_after = r.incr(key)
+        if count_after == 1:
+            r.expire(key, _DAILY_CARD_KEY_TTL_SECONDS)
+    except Exception:
+        # Redis went away between ping and incr — fail open like the None path.
+        analytics_track(
+            user_id=user.id,
+            event="daily_card_submit",
+            properties={
+                "plan": plan,
+                "count_after": None,
+                "was_walled": False,
+                "counter_unavailable": True,
+            },
+        )
+        logger.warning("daily-card INCR failed for user %s; failing open", user.id)
+        return
+
+    if count_after > _DAILY_CARD_LIMIT:
+        resets_at = _next_local_midnight(now_utc, tz)
+        analytics_track(
+            user_id=user.id,
+            event="daily_card_submit",
+            properties={
+                "plan": plan,
+                "count_after": _DAILY_CARD_LIMIT,
+                "was_walled": True,
+                "counter_unavailable": False,
+            },
+        )
+        raise DailyReviewLimitError(
+            {
+                "error": "free_tier_limit",
+                "trigger": "daily_review",
+                "cards_consumed": _DAILY_CARD_LIMIT,
+                "cards_limit": _DAILY_CARD_LIMIT,
+                "resets_at": resets_at.isoformat(),
+            }
+        )
+
+    analytics_track(
+        user_id=user.id,
+        event="daily_card_submit",
+        properties={
+            "plan": plan,
+            "count_after": count_after,
+            "was_walled": False,
+            "counter_unavailable": False,
+        },
+    )
 
 
 # ── Public service methods ────────────────────────────────────────────────────
@@ -254,6 +413,7 @@ async def review_card(
     db: AsyncSession,
     time_spent_ms: int = 0,
     session_id: Optional[str] = None,
+    user: Optional[User] = None,
 ) -> ReviewResponse:
     """Apply a FSRS review rating to a card.
 
@@ -262,9 +422,13 @@ async def review_card(
     due date.
 
     Raises:
-        CardNotFoundError  — card_id does not exist in the cards table
-        CardForbiddenError — card's category is not accessible under the
-                             caller's plan (free user + non-foundation card)
+        CardNotFoundError     — card_id does not exist in the cards table
+        CardForbiddenError    — card's category is not accessible under the
+                                caller's plan (free user + non-foundation card)
+        DailyReviewLimitError — free user has exceeded the daily 15-card
+                                review budget (spec #50). Only raised when
+                                ``user`` is provided so legacy callers
+                                without a User object skip the wall.
     """
     now = datetime.now(timezone.utc)
 
@@ -283,6 +447,12 @@ async def review_card(
     card, category = card_row.Card, card_row.Category
     if is_free and category.source != "foundation":
         raise CardForbiddenError(card_id)
+
+    # ── Daily-card review wall (spec #50) ────────────────────────────────────
+    # Runs AFTER the plan-gate check and BEFORE any FSRS or card_progress
+    # mutation so a walled submit leaves every row untouched.
+    if user is not None:
+        await _check_daily_wall(user, db)
 
     # ── Load or create progress row ──────────────────────────────────────────
     progress = (

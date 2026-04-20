@@ -8,12 +8,14 @@
  * Submitting: Buttons disabled while POST /study/review is in-flight.
  * Done:       Shows next-review result; parent is notified via onRated.
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Eye, CheckCircle, AlertCircle, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { AxiosError } from 'axios'
 import clsx from 'clsx'
 import { submitReview, submitCardFeedback } from '@/services/api'
 import { capture } from '@/utils/posthog'
+import { PaywallModal } from '@/components/PaywallModal'
 import type { FsrsRating, ReviewResponse } from '@/types'
 
 interface RatingOption {
@@ -78,6 +80,53 @@ function formatNextReview(dueDateIso: string): string {
   return `${diffDays} day${diffDays !== 1 ? 's' : ''}`
 }
 
+// ─── Daily-card wall (spec #50) ──────────────────────────────────────────────
+
+/** Backend payload attached to the 402 `detail` when the daily-card wall trips. */
+interface DailyWallPayload {
+  error: 'free_tier_limit'
+  trigger: 'daily_review'
+  cards_consumed: number
+  cards_limit: number
+  resets_at: string
+}
+
+/** Extract the AC-2 wall payload from a 402 error, else null. */
+function extractWallPayload(err: unknown): DailyWallPayload | null {
+  if (!(err instanceof AxiosError) || err.response?.status !== 402) return null
+  const detail = (err.response.data as { detail?: unknown } | undefined)?.detail
+  if (
+    typeof detail === 'object' &&
+    detail !== null &&
+    (detail as DailyWallPayload).trigger === 'daily_review'
+  ) {
+    return detail as DailyWallPayload
+  }
+  return null
+}
+
+/** Hours from now until `resetsAtIso`, rounded toward zero per spec §Analytics. */
+function hoursUntil(resetsAtIso: string): number {
+  const diffMs = new Date(resetsAtIso).getTime() - Date.now()
+  return Math.trunc(diffMs / 3_600_000)
+}
+
+/** Relative for ≤12h remaining; absolute "Resets at H:MM AM/PM" otherwise. */
+function formatResetsAt(resetsAtIso: string): string {
+  const diffMs = new Date(resetsAtIso).getTime() - Date.now()
+  const totalMin = Math.max(0, Math.round(diffMs / 60_000))
+  if (totalMin <= 12 * 60) {
+    const h = Math.floor(totalMin / 60)
+    const m = totalMin % 60
+    return `Resets in ${h}h ${m}m`
+  }
+  const localTime = new Date(resetsAtIso).toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+  return `Resets at ${localTime}`
+}
+
 export function QuizPanel({
   cardId,
   question,
@@ -89,6 +138,16 @@ export function QuizPanel({
   const [state, setState] = useState<QuizState>('idle')
   const [result, setResult] = useState<ReviewResponse | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [wall, setWall] = useState<DailyWallPayload | null>(null)
+
+  // Fire `daily_card_wall_hit` on modal open (spec #50 AC-10 frontend side).
+  // Matches the existing `paywall_hit` open-semantic in PaywallModal.tsx:78.
+  useEffect(() => {
+    if (wall === null) return
+    capture('daily_card_wall_hit', {
+      resets_at_hours_from_now: hoursUntil(wall.resets_at),
+    })
+  }, [wall])
 
   function handleReveal() {
     capture('quiz_submitted', {
@@ -115,7 +174,15 @@ export function QuizPanel({
       setResult(res)
       setState('done')
       onRated(rating, res)
-    } catch {
+    } catch (err) {
+      const payload = extractWallPayload(err)
+      if (payload !== null) {
+        // Free-tier daily-card wall (spec #50). The backend did not mutate
+        // card_progress or FSRS state — we mirror that and open the modal.
+        setWall(payload)
+        setState('revealed')
+        return
+      }
       setSubmitError('Failed to save rating. Please try again.')
       setState('revealed') // let user retry
     }
@@ -236,6 +303,24 @@ export function QuizPanel({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── Daily-card wall modal (spec #50) ───────────────────────────── */}
+      {wall !== null && (
+        <>
+          <p
+            data-testid="wall-resets-label"
+            className="sr-only"
+            aria-live="polite"
+          >
+            {formatResetsAt(wall.resets_at)}
+          </p>
+          <PaywallModal
+            open
+            onClose={() => setWall(null)}
+            trigger="daily_review"
+          />
+        </>
+      )}
     </div>
   )
 }

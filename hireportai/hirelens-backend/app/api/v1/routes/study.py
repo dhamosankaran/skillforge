@@ -92,6 +92,7 @@ async def submit_review(
 
     Error responses:
       400 — rating outside [1, 4] or time_spent_ms outside [0, 300 000]
+      402 — free user hit the daily 15-card review wall (spec #50)
       403 — card exists but is in a category the caller's plan does not permit
       404 — no card with the given card_id
     """
@@ -104,6 +105,7 @@ async def submit_review(
             db=db,
             time_spent_ms=body.time_spent_ms,
             session_id=body.session_id,
+            user=user,
         )
     except study_service.CardNotFoundError as exc:
         raise HTTPException(
@@ -114,6 +116,11 @@ async def submit_review(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(exc),
+        )
+    except study_service.DailyReviewLimitError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=exc.payload,
         )
 
 
