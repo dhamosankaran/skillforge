@@ -9,17 +9,17 @@
 
 | Field | Value |
 |-------|-------|
-| Commit sha (short) | `f09be80` |
-| Branch | `main` (1 ahead of `origin/main`) |
-| Generated | 2026-04-19 |
+| Commit sha (short) | `d155dcb` |
+| Branch | `main` (9 ahead of `origin/main`) |
+| Generated | 2026-04-20 |
 | Backend model files | 17 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models`) |
 | Backend service files | 29 top-level + 3 under `services/llm/` = 32 |
 | Backend router files | 17 v1 + 6 legacy = 23 |
-| Backend endpoints (total) | 56 |
+| Backend endpoints (total) | 56 (52 unique decorators; `analyze` / `rewrite` / `cover_letter` / `interview` legacy routers are each mounted at both `/api/*` and `/api/v1/*`, so 4 paths appear twice) |
 | Alembic revisions | 19 |
 | Frontend pages | 19 |
-| Frontend components (`.tsx` under `src/components/`, excl. `__tests__`) | 59 |
-| Specs on disk (`docs/specs/**/*.md`) | 66 |
+| Frontend components (`.tsx` under `src/components/`, excl. `__tests__`) | 60 |
+| Specs on disk (`docs/specs/**/*.md`) | 69 |
 | Skill files (`.agent/skills/*.md`) | 20 |
 
 ---
@@ -327,7 +327,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | `/api/rewrite` | `app/api/routes/rewrite.py` | 1 | none |
 | `/api/v1/onboarding` | `app/api/routes/onboarding.py` *(legacy folder, v1 mount)* | 2 | `get_current_user` |
 | `/api/v1/payments` | `app/api/routes/payments.py` *(legacy folder, v1 mount)* | 4 | `get_current_user` (2), none (2) |
-| `/api/v1/admin` | `app/api/v1/routes/admin.py` | 7 | `require_admin` (7) |
+| `/api/v1/admin` | `app/api/v1/routes/admin.py` | 8 | `require_admin` (8) |
 | `/api/v1/analyze` | `app/api/v1/routes/analyze.py` | 1 | `get_current_user_optional` |
 | `/api/v1/auth` | `app/api/v1/routes/auth.py` | 4 | `get_current_user` (1), none (3) |
 | `/api/v1/cards` | `app/api/v1/routes/cards.py` | 4 | `get_current_user` (4) |
@@ -361,6 +361,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | POST | /api/v1/admin/cards/import | import_cards | require_admin | v1 Admin |
 | GET | /api/v1/admin/feedback | list_feedback | require_admin | v1 Feedback |
 | GET | /api/v1/admin/feedback/summary | feedback_summary | require_admin | v1 Feedback |
+| GET | /api/v1/admin/ping | admin_ping | require_admin | v1 Admin |
 | GET | /api/v1/admin/registration-logs | list_registration_logs | require_admin | v1 Admin |
 | POST | /api/v1/analyze | analyze_resume | get_current_user_optional | v1 Analysis |
 | POST | /api/v1/auth/google | google_auth | none | v1 Auth |
@@ -398,7 +399,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | GET | /api/v1/study/daily | get_daily_review | get_current_user | v1 Study |
 | POST | /api/v1/study/experience | generate_experience | get_current_user | v1 Study |
 | GET | /api/v1/study/progress | get_progress | get_current_user | v1 Study |
-| POST | /api/v1/study/review | submit_review | get_current_user | v1 Study |
+| POST | /api/v1/study/review | submit_review | get_current_user | v1 Study *(adds 402 branch for `DailyReviewLimitError` per spec #50, P5-S22-WALL-b)* |
 | GET | /api/v1/tracker | list_applications | get_current_user | v1 Tracker |
 | POST | /api/v1/tracker | create_app | get_current_user | v1 Tracker |
 | PATCH | /api/v1/tracker/{app_id} | update_app | get_current_user | v1 Tracker |
@@ -438,7 +439,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | reminder_service.py | Daily email reminder service. | get_users_needing_reminder, build_email_body, build_subject, send_daily_reminders | Resend |
 | resume_templates.py | Resume template definitions for AI-powered rewriting. | get_template, get_template_names, auto_select_template | — |
 | scorer.py | ATS scoring engine for resume ATS compatibility. [INFERRED] | ATSScorer | — |
-| study_service.py | FSRS spaced-repetition study service with server-side scheduling. | get_daily_review, create_progress, review_card, get_progress, CardNotFoundError, CardForbiddenError | — |
+| study_service.py | FSRS spaced-repetition study service with server-side scheduling. Also enforces the free-tier daily-card review wall (spec #50) via private `_check_daily_wall` helper — Redis INCR keyed `daily_cards:{user_id}:{YYYY-MM-DD}` in user-local tz, 48h TTL, fail-open on Redis outage; admin + Pro/Enterprise bypass. | get_daily_review, create_progress, review_card, get_progress, CardNotFoundError, CardForbiddenError, DailyReviewLimitError | Redis |
 | tracker_service_v2.py | SQLAlchemy-backed job application tracker service (v2). | create_application, find_by_scan_id, get_applications, get_application_by_id, update_application, delete_application | — |
 | usage_service.py | Usage tracking and plan limit enforcement. [INFERRED] | log_usage, check_usage_limit, check_and_increment, get_usage_summary | — |
 | user_service.py | User CRUD service. [INFERRED] | get_or_create_user, get_user_by_id | — |
@@ -522,6 +523,8 @@ Nav chrome rendered by `AppShell` (`TopNav` desktop, `MobileNav` mobile). Chrome
 
 No component is rendered at two distinct routes (redirects don't count). `AdminPanel` has no route-level `require_admin`-equivalent guard — relies on in-component check.
 
+**Wall-aware components (spec #50, P5-S22-WALL-b):** `src/components/study/QuizPanel.tsx` is the single submit chokepoint for `POST /api/v1/study/review` — consumed by `DailyReview`, `CardViewer`, and `MissionMode`. On a 402 response whose `detail.trigger === 'daily_review'`, it parses the AC-2 payload, opens `PaywallModal` with `trigger="daily_review"`, and fires the `daily_card_wall_hit` PostHog event. No FSRS state is mutated client-side on a walled submit (mirrors backend).
+
 ---
 
 ## Section 7 — Frontend pages
@@ -543,7 +546,7 @@ No component is rendered at two distinct routes (redirects don't count). `AdminP
 | PersonaPicker.tsx | PersonaPicker | useAuth | updatePersona | persona_picker_shown, persona_selected |
 | Pricing.tsx | Pricing | useUsage, usePricing, useSearchParams | createCheckoutSession | checkout_started, payment_completed |
 | Profile.tsx | Profile | useAuth, useUsage, useGamification | generateExperience, createBillingPortalSession, api.get | profile_viewed, subscription_portal_opened, experience_generated |
-| Results.tsx | Results | useAnalysisContext, useUsage | fetchOnboardingRecommendations | — |
+| Results.tsx | Results | useAnalysisContext, useUsage | fetchOnboardingRecommendations | job_fit_explanation_viewed, results_tooltip_opened *(via `PanelSection` child — 9-section enum)* |
 | Rewrite.tsx | Rewrite | useAnalysisContext, useRewrite, useUsage | — | — |
 | StudyDashboard.tsx | StudyDashboard | useStudyDashboard, useAuth, useUsage, useGamification | — | study_dashboard_viewed, locked_tile_clicked, category_tile_clicked |
 | Tracker.tsx | Tracker | useTracker | — | — |
