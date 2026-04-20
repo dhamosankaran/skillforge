@@ -6,7 +6,7 @@ drafted: 2026-04-19
 
 # SPEC: Analysis Results — Keyword Color Fix + Education Layer
 
-## Status: Draft
+## Status: Done — Shipped in 1c0817a (P5-S21b) on 2026-04-19
 
 ## Problem
 

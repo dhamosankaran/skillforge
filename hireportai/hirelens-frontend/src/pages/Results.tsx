@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import {
   Target, BarChart3, GitMerge, AlertTriangle, Zap,
   MessageSquare, TrendingUp, RefreshCw, FileText,
-  Brain, CheckCircle2, Info
+  Brain, CheckCircle2
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { fetchOnboardingRecommendations } from '@/services/api'
@@ -13,57 +13,18 @@ import { useUsage } from '@/context/UsageContext'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { ATSScoreGauge } from '@/components/dashboard/ATSScoreGauge'
 import { ScoreBreakdown } from '@/components/dashboard/ScoreBreakdown'
-import { KeywordChart } from '@/components/dashboard/KeywordChart'
+import { KeywordChart, KEYWORD_LEGEND, rgbaFromCssVar } from '@/components/dashboard/KeywordChart'
 import { SkillOverlapChart } from '@/components/dashboard/SkillOverlapChart'
 import { MissingSkillsPanel } from '@/components/dashboard/MissingSkillsPanel'
 import { BulletAnalyzer } from '@/components/dashboard/BulletAnalyzer'
 import { FormattingIssues } from '@/components/dashboard/FormattingIssues'
 import { JobFitExplanation } from '@/components/dashboard/JobFitExplanation'
 import { ImprovementSuggestions } from '@/components/dashboard/ImprovementSuggestions'
+import { PanelSection } from '@/components/dashboard/PanelSection'
 import { AnimatedCard, containerVariants, cardVariants } from '@/components/ui/AnimatedCard'
 import { GlowButton } from '@/components/ui/GlowButton'
 import { SkeletonDashboard } from '@/components/ui/SkeletonLoader'
 import { useAnalysisContext } from '@/context/AnalysisContext'
-import clsx from 'clsx'
-
-interface PanelSectionProps {
-  title: string
-  icon: React.ElementType
-  children: React.ReactNode
-  className?: string
-  tooltip?: string
-}
-
-function PanelSection({ title, icon: Icon, children, className, tooltip }: PanelSectionProps) {
-  const [showTooltip, setShowTooltip] = useState(false)
-  return (
-    <AnimatedCard className={clsx('p-5', className)}>
-      <div className="flex items-center gap-2 mb-4">
-        <Icon size={14} className="text-accent-primary flex-shrink-0" />
-        <h2 className="font-display font-semibold text-sm text-text-primary">{title}</h2>
-        {tooltip && (
-          <div className="relative">
-            <button
-              onMouseEnter={() => setShowTooltip(true)}
-              onMouseLeave={() => setShowTooltip(false)}
-              onClick={() => setShowTooltip((p) => !p)}
-              className="text-text-muted hover:text-text-secondary transition-colors"
-              aria-label={`Info: ${title}`}
-            >
-              <Info size={12} />
-            </button>
-            {showTooltip && (
-              <div className="absolute left-1/2 -translate-x-1/2 top-6 z-50 w-64 p-2.5 rounded-lg bg-bg-overlay border border-contrast/10 shadow-lg text-xs text-text-secondary leading-relaxed">
-                {tooltip}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-      {children}
-    </AnimatedCard>
-  )
-}
 
 /** Quick navigation anchors for the left sidebar */
 const NAV_ITEMS = [
@@ -142,6 +103,8 @@ export default function Results() {
     result.ats_score >= 75 ? 'var(--success)' :
     result.ats_score >= 60 ? 'var(--warning)' : 'var(--danger)'
 
+  const hasKeywordData = (result.keyword_chart_data?.length ?? 0) > 0
+
   return (
     <PageWrapper className="min-h-screen bg-bg-base">
       <div data-testid="page-results" className="max-w-7xl mx-auto px-4 py-8">
@@ -166,7 +129,7 @@ export default function Results() {
               <RefreshCw size={12} />
               Re-analyze
             </GlowButton>
-<GlowButton size="sm" onClick={() => navigate('/prep/rewrite')}>
+            <GlowButton size="sm" onClick={() => navigate('/prep/rewrite')}>
               <FileText size={12} />
               Optimize
             </GlowButton>
@@ -174,7 +137,6 @@ export default function Results() {
         </motion.div>
 
         {/* ── Three-column grid ───────────────────────────────────────── */}
-        {/* xl: 3 cols | lg: 2 cols (left+main) | base: single stack */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -185,11 +147,16 @@ export default function Results() {
           {/* ── LEFT SIDEBAR ──────────────────────────────────────────── */}
           <div className="lg:sticky lg:top-20 space-y-4 z-10">
             {/* ATS Score Gauge */}
-            <motion.div variants={cardVariants}>
+            <motion.div variants={cardVariants} id="ats-score">
               <PanelSection
                 title="ATS Score"
                 icon={Target}
-                tooltip="This score estimates how well your resume matches the job description based on keyword overlap, skills alignment, and formatting."
+                section="ats_score"
+                tooltip={{
+                  what: 'Estimated resume-to-JD match strength, 0–100.',
+                  how: 'Aim for 75+ before applying; under 60 needs rewrite.',
+                  why: 'Filters auto-reject below a recruiter-set cutoff, often 70.',
+                }}
               >
                 <div className="flex justify-center overflow-hidden">
                   <ATSScoreGauge score={result.ats_score} grade={result.grade} />
@@ -198,14 +165,19 @@ export default function Results() {
             </motion.div>
 
             {/* Score breakdown */}
-            <motion.div variants={cardVariants}>
-              <AnimatedCard className="p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <BarChart3 size={14} className="text-accent-primary" />
-                  <h2 className="font-display font-semibold text-sm text-text-primary">Score Breakdown</h2>
-                </div>
+            <motion.div variants={cardVariants} id="score-breakdown">
+              <PanelSection
+                title="Score Breakdown"
+                icon={BarChart3}
+                section="score_breakdown"
+                tooltip={{
+                  what: 'Which dimensions (keywords, skills, format) drove your score.',
+                  how: 'Target the lowest bar first; biggest score gain per edit.',
+                  why: 'Shows why your score is what it is, not just the number.',
+                }}
+              >
                 <ScoreBreakdown breakdown={result.score_breakdown} />
-              </AnimatedCard>
+              </PanelSection>
             </motion.div>
 
             {/* Quick nav */}
@@ -272,7 +244,12 @@ export default function Results() {
               <PanelSection
                 title="Job Fit Explanation"
                 icon={MessageSquare}
-                tooltip="AI-generated analysis of how your experience aligns with the role requirements."
+                section="job_fit"
+                tooltip={{
+                  what: 'AI summary of how your experience maps to the role.',
+                  how: 'Read the gaps list; reframe bullets to cover them.',
+                  why: 'Recruiters skim this exact framing in their first 10 seconds.',
+                }}
               >
                 <JobFitExplanation
                   explanation={result.job_fit_explanation}
@@ -287,68 +264,122 @@ export default function Results() {
               <PanelSection
                 title="Keyword Frequency Analysis"
                 icon={BarChart3}
-                tooltip="Green keywords are found in your resume. Red keywords are missing — consider adding these to improve your score."
+                section="keywords"
+                tooltip={{
+                  what: 'Which JD keywords appear in your resume vs. don\'t.',
+                  how: 'Add missing keywords where the evidence supports it.',
+                  why: 'ATS keyword-match drives the biggest single score component.',
+                }}
               >
-                <div className="mb-3 flex items-center gap-4 text-xs text-text-muted">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-sm bg-success/70" />Matched
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-sm bg-danger/40" />Missing
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-sm bg-accent-secondary/50" />In resume
-                  </span>
-                </div>
+                {hasKeywordData && (
+                  <div className="mb-3 flex items-center gap-4 text-xs text-text-muted">
+                    {KEYWORD_LEGEND.map((entry) => (
+                      <span key={entry.id} className="flex items-center gap-1.5">
+                        <span
+                          data-testid={`legend-swatch-${entry.id}`}
+                          className="w-2 h-2 rounded-sm"
+                          style={{ backgroundColor: rgbaFromCssVar(entry.cssVarName, entry.alpha) }}
+                        />
+                        {entry.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <KeywordChart data={result.keyword_chart_data} />
               </PanelSection>
             </div>
 
             {/* Skills radar */}
             <div id="skills">
-              <PanelSection title="Skills Coverage Radar" icon={GitMerge}>
+              <PanelSection
+                title="Skills Coverage Radar"
+                icon={GitMerge}
+                section="skills_radar"
+                tooltip={{
+                  what: 'Visual overlap between your skills and JD requirements.',
+                  how: 'Close gaps on axes where JD demand is high.',
+                  why: 'Spots category-level holes that bullet-level edits miss.',
+                }}
+              >
                 <SkillOverlapChart data={result.skills_overlap_data} />
               </PanelSection>
             </div>
 
             {/* Bullet analysis */}
             <div id="bullets">
-              <PanelSection title="Bullet Point Analysis" icon={Zap}>
+              <PanelSection
+                title="Bullet Point Analysis"
+                icon={Zap}
+                section="bullets"
+                tooltip={{
+                  what: 'Which bullets are weak (no metrics, weak verbs).',
+                  how: 'Rewrite flagged bullets with numbers and outcome verbs.',
+                  why: 'Strong bullets are the #1 driver of human screener yes/no.',
+                }}
+              >
                 <BulletAnalyzer bullets={result.bullet_analysis} />
               </PanelSection>
             </div>
           </div>
 
           {/* ── RIGHT PANEL ───────────────────────────────────────────── */}
-          {/* Shown inline below main on lg, pinned to right column on xl */}
           <div className="xl:sticky xl:top-20 space-y-4 lg:col-span-2 xl:col-span-1 z-10">
 
             {/* Missing skills */}
-            <PanelSection
-              title="Missing Skills"
-              icon={TrendingUp}
-              tooltip="Skills mentioned in the job description but not found in your resume. These are areas to improve."
-            >
-              <MissingSkillsPanel
-                skillGaps={result.skill_gaps}
-                gapMappings={gapMappings}
-                isPro={canUsePro}
-                onUpgradeClick={() => setShowPaywall(true)}
-              />
-            </PanelSection>
+            <div id="missing-skills">
+              <PanelSection
+                title="Missing Skills"
+                icon={TrendingUp}
+                section="missing_skills"
+                tooltip={{
+                  what: 'JD skills not found in your resume.',
+                  how: 'Either add if you have them, or study via flashcards.',
+                  why: 'Unaddressed gaps are the fastest reason to skip an application.',
+                }}
+              >
+                <MissingSkillsPanel
+                  skillGaps={result.skill_gaps}
+                  gapMappings={gapMappings}
+                  isPro={canUsePro}
+                  onUpgradeClick={() => setShowPaywall(true)}
+                />
+              </PanelSection>
+            </div>
 
             {/* Formatting issues */}
-            <PanelSection title="ATS Formatting Issues" icon={AlertTriangle}>
-              <FormattingIssues issues={result.formatting_issues} />
-            </PanelSection>
+            <div id="formatting">
+              <PanelSection
+                title="ATS Formatting Issues"
+                icon={AlertTriangle}
+                section="formatting"
+                tooltip={{
+                  what: 'Structural problems (tables, images, headers).',
+                  how: 'Fix before re-scanning; some ATSes drop formatted content entirely.',
+                  why: 'One table can cost you the whole scan, not just a section.',
+                }}
+              >
+                <FormattingIssues issues={result.formatting_issues} />
+              </PanelSection>
+            </div>
 
             {/* Improvement suggestions */}
-            <PanelSection title="Improvement Suggestions" icon={TrendingUp}>
-              <ImprovementSuggestions
-                missingKeywords={result.missing_keywords}
-                skillGaps={result.skill_gaps}
-              />
-            </PanelSection>
+            <div id="improvements">
+              <PanelSection
+                title="Improvement Suggestions"
+                icon={TrendingUp}
+                section="improvements"
+                tooltip={{
+                  what: 'Prioritized concrete edits to lift your score.',
+                  how: 'Work top-to-bottom; highest-leverage first.',
+                  why: 'Saves you guessing what to fix next.',
+                }}
+              >
+                <ImprovementSuggestions
+                  missingKeywords={result.missing_keywords}
+                  skillGaps={result.skill_gaps}
+                />
+              </PanelSection>
+            </div>
 
           </div>
         </motion.div>

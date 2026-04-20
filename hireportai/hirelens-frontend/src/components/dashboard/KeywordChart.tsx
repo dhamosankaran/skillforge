@@ -10,6 +10,38 @@ import {
 } from 'recharts'
 import type { KeywordChartData } from '@/types'
 
+export type KeywordColorVar =
+  | '--color-success'
+  | '--color-danger'
+  | '--color-accent-secondary'
+
+export interface KeywordLegendEntry {
+  id: 'matched' | 'missing' | 'in_resume'
+  label: string
+  cssVarName: KeywordColorVar
+  alpha: number
+}
+
+// Single source of truth consumed by both the chart cells and the legend
+// swatches in Results.tsx. Alphas are chart-cell-canonical per spec #21
+// Option A (legend aligns to chart, not vice-versa).
+export const KEYWORD_LEGEND: readonly KeywordLegendEntry[] = [
+  { id: 'matched', label: 'Matched', cssVarName: '--color-success', alpha: 1 },
+  { id: 'missing', label: 'Missing', cssVarName: '--color-danger', alpha: 0.25 },
+  { id: 'in_resume', label: 'In resume', cssVarName: '--color-accent-secondary', alpha: 0.5 },
+] as const
+
+export function rgbaFromCssVar(name: KeywordColorVar | string, alpha: number): string {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  // design-tokens.ts emits --color-* as space-separated RGB triples.
+  const parts = raw.split(/\s+/).filter(Boolean)
+  if (parts.length !== 3) {
+    // Safe fallback: transparent if the var isn't in the expected shape.
+    return `rgba(0, 0, 0, ${alpha})`
+  }
+  return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${alpha})`
+}
+
 interface KeywordChartProps {
   data: KeywordChartData[]
 }
@@ -35,11 +67,6 @@ const CustomTooltip = ({ active, payload, label }: {
 }
 
 export function KeywordChart({ data }: KeywordChartProps) {
-  const s = getComputedStyle(document.documentElement)
-  const textMuted = s.getPropertyValue('--text-muted').trim()
-  const success = s.getPropertyValue('--success').trim()
-  const danger = s.getPropertyValue('--danger').trim()
-
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-text-muted text-sm">
@@ -48,7 +75,17 @@ export function KeywordChart({ data }: KeywordChartProps) {
     )
   }
 
-  // Show top 20 by JD count
+  const matchedEntry = KEYWORD_LEGEND.find((e) => e.id === 'matched')!
+  const missingEntry = KEYWORD_LEGEND.find((e) => e.id === 'missing')!
+  const inResumeEntry = KEYWORD_LEGEND.find((e) => e.id === 'in_resume')!
+
+  const matchedFill = rgbaFromCssVar(matchedEntry.cssVarName, matchedEntry.alpha)
+  const missingFill = rgbaFromCssVar(missingEntry.cssVarName, missingEntry.alpha)
+  const inResumeFill = rgbaFromCssVar(inResumeEntry.cssVarName, inResumeEntry.alpha)
+
+  const textMuted = getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim()
+
+  // Show top 16 by JD count
   const chartData = [...data]
     .sort((a, b) => b.jd_count - a.jd_count)
     .slice(0, 16)
@@ -74,13 +111,13 @@ export function KeywordChart({ data }: KeywordChartProps) {
           {chartData.map((entry, i) => (
             <Cell
               key={i}
-              fill={entry.matched ? success : `${danger}40`}
-              stroke={entry.matched ? `${success}80` : `${danger}60`}
+              fill={entry.matched ? matchedFill : missingFill}
+              stroke={entry.matched ? matchedFill : missingFill}
               strokeWidth={1}
             />
           ))}
         </Bar>
-        <Bar dataKey="resume_count" name="In Resume" fill="rgba(124,58,237,0.5)" radius={[3, 3, 0, 0]} />
+        <Bar dataKey="resume_count" name="In Resume" fill={inResumeFill} radius={[3, 3, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )
