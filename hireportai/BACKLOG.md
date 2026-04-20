@@ -51,7 +51,7 @@
 | E-002 | nav | Restructure routes to `/learn/*` and `/prep/*` namespaces | P0 | 🔴 | docs/specs/phase-5/33-navigation-restructure.md | P5-S12, S13, S14 | Includes 301 redirects from old flat paths + new TopNav. Unblocks E-003 and E-004. |
 | E-004 | persona | Add `interview_target_company` field to User model | P1 | 🔴 | docs/specs/phase-5/34-persona-picker-and-home.md | P5-S16-AMEND | Amends E-003 spec. New-user flow promises company + date capture. |
 | E-005 | home | Persona-aware HomeDashboard at `/home` | P1 | 🔴 | docs/specs/phase-5/34-persona-picker-and-home.md | P5-S18 | Depends on E-003. |
-| E-006 | home | State-aware widget logic on HomeDashboard | P1 | 🔴 | docs/specs/phase-5/40-home-dashboard-state-aware.md | P5-S18b | Layered on top of E-005. |
+| E-006 | home | State-aware widget logic on HomeDashboard | P1 | ✅ | docs/specs/phase-5/40-home-dashboard-state-aware.md | P5-S18b | Closed by 55ac7bd on 2026-04-19 (backfill; feature shipped, BACKLOG status was stale). Layered on top of E-005. |
 | E-007 | home | Interview-Prepper guided 5-step checklist widget | P1 | 🔴 | docs/specs/phase-5/41-interview-prepper-checklist.md | P5-S18c | Depends on E-005. |
 | E-008 | persona | Existing-user PersonaPicker migration UX (banner + opt-in) | P1 | 🔴 | docs/specs/phase-5/34-persona-picker-and-home.md | P5-S19 | Don't auto-default. |
 | E-009 | results | Move Job Fit Explanation above the fold | P1 | 🔴 | | P5-S20 | High-leverage conversion fix. |

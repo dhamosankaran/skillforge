@@ -1,11 +1,11 @@
 # P5-S18b — State-Aware HomeDashboard Variants
 
-**Status:** Draft (spec only — no code yet; implementation lands as P5-S18c)
+**Status:** Done — Backfilled (shipped in commit 55ac7bd; spec cross-checked against disk 2026-04-19)
 **Owner:** Dhamo
 **Created:** 2026-04-18
 **Phase:** 5D (persona-aware surface)
 **Depends on:** P5-S18 (HomeDashboard + widget catalog shipped — commit `5e1f56c`, spec #35)
-**Downstream slice:** P5-S18c (implementation of this spec; Interview-Prepper guided checklist layers on top)
+**Implementation slice:** P5-S18b (this spec). Follow-on: P5-S18c = Interview-Prepper checklist (spec #41, separate feature).
 **Related locked decisions:** 2026-04-18 daily-review cap (`_DAILY_LIMIT=20` post-S22) is unrelated to state evaluation and not referenced here.
 **Source:** `claude-code-prompts-all-phases-v2.2-patch.md` §P5-S18b (chat-Claude project knowledge; not checked into repo). This spec is the audited, code-grounded amendment of that starter.
 
@@ -160,7 +160,7 @@ Implementation pattern: a small `home_state_service.invalidate(user_id: str, red
 ### New components
 
 - **`src/hooks/useHomeState.ts`** — fetches `GET /api/v1/home/state` on mount; exposes `{ states, context, isLoading, error }`. React Query pattern, consistent with existing fetches. Cached per-session in React Query; falls back to a single in-flight promise if `HomeDashboard` and any child widget happen to request the same data (shouldn't happen in S18c, but defensive).
-- **`src/components/home/StateAwareWidgetSlot.tsx`** — renders the widget for `states[0]` or nothing. Props: `state: string | null, context: HomeStateContext`. Single switch on `state` that maps to the new widgets listed below.
+- **`src/components/home/StateAwareWidgets.tsx`** — renders the widget for `states[0]` or nothing. Props: `state: string | null, context: HomeStateContext`. Single switch on `state` that maps to the new widgets listed below.
 - **`src/components/home/widgets/StreakAtRiskWidget.tsx`** — "Your N-day streak ends in X hours. [Review now]" → `/learn/daily`.
 - **`src/components/home/widgets/MissionOverdueWidget.tsx`** — "Your mission's target date has passed. [Review mission] [End mission]" → `/learn/mission`.
 - **`src/components/home/widgets/ResumeStaleWidget.tsx`** — "Your last scan was N days ago. [Run a scan]" → `/prep/analyze`.
@@ -295,8 +295,12 @@ All questions resolved during the 2026-04-18 chat-Claude amendment pass. Each it
 
 ### Q6 — `.agent/skills/home.md` skill file
 
-**RESOLVED:** yes, add during **P5-S18c implementation** (not this spec). Tracked as a line item in S18c's Files Touched when that slice's prompt is drafted. Keeps spec #40 scoped to the behavioural contract; implementation slice owns the skill-file sync.
+**RESOLVED:** yes, add during **P5-S18b implementation** (not this spec). Tracked as a line item in S18c's Files Touched when that slice's prompt is drafted. Keeps spec #40 scoped to the behavioural contract; implementation slice owns the skill-file sync.
 
 ---
 
-*End of spec. No code in this slice. All questions resolved; P5-S18c implementation may proceed on Dhamo's go-ahead.*
+*End of spec. No code in this slice. All questions resolved; Implementation shipped 2026-04-19 in commit 55ac7bd.*
+
+## 12. Known Label Drift (Informational)
+
+Early implementation commits and a number of in-code docstrings label this work "P5-S18c". The authoritative slice ID is **P5-S18b** per `BACKLOG.md` E-006 and `docs/PHASE-5-STATUS.md`. In-code labels (17 sites across 12 files, listed in the 2026-04-19 retrofit audit) were intentionally left unchanged because they are comment-only and carry no runtime meaning. Future edits to those files should use "P5-S18b". `P5-S18c` correctly refers to the Interview-Prepper guided checklist (spec #41, shipped separately in commit f075a64).
