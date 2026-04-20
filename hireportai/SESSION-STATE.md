@@ -30,6 +30,9 @@
 | D-001 | 2026-04-19 | SESSION-STATE.md (stale) | AGENTS.md routes table + git log | AGENTS.md said PersonaPicker shipped in P5-S17; stale SESSION-STATE treated it as upcoming. | ✅ RESOLVED 2026-04-19 — AGENTS.md was authoritative; PersonaPicker shipped in P5-S17 (commit 2c01cc7). SESSION-STATE restored from HEAD (3ad9c90) and forward-patched. |
 | D-003 | 2026-04-19 | Chat-Claude prompt | Claude Code pre-flight | Prompt assumed last-good SESSION-STATE was at commit effc980 based on its commit subject. Reality: bad version was uncommitted; HEAD itself was last-good. Following the prompt would have regressed ~10 slices. | ✅ RESOLVED 2026-04-19 — restored from HEAD instead. Lesson: when a working-tree change is uncommitted, "last good" is HEAD, not a prior commit. Future drift-resolution prompts should diff working tree vs HEAD before reaching for git log. |
 | D-004 | 2026-04-19 | Session prompts + AGENTS.md (implicit) | Actual git repo layout | Prompts and docs treat `hireportai/` as repo root, but the git repo root is the parent directory. Git-path commands (`git show HEAD:X`) resolve against true root, not CWD. | 🟡 PARTIAL — this instance resolved by using `HEAD:hireportai/SESSION-STATE.md`. Root cause (docs imply repo-root = `hireportai/`) still present. Follow-up tracked as B-013. |
+| D-005 | 2026-04-19 | SESSION-STATE.md Locked Decision "Daily review budget + free-tier scope" §1A (locked 2026-04-18) | LD-001 (locked 2026-04-19) | Decision 1A §1A assumed no per-day review counter at all — "Daily Review for free users is unlimited within Foundation. The paywall trigger is non-Foundation category access, not review consumption." Superseded by LD-001 (α): free-tier 15-card budget is consumed by daily review. §1A needs amendment in a future slice (the category-gate half of §1A is still correct and the cap rule §1B is independent). | 🟡 PENDING — §1A marked superseded by this commit's new LD-001 entry; full in-place amendment to §1A deferred to a follow-up doc slice (autonomous SESSION-STATE edits beyond append scoped narrowly per Update Protocol). No code impact — code is silent on α/β. |
+| D-006 | 2026-04-19 | BACKLOG.md "Open decisions awaiting Dhamo" row — "Daily review consumes 15-card free budget, or browse-only?" (default: Browse-only) | LD-001 (locked 2026-04-19) | Open-decision row listed (β) browse-only as default. Superseded by LD-001 (α): daily review consumes the 15-card budget. The row needs removal and E-011's Notes need the new spec path. | 🟡 PARTIAL — E-011 Notes column updated in this slice to reference spec #22 and LD-001. Row removal from the "Open decisions awaiting Dhamo" table needs Dhamo (non-status field; outside autonomous edit scope per BACKLOG Rules). |
+| D-007 | 2026-04-19 | `../claude-code-prompts-all-phases-v2.2-patch.md` line 282 (planning-era patch doc; frozen per Locked Decision "Phase-5 status is authoritative on disk") | LD-001 (locked 2026-04-19) | Patch doc listed the α vs β question as an open decision. Superseded by LD-001 (α). Doc is frozen chat-Project artifact and is not edited in-repo. | ✅ RESOLVED — supersession recorded on-disk via LD-001 + this flag per Locked Decision "Phase-5 status is authoritative on disk." No follow-up required; frozen-doc drift is expected and bounded. |
 
 ---
 
@@ -130,9 +133,35 @@ Canonical list lives in **`BACKLOG.md` → "Open decisions awaiting Dhamo"**. It
 
 ## Locked Decisions
 
+### LD-001 — Free-tier daily-review budget: CONSUMES (α)
+**Locked:** 2026-04-19
+**Affected slices:** P5-S22 (this spec — plan-aware Missing Skills CTA), any future paywall trigger around daily review, free-tier budget counter's event hooks, future amendment to Decision 1A below.
+
+**Rule.** The free-tier 15-card/day budget is consumed by the daily review flow, not browse-only. Free users complete 3 days of active daily review (5 cards/day × 3 = 15) before hitting the paywall wall.
+
+**Rationale.**
+(a) Daily review is the core retention mechanic; giving it away free forever inverts value capture.
+(b) Senior-engineer target demographic is high-intent; a 3-day free window is enough to validate.
+(c) Keeps gating coherent with Mission Mode being Pro-only.
+
+**Rejected alternative (β):** browse-only budget, daily review unlimited free — too generous, conversion-hostile.
+
+**Supersedes.** Any planning-era doc that assumed (β), including:
+- `../claude-code-prompts-all-phases-v2.2-patch.md` line 282 (planning-era open decision).
+- BACKLOG.md "Open decisions awaiting Dhamo" row whose default answer was "Browse-only (more generous)."
+- The §1A half of the 2026-04-18 Locked Decision "Daily review budget + free-tier scope" below, whose "no per-day review counter" rule contradicts α. (§1B's hard 20-card/day cap is independent and still stands; §1A's Foundation-category gating is also still correct. Only the "no counter / review consumption never triggers a paywall" part is superseded.)
+
+Drift flags D-005, D-006, D-007 log the supersessions.
+
+**Cross-check (audit 2026-04-19, in this slice's Step 2):** code is SILENT on α vs β — neither is implemented. `app/services/usage_service.py` has no `card_view` / `daily_review` entry in `PLAN_LIMITS`; `app/services/study_service.py::get_daily_review` gates free users on `Category.source == "foundation"` only and increments no card counter on review submit; `hirelens-frontend/src/components/PaywallModal.tsx` defines a `daily_review` trigger in its union type but nothing in `src/` passes `trigger="daily_review"` — dead dispatch. Frontend `MissingSkillsPanel.tsx` currently branches Pro-vs-free as (navigate) vs (onUpgradeClick) with no routing for free users. LD-001 is a docs-level decision in this slice; the code-level counter (and any paywall re-wiring) is a future implementation slice.
+
+---
+
 ### Decision: Daily review budget + free-tier scope
 **Locked:** 2026-04-18
 **Affected slices:** P5-S22 (FSRS Pro-gating), Phase 1 paywall logic (retroactive doc)
+
+**Amendment note (2026-04-19, LD-001):** §1A's "no per-day review counter… paywall trigger is non-Foundation category access, not review consumption" is **superseded by LD-001 (α)**. §1B (hard 20-card/day cap) and §1A's Foundation-category scoping rule are unaffected. See Drift flag D-005.
 
 **1A — Free tier scope: CATEGORY-GATED (status quo).**
 Free users are scoped to the Foundation category. No per-day review counter. No per-session counter. Daily Review for free users is unlimited within Foundation. The paywall trigger is non-Foundation category access, not review consumption.
