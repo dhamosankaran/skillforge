@@ -23,6 +23,12 @@ class User(Base, UUIDPrimaryKeyMixin):
     )
     interview_target_company: Mapped[str | None] = mapped_column(String(100), nullable=True)
     interview_target_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Set by customer.subscription.deleted webhook. Consumed by the deferred
+    # win-back churn guard (spec #42 LD-5); landed now to avoid an unbackfillable
+    # gap if we waited. Dormant for dismissal-only enforcement.
+    downgraded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )

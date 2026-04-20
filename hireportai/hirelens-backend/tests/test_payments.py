@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -313,6 +314,101 @@ async def test_webhook_cancels_pro(client, test_user, db_session):
     assert sub_after.plan == "free"
     assert sub_after.status == "canceled"
     assert sub_after.stripe_subscription_id is None
+
+
+async def test_subscription_deleted_sets_downgraded_at(
+    client, test_user, db_session
+):
+    """customer.subscription.deleted stamps user.downgraded_at (spec #42 LD-5)."""
+    sub = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == test_user.id)
+        )
+    ).scalar_one()
+    sub.plan = "pro"
+    sub.status = "active"
+    sub.stripe_customer_id = "cus_downgraded_xyz"
+    sub.stripe_subscription_id = "sub_downgraded_999"
+    await db_session.flush()
+    assert test_user.downgraded_at is None
+
+    fake_event = {
+        "type": "customer.subscription.deleted",
+        "data": {
+            "object": {
+                "id": "sub_downgraded_999",
+                "customer": "cus_downgraded_xyz",
+            }
+        },
+    }
+
+    before = datetime.now(tz=timezone.utc)
+    with patch(
+        "app.services.payment_service.stripe.Webhook.construct_event",
+        return_value=fake_event,
+    ):
+        resp = await client.post(
+            "/api/v1/payments/webhook",
+            content=json.dumps(fake_event).encode(),
+            headers={"stripe-signature": "t=1,v1=fake"},
+        )
+    after = datetime.now(tz=timezone.utc)
+
+    assert resp.status_code == 200, resp.text
+
+    # Re-read from the session identity map (no refresh — the handler
+    # mutates the ORM object but does not commit, so refresh() would
+    # clobber those changes from the unwritten DB row; same pattern as
+    # test_webhook_cancels_pro).
+    user_after = (
+        await db_session.execute(select(User).where(User.id == test_user.id))
+    ).scalar_one()
+    assert user_after.downgraded_at is not None
+    assert before <= user_after.downgraded_at <= after
+
+
+async def test_subscription_deleted_existing_logic_still_works(
+    client, test_user, db_session
+):
+    """Regression guard: plan/status/stripe_subscription_id downgrade path
+    is unchanged by the downgraded_at wire-up."""
+    sub = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == test_user.id)
+        )
+    ).scalar_one()
+    sub.plan = "pro"
+    sub.status = "active"
+    sub.stripe_customer_id = "cus_regression"
+    sub.stripe_subscription_id = "sub_regression"
+    await db_session.flush()
+
+    fake_event = {
+        "type": "customer.subscription.deleted",
+        "data": {
+            "object": {"id": "sub_regression", "customer": "cus_regression"}
+        },
+    }
+    with patch(
+        "app.services.payment_service.stripe.Webhook.construct_event",
+        return_value=fake_event,
+    ):
+        resp = await client.post(
+            "/api/v1/payments/webhook",
+            content=json.dumps(fake_event).encode(),
+            headers={"stripe-signature": "t=1,v1=fake"},
+        )
+    assert resp.status_code == 200
+
+    sub_after = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == test_user.id)
+        )
+    ).scalar_one()
+    assert sub_after.plan == "free"
+    assert sub_after.status == "canceled"
+    assert sub_after.stripe_subscription_id is None
+    assert sub_after.current_period_end is None
 
 
 async def test_duplicate_webhook_is_idempotent(client, test_user, db_session):

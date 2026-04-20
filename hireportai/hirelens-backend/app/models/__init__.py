@@ -13,3 +13,4 @@ from app.models.mission import Mission, MissionDay, mission_categories  # noqa: 
 from app.models.email_preference import EmailPreference  # noqa: F401
 from app.models.card_feedback import CardFeedback  # noqa: F401
 from app.models.interview_question_set import InterviewQuestionSet  # noqa: F401
+from app.models.paywall_dismissal import PaywallDismissal  # noqa: F401

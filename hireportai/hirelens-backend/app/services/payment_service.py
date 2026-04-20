@@ -17,7 +17,7 @@ those columns onto ``User``.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 import stripe
 from sqlalchemy import select
@@ -312,6 +312,15 @@ async def _handle_subscription_deleted(data: dict, db: AsyncSession) -> None:
     sub.status = "canceled"
     sub.stripe_subscription_id = None
     sub.current_period_end = None
+
+    # Churn timestamp (spec #42 LD-5) — dormant until the deferred win-back
+    # slice reads it. Written here because after-the-fact backfill is
+    # impossible once live downgrades start happening.
+    user = (
+        await db.execute(select(User).where(User.id == sub.user_id))
+    ).scalar_one_or_none()
+    if user is not None:
+        user.downgraded_at = datetime.now(tz=timezone.utc)
 
     analytics_track(
         user_id=sub.user_id,

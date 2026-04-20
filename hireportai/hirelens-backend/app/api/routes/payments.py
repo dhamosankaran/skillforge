@@ -1,16 +1,19 @@
-"""Payments route — Stripe Checkout + webhook (Spec #11).
+"""Payments route — Stripe Checkout + webhook (Spec #11) + paywall
+dismissal (Spec #42).
 
 Mounted at ``/api/v1/payments`` from ``app/main.py``.
 """
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.analytics import track as analytics_track
 from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
+from app.services import paywall_service
 from app.services.geo_pricing_service import get_pricing
 from app.services.payment_service import (
     InvalidSignatureError,
@@ -111,6 +114,80 @@ async def create_portal(
             status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)
         )
     return PortalResponse(url=url)
+
+
+class PaywallDismissRequest(BaseModel):
+    trigger: str = Field(..., min_length=1, max_length=64)
+    action_count_at_dismissal: Optional[int] = Field(default=None, ge=0)
+
+
+class PaywallDismissResponse(BaseModel):
+    logged: bool
+    dismissal_id: str
+    dismissals_in_window: int
+
+
+class ShouldShowPaywallResponse(BaseModel):
+    show: bool
+    attempts_until_next: int
+
+
+@router.post("/payments/paywall-dismiss", response_model=PaywallDismissResponse)
+async def paywall_dismiss(
+    body: PaywallDismissRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> PaywallDismissResponse:
+    """Log a paywall dismissal (spec #42).
+
+    Idempotent within a 60-second window per (user_id, trigger) per LD-8.
+    Fires ``paywall_dismissed`` PostHog event on successful log. Win-back
+    is deferred — this endpoint does not send email.
+    """
+    result = await paywall_service.record_dismissal(
+        db,
+        user_id=user.id,
+        trigger=body.trigger,
+        action_count=body.action_count_at_dismissal,
+    )
+
+    if result["logged"]:
+        analytics_track(
+            user_id=user.id,
+            event="paywall_dismissed",
+            properties={
+                "trigger": body.trigger,
+                "dismissals_in_window": result["dismissals_in_window"],
+                "action_count_at_dismissal": body.action_count_at_dismissal,
+            },
+        )
+
+    return PaywallDismissResponse(**result)
+
+
+@router.get(
+    "/payments/should-show-paywall",
+    response_model=ShouldShowPaywallResponse,
+)
+async def should_show_paywall(
+    trigger: str = Query(..., min_length=1, max_length=64),
+    attempts_since_dismiss: int = Query(0, ge=0),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> ShouldShowPaywallResponse:
+    """Decide modal-vs-inline-nudge for the given (user, trigger).
+
+    Pro / Enterprise / admin always receive ``show=false``. Free users
+    with a prior dismissal receive ``show=false`` until their frontend-
+    tracked ``attempts_since_dismiss`` reaches 3 (LD-3 grace).
+    """
+    result = await paywall_service.should_show_paywall(
+        db,
+        user=user,
+        trigger=trigger,
+        attempts_since_dismiss=attempts_since_dismiss,
+    )
+    return ShouldShowPaywallResponse(**result)
 
 
 @router.post("/payments/webhook")
