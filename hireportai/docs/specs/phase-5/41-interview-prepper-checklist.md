@@ -1,6 +1,6 @@
 # P5-S18c·checklist — Interview-Prepper Onboarding Checklist
 
-**Status:** Active — shipping this slice (P5-S18c follow-up, closing Phase 5D)
+**Status:** Done — Backfilled (shipped in commit f075a64; spec cross-checked against disk 2026-04-19)
 **Owner:** Dhamo
 **Created:** 2026-04-19
 **Phase:** 5D
