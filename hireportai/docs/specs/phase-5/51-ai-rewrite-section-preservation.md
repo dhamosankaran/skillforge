@@ -1,6 +1,6 @@
 # Spec #51 — AI Resume Rewrite: Section Preservation + Token-Budget Fix
 
-**Status:** Draft — awaiting implementation slice
+**Status:** Shipped
 **Owner:** Dhamo
 **Created:** 2026-04-20
 **Phase:** 5

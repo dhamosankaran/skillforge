@@ -1,6 +1,6 @@
 # Spec #52 — Cover Letter: Format Enforcement via Structured Output
 
-**Status:** Draft — awaiting implementation slice
+**Status:** Shipped
 **Owner:** Dhamo
 **Created:** 2026-04-21
 **Phase:** 5

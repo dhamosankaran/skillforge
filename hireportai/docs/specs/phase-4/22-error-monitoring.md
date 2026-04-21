@@ -1,5 +1,7 @@
 # SPEC #22: Sentry Error Monitoring + Webhook Idempotency
 
+> Superseded by [phase-4/23-error-monitoring.md](./23-error-monitoring.md)
+
 ## Status: Done
 ## Phase: 4
 ## Branch: main

@@ -1,6 +1,6 @@
 # P5-S18 — HomeDashboard + Widget Catalog
 
-**Status:** Draft (spec only — no code yet)
+**Status:** Shipped
 **Owner:** Dhamo
 **Created:** 2026-04-18
 **Phase:** 5D (persona-aware surface)

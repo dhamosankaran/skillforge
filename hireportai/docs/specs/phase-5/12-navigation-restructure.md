@@ -1,6 +1,6 @@
 # P5-S12 — Navigation Restructure: Two-Namespace Nav (/learn + /prep)
 
-**Status:** Draft (spec only — no code yet)
+**Status:** Shipped
 **Owner:** Dhamo
 **Created:** 2026-04-17
 **Phase:** 5C (route restructure)

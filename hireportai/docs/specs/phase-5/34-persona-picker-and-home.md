@@ -1,6 +1,6 @@
 # P5-S15 — PersonaPicker + HomeDashboard Foundations
 
-**Status:** Draft (spec only — no code yet)
+**Status:** Shipped
 **Owner:** Dhamo
 **Created:** 2026-04-17
 **Phase:** 5D (persona-aware surface)
