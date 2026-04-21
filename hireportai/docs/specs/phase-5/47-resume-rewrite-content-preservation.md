@@ -109,4 +109,8 @@ No frontend changes. `ResumeEditor`/`MarkdownPreview` render `full_text` verbati
 
 ## 8. Provenance
 
+> **⚠ SUPERSEDED-IN-PART BY SPEC #51 (2026-04-21)**
+>
+> The "flag closed / bug gone" claim in this section is stale. Investigation 2026-04-21 (`docs/audit/2026-04-b001-rewrite-investigation.md`) confirmed the B-001 bug still manifests via a different dominant root cause — output-side thinking-budget contention + empty `sections` + broken export paths. Spec #51 supersedes the resolution claim. This spec's AC-2 preservation-regression test remains valid and is inherited by #51.
+
 v2.1 playbook flagged the feature as 🟡 PARTIAL with "missing original content". Spec #09 (P5-S9, 2026-04-17) fixed the underlying input-truncation + max-tokens caps. This spec is a retroactive closure of the v2.1 flag: Step-2 audit confirmed the fix still holds on `main` (`fc933d1`), the feature is 🟢 GREEN, and this document adds AC-2 as a prompt-contract regression guard. Models the Rule-14 doc-sync pattern used by spec #43.
