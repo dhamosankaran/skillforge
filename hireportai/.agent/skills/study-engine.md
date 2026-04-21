@@ -1,3 +1,6 @@
+---
+description: FSRS spaced-repetition study engine — card scheduling, daily review queue, rating submission, study session orchestration
+---
 # Study Engine Skill
 
 ## Overview
