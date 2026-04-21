@@ -9,17 +9,17 @@
 
 | Field | Value |
 |-------|-------|
-| Commit sha (short) | `dda860a` |
-| Branch | `main` (17 ahead of `origin/main`) |
-| Generated | 2026-04-20 (pre-P5-S26b-impl-FE refresh: Sections 1-5 updated for the backend additions in `7cb2221` — `paywall_dismissal` model, `users.downgraded_at` column, two new `/payments/*` endpoints, `paywall_service.py`, migration `1176cc179bf0`. Sections 6-12 untouched since no frontend code has landed in this slice yet.) |
+| Commit sha (short) | `3cef6c3` |
+| Branch | `main` (24 ahead of `origin/main`) |
+| Generated | 2026-04-21 (post-B-001 refresh: Sections 1, 3, 4, 7, 8 updated for the B-001 impl series `60b1ef3`/`167b70f`/`3c6a594`/`688529d`/`3cef6c3` — new `POST /api/v1/rewrite/section` endpoint (also mounted at `/api/rewrite/section` via the legacy re-export), new `resume_rewrite_section` task in `REASONING_TASKS`, new optional `thinking_budget` kwarg on `generate_for_task`, `gpt_service.generate_resume_rewrite` return-shape changed to `Tuple[RewriteResponse, path_str]`, `RewriteResponse.sections` now populated end-to-end, FE `rewriteSection()` API method + `useRewrite.regenerateSection`, Rewrite.tsx gained `rewrite_requested` + `rewrite_section_regenerated` events. Sections 5, 6, 9-12 re-audited — no net change from B-001.) |
 | Backend model files | 18 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models`) |
 | Backend service files | 30 top-level + 3 under `services/llm/` = 33 |
 | Backend router files | 17 v1 + 6 legacy = 23 |
-| Backend endpoints (total) | 58 (54 unique decorators; `analyze` / `rewrite` / `cover_letter` / `interview` legacy routers are each mounted at both `/api/*` and `/api/v1/*`, so 4 paths appear twice) |
+| Backend endpoints (total) | 60 (55 unique decorators; `analyze` / `rewrite` / `cover_letter` / `interview` legacy routers are each mounted at both `/api/*` and `/api/v1/*`, so 5 paths appear twice — `rewrite.py` now has 2 decorators, not 1, after B-001's `/rewrite/section`) |
 | Alembic revisions | 20 |
 | Frontend pages | 19 |
 | Frontend components (`.tsx` under `src/components/`, excl. `__tests__`) | 60 |
-| Specs on disk (`docs/specs/**/*.md`) | 70 |
+| Specs on disk (`docs/specs/**/*.md`) | 71 (spec #51 added by B-001 series) |
 | Skill files (`.agent/skills/*.md`) | 20 |
 
 ---
@@ -342,7 +342,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | `/api/analyze` | `app/api/routes/analyze.py` | 1 | `get_current_user_optional` |
 | `/api/cover-letter` | `app/api/routes/cover_letter.py` | 1 | none |
 | `/api/interview-prep` | `app/api/routes/interview.py` | 1 | `get_current_user_optional` |
-| `/api/rewrite` | `app/api/routes/rewrite.py` | 1 | none |
+| `/api/rewrite` | `app/api/routes/rewrite.py` | 2 | none *(both `/rewrite` and `/rewrite/section`; latter added in B-001 impl `167b70f`)* |
 | `/api/v1/onboarding` | `app/api/routes/onboarding.py` *(legacy folder, v1 mount)* | 2 | `get_current_user` |
 | `/api/v1/payments` | `app/api/routes/payments.py` *(legacy folder, v1 mount)* | 6 | `get_current_user` (4), none (2) |
 | `/api/v1/admin` | `app/api/v1/routes/admin.py` | 8 | `require_admin` (8) |
@@ -358,7 +358,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | `/api/v1/missions/*` | `app/api/v1/routes/mission.py` | 4 | `get_current_user` (4) |
 | `/api/v1/progress` | `app/api/v1/routes/progress.py` | 2 | `get_current_user` (2) |
 | `/api/v1/resume` | `app/api/v1/routes/resume.py` | 4 | `get_current_user` (3), `require_plan` (1) |
-| `/api/v1/rewrite` | `app/api/v1/routes/rewrite.py` | 1 *(re-exports legacy)* | none |
+| `/api/v1/rewrite` | `app/api/v1/routes/rewrite.py` | 2 *(re-exports legacy — includes `/rewrite/section`)* | none |
 | `/api/v1/study` | `app/api/v1/routes/study.py` | 4 | `get_current_user` (4) |
 | `/api/v1/tracker` | `app/api/v1/routes/tracker.py` | 4 | `get_current_user` (4) |
 | `/api/v1/users` | `app/api/v1/routes/users.py` | 1 | `get_current_user` |
@@ -371,6 +371,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | POST | /api/cover-letter | generate_cover_letter | none | Cover Letter |
 | POST | /api/interview-prep | generate_interview_prep | get_current_user_optional | Interview Prep |
 | POST | /api/rewrite | rewrite_resume | none | Rewrite |
+| POST | /api/rewrite/section | rewrite_section | none | Rewrite *(spec #51, B-001 impl — per-section regen)* |
 | GET | /api/v1/admin/cards | list_cards | require_admin | v1 Admin |
 | POST | /api/v1/admin/cards | create_card | require_admin | v1 Admin |
 | PUT | /api/v1/admin/cards/{card_id} | update_card | require_admin | v1 Admin |
@@ -416,6 +417,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | POST | /api/v1/resume/{resume_id}/optimize | optimize_resume | require_plan | v1 Resume |
 | POST | /api/v1/resume/upload | upload_resume | get_current_user | v1 Resume |
 | POST | /api/v1/rewrite | rewrite_resume | none | v1 Rewrite |
+| POST | /api/v1/rewrite/section | rewrite_section | none | v1 Rewrite *(spec #51, B-001 impl — per-section regen)* |
 | GET | /api/v1/study/daily | get_daily_review | get_current_user | v1 Study |
 | POST | /api/v1/study/experience | generate_experience | get_current_user | v1 Study |
 | GET | /api/v1/study/progress | get_progress | get_current_user | v1 Study |
@@ -446,7 +448,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | gap_detector.py | Skill gap detection service. [INFERRED] | detect_gaps, classify_importance, get_skills_overlap_data | — |
 | gap_mapping_service.py | ATS gap → card category mapping service. | map_gaps_to_categories, RecommendedCategory, GapMapping | LLM-direct |
 | geo_pricing_service.py | Geo-based pricing showing USD by default, INR for India. | get_pricing | HTTP-external, Redis |
-| gpt_service.py | AI resume-optimization features delegating to multi-model LLM router. | generate_job_fit_explanation, generate_resume_rewrite, generate_cover_letter, generate_interview_questions, rewrite_bullets_gpt | LLM-router |
+| gpt_service.py | AI resume-optimization features delegating to multi-model LLM router. Post-B-001 (`167b70f`, spec #51): `generate_resume_rewrite` / `generate_resume_rewrite_async` return `Tuple[RewriteResponse, path_str]` where `path_str ∈ {"chunked", "fallback_full"}` is a telemetry hint — see D-014. Per-section regen entry point is `generate_section_rewrite`. `RewriteError` raised on truncation / malformed JSON (caller maps to AC-5 502 envelope). Chunking uses an asyncio semaphore bounded at `PARALLEL_SECTION_LIMIT=4`. | generate_job_fit_explanation, generate_resume_rewrite, generate_resume_rewrite_async, generate_section_rewrite, generate_cover_letter, generate_interview_questions, rewrite_bullets_gpt, RewriteError | LLM-router |
 | home_state_service.py | State-aware home dashboard evaluator. | evaluate_state, invalidate | Redis |
 | interview_storage_service.py | Interview question set storage + cache-aware generation. | generate_or_get_interview_set, InterviewGenerationResult | LLM-router |
 | keywords.py | TF-IDF keyword extraction and matching service. | extract_keywords, match_keywords, get_keyword_chart_data | — |
@@ -569,7 +571,7 @@ No component is rendered at two distinct routes (redirects don't count). `AdminP
 | Pricing.tsx | Pricing | useUsage, usePricing, useSearchParams | createCheckoutSession | checkout_started, payment_completed |
 | Profile.tsx | Profile | useAuth, useUsage, useGamification | generateExperience, createBillingPortalSession, api.get | profile_viewed, subscription_portal_opened, experience_generated |
 | Results.tsx | Results | useAnalysisContext, useUsage | fetchOnboardingRecommendations | job_fit_explanation_viewed, results_tooltip_opened *(via `PanelSection` child — 9-section enum)* |
-| Rewrite.tsx | Rewrite | useAnalysisContext, useRewrite, useUsage | — | — |
+| Rewrite.tsx | Rewrite | useAnalysisContext, useRewrite, useUsage | rewriteSection *(via `useRewrite.regenerateSection`)* | rewrite_requested, rewrite_section_regenerated *(fired from `useRewrite.ts`); BE also emits `rewrite_succeeded` / `rewrite_failed` with `strategy=chunked\|fallback_full`* |
 | StudyDashboard.tsx | StudyDashboard | useStudyDashboard, useAuth, useUsage, useGamification | — | study_dashboard_viewed, locked_tile_clicked, category_tile_clicked |
 | Tracker.tsx | Tracker | useTracker | — | — |
 
@@ -591,7 +593,8 @@ No component is rendered at two distinct routes (redirects don't count). `AdminP
 | `RewriteEntry` | `{ org, location, date, title: string, bullets, details: string[] }` | — |
 | `RewriteSection` | `{ title, content: string, entries: RewriteEntry[] }` | — |
 | `RewriteHeader` | `{ name, contact: string }` | — |
-| `RewriteResponse` | `{ header, sections, full_text, template_type }` | 6 |
+| `RewriteResponse` | `{ header, sections, full_text, template_type }` | 6 *(post-B-001: `sections` now populated end-to-end; was always-empty pre-`167b70f`)* |
+| `RewriteSectionResponse` | `{ section_id: string, section: RewriteSection }` *(in `services/api.ts`, not `types/index.ts` — per-section regen return shape)* | 1 |
 | `CoverLetterResponse` | `{ cover_letter: string, tone: string }` | 5 |
 | `InterviewQuestion` | `{ question: string, star_framework: string }` | 1 |
 | `InterviewPrepResponse` | `{ questions: InterviewQuestion[], cached?, generated_at?, model_used? }` | 3 |
@@ -687,7 +690,7 @@ No components found behind a `{false && …}` guard or dormant feature flag.
 
 ## Section 11 — Drift flags (AGENTS.md / master-doc vs code)
 
-High-signal output — all verified against the current working tree at `f09be80`.
+High-signal output — all verified against the current working tree at `3cef6c3`.
 
 1. **AGENTS.md legacy routers table says `/api/cover_letter` (underscore).**  `hirelens-backend/app/api/routes/cover_letter.py:11` decorates `@router.post("/cover-letter", …)` (hyphen). Effective production path is `/api/cover-letter`. Same class of drift on `/api/interview` vs actual `/api/interview-prep` (`interview.py:17`).
 
