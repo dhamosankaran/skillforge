@@ -9,9 +9,9 @@
 
 | Field | Value |
 |-------|-------|
-| Commit sha (short) | `3cef6c3` |
-| Branch | `main` (24 ahead of `origin/main`) |
-| Generated | 2026-04-21 (post-B-001 refresh: Sections 1, 3, 4, 7, 8 updated for the B-001 impl series `60b1ef3`/`167b70f`/`3c6a594`/`688529d`/`3cef6c3` — new `POST /api/v1/rewrite/section` endpoint (also mounted at `/api/rewrite/section` via the legacy re-export), new `resume_rewrite_section` task in `REASONING_TASKS`, new optional `thinking_budget` kwarg on `generate_for_task`, `gpt_service.generate_resume_rewrite` return-shape changed to `Tuple[RewriteResponse, path_str]`, `RewriteResponse.sections` now populated end-to-end, FE `rewriteSection()` API method + `useRewrite.regenerateSection`, Rewrite.tsx gained `rewrite_requested` + `rewrite_section_regenerated` events. Sections 5, 6, 9-12 re-audited — no net change from B-001.) |
+| Commit sha (short) | `a13c217` |
+| Branch | `main` |
+| Generated | 2026-04-21 (post-B-002 + Path A decision refresh: Sections 1, 4, 8 updated for the B-002 impl series `825eb0e` (BE slice 1/2) + `ceba622` (FE slice 2/2) + `08f0873` (post-recovery B-002 close) — `CoverLetterResponse` shape changed from `{cover_letter, tone}` to the structured spec #52 LD-2 envelope (`date`, `recipient{name,company}`, `greeting`, `body_paragraphs [len==3]`, `signoff`, `signature`, `tone`, `full_text`), `gpt_service.generate_cover_letter` now assembles `full_text` server-side via `_join_cover_letter` (never LLM-sourced), BE `/cover_letter` route enforces AC-5 structured 502 error envelope on `cover_letter_validation_error`, FE consumers (6 files) migrated off ReactMarkdown onto structured fields + `full_text` for DOCX/PDF/clipboard, telemetry renamed `cover_letter_generated` → `cover_letter_succeeded` / `cover_letter_failed`, new spec #52 landed. Sections 2, 3, 5, 6, 7, 9-12 re-audited — no net change from B-002. Also reflects Path A canonical-flow decision logged in `docs/PHASE-5-STATUS.md` Canonical E2E Flow section + new BACKLOG row E-038 (🟦 deferred anon-scan funnel) — no code impact.) |
 | Backend model files | 18 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models`) |
 | Backend service files | 30 top-level + 3 under `services/llm/` = 33 |
 | Backend router files | 17 v1 + 6 legacy = 23 |
@@ -19,7 +19,7 @@
 | Alembic revisions | 20 |
 | Frontend pages | 19 |
 | Frontend components (`.tsx` under `src/components/`, excl. `__tests__`) | 60 |
-| Specs on disk (`docs/specs/**/*.md`) | 71 (spec #51 added by B-001 series) |
+| Specs on disk (`docs/specs/**/*.md`) | 72 (spec #52 added by B-002 series — cover letter format enforcement) |
 | Skill files (`.agent/skills/*.md`) | 20 |
 
 ---
@@ -448,7 +448,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | gap_detector.py | Skill gap detection service. [INFERRED] | detect_gaps, classify_importance, get_skills_overlap_data | — |
 | gap_mapping_service.py | ATS gap → card category mapping service. | map_gaps_to_categories, RecommendedCategory, GapMapping | LLM-direct |
 | geo_pricing_service.py | Geo-based pricing showing USD by default, INR for India. | get_pricing | HTTP-external, Redis |
-| gpt_service.py | AI resume-optimization features delegating to multi-model LLM router. Post-B-001 (`167b70f`, spec #51): `generate_resume_rewrite` / `generate_resume_rewrite_async` return `Tuple[RewriteResponse, path_str]` where `path_str ∈ {"chunked", "fallback_full"}` is a telemetry hint — see D-014. Per-section regen entry point is `generate_section_rewrite`. `RewriteError` raised on truncation / malformed JSON (caller maps to AC-5 502 envelope). Chunking uses an asyncio semaphore bounded at `PARALLEL_SECTION_LIMIT=4`. | generate_job_fit_explanation, generate_resume_rewrite, generate_resume_rewrite_async, generate_section_rewrite, generate_cover_letter, generate_interview_questions, rewrite_bullets_gpt, RewriteError | LLM-router |
+| gpt_service.py | AI resume-optimization features delegating to multi-model LLM router. Post-B-001 (`167b70f`, spec #51): `generate_resume_rewrite` / `generate_resume_rewrite_async` return `Tuple[RewriteResponse, path_str]` where `path_str ∈ {"chunked", "fallback_full"}` is a telemetry hint — see D-014. Per-section regen entry point is `generate_section_rewrite`. `RewriteError` raised on truncation / malformed JSON (caller maps to AC-5 502 envelope). Chunking uses an asyncio semaphore bounded at `PARALLEL_SECTION_LIMIT=4`. Post-B-002 (`825eb0e`, spec #52): `generate_cover_letter` returns the structured `CoverLetterResponse` (spec #52 LD-2 shape); `full_text` is assembled server-side via `_join_cover_letter` — never LLM-sourced. `body_paragraphs` is Pydantic-pinned to `len==3`; validation failures surface as `cover_letter_validation_error` under the AC-5 502 envelope. | generate_job_fit_explanation, generate_resume_rewrite, generate_resume_rewrite_async, generate_section_rewrite, generate_cover_letter, generate_interview_questions, rewrite_bullets_gpt, RewriteError, _join_cover_letter | LLM-router |
 | home_state_service.py | State-aware home dashboard evaluator. | evaluate_state, invalidate | Redis |
 | interview_storage_service.py | Interview question set storage + cache-aware generation. | generate_or_get_interview_set, InterviewGenerationResult | LLM-router |
 | keywords.py | TF-IDF keyword extraction and matching service. | extract_keywords, match_keywords, get_keyword_chart_data | — |
@@ -595,7 +595,8 @@ No component is rendered at two distinct routes (redirects don't count). `AdminP
 | `RewriteHeader` | `{ name, contact: string }` | — |
 | `RewriteResponse` | `{ header, sections, full_text, template_type }` | 6 *(post-B-001: `sections` now populated end-to-end; was always-empty pre-`167b70f`)* |
 | `RewriteSectionResponse` | `{ section_id: string, section: RewriteSection }` *(in `services/api.ts`, not `types/index.ts` — per-section regen return shape)* | 1 |
-| `CoverLetterResponse` | `{ cover_letter: string, tone: string }` | 5 |
+| `CoverLetterResponse` | `{ date, greeting, signoff, signature, tone, full_text: string, recipient: {name, company: string}, body_paragraphs: string[] (len==3) }` *(post-B-002 spec #52 LD-2 structured shape; supersedes the pre-B-002 `{cover_letter, tone}` shape)* | 5 |
+| `CoverLetterRecipient` | `{ name, company: string }` *(new in B-002 — recipient sub-shape of `CoverLetterResponse`)* | — |
 | `InterviewQuestion` | `{ question: string, star_framework: string }` | 1 |
 | `InterviewPrepResponse` | `{ questions: InterviewQuestion[], cached?, generated_at?, model_used? }` | 3 |
 | `ApplicationStatus` | `Applied\|Interview\|Offer\|Rejected` | — |
