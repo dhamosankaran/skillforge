@@ -25,6 +25,7 @@ import type {
   ReviewRequest,
   ReviewResponse,
   RewriteResponse,
+  RewriteSection,
   TrackerApplication,
 } from '@/types'
 import {
@@ -162,6 +163,28 @@ export async function rewriteResume(
     job_description: jdText,
     template_type: templateType || null,
     major: major || null,
+  })
+  return response.data
+}
+
+export interface RewriteSectionResponse {
+  section_id: string
+  section: RewriteSection
+}
+
+export async function rewriteSection(
+  sectionId: string,
+  sectionTitle: string,
+  sectionText: string,
+  jdText: string,
+  missingKeywords?: string[]
+): Promise<RewriteSectionResponse> {
+  const response = await api.post<RewriteSectionResponse>('/api/v1/rewrite/section', {
+    section_id: sectionId,
+    section_title: sectionTitle,
+    section_text: sectionText,
+    jd_text: jdText,
+    missing_keywords: missingKeywords ?? null,
   })
   return response.data
 }

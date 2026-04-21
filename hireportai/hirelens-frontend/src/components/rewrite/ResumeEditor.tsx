@@ -2,13 +2,15 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Copy, Check, FileText, Download, FileDown, RefreshCw } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
-import type { RewriteResponse } from '@/types'
+import type { RewriteResponse, RewriteSection } from '@/types'
 
 interface ResumeEditorProps {
   original: string
   rewrite: RewriteResponse | null
   isLoading: boolean
   onRegenerate?: () => void
+  onRegenerateSection?: (idx: number, section: RewriteSection) => void
+  regeneratingIdx?: number | null
   onDownloadPDF?: () => void
   onDownloadDocx?: () => void
   isExportingPDF?: boolean
@@ -16,7 +18,15 @@ interface ResumeEditorProps {
 }
 
 /** Full formatted resume preview — structured sections */
-function ResumePreview({ rewrite }: { rewrite: RewriteResponse }) {
+function ResumePreview({
+  rewrite,
+  onRegenerateSection,
+  regeneratingIdx,
+}: {
+  rewrite: RewriteResponse
+  onRegenerateSection?: (idx: number, section: RewriteSection) => void
+  regeneratingIdx?: number | null
+}) {
   return (
     <div className="p-8 bg-white rounded-2xl shadow-card min-h-[400px]" style={{ fontFamily: 'Times New Roman, serif' }}>
       {/* Header */}
@@ -33,11 +43,34 @@ function ResumePreview({ rewrite }: { rewrite: RewriteResponse }) {
 
       {/* Sections */}
       {rewrite.sections.map((section, i) => (
-        <div key={i} style={{ marginTop: i === 0 ? 0 : '14px' }}>
-          {/* Section heading */}
-          <h2 className="text-[12px] font-bold text-gray-900 tracking-[0.15em] uppercase border-b border-gray-800 pb-1 mb-3">
-            {section.title}
-          </h2>
+        <div
+          key={i}
+          data-testid={`rewrite-section-${i}`}
+          data-section-title={section.title}
+          style={{ marginTop: i === 0 ? 0 : '14px' }}
+        >
+          {/* Section heading + per-section regenerate */}
+          <div className="flex items-center justify-between border-b border-gray-800 pb-1 mb-3">
+            <h2 className="text-[12px] font-bold text-gray-900 tracking-[0.15em] uppercase">
+              {section.title}
+            </h2>
+            {onRegenerateSection && section.title.toLowerCase() !== 'contact' && (
+              <button
+                type="button"
+                onClick={() => onRegenerateSection(i, section)}
+                disabled={regeneratingIdx === i}
+                aria-label={`Regenerate ${section.title} section`}
+                title="Regenerate this section"
+                className="text-[10px] text-gray-500 hover:text-gray-900 flex items-center gap-1 disabled:opacity-50 transition-colors"
+              >
+                <RefreshCw
+                  size={10}
+                  className={regeneratingIdx === i ? 'animate-spin' : ''}
+                />
+                {regeneratingIdx === i ? 'Regenerating…' : 'Regenerate'}
+              </button>
+            )}
+          </div>
 
           {/* Entries */}
           {section.entries?.length > 0 &&
@@ -96,6 +129,9 @@ function ResumePreview({ rewrite }: { rewrite: RewriteResponse }) {
   )
 }
 
+// The old "empty-sections → render full_text as markdown" branch is kept as a
+// defensive fallback only; post spec #51 the backend always populates
+// `sections`, so this renderer shouldn't fire in practice.
 /** Markdown-rendered resume preview */
 function MarkdownPreview({ content }: { content: string }) {
   return (
@@ -157,6 +193,8 @@ export function ResumeEditor({
   rewrite,
   isLoading,
   onRegenerate,
+  onRegenerateSection,
+  regeneratingIdx,
   onDownloadPDF,
   onDownloadDocx,
   isExportingPDF,
@@ -311,7 +349,11 @@ export function ResumeEditor({
             {isMarkdown ? (
               <MarkdownPreview content={rewrite.full_text} />
             ) : (
-              <ResumePreview rewrite={rewrite} />
+              <ResumePreview
+                rewrite={rewrite}
+                onRegenerateSection={onRegenerateSection}
+                regeneratingIdx={regeneratingIdx}
+              />
             )}
           </motion.div>
         </div>

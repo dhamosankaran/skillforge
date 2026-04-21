@@ -11,6 +11,8 @@ import { downloadResumeDocx } from '@/utils/docxExport'
 import { useAnalysisContext } from '@/context/AnalysisContext'
 import { useRewrite } from '@/hooks/useRewrite'
 import { useUsage } from '@/context/UsageContext'
+import { capture } from '@/utils/posthog'
+import type { RewriteSection } from '@/types'
 
 type TabId = 'resume' | 'cover-letter'
 
@@ -76,12 +78,26 @@ export default function Rewrite() {
     coverLetter,
     isLoadingRewrite,
     isLoadingCoverLetter,
+    regeneratingIdx,
     runRewrite,
     runCoverLetter,
+    regenerateSection,
   } = useRewrite()
 
   const resumeText = state.result?.resume_text || ''
   const jobDescription = state.jobDescription || ''
+
+  const handleGenerate = () => {
+    capture('rewrite_requested', {
+      resume_char_length: resumeText.length,
+      jd_char_length: jobDescription.length,
+    })
+    runRewrite(resumeText, jobDescription)
+  }
+
+  const handleRegenerateSection = (idx: number, section: RewriteSection) => {
+    regenerateSection(idx, section, jobDescription)
+  }
 
   const handleDownloadPDF = async () => {
     if (!rewriteResult) return
@@ -375,7 +391,7 @@ export default function Rewrite() {
               {activeTab === 'resume' && !rewriteResult && (
                 <GlowButton
                   size="sm"
-                  onClick={() => runRewrite(resumeText, jobDescription)}
+                  onClick={handleGenerate}
                   isLoading={isLoadingRewrite}
                 >
                   <PenTool size={13} />
@@ -448,7 +464,9 @@ export default function Rewrite() {
                   original={resumeText}
                   rewrite={rewriteResult}
                   isLoading={isLoadingRewrite}
-                  onRegenerate={() => runRewrite(resumeText, jobDescription)}
+                  onRegenerate={handleGenerate}
+                  onRegenerateSection={handleRegenerateSection}
+                  regeneratingIdx={regeneratingIdx}
                   isRegenerating={isLoadingRewrite}
                   onDownloadPDF={handleDownloadPDF}
                   onDownloadDocx={handleDownloadDocx}
