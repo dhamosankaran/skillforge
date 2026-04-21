@@ -8,7 +8,8 @@ Historical bugs these tests guard against:
 - Spec #51 / B-001: the service used a single free-form markdown call that was
   truncated by Gemini 2.5 Pro's thinking-budget contention. The service now
   splits the resume into detected sections and calls the LLM once per section
-  with a bounded token budget (Option B chunking).
+  with a bounded token budget (Option B chunking). Tests AC-1 through AC-5
+  in this file correspond to spec #51 §4.
 
 Content-based assertions check that every org name / section survives the
 trip from fixture → union-of-per-section-prompts. Preservation-contract
@@ -19,7 +20,9 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
-from app.services.gpt_service import generate_resume_rewrite
+import pytest
+
+from app.services.gpt_service import RewriteError, generate_resume_rewrite
 
 
 ORGS = [
@@ -205,3 +208,197 @@ def test_prompt_includes_preservation_rules():
             "Dropping this rule risks reintroducing the B-001 "
             "'summary instead of full rewrite' regression. See spec #51 §6.2."
         )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Spec #51 AC-1 through AC-5 — section preservation regression coverage
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+def _faithful_section_mock():
+    """Mock that echoes the section title from the prompt into the response.
+
+    The per-section prompt embeds `Section title (return verbatim): {title}`;
+    we extract and echo it so the response is consistent with the request.
+    This simulates an LLM that faithfully preserves the title (the behavior
+    AC-1/AC-2 depend on — the service cannot manufacture title drift on its
+    own, but can drop sections if chunking misbehaves).
+    """
+    import re as _re
+
+    def fake(*, task, prompt, **kwargs):
+        m = _re.search(r"Section title \(return verbatim\): (.+)", prompt)
+        title = m.group(1).strip() if m else "Unknown"
+        return json.dumps({
+            "title": title,
+            "content": f"Rewritten {title.lower()} content.",
+            "entries": [],
+        })
+
+    return fake
+
+
+def _resume_with_sections(section_titles: list[str]) -> str:
+    """Build a plain-text resume with a contact header and the given sections."""
+    blocks = [
+        "Jane Doe",
+        "jane@example.com | 555-1234 | https://janedoe.dev",
+        "",
+    ]
+    for title in section_titles:
+        blocks.append(title)
+        blocks.append(f"Placeholder content for the {title.lower()} section.")
+        blocks.append("")
+    return "\n".join(blocks)
+
+
+def test_ac1_3page_resume_preserves_6_sections_in_order():
+    """AC-1 — 3-page resume with 6 sections, all present in order."""
+    resume_text = _resume_with_sections(
+        ["Summary", "Experience", "Education", "Skills", "Projects"]
+    )
+    # Pad to ~3-page length
+    resume_text += "\n" + ("Filler content. " * 400)
+
+    resume_data = {"full_text": resume_text, "skills": [], "sections": {}}
+    jd_requirements = {"job_title": "Staff Engineer", "all_skills": ["python"]}
+
+    with patch(
+        "app.services.gpt_service.generate_for_task",
+        side_effect=_faithful_section_mock(),
+    ):
+        result, path = generate_resume_rewrite(
+            resume_data=resume_data,
+            jd_requirements=jd_requirements,
+            template_type="general",
+        )
+
+    assert path == "chunked", f"Expected chunked path; got {path}"
+    titles = [s.title for s in result.sections]
+    assert titles == ["Contact", "Summary", "Experience", "Education", "Skills", "Projects"], (
+        f"Section order/set mismatch. Expected Contact + 5 ordered body sections; "
+        f"got {titles}"
+    )
+    for section in result.sections:
+        assert section.title, "Every section must have a title"
+    assert result.full_text, "full_text must be assembled for copy-to-clipboard"
+
+
+def test_ac2_2page_resume_preserves_exact_section_set():
+    """AC-2 — 2-page resume with 4 sections, no additions, no drops."""
+    resume_text = _resume_with_sections(["Summary", "Experience", "Skills"])
+
+    resume_data = {"full_text": resume_text, "skills": [], "sections": {}}
+    jd_requirements = {"job_title": "Engineer", "all_skills": []}
+
+    with patch(
+        "app.services.gpt_service.generate_for_task",
+        side_effect=_faithful_section_mock(),
+    ):
+        result, path = generate_resume_rewrite(
+            resume_data=resume_data,
+            jd_requirements=jd_requirements,
+            template_type="general",
+        )
+
+    assert path == "chunked"
+    titles = [s.title for s in result.sections]
+    assert titles == ["Contact", "Summary", "Experience", "Skills"], (
+        f"Expected exactly Contact + 3 body sections in order. Got {titles}. "
+        "If 'Education' appeared, the service hallucinated a section — AC-2 guards "
+        "against that regression."
+    )
+    assert "Education" not in titles, (
+        "AC-2: service must not inject sections that weren't in the original resume"
+    )
+    assert "Projects" not in titles
+
+
+def test_ac3_4page_resume_no_truncation():
+    """AC-3 — 4-page senior-engineer resume (>=10k chars) fully preserved.
+
+    The token-budget regression AC: under the old contract, a 4-page resume
+    hit Gemini 2.5 Pro's thinking-budget contention and output was truncated
+    mid-section. Under chunked output, each section call has its own bounded
+    budget and there is no shared pool.
+    """
+    resume_text = _build_12k_resume()
+    assert len(resume_text) >= 10_000, (
+        f"AC-3 requires a >=10k-char fixture; got {len(resume_text)}"
+    )
+
+    resume_data = {"full_text": resume_text, "skills": [], "sections": {}}
+    jd_requirements = {"job_title": "Staff Engineer", "all_skills": ["python"]}
+
+    with patch(
+        "app.services.gpt_service.generate_for_task",
+        side_effect=_faithful_section_mock(),
+    ):
+        result, path = generate_resume_rewrite(
+            resume_data=resume_data,
+            jd_requirements=jd_requirements,
+            template_type="general",
+        )
+
+    assert path == "chunked", "Long resumes must use the chunked path, not fallback"
+
+    # Contact + 5 body sections from _build_12k_resume.
+    titles_lower = [s.title.lower() for s in result.sections]
+    for expected in ["contact", "summary", "experience", "skills", "education", "certifications"]:
+        assert expected in titles_lower, (
+            f"Expected {expected!r} to appear in output sections; got {titles_lower}. "
+            "Likely regression: chunking dropped a section or the splitter "
+            "failed to detect it."
+        )
+    # Every rewritten body section has non-empty content — no truncation.
+    body_sections = [s for s in result.sections if s.title.lower() != "contact"]
+    for section in body_sections:
+        assert section.content, (
+            f"Body section {section.title!r} came back with empty content. "
+            "This is the B-001 truncation regression."
+        )
+
+
+def test_ac5_truncated_llm_response_raises_rewrite_error():
+    """AC-5 — empty LLM response surfaces as RewriteError (→ 502 at route)."""
+    resume_text = _resume_with_sections(["Summary", "Experience"])
+    resume_data = {"full_text": resume_text, "skills": [], "sections": {}}
+    jd_requirements = {"job_title": "Engineer", "all_skills": []}
+
+    def fake_empty(*, task, prompt, **kwargs):
+        return ""
+
+    with patch(
+        "app.services.gpt_service.generate_for_task",
+        side_effect=fake_empty,
+    ):
+        with pytest.raises(RewriteError) as exc_info:
+            generate_resume_rewrite(
+                resume_data=resume_data,
+                jd_requirements=jd_requirements,
+                template_type="general",
+            )
+    assert exc_info.value.error_code == "rewrite_truncated"
+    assert exc_info.value.retry_hint in {"retry", "reduce_input", "contact_support"}
+
+
+def test_ac5_malformed_json_raises_rewrite_error():
+    """AC-5 — malformed JSON response surfaces as RewriteError parse code."""
+    resume_text = _resume_with_sections(["Summary", "Experience"])
+    resume_data = {"full_text": resume_text, "skills": [], "sections": {}}
+    jd_requirements = {"job_title": "Engineer", "all_skills": []}
+
+    def fake_bad_json(*, task, prompt, **kwargs):
+        return "not valid json at all {{{{{"
+
+    with patch(
+        "app.services.gpt_service.generate_for_task",
+        side_effect=fake_bad_json,
+    ):
+        with pytest.raises(RewriteError) as exc_info:
+            generate_resume_rewrite(
+                resume_data=resume_data,
+                jd_requirements=jd_requirements,
+                template_type="general",
+            )
+    assert exc_info.value.error_code == "rewrite_parse_error"
