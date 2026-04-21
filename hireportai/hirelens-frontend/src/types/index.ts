@@ -84,9 +84,20 @@ export interface RewriteResponse {
   template_type: string
 }
 
+export interface CoverLetterRecipient {
+  name: string
+  company: string
+}
+
 export interface CoverLetterResponse {
-  cover_letter: string
+  date: string
+  recipient: CoverLetterRecipient
+  greeting: string
+  body_paragraphs: string[]
+  signoff: string
+  signature: string
   tone: string
+  full_text: string
 }
 
 export interface InterviewQuestion {

@@ -235,81 +235,26 @@ export async function downloadCoverLetterDocx(
   coverLetter: CoverLetterResponse,
   tone: string
 ): Promise<void> {
-  const lines = coverLetter.cover_letter.split('\n').filter((l) => l.trim())
-  const children: Paragraph[] = []
+  const SERIF = { size: 22, font: 'Times New Roman' } as const
 
-  for (const line of lines) {
-    const trimmed = line.trim()
+  const para = (
+    text: string,
+    opts: { spacingBefore?: number; spacingAfter?: number; bold?: boolean } = {}
+  ): Paragraph =>
+    new Paragraph({
+      spacing: { before: opts.spacingBefore ?? 0, after: opts.spacingAfter ?? 0 },
+      children: [new TextRun({ text, bold: opts.bold, ...SERIF })],
+    })
 
-    // Detect greeting
-    const isGreeting = trimmed.startsWith('Dear ')
-    // Detect sign-off
-    const isSignoff = /^(Sincerely|Best regards|Regards|Warm regards|Respectfully|Respectfully yours),?\s*$/i.test(
-      trimmed
-    )
-    // Detect name after sign-off (short line)
-    const prevNonEmpty = children.length > 0 ? lines[lines.indexOf(line) - 1]?.trim() || '' : ''
-    const isNameLine =
-      /^(Sincerely|Best regards|Regards|Warm regards|Respectfully|Respectfully yours),?\s*$/i.test(
-        prevNonEmpty
-      ) && trimmed.length < 60
-
-    if (isGreeting) {
-      children.push(
-        new Paragraph({
-          spacing: { before: 200, after: 200 },
-          children: [
-            new TextRun({
-              text: trimmed,
-              size: 22,
-              font: 'Times New Roman',
-            }),
-          ],
-        })
-      )
-    } else if (isSignoff) {
-      children.push(
-        new Paragraph({
-          spacing: { before: 300, after: 40 },
-          children: [
-            new TextRun({
-              text: trimmed,
-              size: 22,
-              font: 'Times New Roman',
-            }),
-          ],
-        })
-      )
-    } else if (isNameLine) {
-      children.push(
-        new Paragraph({
-          spacing: { before: 200, after: 0 },
-          children: [
-            new TextRun({
-              text: trimmed,
-              bold: true,
-              size: 22,
-              font: 'Times New Roman',
-            }),
-          ],
-        })
-      )
-    } else {
-      // Regular paragraph or header info
-      children.push(
-        new Paragraph({
-          spacing: { after: 160 },
-          children: [
-            new TextRun({
-              text: trimmed,
-              size: 22,
-              font: 'Times New Roman',
-            }),
-          ],
-        })
-      )
-    }
-  }
+  const children: Paragraph[] = [
+    para(coverLetter.date, { spacingAfter: 200 }),
+    para(coverLetter.recipient.name),
+    para(coverLetter.recipient.company, { spacingAfter: 200 }),
+    para(coverLetter.greeting, { spacingBefore: 200, spacingAfter: 200 }),
+    ...coverLetter.body_paragraphs.map((p) => para(p, { spacingAfter: 160 })),
+    para(coverLetter.signoff, { spacingBefore: 300, spacingAfter: 40 }),
+    para(coverLetter.signature, { bold: true }),
+  ]
 
   const doc = new Document({
     sections: [

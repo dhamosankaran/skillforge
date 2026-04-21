@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Copy, Check, RefreshCw, FileText, Download, FileDown } from 'lucide-react'
 import clsx from 'clsx'
-import ReactMarkdown from 'react-markdown'
 import { downloadCoverLetterDocx } from '@/utils/docxExport'
 import type { CoverLetterResponse } from '@/types'
 
@@ -27,14 +26,14 @@ export function CoverLetterViewer({ coverLetter, isLoading, onGenerate }: CoverL
 
   const handleCopy = async () => {
     if (!coverLetter) return
-    await navigator.clipboard.writeText(coverLetter.cover_letter)
+    await navigator.clipboard.writeText(coverLetter.full_text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
   const handleDownloadTxt = () => {
     if (!coverLetter) return
-    const blob = new Blob([coverLetter.cover_letter], { type: 'text/plain' })
+    const blob = new Blob([coverLetter.full_text], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -47,27 +46,26 @@ export function CoverLetterViewer({ coverLetter, isLoading, onGenerate }: CoverL
     if (!coverLetter) return
     setIsExporting(true)
     try {
-      // Build HTML string for cover letter
-      const lines = coverLetter.cover_letter.split('\n').filter(l => l.trim())
-      let html = `<div style="font-family: 'Times New Roman', Times, serif; font-size: 11pt; line-height: 1.6; color: #000; width: 100%;">`
+      const escape = (s: string) =>
+        s
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
 
-      for (const line of lines) {
-        const trimmed = line.trim()
-        const isGreeting = trimmed.startsWith('Dear ')
-        const isSignoff = /^(Sincerely|Best regards|Regards|Warm regards|Respectfully|Respectfully yours),?\s*$/i.test(trimmed)
-        const isHeader = trimmed.startsWith('## ')
+      const bodyHtml = coverLetter.body_paragraphs
+        .map((p) => `<div style="margin-bottom: 12px;">${escape(p)}</div>`)
+        .join('')
 
-        if (isHeader) {
-          html += `<div style="margin-top: 16px; margin-bottom: 8px; font-weight: bold; font-size: 12pt;">${trimmed.replace(/^##\s*/, '')}</div>`
-        } else if (isGreeting) {
-          html += `<div style="margin: 16px 0;">${trimmed}</div>`
-        } else if (isSignoff) {
-          html += `<div style="margin-top: 24px; margin-bottom: 4px;">${trimmed}</div>`
-        } else {
-          html += `<div style="margin-bottom: 12px;">${trimmed}</div>`
-        }
-      }
-      html += `</div>`
+      const html =
+        `<div style="font-family: 'Times New Roman', Times, serif; font-size: 11pt; line-height: 1.6; color: #000; width: 100%;">` +
+        `<div style="margin-bottom: 16px;">${escape(coverLetter.date)}</div>` +
+        `<div>${escape(coverLetter.recipient.name)}</div>` +
+        `<div style="margin-bottom: 16px;">${escape(coverLetter.recipient.company)}</div>` +
+        `<div style="margin: 16px 0;">${escape(coverLetter.greeting)}</div>` +
+        bodyHtml +
+        `<div style="margin-top: 24px; margin-bottom: 4px;">${escape(coverLetter.signoff)}</div>` +
+        `<div>${escape(coverLetter.signature)}</div>` +
+        `</div>`
 
       const html2pdf = (await import('html2pdf.js')).default
       await html2pdf()
@@ -200,54 +198,39 @@ export function CoverLetterViewer({ coverLetter, isLoading, onGenerate }: CoverL
 
           <AnimatePresence mode="wait">
             <motion.div
-              key={coverLetter.cover_letter.slice(0, 20)}
+              key={`${coverLetter.tone}-${coverLetter.signature}-${coverLetter.body_paragraphs[0]?.slice(0, 20) ?? ''}`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               className="p-8 bg-bg-elevated/60 backdrop-blur-sm border border-accent-secondary/10 rounded-2xl shadow-card"
             >
-              <div className="cover-letter-content">
-                <ReactMarkdown
-                  components={{
-                    h2: ({ children }) => (
-                      <h2 className="text-base font-semibold text-accent-secondary mt-5 mb-3 first:mt-0">
-                        {children}
-                      </h2>
-                    ),
-                    h3: ({ children }) => (
-                      <h3 className="text-sm font-semibold text-text-primary mt-4 mb-2">
-                        {children}
-                      </h3>
-                    ),
-                    p: ({ children }) => (
-                      <p className="text-text-primary/90 text-sm leading-[1.8] mb-4 last:mb-0">
-                        {children}
-                      </p>
-                    ),
-                    ul: ({ children }) => (
-                      <ul className="space-y-1 mb-4 ml-1">
-                        {children}
-                      </ul>
-                    ),
-                    li: ({ children }) => (
-                      <li className="flex gap-2 text-sm text-text-primary/85 leading-relaxed">
-                        <span className="text-accent-secondary/60 flex-shrink-0 mt-0.5">•</span>
-                        <span>{children}</span>
-                      </li>
-                    ),
-                    strong: ({ children }) => (
-                      <strong className="font-semibold text-text-primary">{children}</strong>
-                    ),
-                    em: ({ children }) => (
-                      <em className="italic text-text-secondary">{children}</em>
-                    ),
-                    hr: () => (
-                      <hr className="border-contrast/[0.06] my-4" />
-                    ),
-                  }}
-                >
-                  {coverLetter.cover_letter}
-                </ReactMarkdown>
+              <div
+                className="cover-letter-content text-text-primary/90 text-sm leading-[1.8]"
+                data-testid="cover-letter-structured"
+              >
+                <div data-testid="cl-date" className="mb-4">
+                  {coverLetter.date}
+                </div>
+                <div data-testid="cl-recipient" className="mb-4">
+                  <div>{coverLetter.recipient.name}</div>
+                  <div>{coverLetter.recipient.company}</div>
+                </div>
+                <div data-testid="cl-greeting" className="mb-4">
+                  {coverLetter.greeting}
+                </div>
+                {coverLetter.body_paragraphs.map((paragraph, idx) => (
+                  <p
+                    key={idx}
+                    data-testid={`cl-body-${idx}`}
+                    className="mb-4 last:mb-0"
+                  >
+                    {paragraph}
+                  </p>
+                ))}
+                <div data-testid="cl-signoff" className="mt-6 mb-1">
+                  {coverLetter.signoff}
+                </div>
+                <div data-testid="cl-signature">{coverLetter.signature}</div>
               </div>
             </motion.div>
           </AnimatePresence>

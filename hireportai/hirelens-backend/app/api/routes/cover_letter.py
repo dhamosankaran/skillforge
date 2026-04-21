@@ -1,6 +1,7 @@
 """Cover letter generation endpoint."""
 from fastapi import APIRouter, HTTPException
 from app.core.analytics import track as analytics_track
+from app.core.config import get_settings
 from app.models.request_models import CoverLetterRequest
 from app.models.response_models import CoverLetterResponse
 from app.services.gpt_service import (
@@ -21,7 +22,13 @@ async def generate_cover_letter(body: CoverLetterRequest) -> CoverLetterResponse
     try:
         result = gpt_cover_letter(resume_data, jd_requirements, body.tone)
     except CoverLetterError as e:
-        # Spec #52 LD-6 / AC-5 — structured 502 envelope, never silent fallback.
+        # Spec #52 §9 — emit cover_letter_failed before raising the
+        # spec #LD-6 / AC-5 structured 502 envelope. Never silent fallback.
+        analytics_track(
+            user_id=None,
+            event="cover_letter_failed",
+            properties={"error_code": e.error_code, "tone": body.tone},
+        )
         raise HTTPException(
             status_code=502,
             detail={
@@ -35,11 +42,11 @@ async def generate_cover_letter(body: CoverLetterRequest) -> CoverLetterResponse
 
     analytics_track(
         user_id=None,
-        event="cover_letter_generated",
+        event="cover_letter_succeeded",
         properties={
             "tone": body.tone,
-            "resume_chars": len(body.resume_text),
-            "company_name_present": bool(jd_requirements.get("company_name")),
+            "body_paragraphs_count": len(result.body_paragraphs),
+            "model_used": get_settings().llm_reasoning_model,
         },
     )
     return result

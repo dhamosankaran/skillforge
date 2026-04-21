@@ -103,7 +103,8 @@ Preserved for historical PostHog data cross-reference. Source files no longer ex
 | `ats_scanned` | `app/api/routes/analyze.py` | `{user_id, scan_id, resume_id, job_description_length}` |
 | `tracker_auto_created_from_scan` | `app/api/routes/analyze.py` | `{user_id, company, role, matched_skills}` |
 | `resume_rewrite_generated` | `app/api/routes/rewrite.py` | `{resume_chars, missing_keywords_count, template_type}` |
-| `cover_letter_generated` | `app/api/routes/cover_letter.py` | `{tone, resume_chars, company_name_present}` |
+| `cover_letter_succeeded` | `app/api/routes/cover_letter.py` | `{tone, body_paragraphs_count, model_used}` — fires on 200 after the structured response passes Pydantic validation (spec #52 §9, B-002). |
+| `cover_letter_failed` | `app/api/routes/cover_letter.py` | `{error_code, tone}` where `error_code ∈ {cover_letter_truncated, cover_letter_parse_error, cover_letter_validation_error, cover_letter_llm_error}` — fires on the 502 path before the HTTP error is raised (spec #52 §9, B-002). |
 | `experience_generated` | `app/services/experience_service.py` | `{user_id, word_count}` |
 | `card_reviewed` | `app/services/study_service.py` | `{user_id, card_id, rating, ease_factor, interval_days}` |
 | `mission_created` | `app/services/mission_service.py` | `{user_id, mission_id, categories, target_date}` |
@@ -123,6 +124,16 @@ Preserved for historical PostHog data cross-reference. Source files no longer ex
 | `email_resubscribed` | `app/api/v1/routes/email_prefs.py` | `{user_id}` |
 | `home_state_evaluation_failed` | `app/services/home_state_service.py` | `{user_id, error_code}` — fires when the state evaluator's compute path raises; the API still returns 200 with `states: []` (P5-S18c). |
 | `daily_card_submit` | `app/services/study_service.py` (`_check_daily_wall`) | `{plan: 'free'\|'pro'\|'enterprise', count_after: int\|null, was_walled: bool, counter_unavailable: bool}` — fires on every review-submit attempt for free users (spec #50, P5-S22-WALL). `count_after` is the post-INCR Redis value for non-walled submits, `15` (cap) for walled submits, `null` when Redis is down. `was_walled: true` only when the submit returned 402. `counter_unavailable: true` on the fail-open path. Pro/Enterprise bypass Option 2 → event does not fire for them. |
+
+#### Deprecated Backend Events
+
+Preserved for historical PostHog data cross-reference. Emission removed but rows stay in the catalog for dashboard / funnel lookups.
+
+| Event | Source file | Properties |
+|-------|-------------|-----------|
+| `cover_letter_generated` **(DEPRECATED spec #52 slice 2/2)** | `app/api/routes/cover_letter.py` (emission removed) | `{tone, resume_chars, company_name_present}` |
+
+> **`cover_letter_generated` (DEPRECATED spec #52 slice 2/2 — emission removed as part of the B-002 structured-response migration. Historical PostHog data preserved. Replaced by `cover_letter_succeeded` (success) and `cover_letter_failed` (error_code, 502) in the catalog above. Dashboards referencing this event name should be migrated in a separate dashboard-hygiene slice.)**
 
 ## Key Funnels (Phase 4 dashboards)
 1. **Acquisition:** `landing_page_viewed` → `cta_clicked` → sign-in →
