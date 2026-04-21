@@ -14,6 +14,27 @@ _Last audited: 2026-04-19 via slice that closes v2.1 item 5.9 (this commit)_
   - ❓ **AMBIGUOUS** — evidence unclear after ≤3-minute audit; one-line question recorded. Ambiguity is signal, not failure — reconcile in a follow-up slice.
   - ⚫ **OBSOLETE** — in the playbook but superseded, removed, or moot. See rationale.
 
+## Canonical E2E Flow
+
+_Locked 2026-04-21 (Path A decision by Dhamo)_. This is the product-authoritative happy path through the app. Specs, flows, and test plans must reconcile to this.
+
+**Funnel shape: auth-first.** `/` is a marketing landing page for anonymous visitors; product value is gated behind login.
+
+1. **Anonymous visit** → `/` renders `LandingPage.tsx` (Midnight Forge design). All CTAs point to `/login`. No scan surface is exposed to anonymous users.
+2. **Sign up / sign in** → `/login` (Google OAuth). On success, `PersonaGate` evaluates `user.persona`:
+   - `null` → redirect to `/onboarding/persona` (mandatory PersonaPicker, spec #34).
+   - set → redirect to `/home`.
+3. **Persona capture** → `PersonaPicker.tsx` (full-page; 3 cards: Interview-Prepper / Career-Climber / Team Lead). Interview-Prepper expands with date + company fields. `PATCH /api/v1/users/me/persona` persists and sets `interview_target_*` columns. Continue → `/home`.
+4. **Home dashboard** → `HomeDashboard.tsx` (persona-aware, state-aware widgets, spec #35 + #40 + #41).
+5. **Scan flow (Lens)** → user navigates to `/prep/analyze` (from home widget or nav). Upload resume + paste JD → `POST /api/v1/analyze` → `/prep/results`.
+6. **Results** → `Results.tsx` with Job Fit, Score Breakdown, Missing Skills CTA (plan-aware three-state per spec #22). Free users see "Study these cards — free preview"; Pro users see direct link; anonymous state never reaches this page under Path A.
+7. **Free daily-review wall** → user opens `/learn/daily` or similar, submits via `QuizPanel`; 16th review returns 402 (spec #50) → `PaywallModal` with `trigger="daily_review"`.
+8. **Paywall dismissal** → "Not now" / X / backdrop fires `paywall_dismissed` + POST `/paywall-dismiss`. `QuizPanel` tracks `attempts_since_dismiss` and branches modal-vs-nudge per Strategy A (spec #42, P5-S26b).
+9. **Stripe checkout** → `/pricing` → `POST /api/v1/payments/checkout` → Stripe hosted checkout → webhook flips subscription to Pro.
+10. **Post-upgrade** → Pro user bypasses the wall (`_check_daily_wall` short-circuits for non-free plans); Forge study + Mission Mode fully accessible.
+
+**Anon-scan funnel deferred per 2026-04-21 decision** — backend supports it (`/api/v1/analyze` uses `get_current_user_optional`) but no FE surface exposes anon scan on `/`. Tracked as BACKLOG row **E-038** (🟦 deferred, no priority). See `docs/status/E2E-READINESS-2026-04-21.md` §5 for the readiness audit that surfaced the decision.
+
 ## v2.1 Phase 5 status (5.1 – 5.26)
 
 | # | Feature | Status | Spec | Evidence | Notes |
