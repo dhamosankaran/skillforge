@@ -1,7 +1,7 @@
 """Pydantic v2 response models for HirePort AI API."""
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ATSScoreBreakdown(BaseModel):
@@ -110,11 +110,32 @@ class RewriteResponse(BaseModel):
     template_type: str = "general"
 
 
-class CoverLetterResponse(BaseModel):
-    """Generated cover letter response."""
+class CoverLetterRecipient(BaseModel):
+    """Recipient block for a cover letter."""
 
-    cover_letter: str
+    name: str
+    company: str
+
+
+class CoverLetterResponse(BaseModel):
+    """Generated cover letter response (spec #52 LD-2 shape).
+
+    `body_paragraphs` is locked to exactly 3 entries (hook / fit / close).
+    `full_text` is assembled server-side from the structured fields via
+    `app.services.gpt_service._join_cover_letter` — it is never sourced
+    from the LLM. Any other body-paragraph length fails Pydantic
+    validation, which the service translates into a
+    `cover_letter_validation_error` under the AC-5 error envelope.
+    """
+
+    date: str
+    recipient: CoverLetterRecipient
+    greeting: str
+    body_paragraphs: List[str] = Field(..., min_length=3, max_length=3)
+    signoff: str
+    signature: str
     tone: str
+    full_text: str
 
 
 class InterviewQuestion(BaseModel):

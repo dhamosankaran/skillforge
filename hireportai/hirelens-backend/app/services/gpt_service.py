@@ -9,8 +9,11 @@ import re
 from datetime import date
 from typing import Any, Dict, List, Optional, Tuple
 
+from pydantic import BaseModel, Field, ValidationError
+
 from app.core.llm_router import generate_for_task
 from app.models.response_models import (
+    CoverLetterRecipient,
     CoverLetterResponse,
     InterviewPrepResponse,
     InterviewQuestion,
@@ -39,6 +42,27 @@ class RewriteError(Exception):
         super().__init__(message)
 
 
+class CoverLetterError(Exception):
+    """Structured cover-letter error for spec #52 AC-5 envelope.
+
+    Raised by the cover-letter service when the LLM call fails, returns an
+    empty/truncated response, emits malformed JSON, or returns a payload
+    that fails the LD-2 Pydantic shape (e.g., body_paragraphs length != 3).
+    Route handlers translate this to HTTP 502 with the spec-#52 §LD-6 body:
+        {"detail": {"error": <code>, "message": <str>, "retry_hint": <str>}}
+
+    Error codes (spec #52 LD-6): cover_letter_truncated |
+    cover_letter_parse_error | cover_letter_validation_error |
+    cover_letter_llm_error.
+    """
+
+    def __init__(self, error_code: str, message: str, retry_hint: str):
+        self.error_code = error_code
+        self.message = message
+        self.retry_hint = retry_hint
+        super().__init__(message)
+
+
 # Token budgets (spec #51 LD-4). Option B primary: per-section bounded budget.
 # Option A fallback: full-document with high ceiling + thinking-budget cap so
 # Gemini 2.5 Pro's thinking pool cannot starve the output pool.
@@ -47,6 +71,48 @@ FULL_REWRITE_FALLBACK_MAX_TOKENS = 16000
 FULL_REWRITE_THINKING_BUDGET = 2000
 PARALLEL_SECTION_LIMIT = 4
 REWRITE_INPUT_CEILING = 40000  # unchanged from pre-P5-S9 cap
+
+# Cover-letter budgets (spec #52 §7). 400-word target + JSON key overhead.
+# `thinking_budget` mirrors spec #51 LD-4 fallback insurance (AC-7).
+COVER_LETTER_MAX_TOKENS = 2500
+COVER_LETTER_THINKING_BUDGET = 2000
+
+
+class _CoverLetterCore(BaseModel):
+    """Internal parse target for the LLM's cover-letter JSON response.
+
+    Holds the 7 structured fields the model emits (no `full_text`, no `tone`
+    — those are server-side concerns). `body_paragraphs` is length-locked
+    to exactly 3 so the hook / fit / close structure fails Pydantic
+    validation if the LLM drifts.
+    """
+
+    date: str
+    recipient: CoverLetterRecipient
+    greeting: str
+    body_paragraphs: List[str] = Field(..., min_length=3, max_length=3)
+    signoff: str
+    signature: str
+
+
+def _join_cover_letter(core: "_CoverLetterCore") -> str:
+    """Assemble the canonical full-text business letter per spec #52 AC-3.
+
+    Blank lines between blocks; signoff → signature is a single newline per
+    business-letter convention. `recipient.name` is always the literal
+    'Hiring Manager' in V1 and is NOT surfaced as a separate line — the
+    recipient block is the literal 'Hiring Manager' line followed by
+    `recipient.company`. Used by both the service and the AC-3 test so the
+    expected byte-for-byte format lives in exactly one place.
+    """
+    body = "\n\n".join(core.body_paragraphs)
+    return (
+        f"{core.date}\n\n"
+        f"Hiring Manager\n{core.recipient.company}\n\n"
+        f"{core.greeting}\n\n"
+        f"{body}\n\n"
+        f"{core.signoff}\n{core.signature}"
+    )
 
 
 def _extract_candidate_name(resume_text: str) -> str:
@@ -562,42 +628,46 @@ def generate_cover_letter(
     jd_requirements: Dict[str, Any],
     tone: str = "professional",
 ) -> CoverLetterResponse:
-    """Generate a personalized cover letter in traditional business-letter format."""
+    """Generate a structured cover letter (spec #52 LD-2).
+
+    The LLM is prompted to return JSON with the 7 block-level fields;
+    `full_text` is assembled server-side via `_join_cover_letter` so the
+    FE never sees a free-form string that drifts from the structured blocks.
+
+    Raises `CoverLetterError` on any failure mode (LLM exception, empty /
+    truncated response, malformed JSON, Pydantic validation fail against
+    the LD-2 shape). The route handler translates this to HTTP 502 with
+    the spec #52 §LD-6 envelope. There is no silent fallback — a failed
+    generation surfaces visibly, per spec §10.
+    """
     resume_text = resume_data.get("full_text", "")[:20000]
-    jd_title = jd_requirements.get("job_title", "this role")
     jd_text = jd_requirements.get("full_text", "")[:10000]
-    missing_keywords = ", ".join(jd_requirements.get("missing_keywords", jd_requirements.get("all_skills", []))[:20])
+    missing_keywords = ", ".join(
+        jd_requirements.get("missing_keywords", jd_requirements.get("all_skills", []))[:20]
+    )
     candidate_name = _extract_candidate_name(resume_text)
     company_name = jd_requirements.get("company_name") or "your company"
     today = date.today().strftime("%B %d, %Y")
 
     prompt = f"""You are an expert career coach writing a compelling cover letter in traditional business-letter format.
 
-STRICT FORMAT RULES:
-- Do NOT use markdown headers (no "##", no "#", no bold section titles).
-- Do NOT label sections with words like "Opening", "Why I'm a Fit", "Key Achievement", or "Closing".
-- Output plain text with blank lines between blocks.
+Return a JSON object with EXACTLY these fields:
+- "date": string — the letter date. Use: "{today}"
+- "recipient": object with keys "name" (string) and "company" (string).
+    - "name" must be "Hiring Manager".
+    - "company" must be "{company_name}".
+- "greeting": string — e.g. "Dear Hiring Manager,"
+- "body_paragraphs": array of EXACTLY 3 strings (no more, no fewer):
+    - [0] hook: state the role and company by name, express genuine interest, 2–3 sentences.
+    - [1] fit: connect 2–3 specific, quantified achievements from the resume to the JD requirements. Incorporate the missing keywords naturally where they fit.
+    - [2] close: reiterate enthusiasm, invite an interview, thank the reader.
+- "signoff": string — e.g. "Sincerely,"
+- "signature": string — the candidate's name. Use: "{candidate_name}"
 
-Exact structure, in this order:
-
-1. Date line: "{today}"
-2. Blank line.
-3. Recipient block (2 lines):
-   Hiring Manager
-   {company_name}
-4. Blank line.
-5. Greeting: "Dear Hiring Manager,"
-6. Blank line.
-7. Body paragraph 1 — hook: state the role and company by name, express genuine interest, 2–3 sentences.
-8. Blank line.
-9. Body paragraph 2 — fit: connect 2–3 specific, quantified achievements from the resume to the JD requirements. Incorporate missing keywords naturally.
-10. Blank line.
-11. Body paragraph 3 — close: reiterate enthusiasm, invite an interview, thank the reader.
-12. Blank line.
-13. Sign-off line: "Sincerely,"
-14. Signature line: "{candidate_name}"
-
-Keep the total length under 400 words. Tone: {tone}.
+Constraints:
+- Keep the total letter under 400 words across all three body paragraphs.
+- Tone: {tone}.
+- Do not include any other keys. Do not wrap the response in additional objects.
 
 Candidate resume:
 {resume_text}
@@ -609,24 +679,63 @@ Missing skills to incorporate if possible:
 {missing_keywords}"""
 
     try:
-        cover_letter = generate_for_task(task="cover_letter", prompt=prompt, max_tokens=1500, temperature=0.7)
-        return CoverLetterResponse(cover_letter=cover_letter.strip(), tone=tone)
-    except Exception:
-        return CoverLetterResponse(
-            cover_letter=(
-                f"{today}\n\n"
-                f"Hiring Manager\n{company_name}\n\n"
-                f"Dear Hiring Manager,\n\n"
-                f"I am writing to express my strong interest in the {jd_title} position at {company_name}. "
-                "My background aligns well with the requirements you have outlined, and I am eager to contribute to your team's goals.\n\n"
-                "Throughout my career, I have consistently delivered results through technical expertise and a collaborative approach. "
-                "I believe my experience maps directly to the needs of this role.\n\n"
-                "I would welcome the opportunity to discuss how my skills and experiences align with your team. "
-                "Thank you for your time and consideration.\n\n"
-                f"Sincerely,\n{candidate_name}"
-            ),
-            tone=tone,
+        text = generate_for_task(
+            task="cover_letter",
+            prompt=prompt,
+            json_mode=True,
+            max_tokens=COVER_LETTER_MAX_TOKENS,
+            temperature=0.7,
+            thinking_budget=COVER_LETTER_THINKING_BUDGET,
         )
+    except Exception as exc:
+        raise CoverLetterError(
+            "cover_letter_llm_error",
+            f"Cover letter LLM call failed: {exc}",
+            "retry",
+        ) from exc
+
+    if not text or not text.strip():
+        raise CoverLetterError(
+            "cover_letter_truncated",
+            "LLM returned an empty response (likely hit output cap or safety block).",
+            "retry",
+        )
+
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise CoverLetterError(
+            "cover_letter_parse_error",
+            f"LLM response was not valid JSON: {exc}",
+            "retry",
+        ) from exc
+
+    if not isinstance(data, dict):
+        raise CoverLetterError(
+            "cover_letter_parse_error",
+            "LLM response was not a JSON object",
+            "retry",
+        )
+
+    try:
+        core = _CoverLetterCore.model_validate(data)
+    except ValidationError as exc:
+        raise CoverLetterError(
+            "cover_letter_validation_error",
+            f"Cover letter LLM response failed structural validation: {exc}",
+            "retry",
+        ) from exc
+
+    return CoverLetterResponse(
+        date=core.date,
+        recipient=core.recipient,
+        greeting=core.greeting,
+        body_paragraphs=list(core.body_paragraphs),
+        signoff=core.signoff,
+        signature=core.signature,
+        tone=tone,
+        full_text=_join_cover_letter(core),
+    )
 
 
 def generate_interview_questions(
