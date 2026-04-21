@@ -2,19 +2,51 @@
 
 Now delegates to the multi-model LLM router instead of calling Gemini directly.
 """
+import asyncio
 import json
+import logging
 import re
 from datetime import date
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from app.core.llm_router import generate_for_task
 from app.models.response_models import (
     CoverLetterResponse,
     InterviewPrepResponse,
     InterviewQuestion,
+    RewriteEntry,
     RewriteHeader,
     RewriteResponse,
+    RewriteSection,
 )
+from app.services.parser import SECTION_PATTERNS, extract_contact_info
+
+logger = logging.getLogger(__name__)
+
+
+class RewriteError(Exception):
+    """Structured rewrite error for AC-5 envelope.
+
+    Raised by the rewrite service when the LLM response is empty, truncated,
+    or malformed. Route handlers translate this to HTTP 502 with a JSON body
+    of {error, message, retry_hint} (spec #51 §4 AC-5).
+    """
+
+    def __init__(self, error_code: str, message: str, retry_hint: str):
+        self.error_code = error_code
+        self.message = message
+        self.retry_hint = retry_hint
+        super().__init__(message)
+
+
+# Token budgets (spec #51 LD-4). Option B primary: per-section bounded budget.
+# Option A fallback: full-document with high ceiling + thinking-budget cap so
+# Gemini 2.5 Pro's thinking pool cannot starve the output pool.
+SECTION_MAX_TOKENS = 2500
+FULL_REWRITE_FALLBACK_MAX_TOKENS = 16000
+FULL_REWRITE_THINKING_BUDGET = 2000
+PARALLEL_SECTION_LIMIT = 4
+REWRITE_INPUT_CEILING = 40000  # unchanged from pre-P5-S9 cap
 
 
 def _extract_candidate_name(resume_text: str) -> str:
@@ -85,6 +117,366 @@ Be specific, direct, and constructive. Focus on actionable insights."""
         }
 
 
+_MARKDOWN_HEADING_PREFIX = re.compile(r"^#{1,6}\s+")
+
+
+def _split_into_ordered_sections(resume_text: str) -> Tuple[str, List[Tuple[str, str]]]:
+    """Split a resume into (header_text, [(section_title, section_content), ...]).
+
+    The header is the text before any detected section boundary (typically the
+    name + contact block). The section list preserves original file order.
+    Titles are returned cleaned of markdown heading markers but otherwise
+    verbatim from the resume, preserving the candidate's voice (spec #51 LD-1).
+    """
+    lines = resume_text.split("\n")
+    header_lines: List[str] = []
+    sections_ordered: List[Tuple[str, List[str]]] = []
+    current_title: Optional[str] = None
+    current_content: List[str] = []
+
+    def _flush() -> None:
+        nonlocal current_title, current_content
+        if current_title is not None:
+            sections_ordered.append((current_title, list(current_content)))
+        current_content = []
+
+    for raw in lines:
+        stripped = raw.strip()
+        if not stripped:
+            if current_title is not None:
+                current_content.append("")
+            elif header_lines:
+                header_lines.append("")
+            continue
+
+        # Accept markdown-heading syntax (## Summary) AND plain-text headers
+        # (Summary). Production flow feeds plain text from the parser; the
+        # Rewrite page also accepts pasted markdown from the FE composer.
+        cleaned = _MARKDOWN_HEADING_PREFIX.sub("", stripped).strip()
+        detected_key: Optional[str] = None
+        for key, pattern in SECTION_PATTERNS.items():
+            if re.match(pattern, cleaned):
+                detected_key = key
+                break
+
+        if detected_key is not None:
+            _flush()
+            current_title = cleaned
+        else:
+            if current_title is None:
+                header_lines.append(stripped)
+            else:
+                current_content.append(stripped)
+
+    _flush()
+
+    header_text = "\n".join(header_lines).strip()
+    sections = [(title, "\n".join(body).strip()) for title, body in sections_ordered]
+    return header_text, sections
+
+
+def _parse_entries(raw: Any) -> List[RewriteEntry]:
+    """Coerce an LLM-supplied entries array into RewriteEntry instances.
+
+    The LLM may return entries as an array of objects or skip the field
+    entirely. Unknown keys are ignored; missing fields default to empty.
+    """
+    if not isinstance(raw, list):
+        return []
+    entries: List[RewriteEntry] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        entries.append(
+            RewriteEntry(
+                org=str(item.get("org", "")),
+                location=str(item.get("location", "")),
+                date=str(item.get("date", "")),
+                title=str(item.get("title", "")),
+                bullets=[str(b) for b in item.get("bullets", []) if isinstance(b, (str, int, float))],
+                details=[str(d) for d in item.get("details", []) if isinstance(d, (str, int, float))],
+            )
+        )
+    return entries
+
+
+def _section_to_markdown(section: RewriteSection) -> str:
+    """Render a RewriteSection back to markdown for full_text assembly."""
+    parts = [f"## {section.title}"]
+    if section.content:
+        parts.append(section.content)
+    for entry in section.entries:
+        header_bits = [b for b in (entry.title, entry.org, entry.location, entry.date) if b]
+        if header_bits:
+            parts.append("**" + " — ".join(header_bits) + "**")
+        for bullet in entry.bullets:
+            parts.append(f"- {bullet}")
+        for detail in entry.details:
+            parts.append(detail)
+    return "\n\n".join(parts)
+
+
+def _section_rewrite_prompt(
+    section_title: str,
+    section_content: str,
+    jd_title: str,
+    missing_keywords_str: str,
+) -> str:
+    return (
+        f"You are an ATS optimization expert rewriting one section of a resume.\n\n"
+        f"STRICT RULES:\n"
+        f"- Preserve every fact: employer names, dates, metrics, skill names, entries.\n"
+        f"- Do NOT fabricate achievements, metrics, or dates.\n"
+        f"- Do NOT rename the section; keep the title verbatim.\n"
+        f"- Improve: action verbs, quantified impact, keyword incorporation where relevant.\n\n"
+        f"Target role: {jd_title}\n"
+        f"Keywords to incorporate if relevant to THIS section: {missing_keywords_str}\n\n"
+        f"Section title (return verbatim): {section_title}\n"
+        f"Section content:\n{section_content}\n\n"
+        f"Return JSON ONLY with this schema:\n"
+        f'{{"title": "{section_title}", "content": "plain-text or markdown rewrite of the section", '
+        f'"entries": [{{"org": "...", "location": "...", "date": "...", "title": "...", '
+        f'"bullets": ["..."], "details": ["..."]}}]}}\n\n'
+        f"If the section is prose (summary, profile), return content only and entries: [].\n"
+        f"If the section is entry-based (experience, education, projects), populate entries."
+    )
+
+
+def _full_rewrite_prompt(
+    resume_text: str,
+    jd_title: str,
+    missing_keywords_str: str,
+) -> str:
+    return (
+        f"You are an ATS optimization expert rewriting a full resume.\n\n"
+        f"STRICT RULES:\n"
+        f"- Preserve EVERY section in the original order.\n"
+        f"- Do NOT add sections not in the original.\n"
+        f"- Do NOT remove any section, job, education entry, or skill.\n"
+        f"- Preserve all facts: employer names, dates, metrics, skill names.\n"
+        f"- Do NOT fabricate achievements.\n\n"
+        f"Target role: {jd_title}\n"
+        f"Missing keywords to incorporate: {missing_keywords_str}\n\n"
+        f"Original resume:\n{resume_text}\n\n"
+        f"Return JSON ONLY with this schema:\n"
+        f'{{"header": {{"name": "...", "contact": "..."}}, '
+        f'"sections": [{{"title": "...", "content": "...", '
+        f'"entries": [{{"org": "...", "location": "...", "date": "...", '
+        f'"title": "...", "bullets": ["..."], "details": ["..."]}}]}}]}}'
+    )
+
+
+def _parse_section_json(text: str, expected_title: str) -> RewriteSection:
+    """Parse one section's JSON response; raise RewriteError on failure."""
+    if not text or not text.strip():
+        raise RewriteError(
+            "rewrite_truncated",
+            f"LLM returned empty response for section '{expected_title}'. "
+            "The model likely hit its output cap (MAX_TOKENS).",
+            "retry",
+        )
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise RewriteError(
+            "rewrite_parse_error",
+            f"LLM response for section '{expected_title}' was not valid JSON: {exc}",
+            "retry",
+        ) from exc
+
+    if not isinstance(data, dict):
+        raise RewriteError(
+            "rewrite_parse_error",
+            f"LLM response for section '{expected_title}' was not a JSON object",
+            "retry",
+        )
+
+    returned_title = str(data.get("title", "")).strip() or expected_title
+    return RewriteSection(
+        title=returned_title,
+        content=str(data.get("content", "")),
+        entries=_parse_entries(data.get("entries")),
+    )
+
+
+async def _rewrite_one_section(
+    sem: asyncio.Semaphore,
+    section_title: str,
+    section_content: str,
+    jd_title: str,
+    missing_keywords_str: str,
+) -> RewriteSection:
+    """Rewrite a single section with bounded concurrency and token budget."""
+    async with sem:
+        prompt = _section_rewrite_prompt(
+            section_title, section_content, jd_title, missing_keywords_str
+        )
+        text = await asyncio.to_thread(
+            generate_for_task,
+            task="resume_rewrite_section",
+            prompt=prompt,
+            json_mode=True,
+            max_tokens=SECTION_MAX_TOKENS,
+            temperature=0.4,
+        )
+        return _parse_section_json(text, expected_title=section_title)
+
+
+def _build_contact_section(header_text: str) -> RewriteSection:
+    """Build a Contact section from the pre-section header block.
+
+    We do not rewrite contact info — names, emails, and phone numbers are
+    facts, not prose. Passing them to an LLM invites hallucination.
+    """
+    contact = extract_contact_info(header_text) if header_text else {
+        "name": "", "email": "", "phone": "", "urls": ""
+    }
+    content_bits = []
+    if contact.get("name"):
+        content_bits.append(contact["name"])
+    contact_line = " | ".join(
+        c for c in (contact.get("email"), contact.get("phone"), contact.get("urls")) if c
+    )
+    if contact_line:
+        content_bits.append(contact_line)
+    # If the simple extractor missed things, keep the raw header text.
+    if not content_bits and header_text:
+        content_bits.append(header_text)
+    return RewriteSection(
+        title="Contact",
+        content="\n".join(content_bits),
+        entries=[],
+    )
+
+
+async def _generate_resume_rewrite_async(
+    resume_data: Dict[str, Any],
+    jd_requirements: Dict[str, Any],
+    template_type: str,
+    missing_keywords: Optional[List[str]],
+) -> Tuple[RewriteResponse, str]:
+    """Async structured rewrite. Returns (response, path) where path is
+    'chunked' (Option B primary) or 'fallback_full' (Option A safety net).
+
+    Spec #51 LD-4:
+      - Chunked path: one LLM call per detected section, parallelized.
+      - Fallback: single full-document call with high ceiling + Gemini
+        thinking-budget cap, used when sectioning cannot proceed.
+    """
+    resume_text = resume_data.get("full_text", "")[:REWRITE_INPUT_CEILING]
+    jd_title = jd_requirements.get("job_title", "the role")
+    missing_kw_str = ", ".join(
+        (missing_keywords or jd_requirements.get("all_skills", []))[:30]
+    )
+
+    header_text, ordered_sections = _split_into_ordered_sections(resume_text)
+
+    # Option B primary: chunk per detected section.
+    if len(ordered_sections) >= 2:
+        sem = asyncio.Semaphore(PARALLEL_SECTION_LIMIT)
+        tasks = [
+            _rewrite_one_section(sem, title, content, jd_title, missing_kw_str)
+            for title, content in ordered_sections
+        ]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        rewritten_sections: List[RewriteSection] = []
+        for item in results:
+            if isinstance(item, RewriteError):
+                raise item
+            if isinstance(item, Exception):
+                raise RewriteError(
+                    "rewrite_llm_error",
+                    f"Section rewrite failed: {item}",
+                    "retry",
+                ) from item
+            rewritten_sections.append(item)
+
+        contact_section = _build_contact_section(header_text)
+        contact_info = extract_contact_info(header_text)
+        all_sections = [contact_section, *rewritten_sections]
+        full_text = "\n\n".join(_section_to_markdown(s) for s in all_sections).strip()
+
+        return (
+            RewriteResponse(
+                header=RewriteHeader(
+                    name=contact_info.get("name", ""),
+                    contact=" | ".join(
+                        c for c in (
+                            contact_info.get("email", ""),
+                            contact_info.get("phone", ""),
+                            contact_info.get("urls", ""),
+                        ) if c
+                    ),
+                ),
+                sections=all_sections,
+                full_text=full_text,
+                template_type=template_type,
+            ),
+            "chunked",
+        )
+
+    # Option A fallback: single call with thinking-budget cap.
+    prompt = _full_rewrite_prompt(resume_text, jd_title, missing_kw_str)
+    text = await asyncio.to_thread(
+        generate_for_task,
+        task="resume_rewrite",
+        prompt=prompt,
+        json_mode=True,
+        max_tokens=FULL_REWRITE_FALLBACK_MAX_TOKENS,
+        temperature=0.4,
+        thinking_budget=FULL_REWRITE_THINKING_BUDGET,
+    )
+
+    if not text or not text.strip():
+        raise RewriteError(
+            "rewrite_truncated",
+            "LLM returned empty response (likely hit output cap or safety block).",
+            "retry",
+        )
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise RewriteError(
+            "rewrite_parse_error",
+            f"LLM response was not valid JSON: {exc}",
+            "retry",
+        ) from exc
+    if not isinstance(data, dict) or not isinstance(data.get("sections"), list):
+        raise RewriteError(
+            "rewrite_parse_error",
+            "LLM response missing 'sections' array",
+            "retry",
+        )
+
+    header_data = data.get("header") or {}
+    header = RewriteHeader(
+        name=str(header_data.get("name", "")),
+        contact=str(header_data.get("contact", "")),
+    )
+    sections: List[RewriteSection] = []
+    for item in data["sections"]:
+        if not isinstance(item, dict):
+            continue
+        sections.append(
+            RewriteSection(
+                title=str(item.get("title", "Section")),
+                content=str(item.get("content", "")),
+                entries=_parse_entries(item.get("entries")),
+            )
+        )
+    full_text = "\n\n".join(_section_to_markdown(s) for s in sections).strip()
+    return (
+        RewriteResponse(
+            header=header,
+            sections=sections,
+            full_text=full_text,
+            template_type=template_type,
+        ),
+        "fallback_full",
+    )
+
+
 def generate_resume_rewrite(
     resume_data: Dict[str, Any],
     jd_requirements: Dict[str, Any],
@@ -92,51 +484,77 @@ def generate_resume_rewrite(
     major: Optional[str] = None,
     missing_keywords: Optional[List[str]] = None,
     missing_skills: Optional[List[str]] = None,
-) -> RewriteResponse:
-    """Generate an ATS-optimized rewrite of the resume.
+) -> Tuple[RewriteResponse, str]:
+    """Generate an ATS-optimized structured rewrite of the resume (spec #51).
 
-    Returns the rewritten resume as clean markdown in ``full_text``.
+    Returns (RewriteResponse, path) where path is 'chunked' or 'fallback_full'.
+    The 2-tuple return is the contract for callers that want to log which
+    path was taken; the route handler in particular emits this as a PostHog
+    property on `rewrite_succeeded`.
+
+    Raises RewriteError on empty/truncated/malformed LLM responses (AC-5).
     """
-    resume_text = resume_data.get("full_text", "")[:40000]
-    jd_title = jd_requirements.get("job_title", "the role")
-    missing_kw_str = ", ".join((missing_keywords or jd_requirements.get("all_skills", []))[:30])
-
-    prompt = f"""You are an expert resume writer specializing in ATS optimization.
-Rewrite the following resume to maximize ATS compatibility for the target role.
-
-Rules:
-1. Maintain the EXACT same sections as the original (Summary, Experience, Skills, Education, etc.)
-2. Improve bullet points with quantified achievements (numbers, percentages, dollar amounts)
-3. Incorporate the missing keywords naturally into relevant sections
-4. Use strong action verbs at the start of each bullet
-5. Keep the tone professional and confident
-6. Output in clean markdown with ## headers for each section, - for bullet points
-7. Do NOT add sections that weren't in the original resume
-8. Do NOT remove any jobs, education entries, or skills — only improve the language
-
-Missing keywords to incorporate: {missing_kw_str}
-Target role: {jd_title}
-
-Original resume:
-{resume_text}"""
-
-    try:
-        markdown = generate_for_task(
-            task="resume_rewrite", prompt=prompt, max_tokens=8000, temperature=0.4,
-        )
-        return RewriteResponse(
-            header=RewriteHeader(),
-            sections=[],
-            full_text=markdown.strip(),
+    return asyncio.run(
+        _generate_resume_rewrite_async(
+            resume_data=resume_data,
+            jd_requirements=jd_requirements,
             template_type=template_type,
+            missing_keywords=missing_keywords,
         )
-    except Exception:
-        return RewriteResponse(
-            header=RewriteHeader(),
-            sections=[],
-            full_text=resume_text,
-            template_type=template_type,
-        )
+    )
+
+
+async def generate_resume_rewrite_async(
+    resume_data: Dict[str, Any],
+    jd_requirements: Dict[str, Any],
+    template_type: str = "general",
+    major: Optional[str] = None,
+    missing_keywords: Optional[List[str]] = None,
+    missing_skills: Optional[List[str]] = None,
+) -> Tuple[RewriteResponse, str]:
+    """Async variant — use from async route handlers. See generate_resume_rewrite."""
+    return await _generate_resume_rewrite_async(
+        resume_data=resume_data,
+        jd_requirements=jd_requirements,
+        template_type=template_type,
+        missing_keywords=missing_keywords,
+    )
+
+
+async def generate_section_rewrite(
+    section_id: str,
+    section_title: str,
+    section_text: str,
+    jd_text: str,
+    missing_keywords: Optional[List[str]] = None,
+) -> RewriteSection:
+    """Rewrite a single section for per-section regenerate endpoint (spec #51 §6.2).
+
+    Uses the same reasoning tier as the full rewrite (LD-6) but with a
+    bounded per-call token budget — cheap and fast because input is one
+    section, not a full resume.
+    """
+    jd_title = "the target role"
+    # Try to extract a title line from the JD for better prompting.
+    first_line = next((ln.strip() for ln in jd_text.splitlines() if ln.strip()), "")
+    if first_line and len(first_line) < 120:
+        jd_title = first_line
+    missing_kw_str = ", ".join((missing_keywords or [])[:30])
+    prompt = _section_rewrite_prompt(
+        section_title=section_title,
+        section_content=section_text,
+        jd_title=jd_title,
+        missing_keywords_str=missing_kw_str,
+    )
+    text = await asyncio.to_thread(
+        generate_for_task,
+        task="resume_rewrite_section",
+        prompt=prompt,
+        json_mode=True,
+        max_tokens=SECTION_MAX_TOKENS,
+        temperature=0.4,
+    )
+    return _parse_section_json(text, expected_title=section_title)
 
 
 def generate_cover_letter(

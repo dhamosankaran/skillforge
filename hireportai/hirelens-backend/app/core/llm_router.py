@@ -31,6 +31,7 @@ FAST_TASKS = frozenset([
 
 REASONING_TASKS = frozenset([
     "resume_rewrite",
+    "resume_rewrite_section",
     "cover_letter",
     "interview_questions",
 ])
@@ -53,6 +54,7 @@ def _call_gemini(
     json_mode: bool,
     max_tokens: int,
     temperature: float,
+    thinking_budget: Optional[int] = None,
 ) -> str:
     from google import genai
     from google.genai import types
@@ -71,6 +73,19 @@ def _call_gemini(
         config_kwargs["response_mime_type"] = "application/json"
     if system_prompt:
         config_kwargs["system_instruction"] = system_prompt
+    if thinking_budget is not None:
+        # Cap the thinking-token pool so it cannot starve the output pool on
+        # Gemini 2.5 Pro. `thinking_budget=0` disables thinking entirely.
+        # See B-001 investigation §4(b) / spec #51 LD-4 Option A.
+        try:
+            config_kwargs["thinking_config"] = types.ThinkingConfig(
+                thinking_budget=thinking_budget,
+            )
+        except AttributeError:
+            # Older google-genai versions without ThinkingConfig — skip.
+            logger.warning(
+                "google-genai lacks ThinkingConfig; thinking_budget ignored"
+            )
 
     response = client.models.generate_content(
         model=model,
@@ -181,6 +196,7 @@ def generate_for_task(
     json_mode: bool = False,
     max_tokens: int = 4096,
     temperature: float = 0.7,
+    thinking_budget: Optional[int] = None,
 ) -> str:
     """Generate text using the optimal model for the given task.
 
@@ -191,6 +207,10 @@ def generate_for_task(
         json_mode: Request JSON-formatted output.
         max_tokens: Maximum output tokens.
         temperature: Sampling temperature.
+        thinking_budget: Gemini-only cap on thinking-token pool (tokens).
+            Ignored by other providers. Set to a small positive integer
+            (e.g. 512-2000) to stop thinking from starving the output pool
+            on Gemini 2.5 Pro; set 0 to disable thinking entirely.
 
     Returns:
         Generated text string.
@@ -211,7 +231,7 @@ def generate_for_task(
 
     logger.info("LLM call: task=%s, tier=%s, provider=%s, model=%s", task, tier, provider, model)
 
-    result = call_fn(
+    call_kwargs = dict(
         prompt=prompt,
         model=model,
         system_prompt=system_prompt,
@@ -219,6 +239,10 @@ def generate_for_task(
         max_tokens=max_tokens,
         temperature=temperature,
     )
+    if provider == "gemini" and thinking_budget is not None:
+        call_kwargs["thinking_budget"] = thinking_budget
+
+    result = call_fn(**call_kwargs)
 
     logger.info("LLM call complete: task=%s, provider=%s, model=%s, response_len=%d", task, provider, model, len(result))
     return result
