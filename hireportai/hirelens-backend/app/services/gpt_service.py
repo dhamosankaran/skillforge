@@ -66,7 +66,14 @@ class CoverLetterError(Exception):
 # Token budgets (spec #51 LD-4). Option B primary: per-section bounded budget.
 # Option A fallback: full-document with high ceiling + thinking-budget cap so
 # Gemini 2.5 Pro's thinking pool cannot starve the output pool.
-SECTION_MAX_TOKENS = 2500
+#
+# B-014 (2026-04-21) fix: the section path was missing its own thinking_budget
+# cap, so the reasoning tier could consume the entire SECTION_MAX_TOKENS pool
+# on internal thinking (FinishReason.MAX_TOKENS with thoughts_token_count≈cap,
+# empty output). Section calls now pin `thinking_budget=SECTION_THINKING_BUDGET`
+# and the output ceiling is raised to give a stable margin after the cap.
+SECTION_MAX_TOKENS = 4000
+SECTION_THINKING_BUDGET = 800
 FULL_REWRITE_FALLBACK_MAX_TOKENS = 16000
 FULL_REWRITE_THINKING_BUDGET = 2000
 PARALLEL_SECTION_LIMIT = 4
@@ -384,6 +391,7 @@ async def _rewrite_one_section(
             json_mode=True,
             max_tokens=SECTION_MAX_TOKENS,
             temperature=0.4,
+            thinking_budget=SECTION_THINKING_BUDGET,
         )
         return _parse_section_json(text, expected_title=section_title)
 
@@ -619,6 +627,7 @@ async def generate_section_rewrite(
         json_mode=True,
         max_tokens=SECTION_MAX_TOKENS,
         temperature=0.4,
+        thinking_budget=SECTION_THINKING_BUDGET,
     )
     return _parse_section_json(text, expected_title=section_title)
 

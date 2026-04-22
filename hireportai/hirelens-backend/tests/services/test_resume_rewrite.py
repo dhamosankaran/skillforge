@@ -22,7 +22,13 @@ from unittest.mock import patch
 
 import pytest
 
-from app.services.gpt_service import RewriteError, generate_resume_rewrite
+from app.services.gpt_service import (
+    SECTION_MAX_TOKENS,
+    SECTION_THINKING_BUDGET,
+    RewriteError,
+    generate_resume_rewrite,
+    generate_section_rewrite,
+)
 
 
 ORGS = [
@@ -402,3 +408,102 @@ def test_ac5_malformed_json_raises_rewrite_error():
                 template_type="general",
             )
     assert exc_info.value.error_code == "rewrite_parse_error"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# B-014 regression — section-rewrite paths must pin a thinking_budget cap
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# The B-001 fix (spec #51 LD-4 Option B) bounded per-section max_tokens but
+# forgot to pin thinking_budget on the two section-path callers. On Gemini
+# 2.5 Pro the reasoning tier then consumed the entire output pool on internal
+# thinking (thoughts_token_count≈SECTION_MAX_TOKENS, FinishReason.MAX_TOKENS,
+# empty text → RewriteError → 502). Fixed 2026-04-21. Tests below guard the
+# call signature so a future refactor cannot silently drop the cap.
+
+
+def test_b014_section_path_passes_thinking_budget():
+    """Every chunked `resume_rewrite_section` call must supply `thinking_budget`
+    so Gemini 2.5 Pro's reasoning tier cannot starve the section output pool.
+    """
+    resume_text = _resume_with_sections(["Summary", "Experience", "Skills"])
+    resume_data = {"full_text": resume_text, "skills": [], "sections": {}}
+    jd_requirements = {"job_title": "Engineer", "all_skills": []}
+
+    captured, fake = _capture_all_prompts()
+    with patch(
+        "app.services.gpt_service.generate_for_task",
+        side_effect=fake,
+    ):
+        _, path = generate_resume_rewrite(
+            resume_data=resume_data,
+            jd_requirements=jd_requirements,
+            template_type="general",
+        )
+
+    assert path == "chunked", f"Expected chunked path; got {path}"
+    assert captured, "Expected at least one section call to be captured"
+    for call in captured:
+        assert call["task"] == "resume_rewrite_section"
+        assert "thinking_budget" in call, (
+            "B-014 regression: section-rewrite call is missing `thinking_budget` "
+            "kwarg. Without it, Gemini 2.5 Pro's thinking pool can consume all "
+            f"{SECTION_MAX_TOKENS} output tokens and return empty text. "
+            "See docs/status/E2E-BUG-DIAGNOSIS-2026-04-21.md §Bug (a)."
+        )
+        assert call["thinking_budget"] == SECTION_THINKING_BUDGET, (
+            f"Section call used thinking_budget={call['thinking_budget']!r}; "
+            f"expected {SECTION_THINKING_BUDGET}. Drift may silently widen the "
+            "regression window."
+        )
+        # And the output ceiling must leave headroom beyond the thinking cap.
+        assert call["max_tokens"] > SECTION_THINKING_BUDGET, (
+            f"max_tokens={call['max_tokens']} ≤ thinking_budget="
+            f"{SECTION_THINKING_BUDGET}. Output pool has no room left for the "
+            "actual rewrite after thinking is done."
+        )
+
+
+def test_b014_section_endpoint_passes_thinking_budget():
+    """`generate_section_rewrite` (the per-section regen endpoint in
+    `POST /api/v1/rewrite/section`) must pin `thinking_budget` for the same
+    reason as the chunked path — same LLM task, same failure mode.
+    """
+    import asyncio
+
+    captured, fake = _capture_all_prompts()
+    with patch(
+        "app.services.gpt_service.generate_for_task",
+        side_effect=fake,
+    ):
+        asyncio.run(
+            generate_section_rewrite(
+                section_id="sec-1",
+                section_title="Experience",
+                section_text="Acme Corp — Engineer (2020-2024)",
+                jd_text="Staff Engineer",
+            )
+        )
+
+    assert len(captured) == 1, f"Expected one section call; got {len(captured)}"
+    call = captured[0]
+    assert call["task"] == "resume_rewrite_section"
+    assert "thinking_budget" in call, (
+        "B-014 regression: /rewrite/section endpoint missing thinking_budget."
+    )
+    assert call["thinking_budget"] == SECTION_THINKING_BUDGET
+    assert call["max_tokens"] == SECTION_MAX_TOKENS
+
+
+def test_b014_section_max_tokens_has_headroom_above_thinking_budget():
+    """Defence-in-depth constant-level check: SECTION_MAX_TOKENS must stay
+    comfortably above SECTION_THINKING_BUDGET so output never starves even if
+    the model uses the full thinking allowance.
+    """
+    # Output pool ≥ 2× thinking budget — a section rewrite is typically 500-
+    # 2000 tokens of JSON content; the cap should carry that comfortably.
+    assert SECTION_MAX_TOKENS >= SECTION_THINKING_BUDGET * 2, (
+        f"SECTION_MAX_TOKENS={SECTION_MAX_TOKENS} is too close to "
+        f"SECTION_THINKING_BUDGET={SECTION_THINKING_BUDGET}. Leave >=2× headroom "
+        "so a section rewrite cannot hit MAX_TOKENS on realistic content."
+    )
