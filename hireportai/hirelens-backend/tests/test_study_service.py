@@ -414,3 +414,139 @@ async def test_daily_five_completion_awards_bonus(db_session):
     assert stats.total_xp == 110, (
         f"6th review must not refire the daily bonus; got {stats.total_xp}"
     )
+
+
+# ── B-019 — DailyReviewResponse.completed_today ───────────────────────────
+
+
+async def test_completed_today_false_before_any_reviews(db_session):
+    """B-019: fresh user with overdue + fresh-fill sees completed_today=False."""
+    user = await _make_user(db_session)
+    cat = await _make_category(db_session)
+    for _ in range(3):
+        card = await _make_card(db_session, cat.id)
+        await _make_progress(
+            db_session, user.id, card.id, state="review", due_delta_hours=-24.0
+        )
+
+    result = await study_service.get_daily_review(
+        user_id=user.id, is_free=False, db=db_session,
+    )
+    assert result.total_due == 3
+    assert result.completed_today is False
+
+
+async def test_completed_today_true_after_reviewing_five(db_session):
+    """B-019 core bug: after 5 distinct reviews today (UTC), completed_today
+    is True even when fresh-fill keeps total_due > 0."""
+    user = await _make_user(db_session)
+    cat = await _make_category(db_session)
+    # 5 cards the user will review today (marked as already reviewed today).
+    now = datetime.now(timezone.utc)
+    for _ in range(5):
+        card = await _make_card(db_session, cat.id)
+        cp = await _make_progress(
+            db_session, user.id, card.id, state="review",
+            due_delta_hours=+24.0,  # pushed to tomorrow by FSRS
+        )
+        cp.last_reviewed = now  # simulate "reviewed today"
+        db_session.add(cp)
+    # Plus 10 fresh unseen cards — pass-2 will refill the queue from these.
+    for _ in range(10):
+        await _make_card(db_session, cat.id)
+    await db_session.flush()
+
+    result = await study_service.get_daily_review(
+        user_id=user.id, is_free=False, db=db_session,
+    )
+    # Core regression evidence: queue still returns cards (fresh-fill) but
+    # the flag is true so the widget can flip to done-state anyway.
+    assert result.total_due == 5, (
+        "fresh-fill still fills the queue — that's the bug the flag sidesteps"
+    )
+    assert result.completed_today is True
+
+
+async def test_completed_today_small_library_reachable(db_session):
+    """B-019: a user whose foundation library is smaller than _DAILY_GOAL can
+    still reach completed_today=True by exhausting the pool."""
+    user = await _make_user(db_session)
+    cat = await _make_category(db_session, source="foundation")
+    # Library is 3 cards; user already reviewed all 3 today.
+    now = datetime.now(timezone.utc)
+    for _ in range(3):
+        card = await _make_card(db_session, cat.id)
+        cp = await _make_progress(
+            db_session, user.id, card.id, state="review",
+            due_delta_hours=+24.0,
+        )
+        cp.last_reviewed = now
+        db_session.add(cp)
+    await db_session.flush()
+
+    result = await study_service.get_daily_review(
+        user_id=user.id, is_free=True, db=db_session,
+    )
+    assert result.total_due == 0, "all 3 cards are future-due and none unseen"
+    assert result.completed_today is True, (
+        "small-library users must reach a done state — threshold clamps to pool size"
+    )
+
+
+async def test_completed_today_partial_progress_still_false(db_session):
+    """B-019: user has reviewed some (< goal) today, queue has more left;
+    completed_today must remain False."""
+    user = await _make_user(db_session)
+    cat = await _make_category(db_session)
+    now = datetime.now(timezone.utc)
+    # 2 cards already reviewed today.
+    for _ in range(2):
+        card = await _make_card(db_session, cat.id)
+        cp = await _make_progress(
+            db_session, user.id, card.id, state="review",
+            due_delta_hours=+24.0,
+        )
+        cp.last_reviewed = now
+        db_session.add(cp)
+    # 3 overdue + 10 unseen so pool is clearly >= _DAILY_GOAL.
+    for _ in range(3):
+        card = await _make_card(db_session, cat.id)
+        await _make_progress(
+            db_session, user.id, card.id, state="review", due_delta_hours=-24.0
+        )
+    for _ in range(10):
+        await _make_card(db_session, cat.id)
+    await db_session.flush()
+
+    result = await study_service.get_daily_review(
+        user_id=user.id, is_free=False, db=db_session,
+    )
+    assert result.total_due == 5
+    assert result.completed_today is False
+
+
+async def test_completed_today_ignores_reviews_before_today_start(db_session):
+    """B-019: reviews from yesterday do not count toward today's threshold.
+    Threshold uses today-start UTC, matching the daily_complete XP bonus."""
+    user = await _make_user(db_session)
+    cat = await _make_category(db_session)
+    # 5 cards reviewed yesterday — must not count.
+    yesterday = datetime.now(timezone.utc) - timedelta(days=2)
+    for _ in range(5):
+        card = await _make_card(db_session, cat.id)
+        cp = await _make_progress(
+            db_session, user.id, card.id, state="review",
+            due_delta_hours=-24.0,
+        )
+        cp.last_reviewed = yesterday
+        db_session.add(cp)
+    await db_session.flush()
+
+    result = await study_service.get_daily_review(
+        user_id=user.id, is_free=False, db=db_session,
+    )
+    # Queue re-includes them as overdue.
+    assert result.total_due == 5
+    assert result.completed_today is False, (
+        "yesterday's reviews are not today's reviews"
+    )

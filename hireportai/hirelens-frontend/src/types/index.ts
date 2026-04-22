@@ -196,6 +196,16 @@ export interface DailyQueueResponse {
   cards: DailyCard[]
   total_due: number
   session_id: string
+  /**
+   * B-019. True when the caller has already reviewed today's quota (UTC
+   * window, matching the daily_complete XP bonus). TodaysReviewWidget
+   * flips to its done-state on this flag independently of `total_due`,
+   * which always counts the queue length (overdue + fresh-fill) so the
+   * DailyReview page can still render a queue even after completion.
+   * Optional in the type so existing mocks / older FE builds don't break
+   * during the BE → FE deploy ordering window.
+   */
+  completed_today?: boolean
 }
 
 // ─── Mission Mode ────────────────────────────────────────────────────────────

@@ -33,6 +33,14 @@ class DailyReviewResponse(BaseModel):
     cards: list[DailyCardItem]
     total_due: int
     session_id: str  # UUID; echo in daily_review_completed analytics event
+    # B-019: True when the caller has already reviewed enough distinct cards
+    # today (UTC) that no more "owed" reviews remain. `total_due` still counts
+    # the queue length (overdue + fresh-fill) so DailyReview.tsx can render a
+    # queue even after completion; this flag lets TodaysReviewWidget flip to
+    # its done-state independently of the queue length. Threshold is
+    # `reviewed_today >= min(_DAILY_GOAL, available_cards_count)` so a user
+    # whose library is smaller than the goal still has a reachable true.
+    completed_today: bool = False
 
 
 class ReviewRequest(BaseModel):

@@ -25,7 +25,7 @@ from zoneinfo import ZoneInfo
 
 import redis
 from fsrs import Card as FsrsCard, Rating, Scheduler, State
-from sqlalchemy import select
+from sqlalchemy import func as sa_func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.analytics import track as analytics_track
@@ -369,10 +369,31 @@ async def get_daily_review(
                 )
             )
 
+    # B-019 — completed_today. Uses the same UTC today-start window as the
+    # `daily_complete` XP bonus path below (~line 540) so the widget flip
+    # and the XP award share one definition of "done for today." The
+    # library-size clamp lets users whose foundation pool is smaller than
+    # _DAILY_GOAL still reach a completed state — the stable-within-a-day
+    # pool size is `reviewed_today + len(current_queue)` because every
+    # reviewed card leaves the queue, so the sum stays constant as the
+    # user progresses.
+    today_start_utc = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
+    reviewed_today = (
+        await db.execute(
+            select(sa_func.count(CardProgress.id))
+            .where(CardProgress.user_id == user_id)
+            .where(CardProgress.last_reviewed >= today_start_utc)
+        )
+    ).scalar_one()
+    daily_pool_today = reviewed_today + len(result)
+    completion_threshold = min(_DAILY_GOAL, daily_pool_today)
+    completed_today = reviewed_today >= completion_threshold and completion_threshold > 0
+
     return DailyReviewResponse(
         cards=result,
         total_due=len(result),
         session_id=session_id,
+        completed_today=completed_today,
     )
 
 

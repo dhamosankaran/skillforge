@@ -10,13 +10,23 @@ interface TodaysReviewWidgetProps {
 export function TodaysReviewWidget({ persona }: TodaysReviewWidgetProps) {
   const [state, setState] = useState<WidgetState>('loading')
   const [totalDue, setTotalDue] = useState(0)
+  // B-019: widget flips to completed-state on this flag, independent of
+  // total_due. Server-computed (UTC window) so the home widget, the
+  // daily_complete XP bonus, and the streak all share one truth.
+  const [completedToday, setCompletedToday] = useState(false)
 
   const load = useCallback(() => {
     setState('loading')
     fetchDailyQueue()
       .then((res) => {
         setTotalDue(res.total_due)
-        setState(res.total_due > 0 ? 'data' : 'empty')
+        const done = res.completed_today === true
+        setCompletedToday(done)
+        if (done) {
+          setState('empty')
+        } else {
+          setState(res.total_due > 0 ? 'data' : 'empty')
+        }
       })
       .catch(() => setState('error'))
   }, [])
@@ -31,7 +41,11 @@ export function TodaysReviewWidget({ persona }: TodaysReviewWidgetProps) {
       testid="todays-review"
       persona={persona}
       state={state}
-      emptyMessage="You're all caught up — no cards due today."
+      emptyMessage={
+        completedToday
+          ? 'Done for today — great work.'
+          : "You're all caught up — no cards due today."
+      }
       errorMessage="Couldn't load today's review."
       onRetry={load}
       action={
