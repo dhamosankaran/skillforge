@@ -245,3 +245,16 @@ Impact:
   - Flagged my prior-audit error (§8) as a side-finding rather than silently moving on.
 - **Drift flags:** no new flags logged in SESSION-STATE (read-only slice). The `BACKLOG.md:82` hypothesis vs code mismatch is a BACKLOG content issue, not a code↔spec drift; noted in §1 + §4 + question #5.
 - **BACKLOG IDs touched:** none flipped, none created.
+
+---
+
+## 9. Diagnostic plan (appended after initial commit)
+
+The investigation's §5 fix-shape recommendation was `INVESTIGATE FURTHER` — a cheap diagnostic slice before committing to code. That diagnostic has now been scaffolded:
+
+- **Dashboard checklist (human-executed):** `docs/diagnostics/E-033-stripe-dashboard-checklist-2026-04-21.md`. Dhamo walks the prerequisites, activation check, configuration check, webhook check, and live-mode repeat; fills in the result-recording template (§7 of the checklist). Resolves branches A / B / C from §6 of this report with Dashboard-side evidence.
+- **Smoke script (automated):** `hirelens-backend/scripts/smoke_billing_portal.py`. Two checks: (1) `billing_portal.Configuration.list()` — empty collection confirms the primary hypothesis; (2) `billing_portal.Session.create()` round-trip against a real test-mode customer. Test-mode by default; `--live` + `--yes-live` + confirmation phrase required to hit live. Refuses to run on key/mode mismatch.
+
+**E-033 remains 🟦 P1.** No fix applied in the scaffolding slice. The diagnostic evidence from running the checklist + smoke script will determine which of §6's four fix-shape branches applies.
+
+**Recommended execution order (for whoever picks this up):** §1 prerequisites → §2 activation check → §3 config review → §4 live mode → §5 webhook check → §6 smoke script → §7 fill in result → decide branch → file the resolution slice.
