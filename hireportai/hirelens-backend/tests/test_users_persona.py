@@ -213,3 +213,67 @@ async def test_persona_switch_preserves_onboarding_flag(client, db_session):
     assert resp.status_code == 200
     assert resp.json()["persona"] == "team_lead"
     assert resp.json()["onboarding_completed"] is True
+
+
+# ── B-016: POST /api/v1/users/me/home-first-visit ─────────────────────────
+
+async def test_home_first_visit_fresh_user_stamps_timestamp(client, db_session):
+    """B-016: a user whose home_first_visit_seen_at is NULL gets stamped."""
+    user, token = await _seed_user(db_session)
+    assert user.home_first_visit_seen_at is None
+
+    resp = await client.post(
+        "/api/v1/users/me/home-first-visit",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["home_first_visit_seen_at"] is not None
+    assert body["id"] == user.id
+    # Field should be populated in GET /auth/me too.
+    me = await client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert me.status_code == 200
+    assert me.json()["home_first_visit_seen_at"] == body["home_first_visit_seen_at"]
+
+
+async def test_home_first_visit_is_idempotent(client, db_session):
+    """B-016: a repeat call preserves the original stamp (no overwrite)."""
+    _, token = await _seed_user(db_session)
+
+    first = await client.post(
+        "/api/v1/users/me/home-first-visit",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert first.status_code == 200
+    original_stamp = first.json()["home_first_visit_seen_at"]
+    assert original_stamp is not None
+
+    second = await client.post(
+        "/api/v1/users/me/home-first-visit",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert second.status_code == 200
+    assert second.json()["home_first_visit_seen_at"] == original_stamp
+
+
+async def test_home_first_visit_requires_auth(client):
+    """Unauthenticated POST → HTTP 401."""
+    resp = await client.post("/api/v1/users/me/home-first-visit")
+    assert resp.status_code == 401
+
+
+async def test_auth_me_includes_home_first_visit_seen_at_when_null(client, db_session):
+    """B-016: the field is present and null for a fresh user (shape stability
+    matters so the FE can key off `== null` without an undefined branch)."""
+    _, token = await _seed_user(db_session)
+    resp = await client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "home_first_visit_seen_at" in body
+    assert body["home_first_visit_seen_at"] is None

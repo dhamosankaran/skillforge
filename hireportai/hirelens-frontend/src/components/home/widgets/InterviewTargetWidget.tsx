@@ -17,6 +17,25 @@ function formatDate(iso: string): string {
   })
 }
 
+/**
+ * Pick the empty-state copy from the actual gap (B-017).
+ *
+ * The pre-B-017 copy was a single string that told the user to "set the
+ * company in the Countdown widget" — but Countdown only captures date, and
+ * `interview_target_company` is only capturable from PersonaPicker. The
+ * three branches below match the two partial-set cases to the surface that
+ * can actually satisfy them (or, for the company gap, state the fact
+ * plainly — there is no self-service company editor until E-017 lands).
+ */
+function emptyCopy(
+  company: string | null | undefined,
+  date: string | null | undefined,
+): string {
+  if (!company && !date) return 'No interview target set yet.'
+  if (!company) return 'No interview company set yet.'
+  return 'Set your interview date in the Countdown widget below.'
+}
+
 export function InterviewTargetWidget({
   persona,
   company,
@@ -31,7 +50,7 @@ export function InterviewTargetWidget({
       testid="interview-target"
       persona={persona}
       state={state}
-      emptyMessage="Set your interview company in the Countdown widget below."
+      emptyMessage={emptyCopy(company, date)}
     >
       {hasBoth && (
         <div className="flex flex-col gap-1">

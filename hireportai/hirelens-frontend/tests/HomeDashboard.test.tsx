@@ -9,6 +9,15 @@ vi.mock('@/utils/posthog', () => ({
   default: {},
 }))
 
+const markHomeFirstVisit = vi.fn()
+vi.mock('@/services/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/api')>()
+  return {
+    ...actual,
+    markHomeFirstVisit: () => markHomeFirstVisit(),
+  }
+})
+
 // Stub widgets so the page test focuses on shell behavior (modes, ordering,
 // greeting, analytics). Each stub renders the real widget's root testid.
 vi.mock('@/components/home/widgets/TodaysReviewWidget', () => ({
@@ -39,6 +48,7 @@ vi.mock('@/components/home/StateAwareWidgets', () => ({
 }))
 
 let mockUser: AuthUser | null = null
+const updateUser = vi.fn()
 vi.mock('@/context/AuthContext', async () => {
   const actual =
     await vi.importActual<typeof import('@/context/AuthContext')>('@/context/AuthContext')
@@ -49,7 +59,7 @@ vi.mock('@/context/AuthContext', async () => {
       isLoading: false,
       signIn: vi.fn(),
       signOut: vi.fn(),
-      updateUser: vi.fn(),
+      updateUser,
     }),
   }
 })
@@ -57,6 +67,9 @@ vi.mock('@/context/AuthContext', async () => {
 import HomeDashboard from '@/pages/HomeDashboard'
 
 function userFixture(overrides: Partial<AuthUser> = {}): AuthUser {
+  // Default to a return visitor so the bulk of shell-behavior tests read
+  // the stable "Welcome back" copy. First-visit tests pass
+  // `home_first_visit_seen_at: null` to flip the branch.
   return {
     id: 'u1',
     email: 't@example.com',
@@ -65,6 +78,7 @@ function userFixture(overrides: Partial<AuthUser> = {}): AuthUser {
     role: 'user',
     persona: 'career_climber',
     onboarding_completed: true,
+    home_first_visit_seen_at: '2026-04-01T00:00:00Z',
     ...overrides,
   }
 }
@@ -84,6 +98,9 @@ function getWidgetTestidsInOrder(container: HTMLElement): string[] {
 
 beforeEach(() => {
   capture.mockReset()
+  updateUser.mockReset()
+  markHomeFirstVisit.mockReset()
+  markHomeFirstVisit.mockResolvedValue(userFixture())
   mockUser = userFixture()
 })
 
@@ -110,7 +127,7 @@ describe('HomeDashboard', () => {
     expect(screen.getByTestId('home-mode-team_lead')).toBeInTheDocument()
   })
 
-  it('renders greeting with first name', () => {
+  it('renders return-visit greeting with first name when home_first_visit_seen_at is set', () => {
     mockUser = userFixture({ name: 'Dhamo Sankaran' })
     renderHome()
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
@@ -118,12 +135,70 @@ describe('HomeDashboard', () => {
     )
   })
 
-  it('falls back to "Welcome back." when user.name is empty', () => {
+  it('return-visit: falls back to "Welcome back." when user.name is empty', () => {
     mockUser = userFixture({ name: '' })
     renderHome()
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
       'Welcome back.',
     )
+  })
+
+  // ── B-016 first-visit greeting ──────────────────────────────────────────
+  it('first-visit: renders "Welcome, <first name>." when home_first_visit_seen_at is null', () => {
+    mockUser = userFixture({
+      name: 'Dhamo Sankaran',
+      home_first_visit_seen_at: null,
+    })
+    renderHome()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+      'Welcome, Dhamo.',
+    )
+  })
+
+  it('first-visit: falls back to "Welcome to SkillForge." when user.name is empty', () => {
+    mockUser = userFixture({ name: '', home_first_visit_seen_at: null })
+    renderHome()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+      'Welcome to SkillForge.',
+    )
+  })
+
+  it('first-visit: POSTs the stamp endpoint once and applies the returned user', async () => {
+    const stamped = userFixture({
+      name: 'Dhamo Sankaran',
+      home_first_visit_seen_at: '2026-04-22T10:00:00Z',
+    })
+    markHomeFirstVisit.mockResolvedValueOnce(stamped)
+    mockUser = userFixture({
+      name: 'Dhamo Sankaran',
+      home_first_visit_seen_at: null,
+    })
+    renderHome()
+    await waitFor(() => expect(markHomeFirstVisit).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(updateUser).toHaveBeenCalledWith(stamped))
+  })
+
+  it('return-visit: does NOT POST the stamp endpoint', async () => {
+    mockUser = userFixture({ home_first_visit_seen_at: '2026-04-01T00:00:00Z' })
+    renderHome()
+    // Give the effect a tick; then assert no call.
+    await waitFor(() => expect(capture).toHaveBeenCalled())
+    expect(markHomeFirstVisit).not.toHaveBeenCalled()
+  })
+
+  it('first-visit stamp failure is silent (no toast, no crash)', async () => {
+    markHomeFirstVisit.mockRejectedValueOnce(new Error('network'))
+    mockUser = userFixture({
+      name: 'Dhamo Sankaran',
+      home_first_visit_seen_at: null,
+    })
+    renderHome()
+    await waitFor(() => expect(markHomeFirstVisit).toHaveBeenCalledTimes(1))
+    // Greeting still renders and updateUser never fires on rejection.
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+      'Welcome, Dhamo.',
+    )
+    expect(updateUser).not.toHaveBeenCalled()
   })
 
   it('fires home_dashboard_viewed exactly once on mount with persona', async () => {

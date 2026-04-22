@@ -29,6 +29,11 @@ class User(Base, UUIDPrimaryKeyMixin):
     downgraded_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, default=None
     )
+    # NULL = user has not yet landed on /home; stamp flips the greeting copy
+    # from first-visit ("Welcome") to return-visit ("Welcome back"). B-016.
+    home_first_visit_seen_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )

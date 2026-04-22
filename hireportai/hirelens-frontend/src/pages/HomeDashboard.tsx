@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useAuth, type Persona } from '@/context/AuthContext'
+import { markHomeFirstVisit } from '@/services/api'
 import { capture } from '@/utils/posthog'
 import { TodaysReviewWidget } from '@/components/home/widgets/TodaysReviewWidget'
 import { StreakWidget } from '@/components/home/widgets/StreakWidget'
@@ -58,8 +59,9 @@ function TeamLeadMode({ persona }: { persona: Persona }) {
 }
 
 export default function HomeDashboard() {
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth()
   const capturedRef = useRef(false)
+  const stampedRef = useRef(false)
 
   useEffect(() => {
     if (!user?.persona) return
@@ -68,10 +70,34 @@ export default function HomeDashboard() {
     capture('home_dashboard_viewed', { persona: user.persona })
   }, [user?.persona])
 
+  // B-016. First /home visit: stamp `home_first_visit_seen_at` server-side.
+  // The greeting fork below keys off the pre-stamp value of the field so the
+  // first render shows "Welcome" even as the stamp is in flight; the stamp
+  // flips it to "Welcome back" for every visit after this one.
+  const isFirstVisit = user != null && user.home_first_visit_seen_at == null
+  useEffect(() => {
+    if (!user?.persona) return
+    if (!isFirstVisit) return
+    if (stampedRef.current) return
+    stampedRef.current = true
+    markHomeFirstVisit()
+      .then((updated) => updateUser(updated))
+      .catch(() => {
+        // Non-blocking. If the stamp fails, the greeting will still read
+        // "Welcome" on the next visit — idempotent retry. No toast.
+      })
+  }, [user?.persona, isFirstVisit, updateUser])
+
   if (!user || !user.persona) return null
 
   const firstName = user.name?.trim().split(/\s+/)[0] ?? ''
-  const greeting = firstName ? `Welcome back, ${firstName}.` : 'Welcome back.'
+  const greeting = isFirstVisit
+    ? firstName
+      ? `Welcome, ${firstName}.`
+      : 'Welcome to SkillForge.'
+    : firstName
+      ? `Welcome back, ${firstName}.`
+      : 'Welcome back.'
 
   return (
     <div className="min-h-screen bg-bg-base px-4 py-8 sm:px-8">

@@ -34,6 +34,7 @@ export interface AuthUser {
   onboarding_completed: boolean
   interview_target_company?: string | null
   interview_target_date?: string | null
+  home_first_visit_seen_at?: string | null
 }
 
 interface AuthContextValue {

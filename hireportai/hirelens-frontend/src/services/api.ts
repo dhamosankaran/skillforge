@@ -445,6 +445,17 @@ export async function updatePersona(req: PersonaUpdateRequest): Promise<AuthUser
   return response.data
 }
 
+/**
+ * Stamp `users.home_first_visit_seen_at` on first HomeDashboard mount. B-016.
+ * Idempotent on the server — a repeat call is a no-op and returns the
+ * existing stamp. Returns the full user dict so the caller can flip the
+ * greeting copy for the current session without a re-fetch.
+ */
+export async function markHomeFirstVisit(): Promise<AuthUser> {
+  const response = await api.post<AuthUser>('/api/v1/users/me/home-first-visit')
+  return response.data
+}
+
 // ─── Onboarding — ATS gap → card bridge ───────────────────────────────────────
 
 /**

@@ -3,6 +3,8 @@
 Introduced in P5-S16. See spec
 `docs/specs/phase-5/34-persona-picker-and-home.md` §API Contract.
 """
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -43,4 +45,27 @@ async def update_persona(
     await db.commit()
     await db.refresh(user)
     home_state_service.invalidate(user.id)
+    return _user_dict(user)
+
+
+@router.post("/users/me/home-first-visit")
+@limiter.limit("10/minute")
+async def mark_home_first_visit(
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Stamp the user's first HomeDashboard visit. Idempotent.
+
+    B-016. Called by `HomeDashboard` on mount when
+    `user.home_first_visit_seen_at` is NULL. A subsequent call is a
+    no-op — the stamp is preserved and the existing value is returned.
+    Returns the full user dict so the FE can `updateUser` with the
+    stamp and flip the greeting copy for this session too.
+    """
+    if user.home_first_visit_seen_at is None:
+        user.home_first_visit_seen_at = datetime.now(timezone.utc)
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
     return _user_dict(user)

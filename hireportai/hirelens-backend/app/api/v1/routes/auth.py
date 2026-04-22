@@ -43,6 +43,11 @@ def _user_dict(user: User) -> dict:
             if user.interview_target_date
             else None
         ),
+        "home_first_visit_seen_at": (
+            user.home_first_visit_seen_at.isoformat()
+            if user.home_first_visit_seen_at
+            else None
+        ),
     }
 
 
