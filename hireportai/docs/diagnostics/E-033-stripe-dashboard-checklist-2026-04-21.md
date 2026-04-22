@@ -139,7 +139,16 @@ If any check fails, the script prints the specific Stripe error body. Record it 
 
 Fill this in as you go. Copy-paste the completed section into a BACKLOG E-033 update / investigation follow-up.
 
-### Test mode
+### Test mode — COMPLETED 2026-04-21
+
+- [x] Prerequisites all satisfied (§1)
+- [x] Activation state (§2): **Was "Never saved" — resolved by saving default config in Dashboard.**
+- [x] Configuration defaults reviewed (§3) — no unexpected values flagged; defaults accepted.
+- [x] Webhook endpoint events verified (§5)
+- [x] Smoke script Check 1 result: **PASS** — "1 configuration(s) found", `id=bpc_1TOowxCl9xZqd5Sx208P98Nd`, `is_default=True`, `active=True`.
+- [x] Smoke script Check 2 result: **SKIPPED** — no `--customer` arg passed. Deferred to E-039 because DB has 0 subscription rows with `stripe_customer_id` populated (verified: 2 rows, both `plan=free`, both `stripe_customer_id NULL`) — exercising Check 2 requires running the full upgrade flow end-to-end first.
+
+### Live mode — PENDING
 
 - [ ] Prerequisites all satisfied (§1)
 - [ ] Activation state (§2): `[ ] Never saved  [ ] Saved once  [ ] Saved with pending changes`
@@ -149,27 +158,19 @@ Fill this in as you go. Copy-paste the completed section into a BACKLOG E-033 up
 - [ ] Smoke script Check 1 result: `[ ] PASS  [ ] FAIL — paste output`
 - [ ] Smoke script Check 2 result (if run): `[ ] PASS  [ ] FAIL — paste output  [ ] SKIPPED`
 
-### Live mode
-
-- [ ] Prerequisites all satisfied (§1)
-- [ ] Activation state (§2): `[ ] Never saved  [ ] Saved once  [ ] Saved with pending changes`
-- [ ] Configuration defaults reviewed (§3) — flag any unexpected values:
-      `…fill in…`
-- [ ] Webhook endpoint events verified (§5)
-- [ ] Smoke script Check 1 result: `[ ] PASS  [ ] FAIL — paste output`
-- [ ] Smoke script Check 2 result (if run): `[ ] PASS  [ ] FAIL — paste output  [ ] SKIPPED`
-
-### Diagnostic conclusion
+### Diagnostic conclusion (test mode, 2026-04-21)
 
 - Hypothesis branch that matched (pick one from investigation report §6):
-  - [ ] **Branch A — Dashboard config** (primary hypothesis): zero code changes, save config in Dashboard + amend spec #36 + close E-033.
-  - [ ] **Branch B — test methodology**: no prod bug; reclassify E-033 as INVALID.
-  - [ ] **Branch C — live/test key mismatch**: ops/env-var fix; rotate key or re-save config in the correct mode.
-  - [ ] **Branch D — code bug in customer_id persistence**: surgical fix needed; file a follow-up impl slice.
-  - [ ] **None of the above** — evidence points somewhere new. Capture details and escalate back to investigation.
+  - [x] **Branch A — Dashboard config** (primary hypothesis): zero code changes. Default Customer Portal configuration had never been saved in test mode. Saved via Dashboard on 2026-04-21; Check 1 PASS immediately after. Spec #36 amendment (documenting the Dashboard-activation prerequisite) recommended but deferred to the E-033 resolution slice.
+  - [ ] Branch B — test methodology
+  - [ ] Branch C — live/test key mismatch
+  - [ ] Branch D — code bug in customer_id persistence
+  - [ ] None of the above
 
-- Next slice recommendation (what this resolves into):
-  `…fill in after diagnostic completes…`
+- Next slice recommendation:
+  **(a) Live-mode repeat.** Run §4 of this checklist in live mode (same Dashboard → Billing → Customer portal, live-mode URL) to save the default live config. Required before any production deploy.
+  **(b) E-039.** Execute the deferred Check 2 work — run the full upgrade flow E2E (FE Upgrade → Stripe Checkout test mode → success webhook → DB write of `stripe_customer_id`) and then re-run the smoke script with `--customer cus_xxx` to confirm the full paid surface works end-to-end.
+  **(c) Close E-033** only after both (a) and (b) are green. Test-mode Check 1 alone is not sufficient per Dhamo's close criteria.
 
 ---
 

@@ -258,3 +258,40 @@ The investigation's §5 fix-shape recommendation was `INVESTIGATE FURTHER` — a
 **E-033 remains 🟦 P1.** No fix applied in the scaffolding slice. The diagnostic evidence from running the checklist + smoke script will determine which of §6's four fix-shape branches applies.
 
 **Recommended execution order (for whoever picks this up):** §1 prerequisites → §2 activation check → §3 config review → §4 live mode → §5 webhook check → §6 smoke script → §7 fill in result → decide branch → file the resolution slice.
+
+---
+
+## §10 Diagnostic Outcome (2026-04-21)
+
+**Outcome in one sentence:** Primary hypothesis confirmed — the Stripe Dashboard default Customer Portal configuration had never been saved in test mode; saving it resolved Check 1 PASS. E-033 remains 🟦 P1 pending live-mode config + full paid-flow E2E validation.
+
+### Diagnostic result (test mode)
+
+```
+Date: 2026-04-21
+Mode: TEST (key prefix sk_test_)
+Action taken: Saved default Customer Portal configuration via Stripe
+  Dashboard at https://dashboard.stripe.com/test/settings/billing/portal
+Smoke test result (post-Save): PASS at Check 1
+  - "1 configuration(s) found"
+  - id=bpc_1TOowxCl9xZqd5Sx208P98Nd
+  - is_default=True, active=True
+Check 2: SKIPPED (no --customer arg passed)
+Hypothesis: confirmed. The original FAIL ("No billing portal configurations
+  found") matched the script's primary E-033 hypothesis exactly. Saving
+  the default Dashboard config resolved Check 1.
+```
+
+**Branch decision** (from §6 of this report): **Branch A — Dashboard config**. Zero code changes required for the test-mode surface. Live mode and E2E validation remain outstanding.
+
+### Check 2 deferral
+
+Running Check 2 requires a real test-mode Stripe customer ID. DB inspection revealed: **0 subscription rows on disk have `stripe_customer_id` populated** — 2 rows exist, both `plan=free`, `status=active`, both `stripe_customer_id NULL` and `stripe_subscription_id NULL` (placeholder free-tier rows from signup; no upgrade flow has ever completed in this local environment).
+
+Generating a test customer therefore requires running the full upgrade flow end-to-end (FE Upgrade → Stripe Checkout → success webhook → DB write of `stripe_customer_id` on the subscription row), which is a larger surface than this diagnostic was scoped for. Deferred to a new BACKLOG row tracked separately.
+
+### Forward links
+
+- **New BACKLOG row:** `E-039` — "Test paid flow E2E (Stripe Check 2 + upgrade flow validation)." Status 🟦 P2 (gated on E-033 live-mode config + upstream DB state — no `stripe_customer_id` exists to test against until the upgrade flow completes at least once). Tracks the deferred Check 2 work plus the end-to-end validation the test-mode fix by itself cannot confirm.
+- **E-033 close conditions** (Dhamo-locked): live-mode Dashboard Customer Portal config **saved AND verified** **AND** full paid-flow E2E validated via the E-039 work. Both are required; test-mode Check 1 PASS alone is not sufficient.
+- **Spec #36 follow-up (recommended, not in scope here):** amend `docs/specs/phase-5/36-subscription-cancellation.md` §152 to document the Dashboard-activation prerequisite so future ops engineers don't hit the same silent failure. Tracked informally; file under the E-033 resolution slice when live-mode is landed.
