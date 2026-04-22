@@ -170,6 +170,11 @@ def extract_job_requirements(jd_text: str) -> Dict[str, Any]:
     # Extract responsibilities (lines with action verbs)
     responsibilities = _extract_responsibilities(jd_text)
 
+    # B-021: heuristic company-name extraction. Returns None on low
+    # confidence; downstream callers keep their existing placeholder
+    # fallback ("your company" / "Unknown Company") for that case.
+    company_name = _extract_company_name(jd_text)
+
     return {
         "required_skills": sorted(set(required_skills)),
         "preferred_skills": sorted(set(preferred_skills)),
@@ -177,6 +182,7 @@ def extract_job_requirements(jd_text: str) -> Dict[str, Any]:
         "job_title": job_title,
         "seniority_level": seniority,
         "responsibilities": responsibilities,
+        "company_name": company_name,
     }
 
 
@@ -190,6 +196,63 @@ def _detect_seniority(jd_lower: str) -> str:
         return "Manager"
     else:
         return "Mid-level"
+
+
+# Between-word whitespace is single-line only (no newlines); the regex
+# otherwise backtracks across blank lines and absorbs a preceding headline
+# like "Senior Python Engineer\n\nAcme Robotics is hiring" into one match.
+_COMPANY_TOKEN = r"([A-Z][A-Za-z0-9&'\.\-]*(?:[ \t]+[A-Z][A-Za-z0-9&'\.\-]+){0,4})"
+
+# High-precision patterns only. Each captures a Title-Case company token of
+# 1-5 words. The extractor returns the first match; consumers fall back to
+# the "your company" / "Unknown Company" placeholder when None is returned.
+_COMPANY_PATTERNS: List[re.Pattern[str]] = [
+    # "About Acme Robotics:" / "About Acme Robotics —"
+    re.compile(rf"\bAbout\s+{_COMPANY_TOKEN}\s*[:\-\—]"),
+    # "Join Acme Robotics" / "Join the Acme Robotics team"
+    re.compile(rf"\bJoin\s+(?:the\s+)?{_COMPANY_TOKEN}\s+(?:team|as|in)\b"),
+    # "Acme Robotics is hiring" / "Acme Robotics is looking"
+    re.compile(rf"\b{_COMPANY_TOKEN}\s+is\s+(?:hiring|looking\s+for|seeking)\b"),
+    # "at Acme Robotics." / "at Acme Robotics,"  — position-at-company anchor
+    re.compile(rf"\bat\s+{_COMPANY_TOKEN}(?=[\.,\n]|\s+(?:we|you|our|is))"),
+    # "Company: Acme Robotics" on its own line
+    re.compile(rf"^\s*Company\s*[:\-]\s*{_COMPANY_TOKEN}\s*$", re.MULTILINE),
+]
+
+# Common prose tokens that pass the Title-Case regex but aren't companies.
+# Pre-match guard keeps false positives out of the consumer fallback ladder.
+_COMPANY_STOPWORDS: Set[str] = {
+    "we", "you", "our", "the", "this", "that", "your", "their", "its",
+    "scale", "scaling", "python", "kubernetes", "terraform", "postgres",
+    "hiring", "seeking", "looking",
+}
+
+
+def _extract_company_name(jd_text: str) -> Optional[str]:
+    """Best-effort company-name extraction from a JD (B-021).
+
+    High-precision regex sweep. Returns None on low confidence so that
+    consumer fallbacks ("your company" in the cover-letter prompt,
+    "Unknown Company" on tracker rows) stay intact for the case where
+    the JD doesn't match a known shape. Kept heuristic to stay
+    consistent with the rest of this module — no LLM call.
+    """
+    if not jd_text or not jd_text.strip():
+        return None
+    for pattern in _COMPANY_PATTERNS:
+        match = pattern.search(jd_text)
+        if match:
+            candidate = match.group(1).strip().rstrip(",.:;—-")
+            if not candidate:
+                continue
+            if candidate.lower() in _COMPANY_STOPWORDS:
+                continue
+            # First token alone ("Scale", "Python") is a stopword-prone
+            # false-positive signal; require ≥2 tokens OR length ≥4 chars.
+            if len(candidate.split()) == 1 and len(candidate) < 4:
+                continue
+            return candidate[:100]
+    return None
 
 
 def _extract_responsibilities(text: str) -> List[str]:

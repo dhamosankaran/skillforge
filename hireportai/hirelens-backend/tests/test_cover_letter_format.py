@@ -218,6 +218,45 @@ def test_ac4a_tone_parameter_reaches_prompt(tone):
     assert f"Tone: {tone}" in captured["prompt"]
 
 
+# ── B-021 — company_name from jd_requirements reaches the prompt ──────────
+
+
+@pytest.mark.parametrize("tone", ["professional", "confident", "conversational"])
+def test_b021_company_name_flows_from_jd_requirements_into_prompt(tone):
+    """B-021: when jd_requirements has a company_name, the cover-letter
+    prompt uses it (not the "your company" fallback). Tone-agnostic —
+    the bug was reported as tone-specific but the root cause spans all
+    three tones."""
+    side_effect, captured = _fake_llm(VALID_LLM_PAYLOAD)
+    jd = {**_jd(), "company_name": "Acme Robotics"}
+    with patch(
+        "app.services.gpt_service.generate_for_task",
+        side_effect=side_effect,
+    ):
+        generate_cover_letter({"full_text": _resume()}, jd, tone=tone)
+
+    prompt = captured["prompt"]
+    assert "\"company\" must be \"Acme Robotics\"" in prompt
+    # Regression guard: fallback must not appear once a real name is set.
+    assert "\"company\" must be \"your company\"" not in prompt
+
+
+def test_b021_company_name_missing_falls_back_to_placeholder():
+    """B-021: when jd_requirements omits company_name, the fallback
+    "your company" stays intact (silent-miss behaviour of the heuristic
+    extractor in nlp.py is benign at this call site)."""
+    side_effect, captured = _fake_llm(VALID_LLM_PAYLOAD)
+    jd = {**_jd()}
+    jd.pop("company_name", None)
+    with patch(
+        "app.services.gpt_service.generate_for_task",
+        side_effect=side_effect,
+    ):
+        generate_cover_letter({"full_text": _resume()}, jd, tone="conversational")
+
+    assert "\"company\" must be \"your company\"" in captured["prompt"]
+
+
 # ---------------------------------------------------------------------------
 # AC-5 — four failure modes → 502 with spec envelope
 # ---------------------------------------------------------------------------
