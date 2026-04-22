@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { DashboardWidget, type WidgetState } from '@/components/home/DashboardWidget'
 import { Countdown } from '@/components/mission/Countdown'
-import { useAuth, type Persona } from '@/context/AuthContext'
-import { fetchActiveMission, updatePersona } from '@/services/api'
+import { type Persona } from '@/context/AuthContext'
+import { fetchActiveMission } from '@/services/api'
+import { capture } from '@/utils/posthog'
 import type { MissionDetailResponse } from '@/types'
 
 interface CountdownWidgetProps {
@@ -18,10 +20,8 @@ function daysUntil(iso: string): number {
 }
 
 export function CountdownWidget({ persona, date }: CountdownWidgetProps) {
-  const { updateUser } = useAuth()
-  const [chosenDate, setChosenDate] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState<string | null>(null)
+  const navigate = useNavigate()
+  const shownRef = useRef(false)
 
   const [mission, setMission] = useState<MissionDetailResponse | null>(null)
   const [missionChecked, setMissionChecked] = useState(false)
@@ -37,24 +37,19 @@ export function CountdownWidget({ persona, date }: CountdownWidgetProps) {
       .finally(() => setMissionChecked(true))
   }, [date])
 
-  const handleSave = useCallback(async () => {
-    if (!chosenDate || submitting) return
-    setSubmitError(null)
-    setSubmitting(true)
-    try {
-      const updated = await updatePersona({
-        persona,
-        interview_target_date: chosenDate,
-      })
-      updateUser(updated)
-    } catch {
-      setSubmitError("Couldn't save your date. Please try again.")
-    } finally {
-      setSubmitting(false)
-    }
-  }, [chosenDate, persona, submitting, updateUser])
+  // Spec #53 §7.2 / §9: fire countdown_unlock_cta_shown once on mount of the
+  // no-date unlock affordance. Idempotent via ref (same pattern as
+  // `home_dashboard_viewed` / `paywall_hit`). Fires only in Mode 1.
+  useEffect(() => {
+    if (date) return
+    if (shownRef.current) return
+    shownRef.current = true
+    capture('countdown_unlock_cta_shown', { surface: 'home_countdown' })
+  }, [date])
 
-  // Mode 1 — no date set: render inline date-setter inside state="data"
+  // Mode 1 — no date set: render the LD-3 unlock affordance (link-only per
+  // OD-2; the pre-B-018 inline date-setter form is dropped — no two surfaces
+  // with divergent interaction models for the same no-date state).
   if (!date) {
     return (
       <DashboardWidget
@@ -65,29 +60,19 @@ export function CountdownWidget({ persona, date }: CountdownWidgetProps) {
       >
         <div className="flex flex-col gap-3">
           <p className="text-sm text-text-secondary">
-            Set your interview date to start the countdown.
+            Add an interview date to unlock countdown.
           </p>
-          <input
-            type="date"
-            data-testid="countdown-date-input"
-            value={chosenDate}
-            onChange={(e) => setChosenDate(e.target.value)}
-            className="w-full px-3 py-2 rounded-md border border-border bg-bg-base text-text-primary text-sm outline-none focus:border-border-accent"
-          />
           <button
             type="button"
-            data-testid="countdown-save"
-            disabled={!chosenDate || submitting}
-            onClick={handleSave}
-            className="self-start px-4 py-2 rounded-md bg-accent-primary text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-accent-primary/90 transition-colors"
+            data-testid="countdown-unlock-cta"
+            onClick={() => {
+              capture('countdown_unlock_cta_clicked', { surface: 'home_countdown' })
+              navigate('/onboarding/persona?return_to=%2Fhome')
+            }}
+            className="self-start px-4 py-2 rounded-md bg-accent-primary text-white text-sm font-medium hover:bg-accent-primary/90 transition-colors"
           >
-            {submitting ? 'Saving…' : 'Save'}
+            Add interview date
           </button>
-          {submitError && (
-            <div role="alert" className="text-xs text-danger">
-              {submitError}
-            </div>
-          )}
         </div>
       </DashboardWidget>
     )

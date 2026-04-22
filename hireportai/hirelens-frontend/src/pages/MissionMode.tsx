@@ -25,9 +25,11 @@ import { GlowButton } from '@/components/ui/GlowButton'
 import { FlipCard } from '@/components/study/FlipCard'
 import { QuizPanel } from '@/components/study/QuizPanel'
 import { MissionSetup } from '@/components/mission/MissionSetup'
+import { MissionDateGate } from '@/components/mission/MissionDateGate'
 import { Countdown } from '@/components/mission/Countdown'
 import { DailyTarget } from '@/components/mission/DailyTarget'
 import { useMission } from '@/hooks/useMission'
+import { useAuth } from '@/context/AuthContext'
 import { useGamification } from '@/context/GamificationContext'
 import { capture } from '@/utils/posthog'
 import type { FsrsRating, ReviewResponse, MissionDailyCard, MissionCreateRequest } from '@/types'
@@ -193,6 +195,7 @@ function ProgressBar({ completed, total }: { completed: number; total: number })
 
 export default function MissionMode() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const { refresh: refreshGamification } = useGamification()
   const {
     mission,
@@ -377,6 +380,16 @@ export default function MissionMode() {
 
   // ── Setup — no active mission ─────────────────────────────────────────────
   if (phase === 'setup') {
+    // Spec #53 §7.3 / AC-4: a no-date interview_prepper cannot satisfy
+    // MissionSetup's required-date branch, so render MissionDateGate
+    // instead. Other personas and date-present interview_preppers fall
+    // through to MissionSetup as before (AC-6 regression guard).
+    if (
+      user?.persona === 'interview_prepper' &&
+      user.interview_target_date == null
+    ) {
+      return <MissionDateGate />
+    }
     return (
       <PageWrapper className="min-h-screen bg-bg-base">
         <div className="max-w-2xl mx-auto px-4 py-10 sm:px-6">

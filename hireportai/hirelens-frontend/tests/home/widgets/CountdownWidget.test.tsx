@@ -5,12 +5,22 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { AuthUser } from '@/context/AuthContext'
 import type { MissionDetailResponse } from '@/types'
 
-const updatePersona = vi.fn()
 const fetchActiveMission = vi.fn()
 vi.mock('@/services/api', () => ({
-  updatePersona: (...args: unknown[]) => updatePersona(...args),
   fetchActiveMission: (...args: unknown[]) => fetchActiveMission(...args),
 }))
+
+const capture = vi.fn()
+vi.mock('@/utils/posthog', () => ({
+  capture: (...args: unknown[]) => capture(...args),
+  default: {},
+}))
+
+const navigate = vi.fn()
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router-dom')>()
+  return { ...actual, useNavigate: () => navigate }
+})
 
 const updateUser = vi.fn()
 let mockUser: AuthUser = {
@@ -75,9 +85,10 @@ function mission(
 }
 
 beforeEach(() => {
-  updatePersona.mockReset()
   fetchActiveMission.mockReset()
   updateUser.mockReset()
+  capture.mockReset()
+  navigate.mockReset()
   mockUser = {
     id: 'u1',
     email: 't@example.com',
@@ -90,28 +101,42 @@ beforeEach(() => {
 })
 
 describe('CountdownWidget', () => {
-  it('Mode 1 (no date) renders the inline date-setter form', () => {
+  // ── Spec #53 / B-018 Mode 1 reframe: link-only unlock affordance ────────
+
+  it('Mode 1 (no date) renders the LD-3 unlock copy and CTA button (AC-3)', () => {
     renderWidget(null)
-    expect(screen.getByTestId('countdown-date-input')).toBeInTheDocument()
-    expect(screen.getByTestId('countdown-save')).toBeDisabled()
+    expect(
+      screen.getByText(/add an interview date to unlock countdown/i),
+    ).toBeInTheDocument()
+    expect(screen.getByTestId('countdown-unlock-cta')).toBeInTheDocument()
+    // Regression guard: no inline date-setter (OD-2 — dropped).
+    expect(screen.queryByTestId('countdown-date-input')).toBeNull()
+    expect(screen.queryByTestId('countdown-save')).toBeNull()
   })
 
-  it('Mode 1 submit calls updatePersona with persona + interview_target_date', async () => {
-    updatePersona.mockResolvedValueOnce({ ...mockUser, interview_target_date: '2026-06-01' })
+  it('Mode 1 fires countdown_unlock_cta_shown once on mount (home_countdown surface)', async () => {
+    renderWidget(null)
+    await waitFor(() =>
+      expect(capture).toHaveBeenCalledWith('countdown_unlock_cta_shown', {
+        surface: 'home_countdown',
+      }),
+    )
+    // Idempotent via ref — single fire only, even with Strict-Mode-like
+    // re-invocation on the same mount.
+    const shownCalls = capture.mock.calls.filter(
+      (c) => c[0] === 'countdown_unlock_cta_shown',
+    )
+    expect(shownCalls).toHaveLength(1)
+  })
+
+  it('Mode 1 CTA click fires clicked event + navigates to PersonaPicker with return_to=/home', async () => {
     const user = userEvent.setup()
     renderWidget(null)
-
-    const input = screen.getByTestId('countdown-date-input') as HTMLInputElement
-    await user.type(input, '2026-06-01')
-    await user.click(screen.getByTestId('countdown-save'))
-
-    await waitFor(() => expect(updatePersona).toHaveBeenCalledTimes(1))
-    // AC-9 regression catch: persona MUST be in the PATCH body.
-    expect(updatePersona).toHaveBeenCalledWith({
-      persona: 'interview_prepper',
-      interview_target_date: '2026-06-01',
+    await user.click(screen.getByTestId('countdown-unlock-cta'))
+    expect(capture).toHaveBeenCalledWith('countdown_unlock_cta_clicked', {
+      surface: 'home_countdown',
     })
-    expect(updateUser).toHaveBeenCalledTimes(1)
+    expect(navigate).toHaveBeenCalledWith('/onboarding/persona?return_to=%2Fhome')
   })
 
   it('Mode 2 (date set) renders the Countdown component', async () => {

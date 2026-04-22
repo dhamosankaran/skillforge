@@ -62,9 +62,9 @@ beforeEach(() => {
   window.localStorage.clear()
 })
 
-function renderPicker() {
+function renderPicker(initialPath = '/onboarding/persona') {
   return render(
-    <MemoryRouter initialEntries={['/onboarding/persona']}>
+    <MemoryRouter initialEntries={[initialPath]}>
       <PersonaPicker />
     </MemoryRouter>,
   )
@@ -153,5 +153,113 @@ describe('PersonaPicker', () => {
       expect(navigate).toHaveBeenCalledWith('/home', { replace: true }),
     )
     expect(navigate).not.toHaveBeenCalledWith('/first-action', expect.anything())
+  })
+
+  // ── Spec #53 / B-018 — optional fields + return_to + telemetry ──────────
+
+  it('saves interview_prepper with neither date nor company (AC-1)', async () => {
+    const user = userEvent.setup()
+    const apiResponse: AuthUser = userFixture({
+      persona: 'interview_prepper',
+      onboarding_completed: true,
+    })
+    updatePersona.mockResolvedValueOnce(apiResponse)
+
+    renderPicker()
+    await user.click(screen.getByTestId('persona-card-interview_prepper'))
+    // Both expansion inputs are untouched — still empty.
+    await user.click(screen.getByTestId('persona-continue'))
+
+    await waitFor(() => expect(updatePersona).toHaveBeenCalledTimes(1))
+    // Body MUST NOT contain interview_target_date / interview_target_company
+    // keys when they were left blank (PersonaPicker strips them at submit).
+    expect(updatePersona).toHaveBeenCalledWith({ persona: 'interview_prepper' })
+    // Skip signal fires; add signal does not.
+    expect(capture).toHaveBeenCalledWith('interview_target_date_skipped', {
+      source: 'onboarding',
+    })
+    expect(capture).not.toHaveBeenCalledWith(
+      'interview_target_date_added',
+      expect.anything(),
+    )
+  })
+
+  it('date input type is "date" (AC-2 non-regression guard)', async () => {
+    const user = userEvent.setup()
+    renderPicker()
+    await user.click(screen.getByTestId('persona-card-interview_prepper'))
+    const dateInput = screen.getByTestId('interview-target-date-input')
+    expect(dateInput.getAttribute('type')).toBe('date')
+  })
+
+  it('fires interview_target_date_added(source=onboarding) when a date is saved at onboarding', async () => {
+    const user = userEvent.setup()
+    const apiResponse: AuthUser = userFixture({
+      persona: 'interview_prepper',
+      onboarding_completed: true,
+    })
+    updatePersona.mockResolvedValueOnce(apiResponse)
+
+    renderPicker()
+    await user.click(screen.getByTestId('persona-card-interview_prepper'))
+    await user.type(screen.getByTestId('interview-target-date-input'), '2026-06-01')
+    await user.click(screen.getByTestId('persona-continue'))
+
+    await waitFor(() => expect(updatePersona).toHaveBeenCalledTimes(1))
+    expect(capture).toHaveBeenCalledWith('interview_target_date_added', {
+      source: 'onboarding',
+    })
+    expect(capture).not.toHaveBeenCalledWith(
+      'interview_target_date_skipped',
+      expect.anything(),
+    )
+  })
+
+  it('return_to on whitelist: navigates to origin and fires date_added(source=persona_edit)', async () => {
+    const user = userEvent.setup()
+    // Pre-existing interview_prepper returning via the unlock CTA.
+    mockUser = userFixture({ persona: 'interview_prepper' })
+    const apiResponse: AuthUser = userFixture({
+      persona: 'interview_prepper',
+      onboarding_completed: true,
+    })
+    updatePersona.mockResolvedValueOnce(apiResponse)
+
+    renderPicker('/onboarding/persona?return_to=/learn/mission')
+    // Expansion block should be open automatically (selected pre-filled).
+    await user.type(screen.getByTestId('interview-target-date-input'), '2026-06-01')
+    await user.click(screen.getByTestId('persona-continue'))
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith('/learn/mission', { replace: true }),
+    )
+    expect(navigate).not.toHaveBeenCalledWith('/home', expect.anything())
+    expect(navigate).not.toHaveBeenCalledWith('/first-action', expect.anything())
+    expect(capture).toHaveBeenCalledWith('interview_target_date_added', {
+      source: 'persona_edit',
+    })
+  })
+
+  it('return_to NOT on whitelist: falls back to default routing (open-redirect guard)', async () => {
+    const user = userEvent.setup()
+    const apiResponse: AuthUser = userFixture({
+      persona: 'career_climber',
+      onboarding_completed: true,
+    })
+    updatePersona.mockResolvedValueOnce(apiResponse)
+    window.localStorage.setItem('first_action_seen', 'true')
+
+    renderPicker('/onboarding/persona?return_to=https://evil.example.com')
+    await user.click(screen.getByTestId('persona-card-career_climber'))
+    await user.click(screen.getByTestId('persona-continue'))
+
+    await waitFor(() => expect(updatePersona).toHaveBeenCalledTimes(1))
+    // Falls back to /home (since first_action_seen is set). Never to the
+    // untrusted return_to value.
+    expect(navigate).toHaveBeenCalledWith('/home', { replace: true })
+    expect(navigate).not.toHaveBeenCalledWith(
+      'https://evil.example.com',
+      expect.anything(),
+    )
   })
 })

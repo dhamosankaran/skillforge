@@ -1,11 +1,28 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Target, Flame, Users } from 'lucide-react'
 import { useAuth, type Persona } from '@/context/AuthContext'
 import { updatePersona } from '@/services/api'
 import { capture } from '@/utils/posthog'
 import { FIRST_ACTION_SEEN_KEY } from '@/pages/FirstAction'
+
+// Spec #53 OD-3: inline whitelist for the `?return_to=` URL param. Any path
+// not in this set falls back to the existing `first_action_seen` → /home vs
+// /first-action routing. The whitelist prevents open-redirect from arbitrary
+// attacker-controlled values while letting the unlock CTAs (CountdownWidget,
+// MissionDateGate) return the user to their origin after saving a date.
+const RETURN_TO_WHITELIST: ReadonlySet<string> = new Set([
+  '/home',
+  '/learn',
+  '/learn/mission',
+  '/prep/analyze',
+  '/prep/results',
+  '/prep/rewrite',
+  '/prep/interview',
+  '/prep/tracker',
+  '/profile',
+])
 
 interface PersonaCard {
   id: Persona
@@ -37,8 +54,18 @@ const PERSONAS: PersonaCard[] = [
 
 export default function PersonaPicker() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user, updateUser } = useAuth()
-  const [selected, setSelected] = useState<Persona | null>(null)
+  // Spec #53 §7.4: when the unlock CTAs send the user here to add a date
+  // post-onboarding, pre-select interview_prepper so the expansion block
+  // opens automatically. Users arriving via the normal null-persona gate
+  // land with `selected === null` and pick fresh.
+  const returnToRaw = searchParams.get('return_to')
+  const returnTo =
+    returnToRaw && RETURN_TO_WHITELIST.has(returnToRaw) ? returnToRaw : null
+  const [selected, setSelected] = useState<Persona | null>(
+    returnTo && user?.persona === 'interview_prepper' ? 'interview_prepper' : null,
+  )
   const [targetDate, setTargetDate] = useState('')
   const [targetCompany, setTargetCompany] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -69,7 +96,27 @@ export default function PersonaPicker() {
         has_target_date: selected === 'interview_prepper' && !!targetDate,
         has_target_company: selected === 'interview_prepper' && !!trimmedCompany,
       })
+      // Spec #53 §7.1: if the user picked interview_prepper but left the date
+      // blank, record the signal so telemetry can quantify the "broadly
+      // prepping, no specific interview" cohort. Fires alongside (not
+      // instead of) persona_selected; never gates or delays the navigate.
+      if (selected === 'interview_prepper' && !targetDate) {
+        capture('interview_target_date_skipped', { source: 'onboarding' })
+      }
+      // Spec #53 §7.4: the return_to param takes precedence over the
+      // default onboarding route. Both unlock CTAs (Countdown + MissionMode)
+      // append `?return_to=<whitelisted-path>` so the user lands back where
+      // they started after saving a date.
+      if (targetDate && selected === 'interview_prepper') {
+        capture('interview_target_date_added', {
+          source: returnTo ? 'persona_edit' : 'onboarding',
+        })
+      }
       updateUser(updated)
+      if (returnTo) {
+        navigate(returnTo, { replace: true })
+        return
+      }
       const seen =
         typeof window !== 'undefined' &&
         window.localStorage.getItem(FIRST_ACTION_SEEN_KEY) === 'true'
@@ -173,6 +220,9 @@ export default function PersonaPicker() {
                     onChange={(e) => setTargetDate(e.target.value)}
                     className="w-full px-3 py-2 rounded-md border border-border bg-bg-base text-text-primary text-sm outline-none focus:border-border-accent"
                   />
+                  <div className="mt-1 text-xs text-text-muted">
+                    Optional — leave blank if you're prepping broadly.
+                  </div>
                 </div>
                 <div>
                   <label

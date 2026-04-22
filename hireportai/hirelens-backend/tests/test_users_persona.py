@@ -277,3 +277,42 @@ async def test_auth_me_includes_home_first_visit_seen_at_when_null(client, db_se
     body = resp.json()
     assert "home_first_visit_seen_at" in body
     assert body["home_first_visit_seen_at"] is None
+
+
+# ── B-018 / spec #53: interview_target_date + company permissive path ─────
+
+async def test_persona_interview_prepper_without_date_or_company(client, db_session):
+    """Spec #53 AC-1: an interview_prepper can save with neither date nor
+    company. Both fields persist as null; onboarding_completed flips."""
+    _, token = await _seed_user(db_session)
+    resp = await client.patch(
+        "/api/v1/users/me/persona",
+        json={"persona": "interview_prepper"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["persona"] == "interview_prepper"
+    assert body["interview_target_date"] is None
+    assert body["interview_target_company"] is None
+    assert body["onboarding_completed"] is True
+
+
+async def test_persona_interview_prepper_invalid_date_rejected(client, db_session):
+    """Spec #53 §API Contract: malformed date string → HTTP 422 with loc at
+    interview_target_date (Pydantic's ISO date parse rejects non-ISO input)."""
+    _, token = await _seed_user(db_session)
+    resp = await client.patch(
+        "/api/v1/users/me/persona",
+        json={
+            "persona": "interview_prepper",
+            "interview_target_date": "not-a-date",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 422
+    locs = [
+        ".".join(str(p) for p in err.get("loc", []))
+        for err in resp.json()["detail"]
+    ]
+    assert any("interview_target_date" in loc for loc in locs)
