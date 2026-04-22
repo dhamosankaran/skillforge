@@ -77,7 +77,7 @@ function clearAuthAndRedirect() {
 // ─── Response interceptor: silent refresh on 401, toast other errors ──────
 api.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError<{ error?: string; detail?: string }>) => {
+  async (error: AxiosError<{ error?: unknown; detail?: unknown }>) => {
     const original = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean
     }
@@ -125,12 +125,31 @@ api.interceptors.response.use(
 
     // Non-401 (or already-retried 401) — show toast.
     if (error.response?.status !== 401) {
-      const message =
-        error.response?.data?.error ||
-        error.response?.data?.detail ||
-        error.message ||
-        'An unexpected error occurred'
-      toast.error(message)
+      const status = error.response?.status
+      const data = error.response?.data
+      const detail = data?.detail
+
+      // Spec #50 / #42: 402 with a structured `detail.trigger` payload is
+      // component-owned UX (PaywallModal / WallInlineNudge via
+      // QuizPanel.extractWallPayload). The interceptor stays silent so the
+      // wall surface can render without a cryptic toast leaking through.
+      const isWallPayload =
+        status === 402 &&
+        typeof detail === 'object' &&
+        detail !== null &&
+        typeof (detail as { trigger?: unknown }).trigger === 'string'
+
+      if (!isWallPayload) {
+        // Object-coercion guard: `detail` may be a FastAPI-style error dict
+        // (e.g. validation errors). Passing one to toast.error renders
+        // "[object Object]". Only toast strings; fall back to error.message
+        // or a safe default when `error`/`detail` are objects.
+        const rawError = typeof data?.error === 'string' ? data.error : undefined
+        const rawDetail = typeof detail === 'string' ? detail : undefined
+        const message =
+          rawError || rawDetail || error.message || 'An unexpected error occurred'
+        toast.error(message)
+      }
     }
     return Promise.reject(error)
   }
