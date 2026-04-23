@@ -189,11 +189,11 @@ export default function Results() {
           className="grid grid-cols-1 lg:grid-cols-[240px_1fr] xl:grid-cols-[240px_1fr_280px] gap-5 items-start"
         >
 
-          {/* 1. ATS Score — mobile 1st · lg col-1 row-1 · xl sticky */}
+          {/* 1. ATS Score — mobile 1st · lg/xl col-1 row-1 */}
           <motion.div
             variants={cardVariants}
             id="ats-score"
-            className="lg:col-start-1 lg:row-start-1 lg:sticky lg:top-20 z-10"
+            className="lg:col-start-1 lg:row-start-1"
           >
             <PanelSection
               title="ATS Score"
@@ -235,11 +235,11 @@ export default function Results() {
             </PanelSection>
           </motion.div>
 
-          {/* 3. Missing Skills — mobile 3rd · lg spans both cols at row-5 · xl col-3 row-1 sticky */}
+          {/* 3. Missing Skills — mobile 3rd · lg spans both cols at row-5 · xl col-3 row-1 */}
           <motion.div
             variants={cardVariants}
             id="missing-skills"
-            className="lg:col-span-2 lg:col-start-1 lg:row-start-5 xl:col-start-3 xl:col-span-1 xl:row-start-1 xl:sticky xl:top-20 z-10"
+            className="lg:col-span-2 lg:col-start-1 lg:row-start-5 xl:col-start-3 xl:col-span-1 xl:row-start-1"
           >
             <PanelSection
               title="Missing Skills"
