@@ -10,12 +10,12 @@
 
 | Field | Value |
 |-------|-------|
-| **HEAD commit** | `794dc28` (docs(backlog): backfill fa1871e SHA into B-022 close-line — tail of the 2026-04-22 E2E walkthrough sweep; previous anchor was `918cd0a` at the Path A doc-only series end) |
-| **Branch** | `main` (in sync with `origin/main` as of 2026-04-22 sweep push) |
-| **CODE-REALITY.md sha (repo)** | `a13c217` — **FRESH** — regenerated in `918cd0a` on top of the B-002 series (`825eb0e`/`ceba622`/`08f0873`). Sections 1, 4, 8 updated: header sha `3cef6c3 → a13c217`; specs on disk `71 → 72` (spec #52 cover-letter format enforcement); `gpt_service.py` row documents structured-output cover letter + `_join_cover_letter` + AC-5 envelope; `CoverLetterResponse` shape row rewritten for spec #52 LD-2 envelope (`date`, `recipient{name,company}`, `greeting`, `body_paragraphs[len==3]`, `signoff`, `signature`, `tone`, `full_text`); new `CoverLetterRecipient` sub-type row added. Sections 2, 3, 5, 6, 7, 9-12 re-audited — no net change from B-002. |
-| **CODE-REALITY.md in chat Project** | Stale ❌ — re-upload post-`918cd0a` before next plan-level prompt |
-| **CODE-REALITY stale (either copy)?** | Repo copy fresh; chat-Project copy stale until re-uploaded |
-| **Last hand-edit** | 2026-04-21 — doc-only series: Path A canonical-flow decision locked in `PHASE-5-STATUS.md`, BACKLOG E-038 added (🟦 deferred anon-scan funnel, priority unassigned), CODE-REALITY regenerated. No source or test changes. |
+| **HEAD commit** | `38249b6` (docs(backlog): backfill B-027 / B-028 close-lines with SHAs — tail of the 2026-04-23 Dhamo bug-report sweep: B-027 greeting flash + B-028 sign-out affordance; B-003 regression coverage `0719fa1` landed the same day; previous sweep anchor was `794dc28` at the 2026-04-22 E2E walkthrough tail) |
+| **Branch** | `main` (NOT yet pushed to `origin/main` as of 2026-04-23 — 12 commits ahead since `794dc28`) |
+| **CODE-REALITY.md sha (repo)** | Stale ❌ — last regen at `a13c217` (`918cd0a`); HEAD has since moved through B-022/B-021/B-019/B-018/B-023/B-024/B-026/B-003 plus the 2026-04-23 B-027/B-028 layout touches (`UserMenu.tsx` new component, `TopNav.tsx` edit, `Profile.tsx` edit, `HomeDashboard.tsx` edit). Layout-touch trigger per stale-marking rule. Regenerate before next plan-level prompt. |
+| **CODE-REALITY.md in chat Project** | Stale ❌ — re-upload after repo-copy regen |
+| **CODE-REALITY stale (either copy)?** | Both stale — repo regen needed first, then re-upload to chat |
+| **Last hand-edit** | 2026-04-23 — B-027 greeting flash fix + B-028 sign-out affordance (UserMenu desktop dropdown + Profile Account section). FE 217 → 227 (+10). Two P1 BACKLOG rows opened and closed same slice with Dhamo authorization. |
 
 > **Stale-marking rule**: Mark CODE-REALITY stale at the end of any slice that touched routes, models, top-level types, `App.tsx`, or layout components. Regenerate the repo copy AND re-upload to the chat Project before the next plan-level prompt.
 
@@ -61,6 +61,39 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 ---
 
 ## Last Completed Slice
+
+**2026-04-23 Dhamo bug-report sweep — B-027 greeting flash + B-028 sign-out affordance (3 commits).** Two P1 launch-UX issues surfaced in Dhamo's 2026-04-23 session: (1) new-user welcome copy flipping "Welcome" → "Welcome back" mid-session on first `/home` visit, and (2) no sign-out UI anywhere in the app — `AuthContext.signOut()` had shipped in P1 but no surface ever invoked it. Both P1 rows opened and closed in the same slice after Dhamo explicitly authorized BACKLOG row creation.
+
+**Commit 1 — `e792bb4` fix(home): freeze first-visit greeting for session — closes B-027.** Snapshot `isFirstVisit` on `HomeDashboard.tsx` mount via `useState(() => user != null && user.home_first_visit_seen_at == null)` so the post-stamp `updateUser(stamped)` applied by the B-016 effect no longer mutates the rendered copy within a single mount. Stamp still fires (persists server-side for subsequent sessions) — only the rendered greeting is frozen. Root cause: B-016 (`d835fb8`, 2026-04-22) keyed the greeting directly off `user.home_first_visit_seen_at`; on fast local/dev networks the stamp round-trip completed in ~100 ms, so users perceived the flip as "I just signed up and the app greets me as a returning user." New regression test in `tests/HomeDashboard.test.tsx` — rerenders with the stamped user after the updateUser call and asserts the heading still reads `"Welcome, Dhamo."`. Also added BACKLOG row B-027 🔴 inline (Dhamo-authorized; flipped to ✅ in commit 3 per SHA-availability pattern).
+
+**Commit 2 — `7da0943` feat(nav): add sign-out affordance via UserMenu + Profile — closes B-028.** Two surfaces:
+- **Desktop** — new `src/components/layout/UserMenu.tsx` component: avatar circle (uses `user.avatar_url` with initial-letter fallback) + keyboard-accessible dropdown menu (aria-haspopup, aria-expanded, role=menu, Escape + click-outside close, focus return to trigger on Escape) mounted on the right edge of `TopNav.tsx`. Dropdown shows user name/email, Profile link, and Sign out button. Calls `AuthContext.signOut()` directly (existing flow: clears tokens, hits `/api/v1/auth/logout` best-effort, redirects to `/`).
+- **Mobile** — `pages/Profile.tsx` gains a new `<section data-testid="account-section">` ("Account" heading) with a "Sign out" button. Reached via MobileNav → Profile. Chose this over a sixth bottom-nav tab because MobileNav is already at five-tab capacity (Home/Learn/Prep/Profile/Admin-if-admin) and standard SaaS pattern (Linear/Notion/Vercel) buries sign-out on Profile.
+
+New analytics event `sign_out_clicked {source: 'topnav_avatar' \| 'profile_page'}` fires **before** `signOut()` runs — the `signOut` redirect to `/` would otherwise race the PostHog capture. Catalogued in `.agent/skills/analytics.md`. Profile gained `signOut` destructure from `useAuth()` + `LogOut` lucide icon import.
+
+Tests added:
+- `tests/UserMenu.test.tsx` (new file, +6) — null-user hides the component, avatar renders the first initial when `avatar_url` is null, open-dropdown shows Profile link + Sign out + user identity, Escape closes, outside-click closes, Sign-out click fires `signOut` + analytics with `source: 'topnav_avatar'`.
+- `tests/TopNav.test.tsx` (+1) — avatar trigger mounts alongside the existing nav tabs.
+- `tests/Profile.account.test.tsx` (new file, +2) — section renders with Sign-out button, click fires `signOut` + analytics with `source: 'profile_page'`.
+
+Kept `Profile.subscription.test.tsx` untouched (its inline `signOut: vi.fn()` mock was already correct).
+
+**Commit 3 — `38249b6` docs(backlog): backfill B-027 / B-028 close-lines with SHAs.** B-027 flipped 🔴 → ✅ with SHA `e792bb4` (the row had shipped as 🔴 inside that same commit because B-027's close SHA didn't yet exist); B-028 close-line got the real impl SHA `7da0943` (was "by this slice" pre-amend); both rows appended to the Closed table. Pattern matches prior backfill commits (`f70c118`, `60b81bd`, `24761fd`, `60717c1`, `9db3b12`, `78eedfd`, `14194c1`, `794dc28`). No source/test changes.
+
+**Tests: BE unchanged (372 passed, 1 skipped, 6 deselected integration), FE 217 → 227 (+10).** `tsc --noEmit` clean.
+
+**BACKLOG IDs touched:** B-027 🔴 created + 🔴 → ✅ (Dhamo-authorized), B-028 🔴 created + 🔴 → ✅ (Dhamo-authorized).
+
+**Judgment calls logged:**
+- **Stopped first, asked Dhamo to clarify the bug before coding.** The prompt said "check the backlog and fix it" but B-016 was already ✅ on disk — per CLAUDE.md R3 push-back rule, this was "genuine surprise: prompt contradicts on-disk reality." Reported three candidate interpretations (existing-user re-sign-in, truly-new-user regression, mid-session flash) and asked which was happening. Dhamo confirmed the intent — new users should see "Welcome" and existing returners "Welcome back" — which matches the flash interpretation. Saved a wasted regression rabbit hole.
+- **Three commits vs one.** Commit 3 exists because B-027's close SHA (`e792bb4`) couldn't be known before Commit 1 landed; backfill pattern is the project's established precedent (see grep of `docs\(backlog\): backfill`). Alternative — `git commit --amend` — explicitly rejected per CLAUDE.md C guidance ("Always create NEW commits rather than amending" — and see D-015 incident which teaches why amend is dangerous).
+- **Mobile sign-out placed on Profile, not a sixth MobileNav tab.** Bottom-bar is already at five-tab capacity and forcing a sixth would cramp layout. Reversible cheaply if telemetry shows mobile users can't find Sign Out.
+- **Sign-out confirm() dialog deliberately NOT added.** Matches Google/Linear/Notion — instant sign-out, re-OAuth to recover. If Dhamo wants a confirm step, file a B- follow-up. Out of scope for B-028.
+- **Did NOT refresh CODE-REALITY.md in this slice.** SESSION-STATE's stale-marking rule requires regen for route / model / top-level type / App.tsx / layout touches. TopNav + Profile qualify as layout — **marked stale in the header below pending regen before next plan-level prompt**.
+- **Did NOT touch pre-existing dirty files.** `../.DS_Store`, `Enhancements.txt`, `scripts/wipe_local_user_data.py` mode, `.env.example`, `app/core/config.py` all modified at session start. Per C2 + C3 excluded from every commit; 5 untracked paths (`.agent/skills/stripe-*`, `BACKLOG_PRIORITIZED.md`, `docs/audits/`, `docs/status/E2E-READINESS-2026-04-21.md`, `skills-lock.json`) also excluded.
+
+**Drift flags new this slice:** none. `CODE-REALITY.md` newly marked stale in the header (layout-touch trigger). The pre-existing `.env.example` + `app/core/config.py` working-tree modifications do not have a D-entry — they're a working-tree state not a source-disagreement; a D-entry would only be warranted if they encode a decision that conflicts with another doc.
 
 **2026-04-21 Path A + E-038 + CODE-REALITY doc-only series (3 commits, no source/test touch).** Three scoped doc commits landed after `39ea156` to catch the on-disk record up to the post-B-002 reality plus lock the Path A funnel decision.
 
