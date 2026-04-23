@@ -9,18 +9,18 @@
 
 | Field | Value |
 |-------|-------|
-| Commit sha (short) | `a13c217` |
-| Branch | `main` |
-| Generated | 2026-04-21 (post-B-002 + Path A decision refresh: Sections 1, 4, 8 updated for the B-002 impl series `825eb0e` (BE slice 1/2) + `ceba622` (FE slice 2/2) + `08f0873` (post-recovery B-002 close) — `CoverLetterResponse` shape changed from `{cover_letter, tone}` to the structured spec #52 LD-2 envelope (`date`, `recipient{name,company}`, `greeting`, `body_paragraphs [len==3]`, `signoff`, `signature`, `tone`, `full_text`), `gpt_service.generate_cover_letter` now assembles `full_text` server-side via `_join_cover_letter` (never LLM-sourced), BE `/cover_letter` route enforces AC-5 structured 502 error envelope on `cover_letter_validation_error`, FE consumers (6 files) migrated off ReactMarkdown onto structured fields + `full_text` for DOCX/PDF/clipboard, telemetry renamed `cover_letter_generated` → `cover_letter_succeeded` / `cover_letter_failed`, new spec #52 landed. Sections 2, 3, 5, 6, 7, 9-12 re-audited — no net change from B-002. Also reflects Path A canonical-flow decision logged in `docs/PHASE-5-STATUS.md` Canonical E2E Flow section + new BACKLOG row E-038 (🟦 deferred anon-scan funnel) — no code impact.) |
+| Commit sha (short) | `96e6096` |
+| Branch | `main` (12 commits ahead of `origin/main`, not pushed) |
+| Generated | 2026-04-23 (targeted regen — **Sections 1, 6, 7 only** for the 2026-04-23 B-027/B-028 slice: `e792bb4` HomeDashboard first-visit snapshot, `7da0943` new `UserMenu` + TopNav avatar dropdown + Profile Account section, `38249b6` BACKLOG backfill. **Known gap:** Sections 4 and 8 still reflect pre-2026-04-22-walkthrough state — the `94e1` tail (B-018 `MissionDateGate`, B-019 `DailyReviewResponse.completed_today`, B-021 `_extract_company_name` regex, B-022 `job_fit_explanation` REASONING tier + `_extract_company_name_regex` rename for B-024, B-023 `_extract_candidate_name` all-caps guard, B-024 LLM-primary `company_name_extraction` task, B-026 `applyTheme` color-scheme) has not been swept into Sections 4/8 yet and needs its own regen slice. Sections 2, 3, 5, 9, 10, 11, 12 last re-audited at `a13c217` and not re-checked in this pass — treat as potentially stale if editing them.) |
 | Backend model files | 18 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models`) |
 | Backend service files | 30 top-level + 3 under `services/llm/` = 33 |
 | Backend router files | 17 v1 + 6 legacy = 23 |
 | Backend endpoints (total) | 60 (55 unique decorators; `analyze` / `rewrite` / `cover_letter` / `interview` legacy routers are each mounted at both `/api/*` and `/api/v1/*`, so 5 paths appear twice — `rewrite.py` now has 2 decorators, not 1, after B-001's `/rewrite/section`) |
 | Alembic revisions | 20 |
 | Frontend pages | 19 |
-| Frontend components (`.tsx` under `src/components/`, excl. `__tests__`) | 60 |
+| Frontend components (`.tsx` under `src/components/`, excl. `__tests__`) | 61 (+1 `layout/UserMenu.tsx` from B-028; `mission/MissionDateGate.tsx` from B-018 should also be in this count — re-count on next full regen) |
 | Specs on disk (`docs/specs/**/*.md`) | 72 (spec #52 added by B-002 series — cover letter format enforcement) |
-| Skill files (`.agent/skills/*.md`) | 20 |
+| Skill files (`.agent/skills/*.md`) | 20 (`analytics.md` updated 2026-04-23 with `sign_out_clicked` event — no new skill file) |
 
 ---
 
@@ -545,6 +545,10 @@ Configured in `src/App.tsx`. Top-level wrappers: `<AppShell>` (always), `<Protec
 
 Nav chrome rendered by `AppShell` (`TopNav` desktop, `MobileNav` mobile). Chromeless paths: `/`, `/login`, `/pricing`, `/onboarding/persona`, `/first-action`.
 
+**TopNav composition (desktop, `md:block`):** left = wordmark `SKILL/FORGE` → `/home`; middle = nav links (`Home` / `Learn` / `Prep` / `Profile` / `Admin` if admin); right = `<UserMenu />` (new component `src/components/layout/UserMenu.tsx`, B-028 2026-04-23) — avatar circle + keyboard-accessible dropdown (aria-haspopup/expanded, role=menu, Escape + click-outside close, focus return on Escape) exposing Profile link + `Sign out` button. Sign-out calls `AuthContext.signOut()` and fires `sign_out_clicked {source: 'topnav_avatar'}` before the redirect-to-`/`. Renders nothing when `user === null`.
+
+**MobileNav composition (`md:hidden`):** five-tab bottom bar (Home/Learn/Prep/Profile/Admin) — **no sign-out surface here**. Mobile users reach sign-out via MobileNav → Profile → Account section (B-028) because the bar is at capacity.
+
 No component is rendered at two distinct routes (redirects don't count). `AdminPanel` has no route-level `require_admin`-equivalent guard — relies on in-component check.
 
 **Wall-aware components (spec #50, P5-S22-WALL-b):** `src/components/study/QuizPanel.tsx` is the single submit chokepoint for `POST /api/v1/study/review` — consumed by `DailyReview`, `CardViewer`, and `MissionMode`. On a 402 response whose `detail.trigger === 'daily_review'`, it parses the AC-2 payload, opens `PaywallModal` with `trigger="daily_review"`, and fires the `daily_card_wall_hit` PostHog event. No FSRS state is mutated client-side on a walled submit (mirrors backend).
@@ -561,7 +565,7 @@ No component is rendered at two distinct routes (redirects don't count). `AdminP
 | CategoryDetail.tsx | CategoryDetail | — | fetchCardsByCategory | category_detail_viewed |
 | DailyReview.tsx | DailyReview | useGamification | fetchDailyQueue | daily_review_started, daily_review_completed |
 | FirstAction.tsx | FirstAction | useAuth | — | first_action_viewed, first_action_primary_clicked, first_action_secondary_clicked |
-| HomeDashboard.tsx | HomeDashboard | useAuth | — | home_dashboard_viewed |
+| HomeDashboard.tsx | HomeDashboard | useAuth | markHomeFirstVisit *(B-016)* | home_dashboard_viewed. Greeting fork: `isFirstVisit` is **snapshotted on mount** via `useState(() => user.home_first_visit_seen_at == null)` — B-027 fix (`e792bb4`, 2026-04-23) so the post-stamp `updateUser` call does not flip `"Welcome, ${firstName}."` → `"Welcome back, ${firstName}."` within a single mount. Stamp effect still fires (persists server-side). |
 | Interview.tsx | Interview | useAnalysisContext, useUsage, useInterview | generateInterviewPrep | interview_questions_regenerated, interview_questions_cached_served |
 | LandingPage.tsx | LandingPage | useAuth, usePricing | — | landing_page_viewed, cta_clicked |
 | LoginPage.tsx | LoginPage | useAuth | signIn | — |
@@ -569,7 +573,7 @@ No component is rendered at two distinct routes (redirects don't count). `AdminP
 | Onboarding.tsx | Onboarding | useAnalysisContext | fetchOnboardingRecommendations | onboarding_started, onboarding_completed, gap_card_clicked |
 | PersonaPicker.tsx | PersonaPicker | useAuth | updatePersona | persona_picker_shown, persona_selected |
 | Pricing.tsx | Pricing | useUsage, usePricing, useSearchParams | createCheckoutSession | checkout_started, payment_completed |
-| Profile.tsx | Profile | useAuth, useUsage, useGamification | generateExperience, createBillingPortalSession, api.get | profile_viewed, subscription_portal_opened, experience_generated |
+| Profile.tsx | Profile | useAuth *(destructures `signOut`)*, useUsage, useGamification | generateExperience, createBillingPortalSession, api.get, `signOut` *(via `useAuth`; B-028)* | profile_viewed, subscription_portal_opened, experience_generated, `sign_out_clicked {source: 'profile_page'}` *(B-028, 2026-04-23 — fires before `signOut()` because `signOut` redirects to `/`)*. New `<section data-testid="account-section">` near bottom of layout exposes a "Sign out" button for mobile users reaching via MobileNav → Profile. |
 | Results.tsx | Results | useAnalysisContext, useUsage | fetchOnboardingRecommendations | job_fit_explanation_viewed, results_tooltip_opened *(via `PanelSection` child — 9-section enum)* |
 | Rewrite.tsx | Rewrite | useAnalysisContext, useRewrite, useUsage | rewriteSection *(via `useRewrite.regenerateSection`)* | rewrite_requested, rewrite_section_regenerated *(fired from `useRewrite.ts`); BE also emits `rewrite_succeeded` / `rewrite_failed` with `strategy=chunked\|fallback_full`* |
 | StudyDashboard.tsx | StudyDashboard | useStudyDashboard, useAuth, useUsage, useGamification | — | study_dashboard_viewed, locked_tile_clicked, category_tile_clicked |

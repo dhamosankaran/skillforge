@@ -12,9 +12,9 @@
 |-------|-------|
 | **HEAD commit** | `38249b6` (docs(backlog): backfill B-027 / B-028 close-lines with SHAs — tail of the 2026-04-23 Dhamo bug-report sweep: B-027 greeting flash + B-028 sign-out affordance; B-003 regression coverage `0719fa1` landed the same day; previous sweep anchor was `794dc28` at the 2026-04-22 E2E walkthrough tail) |
 | **Branch** | `main` (NOT yet pushed to `origin/main` as of 2026-04-23 — 12 commits ahead since `794dc28`) |
-| **CODE-REALITY.md sha (repo)** | Stale ❌ — last regen at `a13c217` (`918cd0a`); HEAD has since moved through B-022/B-021/B-019/B-018/B-023/B-024/B-026/B-003 plus the 2026-04-23 B-027/B-028 layout touches (`UserMenu.tsx` new component, `TopNav.tsx` edit, `Profile.tsx` edit, `HomeDashboard.tsx` edit). Layout-touch trigger per stale-marking rule. Regenerate before next plan-level prompt. |
-| **CODE-REALITY.md in chat Project** | Stale ❌ — re-upload after repo-copy regen |
-| **CODE-REALITY stale (either copy)?** | Both stale — repo regen needed first, then re-upload to chat |
+| **CODE-REALITY.md sha (repo)** | Partial ⚠️ — Sections 1, 6, 7 regenerated at HEAD `96e6096` in this slice (B-027/B-028 layout touches: `UserMenu.tsx` new, TopNav UserMenu mount, HomeDashboard first-visit snapshot, Profile Account section + `signOut` destructure). **Sections 4 and 8 still reflect pre-2026-04-22-walkthrough state** and need a follow-up regen for the B-018/19/21/22/23/24/26 tail (`MissionDateGate.tsx` new, `DailyReviewResponse.completed_today`, `_extract_company_name` regex + LLM-primary task, `_extract_candidate_name` guard, `applyTheme` color-scheme). Sections 2, 3, 5, 9-12 last re-audited at `a13c217` and not re-checked this pass. |
+| **CODE-REALITY.md in chat Project** | Stale ❌ — re-upload after the Section 4/8 follow-up regen lands |
+| **CODE-REALITY stale (either copy)?** | Repo copy partial (Sections 1/6/7 fresh, 4/8 stale); chat copy stale until re-upload |
 | **Last hand-edit** | 2026-04-23 — B-027 greeting flash fix + B-028 sign-out affordance (UserMenu desktop dropdown + Profile Account section). FE 217 → 227 (+10). Two P1 BACKLOG rows opened and closed same slice with Dhamo authorization. |
 
 > **Stale-marking rule**: Mark CODE-REALITY stale at the end of any slice that touched routes, models, top-level types, `App.tsx`, or layout components. Regenerate the repo copy AND re-upload to the chat Project before the next plan-level prompt.
