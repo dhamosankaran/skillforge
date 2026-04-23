@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|-------|
-| **HEAD commit** | *(pending commit)* — P5-S-B032 Optimize-button paywall gate (closes B-032, opens B-033). SHA will be backfilled post-commit per the established pattern. Prior HEAD was `1499ad2` (spec #56 draft). |
+| **HEAD commit** | `e93e950` — P5-S-B032 Optimize-button paywall gate (closes B-032, opens B-033). Prior HEAD was `1499ad2` (spec #56 draft). |
 | **Branch** | `main` (NOT yet pushed to `origin/main` as of 2026-04-23 — 23 commits ahead since `794dc28`) |
 | **CODE-REALITY.md sha (repo)** | Partial ⚠️ — regen blob at top of the file was authored for the (still-uncommitted) E-018b content in the working tree; add E-040's touches on next regen: new `AdminGate` FE component (`src/components/auth/AdminGate.tsx`), new `reconcile_admin_role` service helper in `app/services/user_service.py`, new `Settings.admin_emails` + `admin_emails_set`, new `ADMIN_EMAILS` env var in AGENTS.md table, `/admin` + `/admin/analytics` routes now wrapped in `<AdminGate>`, new `admin_role_reconciled` PostHog event. |
 | **CODE-REALITY.md in chat Project** | Stale ❌ — re-upload after a clean regen lands (E-018b commits + E-040 touches together) |
