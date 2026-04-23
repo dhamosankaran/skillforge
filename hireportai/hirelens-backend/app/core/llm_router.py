@@ -34,6 +34,7 @@ REASONING_TASKS = frozenset([
     "resume_rewrite_section",
     "cover_letter",
     "interview_questions",
+    "job_fit_explanation",
 ])
 
 

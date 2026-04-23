@@ -84,6 +84,15 @@ REWRITE_INPUT_CEILING = 40000  # unchanged from pre-P5-S9 cap
 COVER_LETTER_MAX_TOKENS = 2500
 COVER_LETTER_THINKING_BUDGET = 2000
 
+# Job-fit explanation budgets (B-022). Promoted from fast → reasoning tier so
+# Analysis Results reasoning quality matches resume_rewrite / cover_letter.
+# Gemini 2.5 Pro spends tokens on hidden thinking; without a cap, the output
+# pool starves and we hit the B-014 empty-text failure mode. 800 thinking
+# mirrors SECTION_THINKING_BUDGET; 3500 output gives a ≥2× margin after the
+# cap for the explanation (150-200 words) + 3 strengths + 3 gaps + 3 plan steps.
+JOB_FIT_MAX_TOKENS = 3500
+JOB_FIT_THINKING_BUDGET = 800
+
 
 class _CoverLetterCore(BaseModel):
     """Internal parse target for the LLM's cover-letter JSON response.
@@ -165,7 +174,14 @@ Respond with a JSON object containing:
 Be specific, direct, and constructive. Focus on actionable insights."""
 
     try:
-        response_text = generate_for_task(task="ats_keyword_extraction", prompt=prompt, json_mode=True, max_tokens=800, temperature=0.6)
+        response_text = generate_for_task(
+            task="job_fit_explanation",
+            prompt=prompt,
+            json_mode=True,
+            max_tokens=JOB_FIT_MAX_TOKENS,
+            temperature=0.6,
+            thinking_budget=JOB_FIT_THINKING_BUDGET,
+        )
         data = json.loads(response_text)
         return {
             "explanation": data.get("explanation", ""),

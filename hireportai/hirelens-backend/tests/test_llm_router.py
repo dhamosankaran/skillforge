@@ -124,3 +124,44 @@ class TestGenerateForTask:
 
         with pytest.raises(ValueError, match="Unsupported LLM provider"):
             generate_for_task(task="card_draft", prompt="test")
+
+
+# ── B-022 — job_fit_explanation promoted to reasoning tier ────────────────
+
+class TestJobFitExplanationTier:
+    """B-022: Analysis Results promoted from fast → reasoning tier.
+
+    Before B-022 the call used `task="ats_keyword_extraction"` (fast).
+    After, the call uses `task="job_fit_explanation"` and gets Pro.
+    Guard the classification and that the shared fast task wasn't moved.
+    """
+
+    def test_job_fit_explanation_is_reasoning(self):
+        assert "job_fit_explanation" in REASONING_TASKS
+        assert _get_tier("job_fit_explanation") == "reasoning"
+
+    def test_ats_keyword_extraction_remains_fast(self):
+        # Shared task — still used for pure JD keyword parsing. Must NOT
+        # drift to reasoning tier by accident.
+        assert "ats_keyword_extraction" in FAST_TASKS
+        assert _get_tier("ats_keyword_extraction") == "fast"
+
+    @patch("app.core.llm_router.get_settings")
+    @patch("app.core.llm_router._PROVIDER_DISPATCH")
+    def test_job_fit_explanation_routes_to_reasoning_model(self, mock_dispatch, mock_settings):
+        mock_settings.return_value = _mock_settings()
+        mock_fn = MagicMock(return_value='{"explanation": "ok"}')
+        mock_dispatch.get.return_value = mock_fn
+
+        generate_for_task(
+            task="job_fit_explanation",
+            prompt="test",
+            json_mode=True,
+            max_tokens=3500,
+            thinking_budget=800,
+        )
+
+        assert mock_fn.call_args.kwargs["model"] == "gemini-2.5-pro"
+        # thinking_budget must plumb through — missing it on Gemini Pro
+        # reproduces the B-014 empty-output failure mode.
+        assert mock_fn.call_args.kwargs["thinking_budget"] == 800

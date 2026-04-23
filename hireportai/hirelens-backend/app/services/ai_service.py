@@ -34,58 +34,6 @@ def _extract_candidate_name(resume_text: str) -> str:
     return "The Applicant"
 
 
-def generate_job_fit_explanation(
-    resume_data: Dict[str, Any],
-    jd_requirements: Dict[str, Any],
-    ats_score: int,
-    matched_keywords: List[str],
-    missing_keywords: List[str],
-) -> Dict[str, Any]:
-    """Generate a natural language job fit explanation."""
-    prompt = f"""You are an expert career coach and ATS specialist. Analyze how well a candidate's resume matches a job description and provide a clear, honest assessment.
-
-Resume Skills: {', '.join(resume_data.get('skills', [])[:20])}
-Resume Sections: {list(resume_data.get('sections', {}).keys())}
-JD Required Skills: {', '.join(jd_requirements.get('required_skills', [])[:20])}
-JD Title: {jd_requirements.get('job_title', 'N/A')}
-ATS Score: {ats_score}/100
-Matched Keywords: {', '.join(matched_keywords[:15])}
-Missing Keywords: {', '.join(missing_keywords[:15])}
-
-Respond with a JSON object containing:
-1. "explanation": A 2-3 sentence honest assessment of fit (150-200 words)
-2. "top_strengths": Array of exactly 3 specific strengths as short strings
-3. "top_gaps": Array of exactly 3 specific gaps/improvements as short strings
-4. "improvement_plan": A 3-step 30-day action plan as array of strings
-
-Be specific, direct, and constructive. Focus on actionable insights."""
-
-    try:
-        response_text = generate_for_task(task="ats_keyword_extraction", prompt=prompt, json_mode=True, max_tokens=800, temperature=0.6)
-        data = json.loads(response_text)
-        return {
-            "explanation": data.get("explanation", ""),
-            "top_strengths": data.get("top_strengths", [])[:3],
-            "top_gaps": data.get("top_gaps", [])[:3],
-            "improvement_plan": data.get("improvement_plan", []),
-        }
-    except Exception:
-        return {
-            "explanation": (
-                f"Your resume shows {ats_score}% ATS compatibility with this role. "
-                f"You matched {len(matched_keywords)} key terms but are missing {len(missing_keywords)} "
-                "important keywords. Focus on incorporating the missing skills into your experience descriptions."
-            ),
-            "top_strengths": matched_keywords[:3] if matched_keywords else ["Technical background", "Relevant experience", "Education"],
-            "top_gaps": missing_keywords[:3] if missing_keywords else ["Keyword optimization needed"],
-            "improvement_plan": [
-                "Add missing keywords naturally into your experience bullets",
-                "Quantify your achievements with specific metrics",
-                "Ensure your skills section covers all required technologies",
-            ],
-        }
-
-
 def generate_resume_rewrite(
     resume_data: Dict[str, Any],
     jd_requirements: Dict[str, Any],

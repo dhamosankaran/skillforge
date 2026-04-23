@@ -30,8 +30,13 @@ Used for high-volume, deterministic extraction / drafting:
 ### REASONING_TASKS — stronger reasoning model
 Used for longer, creative, or multi-step outputs:
 - `resume_rewrite` — full resume rewrite against a JD
+- `resume_rewrite_section` — per-section rewrite (spec #51)
 - `cover_letter` — tailored cover letter
 - `interview_questions` — interview prep question set
+- `job_fit_explanation` — Analysis Results fit/strengths/gaps/plan
+  (promoted from fast in B-022 — reasoning quality matches the rest of
+  the Analysis Results surface; requires `thinking_budget` to avoid
+  B-014-class empty-output failures on Gemini 2.5 Pro)
 
 Unknown task names default to the **fast** tier.
 
@@ -75,9 +80,11 @@ handlers; swap by setting the env var, no code change needed.
 |------|--------------------------|
 | `ats_keyword_extraction` | `ai_service.py`, `gpt_service.py` |
 | `resume_rewrite` | `ai_service.py`, `gpt_service.py` |
+| `resume_rewrite_section` | `gpt_service.py` |
 | `cover_letter` | `ai_service.py`, `gpt_service.py` |
 | `interview_questions` | `ai_service.py`, `gpt_service.py` |
 | `rewrite_bullets` | `ai_service.py`, `gpt_service.py` |
+| `job_fit_explanation` | `gpt_service.py` (Analysis Results) |
 | `card_draft` | `ai_card_service.py` |
 | `gap_mapping` | `gap_mapping_service.py` |
 | `experience_narrative` | `experience_service.py` |
