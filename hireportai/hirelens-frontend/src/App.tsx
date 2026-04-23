@@ -4,6 +4,7 @@ import { AnimatePresence } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
 import { PersonaGate } from '@/components/PersonaGate'
+import { AdminGate } from '@/components/auth/AdminGate'
 import { useAuth } from '@/context/AuthContext'
 import PersonaPicker from '@/pages/PersonaPicker'
 import FirstAction from '@/pages/FirstAction'
@@ -26,6 +27,7 @@ import HomeDashboard from '@/pages/HomeDashboard'
 const Profile = lazy(() => import('@/pages/Profile'))
 const MissionMode = lazy(() => import('@/pages/MissionMode'))
 const AdminPanel = lazy(() => import('@/pages/AdminPanel'))
+const AdminAnalytics = lazy(() => import('@/pages/AdminAnalytics'))
 
 function LazyFallback() {
   return (
@@ -96,7 +98,8 @@ export default function App() {
 
           {/* Profile + admin — unchanged */}
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          <Route path="/admin"   element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
+          <Route path="/admin"           element={<ProtectedRoute><AdminGate><AdminPanel /></AdminGate></ProtectedRoute>} />
+          <Route path="/admin/analytics" element={<ProtectedRoute><AdminGate><AdminAnalytics /></AdminGate></ProtectedRoute>} />
 
           {/* Transitional redirects — drop in Phase 6 once the old paths stop receiving hits. */}
           <Route path="/analyze"            element={<Navigate to="/prep/analyze" replace />} />

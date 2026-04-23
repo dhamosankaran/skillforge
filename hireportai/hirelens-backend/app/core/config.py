@@ -1,6 +1,6 @@
 """Application configuration using pydantic-settings."""
 from functools import lru_cache
-from typing import List
+from typing import FrozenSet, List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -10,7 +10,7 @@ class Settings(BaseSettings):
 
     # --- Existing settings ---
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-2.5-flash"
     allowed_origins: str = "http://localhost:5173,http://localhost:5199"
     max_upload_size_mb: int = 5
 
@@ -51,7 +51,7 @@ class Settings(BaseSettings):
 
     # --- LLM Router (multi-model) ---
     llm_fast_provider: str = "gemini"
-    llm_fast_model: str = "gemini-2.0-flash"
+    llm_fast_model: str = "gemini-2.5-flash"
     llm_reasoning_provider: str = "gemini"
     llm_reasoning_model: str = "gemini-2.5-pro"
     openai_api_key: str = ""
@@ -62,6 +62,9 @@ class Settings(BaseSettings):
     # --- Email (Resend) ---
     resend_api_key: str = ""
     resend_from_address: str = "reminders@skillforge.app"
+
+    # --- Admin access (spec #54 / E-040) ---
+    admin_emails: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -94,6 +97,20 @@ class Settings(BaseSettings):
     def max_upload_size_bytes(self) -> int:
         """Convert MB limit to bytes."""
         return self.max_upload_size_mb * 1024 * 1024
+
+    @property
+    def admin_emails_set(self) -> FrozenSet[str]:
+        """Parse ADMIN_EMAILS into a lowercase, whitespace-stripped frozenset.
+
+        Empty / missing env var produces an empty frozenset, which fails
+        closed in the login-time role-reconciliation path (no user is
+        admin). Spec #54 / E-040.
+        """
+        return frozenset(
+            e.strip().lower()
+            for e in self.admin_emails.split(",")
+            if e.strip()
+        )
 
 
 @lru_cache()

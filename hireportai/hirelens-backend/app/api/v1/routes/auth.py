@@ -1,5 +1,7 @@
 """Authentication endpoints — Google OAuth + JWT."""
 import hashlib
+import logging
+import uuid
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -8,6 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.analytics import track as analytics_track
+from app.core.config import get_settings
 from app.core.deps import get_current_user
 from app.core.rate_limit import limiter
 from app.core.security import (
@@ -17,9 +20,12 @@ from app.core.security import (
     verify_google_token,
 )
 from app.db.session import get_db
+from app.models.admin_audit_log import AdminAuditLog
 from app.models.registration_log import RegistrationLog
 from app.models.user import User
-from app.services.user_service import get_or_create_user
+from app.services.user_service import get_or_create_user, reconcile_admin_role
+
+logger = logging.getLogger(__name__)
 
 _MAX_REGISTRATIONS_PER_IP = 2
 _REGISTRATION_WINDOW_DAYS = 30
@@ -153,6 +159,33 @@ async def google_auth(request: Request, body: GoogleAuthRequest, db: AsyncSessio
             google_email=google_info["email"],
         ))
 
+    # Spec #54 / E-040: reconcile admin role against ADMIN_EMAILS whitelist
+    # on every login. Promote / demote / no-op. Audit row on any change;
+    # PostHog event on all three branches (unchanged fires as a heartbeat).
+    settings = get_settings()
+    action, prior_role, new_role = reconcile_admin_role(
+        user, settings.admin_emails_set
+    )
+    if action != "unchanged":
+        await _log_role_reconciliation(
+            db=db,
+            admin_id=user.id,
+            action=action,
+            prior_role=prior_role,
+            new_role=new_role,
+            ip_address=ip,
+        )
+    analytics_track(
+        user_id=user.id,
+        event="admin_role_reconciled",
+        properties={
+            "email": user.email,
+            "prior_role": prior_role,
+            "new_role": new_role,
+            "action": action,
+        },
+    )
+
     token_data = {"sub": user.id, "email": user.email}
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
@@ -162,6 +195,40 @@ async def google_auth(request: Request, body: GoogleAuthRequest, db: AsyncSessio
         refresh_token=refresh_token,
         user=_user_dict(user),
     )
+
+
+async def _log_role_reconciliation(
+    db: AsyncSession,
+    admin_id: str,
+    action: str,
+    prior_role: str,
+    new_role: str,
+    ip_address: str,
+) -> None:
+    """Write an admin_audit_log row for a promotion or demotion.
+
+    Dedicated helper (not a reuse of ``deps._write_admin_audit_log``)
+    because login happens without the request-scoped audit dependency
+    in the chain. Best-effort flush on the active session — never
+    raises, matches the E-018a discipline.
+    """
+    try:
+        entry = AdminAuditLog(
+            id=str(uuid.uuid4()),
+            admin_id=admin_id,
+            route="/api/v1/auth/google",
+            method="POST",
+            query_params={
+                "action": action,
+                "prior_role": prior_role,
+                "new_role": new_role,
+            },
+            ip_address=ip_address,
+        )
+        db.add(entry)
+        await db.flush()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("admin role-reconciliation audit write failed: %s", exc)
 
 
 @router.post("/auth/refresh", response_model=RefreshResponse)

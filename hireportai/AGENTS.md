@@ -172,6 +172,7 @@ variable was introduced.
 | `RESEND_API_KEY` | Transactional email provider | — | 2 |
 | `RESEND_FROM_ADDRESS` | From address for reminder emails | `reminders@skillforge.app` | 2 |
 | `SENTRY_DSN` | Backend Sentry DSN | — | 4 |
+| `ADMIN_EMAILS` | Comma-separated Google emails granted admin role on login (case-insensitive, whitespace-trimmed, empty = no admins, fail-closed) | `""` | 5 |
 
 ### Frontend (`VITE_*`)
 
