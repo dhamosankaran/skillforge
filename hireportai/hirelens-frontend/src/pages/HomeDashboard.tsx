@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth, type Persona } from '@/context/AuthContext'
 import { markHomeFirstVisit } from '@/services/api'
 import { capture } from '@/utils/posthog'
@@ -70,11 +70,14 @@ export default function HomeDashboard() {
     capture('home_dashboard_viewed', { persona: user.persona })
   }, [user?.persona])
 
-  // B-016. First /home visit: stamp `home_first_visit_seen_at` server-side.
-  // The greeting fork below keys off the pre-stamp value of the field so the
-  // first render shows "Welcome" even as the stamp is in flight; the stamp
-  // flips it to "Welcome back" for every visit after this one.
-  const isFirstVisit = user != null && user.home_first_visit_seen_at == null
+  // B-016 / B-027. Snapshot first-visit state on mount: the stamp effect
+  // below persists the timestamp server-side, but we hold the greeting fork
+  // frozen for the lifetime of this mount so the copy does not flip from
+  // "Welcome" → "Welcome back" mid-session when updateUser applies the
+  // stamped user.
+  const [isFirstVisit] = useState<boolean>(
+    () => user != null && user.home_first_visit_seen_at == null,
+  )
   useEffect(() => {
     if (!user?.persona) return
     if (!isFirstVisit) return

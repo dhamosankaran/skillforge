@@ -186,6 +186,37 @@ describe('HomeDashboard', () => {
     expect(markHomeFirstVisit).not.toHaveBeenCalled()
   })
 
+  // B-027: greeting must not flip from "Welcome" → "Welcome back" inside a
+  // single mount once the post-stamp updateUser applies the stamped user.
+  it('first-visit: greeting stays "Welcome, <name>." after the stamp flips server-side (no mid-session flash)', async () => {
+    const stamped = userFixture({
+      name: 'Dhamo Sankaran',
+      home_first_visit_seen_at: '2026-04-23T10:00:00Z',
+    })
+    markHomeFirstVisit.mockResolvedValueOnce(stamped)
+    mockUser = userFixture({
+      name: 'Dhamo Sankaran',
+      home_first_visit_seen_at: null,
+    })
+    const { rerender } = renderHome()
+
+    await waitFor(() => expect(markHomeFirstVisit).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(updateUser).toHaveBeenCalledWith(stamped))
+
+    // Simulate the updateUser effect in AuthContext by swapping mockUser to
+    // the stamped value and re-rendering the same tree. isFirstVisit was
+    // snapshotted on mount, so the greeting must stay as-is.
+    mockUser = stamped
+    rerender(
+      <MemoryRouter initialEntries={['/home']}>
+        <HomeDashboard />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+      'Welcome, Dhamo.',
+    )
+  })
+
   it('first-visit stamp failure is silent (no toast, no crash)', async () => {
     markHomeFirstVisit.mockRejectedValueOnce(new Error('network'))
     mockUser = userFixture({
