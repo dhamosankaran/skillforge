@@ -9,9 +9,9 @@
 
 | Field | Value |
 |-------|-------|
-| Commit sha (short) | `96e6096` |
-| Branch | `main` (12 commits ahead of `origin/main`, not pushed) |
-| Generated | 2026-04-23 (targeted regen — **Sections 1, 6, 7 only** for the 2026-04-23 B-027/B-028 slice: `e792bb4` HomeDashboard first-visit snapshot, `7da0943` new `UserMenu` + TopNav avatar dropdown + Profile Account section, `38249b6` BACKLOG backfill. **Known gap:** Sections 4 and 8 still reflect pre-2026-04-22-walkthrough state — the `94e1` tail (B-018 `MissionDateGate`, B-019 `DailyReviewResponse.completed_today`, B-021 `_extract_company_name` regex, B-022 `job_fit_explanation` REASONING tier + `_extract_company_name_regex` rename for B-024, B-023 `_extract_candidate_name` all-caps guard, B-024 LLM-primary `company_name_extraction` task, B-026 `applyTheme` color-scheme) has not been swept into Sections 4/8 yet and needs its own regen slice. Sections 2, 3, 5, 9, 10, 11, 12 last re-audited at `a13c217` and not re-checked in this pass — treat as potentially stale if editing them.) |
+| Commit sha (short) | `806c199` (HEAD pre-E-018b-slice-2 commit) |
+| Branch | `main` (commits ahead of `origin/main`; not pushed) |
+| Generated | 2026-04-23 (targeted regen — **Sections 1, 2, 4, 5 touched** for the 2026-04-23 E-018b slice 2/4 ahead of commit: new model `AdminAuditLog` (from earlier Slice-1 `538fe233b639`; not yet indexed here), new service `admin_analytics_service.py`, new router `admin_analytics.py` mounted at `/api/v1/admin/analytics/*`, new frontend page `AdminAnalytics.tsx` at `/admin/analytics` wrapped in `AdminGate`, `TIER_PRICE_USD_PER_1M_TOKENS` added to `llm_router.py`. **Known gaps carried from prior regens:** Sections 4 and 8 still reflect pre-2026-04-22-walkthrough state — the `94e1` tail (B-018 `MissionDateGate`, B-019 `DailyReviewResponse.completed_today`, B-021 `_extract_company_name` regex, B-022 `job_fit_explanation` REASONING tier + `_extract_company_name_regex` rename for B-024, B-023 `_extract_candidate_name` all-caps guard, B-024 LLM-primary `company_name_extraction` task, B-026 `applyTheme` color-scheme) has not been swept into Sections 4/8 yet and still needs its own regen slice. Sections 3, 6, 7, 9, 10, 11, 12 last re-audited at `a13c217` / `96e6096` and not re-checked in this pass — treat as potentially stale if editing them.) |
 | Backend model files | 18 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models`) |
 | Backend service files | 30 top-level + 3 under `services/llm/` = 33 |
 | Backend router files | 17 v1 + 6 legacy = 23 |
@@ -345,7 +345,8 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | `/api/rewrite` | `app/api/routes/rewrite.py` | 2 | none *(both `/rewrite` and `/rewrite/section`; latter added in B-001 impl `167b70f`)* |
 | `/api/v1/onboarding` | `app/api/routes/onboarding.py` *(legacy folder, v1 mount)* | 2 | `get_current_user` |
 | `/api/v1/payments` | `app/api/routes/payments.py` *(legacy folder, v1 mount)* | 6 | `get_current_user` (4), none (2) |
-| `/api/v1/admin` | `app/api/v1/routes/admin.py` | 8 | `require_admin` (8) |
+| `/api/v1/admin` | `app/api/v1/routes/admin.py` | 9 | `audit_admin_request` (router-level, chains `require_admin`) |
+| `/api/v1/admin/analytics` | `app/api/v1/routes/admin_analytics.py` | 2 | `audit_admin_request` (router-level, chains `require_admin`) — spec #38 E-018b slice 2/4 |
 | `/api/v1/analyze` | `app/api/v1/routes/analyze.py` | 1 | `get_current_user_optional` |
 | `/api/v1/auth` | `app/api/v1/routes/auth.py` | 4 | `get_current_user` (1), none (3) |
 | `/api/v1/cards` | `app/api/v1/routes/cards.py` | 4 | `get_current_user` (4) |
@@ -382,6 +383,9 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | GET | /api/v1/admin/feedback/summary | feedback_summary | require_admin | v1 Feedback |
 | GET | /api/v1/admin/ping | admin_ping | require_admin | v1 Admin |
 | GET | /api/v1/admin/registration-logs | list_registration_logs | require_admin | v1 Admin |
+| GET | /api/v1/admin/audit | list_admin_audit_log | audit_admin_request → require_admin | v1 Admin *(spec #38 E-018a)* |
+| GET | /api/v1/admin/analytics/metrics | metrics_endpoint | audit_admin_request → require_admin | v1 Admin Analytics *(spec #38 E-018b slice 2/4)* |
+| GET | /api/v1/admin/analytics/performance | performance_endpoint | audit_admin_request → require_admin | v1 Admin Analytics *(spec #38 E-018b slice 2/4)* |
 | POST | /api/v1/analyze | analyze_resume | get_current_user_optional | v1 Analysis |
 | POST | /api/v1/auth/google | google_auth | none | v1 Auth |
 | POST | /api/v1/auth/logout | logout | get_current_user | v1 Auth |
@@ -440,6 +444,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | ai_service.py | AI service — LLM-powered resume optimization features. Duplicates `gpt_service.py` (see `[S47-defer]`). | generate_job_fit_explanation, generate_resume_rewrite, generate_cover_letter, generate_interview_questions, rewrite_bullets_gpt | LLM-router |
 | bullet_analyzer.py | Bullet point analyzer and strength scorer. | score_bullet, identify_issues, rewrite_bullet_locally, analyze_bullets | — |
 | card_admin_service.py | Admin card CRUD — create, update, delete, list, bulk import. | create_card, update_card, delete_card, list_cards, bulk_import_csv | — |
+| admin_analytics_service.py | Admin analytics aggregations (spec #38 E-018b slice 2/4). Six-OKR metrics with 7d/30d deltas; performance snapshot with LLM spend estimate (Postgres `usage_logs.tokens_consumed` × `llm_router.TIER_PRICE_USD_PER_1M_TOKENS`) and Stripe webhook success rate. `api_latency` + `error_rate_24h_pct` are emitted as deferred placeholders (empty/null + `available: false` markers) pending E-018b-follow / E-018b-follow-errors. Redis-cached 5 min with graceful degradation. | get_metrics_summary, get_performance_summary, CACHE_TTL_SECONDS | Redis |
 | card_service.py | Card and category read service with plan-gated access. | list_categories, get_cards_by_category, get_card, search_cards | LLM-direct |
 | email_service.py | Thin wrapper around the Resend API for transactional email with retry logic. | send_email, EmailSendError | Resend |
 | experience_service.py | AI experience generator — turns study history into resume-ready narratives. | generate_experience | LLM-router |

@@ -22,6 +22,7 @@ from app.api.routes import (
 )
 from app.api.v1.routes import (
     admin as v1_admin,
+    admin_analytics as v1_admin_analytics,
     analyze as v1_analyze,
     auth as v1_auth,
     cards as v1_cards,
@@ -126,6 +127,9 @@ def create_app() -> FastAPI:
     app.include_router(v1_auth.router, prefix="/api/v1", tags=["v1 Auth"])
     app.include_router(v1_users.router, prefix="/api/v1", tags=["v1 Users"])
     app.include_router(v1_admin.router, prefix="/api/v1", tags=["v1 Admin"])
+    app.include_router(
+        v1_admin_analytics.router, prefix="/api/v1", tags=["v1 Admin Analytics"]
+    )
     app.include_router(v1_analyze.router, prefix="/api/v1", tags=["v1 Analysis"])
     app.include_router(v1_rewrite.router, prefix="/api/v1", tags=["v1 Rewrite"])
     app.include_router(v1_cover_letter.router, prefix="/api/v1", tags=["v1 Cover Letter"])

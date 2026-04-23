@@ -642,4 +642,66 @@ export async function importCardsCSV(file: File, partial: boolean = false): Prom
   return response.data
 }
 
+// ─── Admin Analytics (spec #38 E-018b slice 2/4) ────────────────────────────
+
+export interface AdminAnalyticsMetricValue {
+  current: number
+  d7_ago: number
+  d30_ago: number
+  delta_7d_pct: number
+  delta_30d_pct: number
+}
+
+export interface AdminAnalyticsMetricsResponse {
+  registered_users: AdminAnalyticsMetricValue
+  paying_pro_users: AdminAnalyticsMetricValue
+  dau_mau_ratio: AdminAnalyticsMetricValue
+  avg_streak_length: AdminAnalyticsMetricValue
+  ats_to_pro_conversion: AdminAnalyticsMetricValue
+  monthly_churn: AdminAnalyticsMetricValue
+  generated_at: string
+  from_cache: boolean
+}
+
+export interface AdminAnalyticsRouteLatency {
+  route: string
+  p50_ms: number
+  p95_ms: number
+  p99_ms: number
+  request_count: number
+}
+
+export interface AdminAnalyticsPerformanceResponse {
+  llm_spend_estimate_usd: number
+  llm_spend_breakdown: Record<string, number>
+  api_latency: AdminAnalyticsRouteLatency[]
+  api_latency_available: boolean
+  error_rate_24h_pct: number | null
+  error_rate_available: boolean
+  stripe_webhook_success_24h_pct: number | null
+  stripe_webhook_available: boolean
+  generated_at: string
+  from_cache: boolean
+}
+
+export async function fetchAdminAnalyticsMetrics(
+  params?: { from?: string; to?: string },
+): Promise<AdminAnalyticsMetricsResponse> {
+  const response = await api.get<AdminAnalyticsMetricsResponse>(
+    '/api/v1/admin/analytics/metrics',
+    { params },
+  )
+  return response.data
+}
+
+export async function fetchAdminAnalyticsPerformance(
+  params?: { from?: string; to?: string },
+): Promise<AdminAnalyticsPerformanceResponse> {
+  const response = await api.get<AdminAnalyticsPerformanceResponse>(
+    '/api/v1/admin/analytics/performance',
+    { params },
+  )
+  return response.data
+}
+
 export default api

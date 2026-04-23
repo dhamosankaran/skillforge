@@ -39,6 +39,22 @@ REASONING_TASKS = frozenset([
 ])
 
 
+# ── Pricing table (USD per 1M tokens) ───────────────────────────────────────
+#
+# Consumed by `app/services/admin_analytics_service.py` for LLM spend
+# estimation (spec #38 E-018b AC-3). Keep in sync with the providers' public
+# pricing pages. Tier granularity matches the router's fast/reasoning split
+# because `usage_logs` does not yet carry a per-row model discriminator —
+# spend is estimated from summed `tokens_consumed` × the tier-blended rate.
+# When per-model instrumentation lands, switch to a model-keyed lookup.
+TIER_PRICE_USD_PER_1M_TOKENS: dict[str, float] = {
+    # Gemini 2.5 Flash — default fast tier.
+    "fast": 0.30,
+    # Gemini 2.5 Pro — default reasoning tier. Blended input/output rate.
+    "reasoning": 5.00,
+}
+
+
 def _get_tier(task: str) -> str:
     """Return 'fast' or 'reasoning' for the given task name."""
     if task in REASONING_TASKS:
