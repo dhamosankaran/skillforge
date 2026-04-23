@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { fetchOnboardingRecommendations } from '@/services/api'
-import { PaywallModal } from '@/components/PaywallModal'
+import { PaywallModal, type PaywallTrigger } from '@/components/PaywallModal'
 import { useAuth } from '@/context/AuthContext'
 import { useUsage } from '@/context/UsageContext'
 import type { MissingSkillsPlan } from '@/components/dashboard/MissingSkillsPanel'
@@ -47,7 +47,22 @@ export default function Results() {
   const toastShownRef = useRef<string | null>(null)
   const jobFitViewedRef = useRef(false)
   const [showPaywall, setShowPaywall] = useState(false)
+  const [paywallTrigger, setPaywallTrigger] = useState<PaywallTrigger>('scan_limit')
   const [gapMappings, setGapMappings] = useState<import('@/types').GapMapping[]>([])
+
+  // Spec #55 — gate Re-analyze on plan. Free users hit the existing
+  // PaywallModal with `scan_limit` trigger; Pro users flow through to
+  // /prep/analyze. `re_analyze_clicked` fires regardless so both
+  // branches are measurable.
+  const handleReanalyzeClick = () => {
+    capture('re_analyze_clicked', { plan: canUsePro ? 'pro' : 'free' })
+    if (!canUsePro) {
+      setPaywallTrigger('scan_limit')
+      setShowPaywall(true)
+      return
+    }
+    navigate('/prep/analyze')
+  }
 
   // Three-state plan for the Missing Skills CTA (spec #22 §Plan Detection).
   // Composed from the two live plan-surfaces — `AuthContext.user` signals
@@ -151,7 +166,7 @@ export default function Results() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <GlowButton variant="ghost" size="sm" onClick={() => navigate('/prep/analyze')}>
+            <GlowButton variant="ghost" size="sm" onClick={handleReanalyzeClick}>
               <RefreshCw size={12} />
               Re-analyze
             </GlowButton>
@@ -445,7 +460,7 @@ export default function Results() {
       <PaywallModal
         open={showPaywall}
         onClose={() => setShowPaywall(false)}
-        trigger="skill_gap_study"
+        trigger={paywallTrigger}
       />
     </PageWrapper>
   )
