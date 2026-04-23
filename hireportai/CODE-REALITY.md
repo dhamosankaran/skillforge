@@ -9,22 +9,41 @@
 
 | Field | Value |
 |-------|-------|
-| Commit sha (short) | `806c199` (HEAD pre-E-018b-slice-2 commit) |
-| Branch | `main` (commits ahead of `origin/main`; not pushed) |
-| Generated | 2026-04-23 (targeted regen — **Sections 1, 2, 4, 5 touched** for the 2026-04-23 E-018b slice 2/4 ahead of commit: new model `AdminAuditLog` (from earlier Slice-1 `538fe233b639`; not yet indexed here), new service `admin_analytics_service.py`, new router `admin_analytics.py` mounted at `/api/v1/admin/analytics/*`, new frontend page `AdminAnalytics.tsx` at `/admin/analytics` wrapped in `AdminGate`, `TIER_PRICE_USD_PER_1M_TOKENS` added to `llm_router.py`. **Known gaps carried from prior regens:** Sections 4 and 8 still reflect pre-2026-04-22-walkthrough state — the `94e1` tail (B-018 `MissionDateGate`, B-019 `DailyReviewResponse.completed_today`, B-021 `_extract_company_name` regex, B-022 `job_fit_explanation` REASONING tier + `_extract_company_name_regex` rename for B-024, B-023 `_extract_candidate_name` all-caps guard, B-024 LLM-primary `company_name_extraction` task, B-026 `applyTheme` color-scheme) has not been swept into Sections 4/8 yet and still needs its own regen slice. Sections 3, 6, 7, 9, 10, 11, 12 last re-audited at `a13c217` / `96e6096` and not re-checked in this pass — treat as potentially stale if editing them.) |
-| Backend model files | 18 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models`) |
-| Backend service files | 30 top-level + 3 under `services/llm/` = 33 |
-| Backend router files | 17 v1 + 6 legacy = 23 |
-| Backend endpoints (total) | 60 (55 unique decorators; `analyze` / `rewrite` / `cover_letter` / `interview` legacy routers are each mounted at both `/api/*` and `/api/v1/*`, so 5 paths appear twice — `rewrite.py` now has 2 decorators, not 1, after B-001's `/rewrite/section`) |
-| Alembic revisions | 20 |
-| Frontend pages | 19 |
-| Frontend components (`.tsx` under `src/components/`, excl. `__tests__`) | 61 (+1 `layout/UserMenu.tsx` from B-028; `mission/MissionDateGate.tsx` from B-018 should also be in this count — re-count on next full regen) |
-| Specs on disk (`docs/specs/**/*.md`) | 72 (spec #52 added by B-002 series — cover letter format enforcement) |
-| Skill files (`.agent/skills/*.md`) | 20 (`analytics.md` updated 2026-04-23 with `sign_out_clicked` event — no new skill file) |
+| Commit sha (short) | `7ca2e90` (HEAD after E-018b backfill). Prior regen snapshots referenced `806c199` / `96e6096` / `a13c217` / `3cef6c3`. |
+| Branch | `main` (24 commits ahead of `origin/main`; not yet pushed — scheduled for push alongside this regen) |
+| Generated | 2026-04-23 (body sweep completed: Sections 1-8 + 11-12 audited against HEAD `7ca2e90`. Caught up: E-018a `admin_audit_log` model (§2), E-018b `admin_analytics_service` + routes + `AdminAnalytics.tsx` (§3-4-6-7), E-040 `AdminGate` + `reconcile_admin_role` (§4-6-12), B-001 `/rewrite/section` + `RewriteError` (§3-4), B-014 `SECTION_THINKING_BUDGET` headroom (§4 gpt_service), B-016 `users.home_first_visit_seen_at` (§2) + `POST /users/me/home-first-visit` (§3), B-021 + B-024 `_extract_company_name` LLM-primary orchestrator (§4 nlp.py), B-022 `job_fit_explanation` reasoning tier (§4), B-023 `_extract_candidate_name` all-caps guard (§4), B-027 HomeDashboard `isFirstVisit` snapshot (§7), B-028 UserMenu + Profile account section (§6-7), AdminGate wraps both admin routes closing §12 Q4. Section 9 (dead code) + Section 10 (skills inventory) + Section 11 (drift flags) not re-checked in this pass — treat as potentially stale beyond the known skill-file addition and drift items carried forward below. |
+| Backend model files | 19 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models` — adds `admin_audit_log.py`) |
+| Backend service files | 31 top-level (+1 `admin_analytics_service.py`) + 3 under `services/llm/` = 34 |
+| Backend router files | 18 v1 (+1 `admin_analytics.py`) + 6 legacy = 24 |
+| Backend endpoints (total) | 63+ (new: `GET /admin/audit`, `GET /admin/analytics/metrics`, `GET /admin/analytics/performance`, `POST /users/me/home-first-visit`). `analyze` / `rewrite` / `cover_letter` / `interview` legacy routers are each mounted at both `/api/*` and `/api/v1/*`, so 5 paths appear twice. |
+| Alembic revisions | 22 (adds `508df0110037` B-016, `538fe233b639` E-018a) |
+| Frontend pages | 20 (+`AdminAnalytics.tsx`) |
+| Frontend components (`.tsx` under `src/components/`, excl. `__tests__`) | 63+ (+`layout/UserMenu.tsx` B-028, +`mission/MissionDateGate.tsx` B-018, +`auth/AdminGate.tsx` E-040; not counted individually — verify on next full regen) |
+| Specs on disk (`docs/specs/**/*.md`) | 74 (+spec #38 admin-analytics E-018 umbrella, +spec #54 admin email whitelist E-040) |
+| Skill files (`.agent/skills/*.md`) | 20 (`analytics.md` updated 2026-04-23 with `sign_out_clicked`, `admin_analytics_viewed` (live), `admin_analytics_segment_changed`, `admin_role_reconciled` events; `admin-panel.md` expanded for E-018 umbrella; no new skill file) |
 
 ---
 
 ## Section 2 — Backend models
+
+### `admin_audit_log.py`
+**Class:** `AdminAuditLog`  **Table:** `admin_audit_log`
+
+| Column | Type | Nullable / Default |
+|--------|------|--------------------|
+| id | UUID (PK) | — |
+| admin_id | String (FK `users.id` ON DELETE RESTRICT, indexed) | NOT NULL |
+| route | String(255) | NOT NULL |
+| method | String(10) | NOT NULL |
+| query_params | JSONB | NOT NULL, server default `{}` |
+| ip_address | String(45) | NOT NULL |
+| created_at | DateTime(timezone=True) | NOT NULL, server default `now()` (indexed) |
+
+**Indexes:** `ix_admin_audit_admin_created` on `(admin_id, created_at)`, `ix_admin_audit_route_created` on `(route, created_at)` — serve the two common audit-trail read patterns (per-admin trail, per-endpoint trail) used by `/api/v1/admin/audit`.
+
+**Relationships:** none declared. `admin_id` ON DELETE RESTRICT is a forensic guardrail — a user row with audit history cannot be deleted without first purging audit rows (verified live by the E-018b smoke test).
+
+Purpose: append-only audit trail for every admin-scoped HTTP request. Written fire-and-forget-scheduled-with-request-scoped-flush via `core.deps.audit_admin_request` (router-level dep on `/api/v1/admin/*`). Also written directly by `auth.py::_log_role_reconciliation` on admin role promote/demote events (spec #54 E-040). Spec: `docs/specs/phase-5/38-admin-analytics.md` (AC-9).
 
 ### `base.py`
 **Mixins only:** `TimestampMixin` (`created_at`, `updated_at` via `func.now()` + `onupdate`), `UUIDPrimaryKeyMixin` (`id` UUID default `uuid.uuid4()`). No models.
@@ -323,6 +342,7 @@ Purpose: append-only log of user paywall dismissals. Consumed by `paywall_servic
 | interview_target_company | String(100) | nullable |
 | interview_target_date | Date | nullable |
 | downgraded_at | DateTime(timezone=True) | nullable, default `None` (set by `customer.subscription.deleted` webhook per spec #42 LD-5; dormant until win-back slice E-031 activates) |
+| home_first_visit_seen_at | DateTime(timezone=True) | nullable, default `None` (B-016; stamped on first `/home` load via idempotent `POST /api/v1/users/me/home-first-visit`; flips greeting copy "Welcome" → "Welcome back". B-027 patched the FE to snapshot on mount so in-mount stamp doesn't flip the rendered copy within a single session) |
 | created_at | DateTime | NOT NULL |
 
 **Relationships:** `subscription → Subscription` (uselist=False), `resumes → list[Resume]`, `usage_logs → list[UsageLog]`, `tracker_applications → list[TrackerApplicationModel]`.
@@ -431,6 +451,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | PATCH | /api/v1/tracker/{app_id} | update_app | get_current_user | v1 Tracker |
 | DELETE | /api/v1/tracker/{app_id} | delete_app | get_current_user | v1 Tracker |
 | PATCH | /api/v1/users/me/persona | update_persona | get_current_user | v1 Users |
+| POST | /api/v1/users/me/home-first-visit | mark_home_first_visit | get_current_user | v1 Users *(B-016; idempotent stamp — flips greeting copy)* |
 
 ---
 
@@ -453,12 +474,12 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | gap_detector.py | Skill gap detection service. [INFERRED] | detect_gaps, classify_importance, get_skills_overlap_data | — |
 | gap_mapping_service.py | ATS gap → card category mapping service. | map_gaps_to_categories, RecommendedCategory, GapMapping | LLM-direct |
 | geo_pricing_service.py | Geo-based pricing showing USD by default, INR for India. | get_pricing | HTTP-external, Redis |
-| gpt_service.py | AI resume-optimization features delegating to multi-model LLM router. Post-B-001 (`167b70f`, spec #51): `generate_resume_rewrite` / `generate_resume_rewrite_async` return `Tuple[RewriteResponse, path_str]` where `path_str ∈ {"chunked", "fallback_full"}` is a telemetry hint — see D-014. Per-section regen entry point is `generate_section_rewrite`. `RewriteError` raised on truncation / malformed JSON (caller maps to AC-5 502 envelope). Chunking uses an asyncio semaphore bounded at `PARALLEL_SECTION_LIMIT=4`. Post-B-002 (`825eb0e`, spec #52): `generate_cover_letter` returns the structured `CoverLetterResponse` (spec #52 LD-2 shape); `full_text` is assembled server-side via `_join_cover_letter` — never LLM-sourced. `body_paragraphs` is Pydantic-pinned to `len==3`; validation failures surface as `cover_letter_validation_error` under the AC-5 502 envelope. | generate_job_fit_explanation, generate_resume_rewrite, generate_resume_rewrite_async, generate_section_rewrite, generate_cover_letter, generate_interview_questions, rewrite_bullets_gpt, RewriteError, _join_cover_letter | LLM-router |
+| gpt_service.py | AI resume-optimization features delegating to multi-model LLM router. Post-B-001 (`167b70f`, spec #51): `generate_resume_rewrite` / `generate_resume_rewrite_async` return `Tuple[RewriteResponse, path_str]` where `path_str ∈ {"chunked", "fallback_full"}` is a telemetry hint — see D-014. Per-section regen entry point is `generate_section_rewrite`. `RewriteError` raised on truncation / malformed JSON (caller maps to AC-5 502 envelope). Chunking uses an asyncio semaphore bounded at `PARALLEL_SECTION_LIMIT=4`. Post-B-002 (`825eb0e`, spec #52): `generate_cover_letter` returns the structured `CoverLetterResponse` (spec #52 LD-2 shape); `full_text` is assembled server-side via `_join_cover_letter` — never LLM-sourced. `body_paragraphs` is Pydantic-pinned to `len==3`; validation failures surface as `cover_letter_validation_error` under the AC-5 502 envelope. Post-B-014 (`067c232`): `SECTION_MAX_TOKENS=4000` + `SECTION_THINKING_BUDGET=800` passed to both chunked and per-section endpoints so Gemini 2.5 Pro's thinking pool cannot starve the output pool. Post-B-022 (`fa1871e`): `generate_job_fit_explanation` now routed through the reasoning tier (`JOB_FIT_MAX_TOKENS=3500`, `JOB_FIT_THINKING_BUDGET=800`). Post-B-023 (`79f76b4`): `_extract_candidate_name` rejects pure-uppercase lines (section-header guard) before the token-regex check — prevents `"KEY ACHIEVEMENTS"` / `"WORK EXPERIENCE"` from leaking into the cover-letter signature. | generate_job_fit_explanation, generate_resume_rewrite, generate_resume_rewrite_async, generate_section_rewrite, generate_cover_letter, generate_interview_questions, rewrite_bullets_gpt, RewriteError, _join_cover_letter, _extract_candidate_name, SECTION_MAX_TOKENS, SECTION_THINKING_BUDGET, JOB_FIT_MAX_TOKENS, JOB_FIT_THINKING_BUDGET | LLM-router |
 | home_state_service.py | State-aware home dashboard evaluator. | evaluate_state, invalidate | Redis |
 | interview_storage_service.py | Interview question set storage + cache-aware generation. | generate_or_get_interview_set, InterviewGenerationResult | LLM-router |
 | keywords.py | TF-IDF keyword extraction and matching service. | extract_keywords, match_keywords, get_keyword_chart_data | — |
 | mission_service.py | Mission Mode service — time-bound study sprints with FSRS-prioritised cards. | create_mission, get_active_mission, get_mission_daily_cards, complete_mission_day, MissionNotFoundError, MissionConflictError, MissionInvalidError, MissionGoneError | — |
-| nlp.py | NLP pipeline using spaCy for entity extraction and skill detection. | get_nlp, extract_entities, extract_skills, extract_job_requirements, calculate_similarity | — |
+| nlp.py | NLP pipeline using spaCy for entity extraction and skill detection. Post-B-021 (`e7c6d73`) + B-024 (`50e3c3c`): `_extract_company_name` is now a three-layer orchestrator — LLM primary (`company_name_extraction` FAST task, null-on-unclear), regex fallback on LLM infra failure via `_extract_company_name_regex`, aggregator deny-list + 100-char cap on LLM output. `extract_job_requirements` returns `company_name: str \| None` in its dict; two live consumers (cover-letter prompt in `gpt_service.generate_cover_letter`, tracker autopopulate in `api/routes/analyze.py`) pick it up automatically and fall back to "your company" / "Unknown Company" on None. | get_nlp, extract_entities, extract_skills, extract_job_requirements, calculate_similarity, _extract_company_name, _extract_company_name_regex | LLM-router |
 | onboarding_checklist_service.py | Interview-Prepper onboarding checklist from telemetry-derived state. | get_checklist, WrongPersonaError | — |
 | parser.py | Resume parser supporting PDF and DOCX formats. | parse_pdf, parse_docx, detect_sections, extract_bullets, extract_contact_info | — |
 | payment_service.py | Payment service — thin wrapper around Stripe. `_handle_subscription_deleted` also writes `user.downgraded_at` per spec #42 LD-5 (dormant until win-back E-031 activates). | create_checkout_session, create_billing_portal_session, handle_webhook, PaymentError, InvalidSignatureError, UserNotFoundError, NotProSubscriberError | Stripe |
@@ -470,7 +491,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | study_service.py | FSRS spaced-repetition study service with server-side scheduling. Also enforces the free-tier daily-card review wall (spec #50) via private `_check_daily_wall` helper — Redis INCR keyed `daily_cards:{user_id}:{YYYY-MM-DD}` in user-local tz, 48h TTL, fail-open on Redis outage; admin + Pro/Enterprise bypass. | get_daily_review, create_progress, review_card, get_progress, CardNotFoundError, CardForbiddenError, DailyReviewLimitError | Redis |
 | tracker_service_v2.py | SQLAlchemy-backed job application tracker service (v2). | create_application, find_by_scan_id, get_applications, get_application_by_id, update_application, delete_application | — |
 | usage_service.py | Usage tracking and plan limit enforcement. [INFERRED] | log_usage, check_usage_limit, check_and_increment, get_usage_summary | — |
-| user_service.py | User CRUD service. [INFERRED] | get_or_create_user, get_user_by_id | — |
+| user_service.py | User CRUD + admin-role reconciliation. Post-E-040 (`1148354`, spec #54): `reconcile_admin_role(user, admin_emails_set) -> (action, prior_role, new_role)` is a pure mutation function that sets `user.role` to `"admin"` if `email.lower() in admin_emails_set` and `"user"` otherwise. Action ∈ `{"promoted", "demoted", "unchanged"}`; caller owns commit / audit / analytics. Invoked from `auth.py::google_auth` on every login — the `unchanged` case doubles as a dashboard heartbeat. | get_or_create_user, get_user_by_id, reconcile_admin_role | — |
 
 ### `app/services/llm/` (legacy provider factory — do not extend)
 
@@ -506,6 +527,8 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | 18 | 02bf7265b387 | rename users target columns + migrate persona enum values | 59795ca196e9 | yes |
 | 19 | f3350dcba3a5 | add interview_question_sets table | 02bf7265b387 | yes |
 | 20 | 1176cc179bf0 | add paywall_dismissals and user.downgraded_at | f3350dcba3a5 | yes |
+| 21 | 508df0110037 | add users.home_first_visit_seen_at | 1176cc179bf0 | yes — B-016 |
+| 22 | 538fe233b639 | add admin_audit_log | 508df0110037 | yes — E-018a slice 1/4 |
 
 Head = `1176cc179bf0`.
 
@@ -535,7 +558,8 @@ Configured in `src/App.tsx`. Top-level wrappers: `<AppShell>` (always), `<Protec
 | `/prep/interview` | `Interview` | AppShell | ProtectedRoute → PersonaGate | — |
 | `/prep/tracker` | `Tracker` | AppShell | ProtectedRoute → PersonaGate | — |
 | `/profile` | `Profile` (lazy) | AppShell | ProtectedRoute → PersonaGate | — |
-| `/admin` | `AdminPanel` (lazy) | AppShell | ProtectedRoute → PersonaGate *(no admin-role gate at route level — component-level check)* | — |
+| `/admin` | `AdminPanel` (lazy) | AppShell | ProtectedRoute → `AdminGate` (role === 'admin' else 403 view) | — |
+| `/admin/analytics` | `AdminAnalytics` (lazy) | AppShell | ProtectedRoute → `AdminGate` | — — spec #38 E-018b slice 2/4 |
 | `/analyze` → `/prep/analyze` | `<Navigate replace>` | AppShell | none | transitional |
 | `/results` → `/prep/results` | `<Navigate replace>` | AppShell | none | transitional |
 | `/rewrite` → `/prep/rewrite` | `<Navigate replace>` | AppShell | none | transitional |
@@ -554,7 +578,7 @@ Nav chrome rendered by `AppShell` (`TopNav` desktop, `MobileNav` mobile). Chrome
 
 **MobileNav composition (`md:hidden`):** five-tab bottom bar (Home/Learn/Prep/Profile/Admin) — **no sign-out surface here**. Mobile users reach sign-out via MobileNav → Profile → Account section (B-028) because the bar is at capacity.
 
-No component is rendered at two distinct routes (redirects don't count). `AdminPanel` has no route-level `require_admin`-equivalent guard — relies on in-component check.
+No component is rendered at two distinct routes (redirects don't count). Both `/admin` and `/admin/analytics` are wrapped in `<AdminGate>` (E-040, `1148354`, spec #54) — non-admins see a `ShieldAlert` 403 view with a back-link to `/home`, and the lazy AdminPanel / AdminAnalytics chunks are **not downloaded** for non-admins. This supersedes the earlier "component-level check only" pattern and closes Section 12 Q4.
 
 **Wall-aware components (spec #50, P5-S22-WALL-b):** `src/components/study/QuizPanel.tsx` is the single submit chokepoint for `POST /api/v1/study/review` — consumed by `DailyReview`, `CardViewer`, and `MissionMode`. On a 402 response whose `detail.trigger === 'daily_review'`, it parses the AC-2 payload, opens `PaywallModal` with `trigger="daily_review"`, and fires the `daily_card_wall_hit` PostHog event. No FSRS state is mutated client-side on a walled submit (mirrors backend).
 
@@ -565,6 +589,7 @@ No component is rendered at two distinct routes (redirects don't count). `AdminP
 | File | Default export | Top-level data hooks | API calls | PostHog events |
 |------|----------------|----------------------|-----------|----------------|
 | AdminPanel.tsx | AdminPanel | — | fetchAdminCards, fetchCategories, createAdminCard, updateAdminCard, deleteAdminCard, generateCardDraft | — |
+| AdminAnalytics.tsx | AdminAnalytics | useAuth | fetchAdminAnalyticsMetrics, fetchAdminAnalyticsPerformance | admin_analytics_segment_changed. Sections: Metrics (6 OKR tiles) + Performance (LLM spend, Stripe webhook success, 2 Coming-Soon tiles for deferred fields). Segmented `7d/30d/90d/YTD` control computes `?from=` client-side; `computeFromDate(segment, now)` is exported for tests. Spec #38 E-018b slice 2/4. |
 | Analyze.tsx | Analyze | useAnalysis, useUsage | — | — |
 | CardViewer.tsx | CardViewer | useCardViewer, useGamification | — | card_viewed |
 | CategoryDetail.tsx | CategoryDetail | — | fetchCardsByCategory | category_detail_viewed |
@@ -729,7 +754,7 @@ High-signal output — all verified against the current working tree at `3cef6c3
 1. `components/onboarding/GuidedTour.tsx` has zero imports. Is this (A) dead code safe to delete, or (B) a scaffold you're saving for a future onboarding tour spec?
 2. `components/rewrite/ResumePDFTemplate.tsx` has zero imports and PDF generation is inline in `Rewrite.tsx`. Delete in next cleanup slice — yes/no?
 3. Is `UsageLimit` supposed to exist as a DB-backed model, or is the AGENTS.md Models table row stale and should be removed?
-4. `AdminPanel` (`/admin`) has no route-level admin guard — just `ProtectedRoute` + `PersonaGate`. Is the in-component role check intentional, or should `/admin` gain an `<AdminGate>` wrapper for parity with the backend's `require_admin` dependency?
+4. ~~`AdminPanel` (`/admin`) has no route-level admin guard — just `ProtectedRoute` + `PersonaGate`. Is the in-component role check intentional, or should `/admin` gain an `<AdminGate>` wrapper for parity with the backend's `require_admin` dependency?~~ ✅ **RESOLVED by E-040** (`1148354`, spec #54) — `<AdminGate>` now wraps both `/admin` and `/admin/analytics`; non-admins see a 403 view and lazy chunks are not downloaded.
 5. `study-engine.md` skill file is missing `description:` frontmatter — should I backfill it to match the style of the other 19 skills? (Would be a one-line edit.)
 6. `ai_service.py` duplicates `gpt_service.py` verbatim and is consumed only by an enterprise-tier endpoint (`/api/v1/resume/{id}/optimize`). Is it safe to delete now, or do you want to wait on a production traffic check per `[S47-defer]`?
 7. Legacy mounts `/api/analyze`, `/api/rewrite`, `/api/cover-letter`, `/api/interview-prep` — is there a known external caller relying on these paths, or are they purely FE-migration holdovers that can be dropped once the FE references are swept?
