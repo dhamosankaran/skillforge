@@ -41,7 +41,9 @@ beforeEach(() => {
 })
 
 describe('TopNav', () => {
-  it('renders four tabs for a non-admin user', () => {
+  // B-029: Profile removed from TopNav nav items (now lives in the UserMenu
+  // avatar dropdown). MobileNav still keeps Profile as a tab.
+  it('renders three tabs for a non-admin user (Home/Learn/Prep)', () => {
     mockUser = userFixture({ role: 'user' })
     render(
       <MemoryRouter initialEntries={['/home']}>
@@ -51,11 +53,11 @@ describe('TopNav', () => {
     expect(screen.getByTestId('top-nav-home')).toBeInTheDocument()
     expect(screen.getByTestId('top-nav-learn')).toBeInTheDocument()
     expect(screen.getByTestId('top-nav-prep')).toBeInTheDocument()
-    expect(screen.getByTestId('top-nav-profile')).toBeInTheDocument()
+    expect(screen.queryByTestId('top-nav-profile')).not.toBeInTheDocument()
     expect(screen.queryByTestId('top-nav-admin')).not.toBeInTheDocument()
   })
 
-  it('renders five tabs (including Admin) for an admin user', () => {
+  it('renders four tabs (including Admin) for an admin user', () => {
     mockUser = userFixture({ role: 'admin' })
     render(
       <MemoryRouter initialEntries={['/home']}>
@@ -65,7 +67,7 @@ describe('TopNav', () => {
     expect(screen.getByTestId('top-nav-home')).toBeInTheDocument()
     expect(screen.getByTestId('top-nav-learn')).toBeInTheDocument()
     expect(screen.getByTestId('top-nav-prep')).toBeInTheDocument()
-    expect(screen.getByTestId('top-nav-profile')).toBeInTheDocument()
+    expect(screen.queryByTestId('top-nav-profile')).not.toBeInTheDocument()
     expect(screen.getByTestId('top-nav-admin')).toBeInTheDocument()
   })
 
@@ -73,7 +75,6 @@ describe('TopNav', () => {
     { path: '/home',          activeTab: 'home' },
     { path: '/learn/daily',   activeTab: 'learn' },
     { path: '/prep/rewrite',  activeTab: 'prep' },
-    { path: '/profile',       activeTab: 'profile' },
     { path: '/admin',         activeTab: 'admin' },
   ]
 

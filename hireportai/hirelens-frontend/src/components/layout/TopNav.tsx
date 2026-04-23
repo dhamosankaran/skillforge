@@ -12,11 +12,14 @@ interface NavItem {
   adminOnly?: boolean
 }
 
+// Profile deliberately not listed here (B-029). Desktop users reach it via
+// the UserMenu avatar dropdown on the right. MobileNav keeps the Profile tab
+// because the mobile layout has no UserMenu — it's the only path to
+// Sign out on mobile (Profile → Account section).
 const NAV_ITEMS: NavItem[] = [
   { label: 'Home',    to: '/home',    prefix: '/home',    exact: true },
   { label: 'Learn',   to: '/learn',   prefix: '/learn' },
   { label: 'Prep',    to: '/prep',    prefix: '/prep' },
-  { label: 'Profile', to: '/profile', prefix: '/profile' },
   { label: 'Admin',   to: '/admin',   prefix: '/admin', adminOnly: true },
 ]
 
