@@ -10,8 +10,8 @@
 
 | Field | Value |
 |-------|-------|
-| **HEAD commit** | `1148354` — E-040 admin email whitelist + AdminGate (spec #54) shipped in a 3-commit slice: `22dccfc` spec #54 + spec #38 cross-ref, `71f9d4b` BACKLOG E-040 + E-040-follow, `1148354` impl (Settings + reconcile_admin_role + google_auth wire-up + AdminGate FE + tests). **Note on the "Last Completed Slice" section below:** a pre-authored E-018b (slice 2/4) entry sits below this E-040 entry — that slice's commit has NOT yet landed on `main` as of HEAD `1148354`; git log ends at `806c199` (E-018a close). The E-018b draft was left in the working tree by a concurrent session and has been preserved, not stomped. See D-019. |
-| **Branch** | `main` (NOT yet pushed to `origin/main` as of 2026-04-23 — 22 commits ahead since `794dc28`) |
+| **HEAD commit** | `36d10de` — E-018b admin analytics metrics + performance (spec #38 slice 2/4) impl. Preceded by E-040 slice `1148354` which had absorbed this slice's wire-up edits (App.tsx, BACKLOG additions, analytics.md) via concurrent-session contamination — see D-019. This commit lands the remaining file set: new service / schema / router / page / tests + CODE-REALITY regen. |
+| **Branch** | `main` (NOT yet pushed to `origin/main` as of 2026-04-23 — 23 commits ahead since `794dc28`) |
 | **CODE-REALITY.md sha (repo)** | Partial ⚠️ — regen blob at top of the file was authored for the (still-uncommitted) E-018b content in the working tree; add E-040's touches on next regen: new `AdminGate` FE component (`src/components/auth/AdminGate.tsx`), new `reconcile_admin_role` service helper in `app/services/user_service.py`, new `Settings.admin_emails` + `admin_emails_set`, new `ADMIN_EMAILS` env var in AGENTS.md table, `/admin` + `/admin/analytics` routes now wrapped in `<AdminGate>`, new `admin_role_reconciled` PostHog event. |
 | **CODE-REALITY.md in chat Project** | Stale ❌ — re-upload after a clean regen lands (E-018b commits + E-040 touches together) |
 | **CODE-REALITY stale (either copy)?** | Both need follow-up — repo copy has E-018b content ahead of its commit; E-040 additions not yet mapped |
@@ -89,7 +89,7 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 ---
 
-**2026-04-23 — E-018b admin analytics metrics + performance (spec #38 slice 2/4).** ⚠️ **PRE-AUTHORED — NOT YET COMMITTED.** Content below was authored into SESSION-STATE by a concurrent session but the corresponding implementation commit has NOT landed on `main` (git log HEAD as of E-040 close is `1148354`; expected E-018b commit not present). Preserved here verbatim so whoever resumes E-018b can commit without re-authoring. See D-019.
+**2026-04-23 — E-018b admin analytics metrics + performance (spec #38 slice 2/4).** ✅ **COMMITTED `36d10de`** (impl: service + schema + router + page + tests + CODE-REALITY regen). Pre-authored draft below was resumed and committed verbatim; partial wire-up (App.tsx + BACKLOG row additions + analytics.md catalog entries) already landed under E-040 `1148354` from the concurrent-session contamination, so this commit's file set is the impl code + CODE-REALITY regen only. See D-019 for the full attribution story.
 
 One commit (SHA backfilled in follow-up doc commit per established pattern — amend explicitly rejected per D-015). Shipped end-to-end:
 
