@@ -104,4 +104,14 @@ describe('TopNav', () => {
     expect(screen.getByTestId('top-nav-home')).toHaveAttribute('data-active', 'false')
     expect(screen.getByTestId('top-nav-learn')).toHaveAttribute('data-active', 'true')
   })
+
+  // B-028: UserMenu (avatar + sign-out dropdown) mounts in the TopNav.
+  it('mounts the UserMenu avatar trigger alongside the nav tabs', () => {
+    render(
+      <MemoryRouter initialEntries={['/home']}>
+        <TopNav />
+      </MemoryRouter>,
+    )
+    expect(screen.getByTestId('user-menu-trigger')).toBeInTheDocument()
+  })
 })

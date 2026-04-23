@@ -66,6 +66,7 @@ PostHog is instrumented from Phase 1 and runs on both tiers:
 | `email_preferences_viewed` | `pages/EmailPreferences.tsx` | — |
 | `email_preferences_saved` | `pages/EmailPreferences.tsx` | `{daily_reminder}` / `{timezone}` |
 | `nav_clicked` | `components/layout/TopNav.tsx`, `components/layout/MobileNav.tsx` | `{namespace: 'home'\|'learn'\|'prep'\|'profile'\|'admin', from_path, to_path}` |
+| `sign_out_clicked` | `components/layout/UserMenu.tsx`, `pages/Profile.tsx` | `{source: 'topnav_avatar' \| 'profile_page'}` — fires before `AuthContext.signOut()` runs so the event still captures even though `signOut` redirects to `/` on completion (B-028). |
 | `home_dashboard_viewed` | `pages/HomeDashboard.tsx` | `{persona: 'interview_prepper'\|'career_climber'\|'team_lead'}` — fires once on mount via `useRef` idempotency guard so Strict Mode's double-invoked effect captures once (P5-S18). |
 | `home_state_evaluated` | `hooks/useHomeState.ts` | `{persona, states: string[], state_count, cache_hit}` — fires once per resolved fetch; deduped by fingerprint of `persona\|states` so refetch-with-same-result doesn't re-fire (P5-S18c). |
 | `home_state_widget_clicked` | `components/home/widgets/{StreakAtRisk,MissionActive,MissionOverdue,ResumeStale,InactiveReturner,FirstSessionDone}Widget.tsx` | `{state, cta}` — fires on the priority-slot widget's CTA click, alongside the route navigation (P5-S18c). |

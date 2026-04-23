@@ -19,7 +19,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Flame, Lock, Trophy, BookOpen, Sparkles, Radar, CalendarDays, Settings, FileText, Copy, Check, Loader2, CreditCard } from 'lucide-react'
+import { Flame, Lock, Trophy, BookOpen, Sparkles, Radar, CalendarDays, Settings, FileText, Copy, Check, Loader2, CreditCard, LogOut } from 'lucide-react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { XPBar } from '@/components/profile/XPBar'
 import { useGamification } from '@/context/GamificationContext'
@@ -70,7 +70,7 @@ async function fetchStudyProgress(): Promise<StudyProgress> {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Profile() {
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   const { usage } = useUsage()
   const navigate = useNavigate()
   const { stats, isLoading, refresh } = useGamification()
@@ -401,6 +401,38 @@ export default function Profile() {
             </h2>
           </div>
           <EmailPreferences />
+        </section>
+
+        {/* ── Account ──────────────────────────────────────────── */}
+        <section data-testid="account-section">
+          <div className="flex items-center gap-2 mb-3">
+            <LogOut size={14} className="text-accent-primary" />
+            <h2 className="text-[11px] uppercase tracking-[0.15em] text-text-secondary font-semibold">
+              Account
+            </h2>
+          </div>
+          <div className="rounded-2xl border border-contrast/[0.08] bg-bg-surface/60 p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-text-primary">Sign out</p>
+                <p className="text-[11px] text-text-muted mt-1">
+                  End your session on this device.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  capture('sign_out_clicked', { source: 'profile_page' })
+                  void signOut()
+                }}
+                data-testid="profile-signout"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-contrast/[0.12] text-sm font-semibold text-text-secondary hover:text-danger hover:border-danger/40 transition-colors"
+              >
+                <LogOut size={14} />
+                Sign out
+              </button>
+            </div>
+          </div>
         </section>
 
         {isLoading && (

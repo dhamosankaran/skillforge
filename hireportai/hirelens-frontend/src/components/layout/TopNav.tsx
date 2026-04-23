@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom'
 import clsx from 'clsx'
 import { useAuth } from '@/context/AuthContext'
 import { capture } from '@/utils/posthog'
+import { UserMenu } from '@/components/layout/UserMenu'
 
 interface NavItem {
   label: string
@@ -55,26 +56,29 @@ export function TopNav() {
           SKILL<span className="text-accent-primary">FORGE</span>
         </Link>
 
-        <nav className="flex items-center gap-6" role="navigation" aria-label="Main navigation">
-          {items.map((item) => {
-            const active = isActive(location.pathname, item)
-            return (
-              <Link
-                key={item.prefix}
-                to={item.to}
-                onClick={onClick(item.to, item.prefix)}
-                data-testid={`top-nav-${namespaceFor(item.prefix)}`}
-                data-active={active ? 'true' : 'false'}
-                className={clsx(
-                  'text-[11px] tracking-[0.18em] uppercase font-medium transition-colors duration-200',
-                  active ? 'text-accent-primary' : 'text-text-secondary hover:text-text-primary',
-                )}
-              >
-                {item.label}
-              </Link>
-            )
-          })}
-        </nav>
+        <div className="flex items-center gap-6">
+          <nav className="flex items-center gap-6" role="navigation" aria-label="Main navigation">
+            {items.map((item) => {
+              const active = isActive(location.pathname, item)
+              return (
+                <Link
+                  key={item.prefix}
+                  to={item.to}
+                  onClick={onClick(item.to, item.prefix)}
+                  data-testid={`top-nav-${namespaceFor(item.prefix)}`}
+                  data-active={active ? 'true' : 'false'}
+                  className={clsx(
+                    'text-[11px] tracking-[0.18em] uppercase font-medium transition-colors duration-200',
+                    active ? 'text-accent-primary' : 'text-text-secondary hover:text-text-primary',
+                  )}
+                >
+                  {item.label}
+                </Link>
+              )
+            })}
+          </nav>
+          <UserMenu />
+        </div>
       </div>
     </header>
   )
