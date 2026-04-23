@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|-------|
-| **HEAD commit** | `36d10de` — E-018b admin analytics metrics + performance (spec #38 slice 2/4) impl. Preceded by E-040 slice `1148354` which had absorbed this slice's wire-up edits (App.tsx, BACKLOG additions, analytics.md) via concurrent-session contamination — see D-019. This commit lands the remaining file set: new service / schema / router / page / tests + CODE-REALITY regen. |
+| **HEAD commit** | *(pending commit)* — P5-S-B032 Optimize-button paywall gate (closes B-032, opens B-033). SHA will be backfilled post-commit per the established pattern. Prior HEAD was `1499ad2` (spec #56 draft). |
 | **Branch** | `main` (NOT yet pushed to `origin/main` as of 2026-04-23 — 23 commits ahead since `794dc28`) |
 | **CODE-REALITY.md sha (repo)** | Partial ⚠️ — regen blob at top of the file was authored for the (still-uncommitted) E-018b content in the working tree; add E-040's touches on next regen: new `AdminGate` FE component (`src/components/auth/AdminGate.tsx`), new `reconcile_admin_role` service helper in `app/services/user_service.py`, new `Settings.admin_emails` + `admin_emails_set`, new `ADMIN_EMAILS` env var in AGENTS.md table, `/admin` + `/admin/analytics` routes now wrapped in `<AdminGate>`, new `admin_role_reconciled` PostHog event. |
 | **CODE-REALITY.md in chat Project** | Stale ❌ — re-upload after a clean regen lands (E-018b commits + E-040 touches together) |
@@ -63,6 +63,45 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 ---
 
 ## Last Completed Slice
+
+**2026-04-23 — P5-S-B032 Optimize-button paywall gate (closes B-032 ✅, opens B-033 🔴).** Parallel-shape sibling to B-030. Single commit. Pure revenue-surface / UX regression closure (R14 exception (b)). Two ungated click-paths on `Results.tsx` navigated free users to `/prep/rewrite` without firing the canonical `PaywallModal` (spec #11) — header "Optimize" button (line 169) and sidebar "AI Rewrite" CTA (line 424-431). Both wired to a **single new `handleOptimizeClick` handler** mirroring B-030's `handleReanalyzeClick` structure exactly (fires `optimize_clicked {plan}`, free → open PaywallModal with new `rewrite_limit` trigger, Pro → `navigate('/prep/rewrite')`).
+
+**Changes:**
+- `hirelens-frontend/src/components/PaywallModal.tsx` — new `PaywallTrigger` value `'rewrite_limit'` with HEADLINES ("AI Rewrite is a Pro feature") and SUBLINES ("Upgrade to Pro to get ATS-optimized resume rewrites, tailored cover letters, and PDF export.") entries.
+- `hirelens-frontend/src/pages/Results.tsx` — new `handleOptimizeClick` handler (added just under `handleReanalyzeClick`). Both buttons switched from `onClick={() => navigate('/prep/rewrite')}` to `onClick={handleOptimizeClick}`.
+- `hirelens-frontend/tests/pages/Results.optimize.test.tsx` — new file, 5 tests mirroring `Results.reanalyze.test.tsx` structure (AC-1/AC-2/AC-3 free/pro, plus AC-4 asserting both buttons share the same handler behavior — guards against future divergence).
+- `hirelens-frontend/src/components/__tests__/PaywallModal.test.tsx` — existing `Record<PaywallTrigger, string>` test-data map updated with `rewrite_limit` entry (tsc exhaustiveness — caught by `tsc --noEmit` after the type change, fixed in the same slice).
+- `.agent/skills/analytics.md` — catalog entry for `optimize_clicked {plan: 'free' \| 'pro'}` added under frontend events.
+- `BACKLOG.md` — B-032 🔴 → ✅ in same commit (SHA backfillable post-commit if needed); new B-033 🔴 filed P0 (related follow-up: backend `/rewrite` router is entirely unauthed — spec-first per R14 when picked up).
+
+**Framing note:** This is a hybrid — not pure UX polish. Today's visible revenue leak is blocked at the frontend by `Rewrite.tsx`'s local `PremiumGate`, but the backend `hirelens-backend/app/api/routes/rewrite.py` endpoints (`/rewrite`, `/rewrite/section`, cover-letter) have zero auth and zero quota enforcement — a direct API call bypass would succeed. B-032 closes the UX half + adds defense-in-depth for the front door; B-033 tracks the broader backend auth gap as a separate, dedicated spec slice.
+
+**Trigger / event / scope decisions (locked by Dhamo pre-impl):**
+- Trigger key `rewrite_limit` (naming convention: `<feature>_limit` — matches `scan_limit`, `interview_limit`).
+- Event name `optimize_clicked` (mirrors B-030's `re_analyze_clicked`).
+- Gate BOTH buttons via a SINGLE handler — avoids two divergent copies.
+- B-033 filed in SAME commit as B-032 (cheap, zero code change) per Dhamo direction.
+
+**Tests:** FE 244 → **249** (+5 new in `tests/pages/Results.optimize.test.tsx`). Full FE suite `npx vitest run` green (47 files / 249 tests). `tsc --noEmit` clean. BE untouched (no backend changes in this slice).
+
+**BACKLOG IDs touched:** B-032 🔴 → 🟡 → ✅ (Dhamo-authorized row creation + same-commit closure). B-033 🔴 created (follow-up, not touched by code).
+
+**Pre-existing dirty files untouched per C2:** `../.DS_Store`, `Enhancements.txt`, `hirelens-backend/scripts/wipe_local_user_data.py`; untracked `.agent/skills/stripe-*`, `.gitattributes`, `BACKLOG_PRIORITIZED.md`, `docs/audits/`, `docs/status/E2E-READINESS-2026-04-21.md`, `skills-lock.json`. None enter the commit.
+
+**Commit-file contract (single commit):** MODIFIED: `hirelens-frontend/src/components/PaywallModal.tsx`, `hirelens-frontend/src/pages/Results.tsx`, `hirelens-frontend/src/components/__tests__/PaywallModal.test.tsx`, `.agent/skills/analytics.md`, `BACKLOG.md`, `SESSION-STATE.md`. NEW: `hirelens-frontend/tests/pages/Results.optimize.test.tsx`.
+
+**Judgment calls logged:**
+- **Step 0 reported "hybrid framing", Dhamo confirmed scope.** Backend `/rewrite` is unauthed, but closing B-032 via the FE button gate is the intended shape — not a stub, not a workaround. The backend gap lives on as B-033 under its own spec-first slice. Per R3 push-back this was flagged before implementation; greenlight locked the scope.
+- **Gate BOTH buttons through a single handler.** Sidebar "AI Rewrite" CTA uses identical behavior to header "Optimize" — same copy, same paywall, same event. A duplicated inline handler would drift; shared handler + AC-4 test guards it.
+- **Did NOT touch Rewrite.tsx `PremiumGate`.** It remains as a second layer. Removing it would widen blast radius beyond this slice; that's spec-first territory (does the Rewrite page still need a page-level lock once the entry buttons are gated? Out of scope here).
+
+**Drift flags new this slice:** none.
+
+**CODE-REALITY.md status:** **NOT regenerated this slice.** No routes, models, top-level types, `App.tsx`, or layout components were touched. The stale-marking rule does not trigger. (Prior staleness from E-018b / E-040 remains — pre-existing state.)
+
+**R14 classification:** exception (b) — pure revenue-surface / UX regression closure, no new feature surface. Spec-first was not required per CLAUDE.md R14 exception rules; Dhamo-locked pre-impl via prompt review.
+
+---
 
 **2026-04-23 — P5-S56 spec authored (free-tier 1-scan lifetime cap; opens B-031 🟡 PARTIAL).** Mode 4 spec slice — **no code changes**. Drafted `docs/specs/phase-5/56-free-tier-scan-lifetime-cap.md` at base `ebd0415` (HEAD at slice start was `e36c319`). Dhamo-locked policy (2026-04-23): free tier = exactly 1 full ATS analysis per user, lifetime; Pro/Enterprise unlimited; admin bypass; NO dismissal grace (carve-out from spec #42 LD-1); implicit grandfathering (no data migration — existing free users start at zero `usage_logs` count, accepted bounded revenue leak).
 

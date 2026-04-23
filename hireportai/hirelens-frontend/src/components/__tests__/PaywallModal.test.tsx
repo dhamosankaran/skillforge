@@ -79,6 +79,7 @@ describe('PaywallModal', () => {
       daily_review: 'Daily Review is a Pro feature',
       interview_limit: "You've used your free interview preps",
       skill_gap_study: 'Study skill gaps with flashcards',
+      rewrite_limit: 'AI Rewrite is a Pro feature',
     }
 
     for (const [trigger, headline] of Object.entries(expected)) {

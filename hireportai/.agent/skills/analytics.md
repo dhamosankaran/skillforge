@@ -39,6 +39,7 @@ PostHog is instrumented from Phase 1 and runs on both tiers:
 | `gap_card_clicked` | `pages/Onboarding.tsx` | `{gap_id, gap_name}` |
 | `gap_study_clicked` **(DEPRECATED P5-S22b)** | `components/dashboard/MissingSkillsPanel.tsx` | `{gap_name, category_id, user_plan}` — replaced by `missing_skills_cta_clicked` (see below). No longer fires after commit `fd4ca3d`. |
 | `paywall_hit` | `components/PaywallModal.tsx` | `{trigger, category_name?, cards_viewed?}` |
+| `optimize_clicked` | `pages/Results.tsx` | `{plan: 'free' \| 'pro'}` — fires on both header "Optimize" and sidebar "AI Rewrite" buttons; free users see the paywall (trigger=`rewrite_limit`), Pro users navigate to `/prep/rewrite` (B-032) |
 | `checkout_started` | `components/PaywallModal.tsx` | `{trigger, plan, price, currency}` |
 | `payment_completed` | `pages/Pricing.tsx` | `{plan, price, currency, source: 'stripe_checkout_return'}` |
 | `theme_changed` | `context/ThemeContext.tsx` | `{from_theme, to_theme}` |

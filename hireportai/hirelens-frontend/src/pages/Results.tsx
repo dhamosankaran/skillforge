@@ -64,6 +64,19 @@ export default function Results() {
     navigate('/prep/analyze')
   }
 
+  // B-032 — gate Optimize / AI Rewrite on plan. Mirrors handleReanalyzeClick
+  // shape. Both the header "Optimize" button and the sidebar "AI Rewrite"
+  // CTA wire to this single handler so their behavior cannot diverge.
+  const handleOptimizeClick = () => {
+    capture('optimize_clicked', { plan: canUsePro ? 'pro' : 'free' })
+    if (!canUsePro) {
+      setPaywallTrigger('rewrite_limit')
+      setShowPaywall(true)
+      return
+    }
+    navigate('/prep/rewrite')
+  }
+
   // Three-state plan for the Missing Skills CTA (spec #22 §Plan Detection).
   // Composed from the two live plan-surfaces — `AuthContext.user` signals
   // anonymity, `UsageContext.canUsePro` signals pro. `AuthUser` has no
@@ -170,7 +183,7 @@ export default function Results() {
               <RefreshCw size={12} />
               Re-analyze
             </GlowButton>
-            <GlowButton size="sm" onClick={() => navigate('/prep/rewrite')}>
+            <GlowButton size="sm" onClick={handleOptimizeClick}>
               <FileText size={12} />
               Optimize
             </GlowButton>
@@ -423,7 +436,7 @@ export default function Results() {
           >
             <GlowButton
               size="sm"
-              onClick={() => navigate('/prep/rewrite')}
+              onClick={handleOptimizeClick}
               className="w-full justify-center"
             >
               <Brain size={12} />
