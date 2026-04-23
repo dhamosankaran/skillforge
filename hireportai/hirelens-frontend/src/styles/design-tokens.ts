@@ -60,6 +60,12 @@ export interface Theme {
   name: string
   /** CSS variables to set on :root */
   vars: Record<string, string>
+  /**
+   * Browser `color-scheme` for native form controls (date picker,
+   * scrollbars, spinners). Without this set, the native `<input type="date">`
+   * calendar icon renders dark-on-dark on dark themes and is invisible.
+   */
+  colorScheme: 'dark' | 'light'
 }
 
 // ── Dark Theme (default) ────────────────────────────────────────────────────
@@ -67,6 +73,7 @@ export interface Theme {
 const dark: Theme = {
   id: 'dark',
   name: 'Dark',
+  colorScheme: 'dark',
   vars: {
     // ── App colors (hex for inline styles) ──
     '--bg-base': '#0A0A0B',
@@ -144,6 +151,7 @@ const dark: Theme = {
 const light: Theme = {
   id: 'light',
   name: 'Light',
+  colorScheme: 'light',
   vars: {
     '--bg-base': '#FAFAFA',
     '--bg-surface': '#FFFFFF',
@@ -216,6 +224,7 @@ const light: Theme = {
 const midnightBlue: Theme = {
   id: 'midnight-blue',
   name: 'Midnight Blue',
+  colorScheme: 'dark',
   vars: {
     '--bg-base': '#060810',
     '--bg-surface': '#0C1020',
@@ -322,4 +331,9 @@ export function applyTheme(themeId: string, el: HTMLElement = document.documentE
   for (const [prop, value] of Object.entries(allVars)) {
     el.style.setProperty(prop, value)
   }
+  // B-026: set `color-scheme` so native form controls (date picker calendar
+  // icon, scrollbars, number spinners) render with theme-aware chrome.
+  // Without this, `<input type="date">` shows a dark-grey icon on dark
+  // backgrounds that's effectively invisible.
+  el.style.colorScheme = theme.colorScheme
 }
