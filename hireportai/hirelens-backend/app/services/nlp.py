@@ -1,11 +1,16 @@
 """NLP pipeline using spaCy for entity extraction and skill detection."""
+import json
+import logging
 import re
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+from app.core.llm_router import generate_for_task
 from app.utils.skill_taxonomy import ALL_SKILLS_LOWER, find_skill
+
+logger = logging.getLogger(__name__)
 
 # Lazy-load spaCy model to avoid startup overhead.
 # _nlp is set to False (not None) when spaCy is unavailable so we only
@@ -228,14 +233,83 @@ _COMPANY_STOPWORDS: Set[str] = {
 }
 
 
-def _extract_company_name(jd_text: str) -> Optional[str]:
-    """Best-effort company-name extraction from a JD (B-021).
+# B-024: aggregator job-board names that sometimes appear more prominently in
+# a JD than the hiring company. Server-side deny-list is a backstop — the LLM
+# prompt already instructs against returning these. Both halves catch real
+# failures; keep this set short and obvious (user: "deny-list only, STOP if
+# it gets more complex").
+_AGGREGATOR_DENY: Set[str] = {
+    "linkedin", "indeed", "glassdoor", "monster", "ziprecruiter",
+    "careerbuilder", "dice", "wellfound", "angellist", "simplyhired",
+}
 
-    High-precision regex sweep. Returns None on low confidence so that
-    consumer fallbacks ("your company" in the cover-letter prompt,
-    "Unknown Company" on tracker rows) stay intact for the case where
-    the JD doesn't match a known shape. Kept heuristic to stay
-    consistent with the rest of this module — no LLM call.
+
+_LLM_COMPANY_PROMPT = """You are extracting the hiring company name from a job description.
+
+Return a JSON object with EXACTLY one key:
+{{"company_name": "<string>"}} OR {{"company_name": null}}
+
+Rules:
+- Return the hiring COMPANY (the employer posting this job).
+- If the company name is not clearly stated in the JD, return null.
+- Do NOT return the ROLE TITLE (e.g., "Senior Engineer", "Executive Director").
+- Do NOT return the team / department / organization-within-company.
+- Do NOT return aggregator or job-board names (LinkedIn, Indeed, Glassdoor, Monster, ZipRecruiter, etc.).
+- Return the company verbatim as it appears, preserving capitalization and punctuation.
+- Do not add commentary, markdown, or additional keys.
+
+Job description:
+{jd_text}
+"""
+
+
+def _extract_company_name_llm(jd_text: str) -> Optional[str]:
+    """Call the LLM to extract the hiring-company name from a JD (B-024).
+
+    Returns a plausible string, or None if the LLM judged the JD
+    ambiguous or returned an aggregator / empty value. Raises on
+    network / quota / config failure — the orchestrator catches
+    that and falls back to the regex path.
+    """
+    prompt = _LLM_COMPANY_PROMPT.format(jd_text=jd_text[:8000])
+    response_text = generate_for_task(
+        task="company_name_extraction",
+        prompt=prompt,
+        json_mode=True,
+        max_tokens=200,
+        temperature=0.2,
+    )
+    if not response_text or not response_text.strip():
+        return None
+    try:
+        data = json.loads(response_text)
+    except json.JSONDecodeError:
+        # Malformed LLM output = low confidence; do NOT fall back to regex —
+        # that's reserved for genuine infrastructure failures. Per user:
+        # "null is valid data, not error." Parse-fail is effectively null.
+        logger.warning("company_name LLM returned non-JSON: %r", response_text[:200])
+        return None
+    candidate = data.get("company_name") if isinstance(data, dict) else None
+    if not isinstance(candidate, str):
+        return None
+    candidate = candidate.strip()
+    if not candidate:
+        return None
+    # Server-side deny-list backstop — prompt already instructs against these.
+    if candidate.lower() in _AGGREGATOR_DENY:
+        logger.info("company_name rejected by aggregator deny-list: %r", candidate)
+        return None
+    return candidate[:100]
+
+
+def _extract_company_name_regex(jd_text: str) -> Optional[str]:
+    """High-precision regex fallback for company-name extraction (B-021).
+
+    Preserved as the fallback path for B-024's LLM orchestrator: used only
+    when the LLM call itself raises (network / quota / config). LLM
+    returning `None` is valid data — that result passes through and does
+    NOT trigger this fallback. Returns None on low confidence so consumer
+    fallbacks ("your company" / "Unknown Company") stay intact.
     """
     if not jd_text or not jd_text.strip():
         return None
@@ -253,6 +327,36 @@ def _extract_company_name(jd_text: str) -> Optional[str]:
                 continue
             return candidate[:100]
     return None
+
+
+def _extract_company_name(jd_text: str) -> Optional[str]:
+    """Extract the hiring-company name from a JD (B-024 — LLM primary).
+
+    Design: LLM primary (Flash) + regex fallback + existing
+    "your company" / "Unknown Company" consumer fallback. Three layers,
+    precision-first: null > false positive. Layer 2 (manual user entry
+    when extraction returns None) is tracked as B-025 and is out of
+    scope here.
+
+    - LLM raises (network / quota / config) → fall back to regex.
+    - LLM returns None (valid "unclear" judgment) → return None; consumers
+      keep their placeholder. We do NOT re-try the regex — null is
+      data, not an error.
+    - LLM returns a string → deny-list backstop, length cap, return.
+
+    Role-title rejection is enforced in the LLM prompt rather than
+    server-side, keeping the validator to a simple aggregator deny-list
+    (user: "STOP if validator gets more complex than a deny-list").
+    """
+    if not jd_text or not jd_text.strip():
+        return None
+    try:
+        return _extract_company_name_llm(jd_text)
+    except Exception as exc:
+        logger.warning(
+            "company_name LLM call failed (%s); falling back to regex", exc
+        )
+        return _extract_company_name_regex(jd_text)
 
 
 def _extract_responsibilities(text: str) -> List[str]:

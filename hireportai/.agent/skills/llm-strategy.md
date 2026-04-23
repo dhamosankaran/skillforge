@@ -26,6 +26,9 @@ Used for high-volume, deterministic extraction / drafting:
 - `experience_narrative` — 1-2 sentence "My Experience" bullet
   (moved from reasoning tier in P5-S11; output is short and the
   reasoning-tier model wasted budget on hidden thinking tokens)
+- `company_name_extraction` — extract the hiring company from a JD
+  (B-024 — LLM primary, regex fallback on infra failure, null on
+  unclear; aggregator deny-list backstop server-side)
 
 ### REASONING_TASKS — stronger reasoning model
 Used for longer, creative, or multi-step outputs:
@@ -89,6 +92,7 @@ handlers; swap by setting the env var, no code change needed.
 | `gap_mapping` | `gap_mapping_service.py` |
 | `experience_narrative` | `experience_service.py` |
 | `quiz_generation` | `study_service.py` (quiz mode) |
+| `company_name_extraction` | `nlp.py` (via `extract_job_requirements`; both cover-letter prompt and tracker autopopulate inherit) |
 
 ## Switching Providers
 To move reasoning tasks from Gemini 2.5 Pro to Claude Sonnet:

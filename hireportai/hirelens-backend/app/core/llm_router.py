@@ -27,6 +27,7 @@ FAST_TASKS = frozenset([
     "gap_mapping",
     "rewrite_bullets",
     "experience_narrative",
+    "company_name_extraction",
 ])
 
 REASONING_TASKS = frozenset([
