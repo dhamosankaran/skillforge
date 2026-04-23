@@ -124,6 +124,7 @@ Preserved for historical PostHog data cross-reference. Source files no longer ex
 | `subscription_cancelled` | `app/services/payment_service.py` (webhook) | `{user_id, plan}` |
 | `registration_blocked` | `app/api/v1/routes/auth.py` | `{ip_hash, existing_accounts}` |
 | `admin_card_draft_generated` | `app/api/v1/routes/admin.py` | `{admin_id, category, tokens}` |
+| `admin_analytics_viewed` | `app/core/deps.py` (`audit_admin_request`) | `{admin_id, internal: true, path}` — fires from the router-level `audit_admin_request` dep whenever the request path starts with `/api/v1/admin/analytics`. Dormant until Slice 2 (E-018b) lands the first analytics route (spec #38 AC-8). |
 | `email_sent` | `app/services/reminder_service.py` | `{user_id, type, cards_due, streak}` |
 | `email_unsubscribed` | `app/api/v1/routes/email_prefs.py` | `{user_id, method}` |
 | `email_resubscribed` | `app/api/v1/routes/email_prefs.py` | `{user_id}` |

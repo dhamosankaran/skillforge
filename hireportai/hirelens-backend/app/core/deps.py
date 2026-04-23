@@ -1,8 +1,10 @@
 """FastAPI dependencies for authentication and authorization."""
+import logging
+import uuid
 from typing import Optional
 
 import sentry_sdk
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import BackgroundTasks, Depends, Header, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +13,8 @@ from app.core.config import get_settings
 from app.core.security import decode_token
 from app.db.session import get_db
 from app.models.user import User
+
+logger = logging.getLogger(__name__)
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -95,6 +99,91 @@ async def require_admin(user: User = Depends(get_current_user)) -> User:
             detail="Admin access required.",
         )
     return user
+
+
+async def audit_admin_request(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Audit log for every admin-scoped HTTP request (spec #38 E-018a).
+
+    Chains `require_admin` so the 401/403 gate runs first (unauth and
+    non-admin requests never reach the audit path by design — we audit
+    authorized admin activity, not rejected attempts).
+
+    The audit row is scheduled via `BackgroundTasks` so the route handler
+    returns the response first; the write then flushes on the same
+    request-scoped session and commits as part of the request transaction
+    via `get_db`'s teardown. Consequence: if the handler raises, the
+    audit row is rolled back with it, keeping audit rows consistent with
+    committed state.
+
+    Side-fires `admin_analytics_viewed` when the request path starts with
+    `/api/v1/admin/analytics` so every analytics endpoint is observed
+    without each one having to remember to call `track()`. In Slice 1
+    the analytics routes do not exist yet, so this emitter is dormant;
+    Slice 2 (E-018b) lands the first `/admin/analytics/*` route and the
+    event starts firing for real.
+    """
+    path = request.url.path
+    method = request.method
+    ip = request.client.host if request.client else "unknown"
+    query = dict(request.query_params) if request.query_params else {}
+    admin_id = user.id
+
+    background_tasks.add_task(
+        _write_admin_audit_log, db, admin_id, path, method, query, ip
+    )
+
+    if path.startswith("/api/v1/admin/analytics"):
+        background_tasks.add_task(_fire_admin_analytics_viewed, admin_id, path)
+
+    return user
+
+
+async def _write_admin_audit_log(
+    db: AsyncSession,
+    admin_id: str,
+    route: str,
+    method: str,
+    query_params: dict,
+    ip_address: str,
+) -> None:
+    """Persist a row to `admin_audit_log` on the request-scoped session.
+
+    Flushes only — `get_db` commits on request teardown. Never raises;
+    audit is best-effort and must not break the user-facing response.
+    """
+    # Local import avoids pulling the model graph when deps.py is imported
+    # in contexts that don't exercise the admin router.
+    from app.models.admin_audit_log import AdminAuditLog
+
+    try:
+        entry = AdminAuditLog(
+            id=str(uuid.uuid4()),
+            admin_id=admin_id,
+            route=route,
+            method=method,
+            query_params=query_params,
+            ip_address=ip_address,
+        )
+        db.add(entry)
+        await db.flush()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("admin audit log write failed: %s", exc)
+
+
+def _fire_admin_analytics_viewed(admin_id: str, path: str) -> None:
+    """Emit `admin_analytics_viewed` PostHog event. Silent on failure."""
+    from app.core.analytics import track
+
+    track(
+        admin_id,
+        "admin_analytics_viewed",
+        {"admin_id": admin_id, "internal": True, "path": path},
+    )
 
 
 def require_plan(minimum: str):

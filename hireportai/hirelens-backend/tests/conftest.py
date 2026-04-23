@@ -98,6 +98,7 @@ async def engine():
     import app.models.registration_log   # noqa: F401
     import app.models.interview_question_set  # noqa: F401
     import app.models.paywall_dismissal       # noqa: F401
+    import app.models.admin_audit_log          # noqa: F401
 
     async with eng.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
