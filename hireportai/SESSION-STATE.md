@@ -64,6 +64,23 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 ## Last Completed Slice
 
+**2026-04-23 — P5-S56 spec authored (free-tier 1-scan lifetime cap; opens B-031 🟡 PARTIAL).** Mode 4 spec slice — **no code changes**. Drafted `docs/specs/phase-5/56-free-tier-scan-lifetime-cap.md` at base `ebd0415` (HEAD at slice start was `e36c319`). Dhamo-locked policy (2026-04-23): free tier = exactly 1 full ATS analysis per user, lifetime; Pro/Enterprise unlimited; admin bypass; NO dismissal grace (carve-out from spec #42 LD-1); implicit grandfathering (no data migration — existing free users start at zero `usage_logs` count, accepted bounded revenue leak).
+
+**Current-phase spec list — new row:**
+- **Spec #56 — Free-Tier ATS Scan Lifetime Cap** · `docs/specs/phase-5/56-free-tier-scan-lifetime-cap.md` · Status: 🟡 spec drafted, impl pending (B-031) · Cross-ref: **amends spec #42 LD-1** — `paywall_service.should_show_paywall(trigger='scan_limit')` always returns `{show: True, attempts_until_next: 0}` for free users regardless of `paywall_dismissals` history (other triggers retain 3-attempt grace).
+
+**Critical reframe captured in spec §1–§2:** current `/api/analyze` and `/api/v1/analyze` have **zero backend quota enforcement**. `PLAN_LIMITS["free"]["analyze"] = 3` in `usage_service.py:13` is dead code (no consumers; only `interview_prep` and `resume_optimize` call `check_and_increment`). FE `maxScans: 3` is a localStorage counter, defeatable. The impl slice wires BE enforcement **for the first time** AND flips the number to `1` — not a "tighten 3 → 1" slice.
+
+**Spec shape (13 sections):** §1 Problem, §2 Audit summary (Step-0 findings accepted), §3 LDs (7 locked decisions — cap=1 lifetime; BE authoritative; window=lifetime for `analyze`; no grace for `scan_limit`; implicit grandfathering; reuse `scan_limit` trigger; upgrade is plan-first), §4 Solution (BE quota wiring + lifetime-window helper + new `GET /api/v1/payments/usage` + FE hydration + 402 handler + B-030 regression guard), §5 ACs (AC-1..AC-10 — includes the `Results.reanalyze.test.tsx` regression pin at AC-10), §6 spec #42 carve-out, §7 analytics (`paywall_hit` + `paywall_dismissed` gain optional `attempted_action`; new `free_scan_cap_hit {attempted_action, scans_used_at_hit}`), §8 API contract table, §9 data-model changes (none), §10 out of scope (Optimize button, anonymous scans, announcement email), §11 dependencies (spec #42, spec #55), §12 impl blast radius, §13 R14 classification (new feature + policy change — R14 default, not an exception).
+
+**BACKLOG:** B-031 opened 🔴 → 🟡 PARTIAL in same commit. Close-line references pre-amend SHA `6242cba` (backfilled post-amend). Row notes: "Spec half closed … (impl pending). Impl slice (P5-S56-impl) flips 🟡 → ✅." Scope = spec + impl; this slice closes spec only. B-030 row unchanged (✅ already).
+
+**No code touch.** No tests added/changed. Test counts unchanged: BE 399 passed / 1 skipped / 6 deselected integration; FE 244/244.
+
+**R14 classification:** new feature + locked policy change; spec-first per R14 default — NOT an exception.
+
+---
+
 **2026-04-23 — E-041 anchor ATS Score + Missing Skills widgets (results-page drift bug).** Single commit. Pure CSS revert of two unspecced sticky declarations at `hirelens-frontend/src/pages/Results.tsx:196,242` introduced by commit `6e126b3` (E-009 / P5-S20 "Job Fit above the fold") without spec backing. Both widgets were pinning on scroll and overlapping their own column's later rows (col-1: Score Breakdown / Nav / CTAs; col-3 at xl: Formatting / Improvements) — the "floats and drifts down" symptom Dhamo reported. Classified accidental: not in spec #21, not in the E-009 commit body, and the ATS Score code comment said "xl sticky" while code was `lg:sticky` (internal drift). Fix: drop `lg:sticky lg:top-20 z-10` from ATS Score and `xl:sticky xl:top-20 z-10` from Missing Skills + realign both code comments. Widgets return to natural document flow at all breakpoints. DOM order unchanged; grid-position classes untouched; no test changes. FE suite: `tests/pages/Results.ordering.test.tsx` (8), `Results.reanalyze.test.tsx` (4), `Results.tooltips.test.tsx` (1) all green. Manual verification owed on desktop + mobile per prompt ("Manual only — pure CSS bug"). BACKLOG: E-041 opened 🔴 → 🟡 in same commit (pre-authorized per prompt R15 "file one before implementing"), to flip ✅ on CODEX pass. `tsc --noEmit` clean.
 
 ---
