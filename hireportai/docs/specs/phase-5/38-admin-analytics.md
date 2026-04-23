@@ -423,24 +423,31 @@ No feature parity loss — just reflow.
 
 ### Out of scope — flagged as follow-up spec candidates
 
-The following should be authored as a distinct spec
-(`phase-5/XX-admin-access-hardening.md`) before this dashboard surfaces
-anything beyond aggregate counts (i.e. before any per-user drill-downs):
+The admin-access-hardening umbrella originally listed here has been
+partially landed by **`docs/specs/phase-5/54-admin-email-whitelist.md`**
+(E-040) — env-driven `ADMIN_EMAILS` whitelist reconciled on login +
+frontend `<AdminGate>` wrapper. That closes the "no declarative
+source of truth / manual DB promotion" concern. The remaining items
+below are still open follow-ups under a narrower hardening umbrella
+and should each be authored as their own spec before this dashboard
+surfaces anything beyond aggregate counts (i.e. before any per-user
+drill-downs):
 
 - **MFA for admin role** — require TOTP on admin sign-in before
   `role=admin` is honored. Matters once the dashboard can drill into
-  individual user records.
+  individual user records. Explicitly deferred in spec #54 LD-1.
 - **Admin session IP pinning / short TTL** — admin JWTs expire in 1h
-  instead of 30d; re-auth on IP change.
-- **Admin promotion UI** — a dedicated `POST /api/v1/admin/promote`
-  endpoint gated by an environment-bound bootstrap-admin email list,
-  replacing direct DB updates.
+  instead of 30d; re-auth on IP change. Pairs with the live-session
+  demotion lag documented in spec #54 §Known Limitations
+  (tracked separately as **E-040-follow**).
 - **Admin-scoped rate limit profile** — higher LLM ceilings but audit-heavy.
 - **PII-scrubbed representative quotes** (partial in this spec for themes;
   should generalize).
 
 None of these block this spec, but the audit log (AC-9) is a hard
-prerequisite and is included.
+prerequisite and is included. Admin promotion UI — previously listed
+here — is explicitly **rejected** by spec #54 LD-2 (the env var is
+the only promotion path); do not re-author.
 
 ---
 
