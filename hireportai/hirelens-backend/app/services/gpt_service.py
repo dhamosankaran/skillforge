@@ -136,10 +136,21 @@ def _extract_candidate_name(resume_text: str) -> str:
 
     Accepts 2–4 Title-Case tokens with no digits, email, or colon. Falls back
     to "The Applicant" so the signature always renders something.
+
+    B-023: explicitly skip all-uppercase lines (e.g. "KEY ACHIEVEMENTS",
+    "PROFESSIONAL SUMMARY", "WORK EXPERIENCE"). The token regex below
+    accepts `^[A-Z][A-Za-z.'-]+$` which silently matches all-caps tokens,
+    so without this guard a section header above the candidate's name
+    would be returned and end up poisoning the cover-letter signature.
+    Human names capitalize the first letter per token, not every letter.
     """
     for raw in resume_text.splitlines()[:10]:
         line = raw.strip()
         if not line or "@" in line or ":" in line or any(c.isdigit() for c in line):
+            continue
+        # B-023: reject all-uppercase section headers explicitly.
+        letters = [c for c in line if c.isalpha()]
+        if letters and line == line.upper():
             continue
         tokens = line.split()
         if 2 <= len(tokens) <= 4 and all(re.match(r"^[A-Z][A-Za-z.'-]+$", t) for t in tokens):

@@ -22,6 +22,7 @@ from app.schemas.responses import CoverLetterRecipient, CoverLetterResponse
 from app.services.gpt_service import (
     CoverLetterError,
     _CoverLetterCore,
+    _extract_candidate_name,
     _join_cover_letter,
     generate_cover_letter,
 )
@@ -419,6 +420,68 @@ def test_telemetry_failed_fires_on_llm_exception():
 # ---------------------------------------------------------------------------
 # AC-4b — live-LLM tone differentiation, integration_llm marker
 # ---------------------------------------------------------------------------
+
+# ── B-023 — candidate-name extractor rejects all-caps section headers ──
+#
+# Observed artifact (2026-04-22): cover-letter output rendered "KEY
+# ACHIEVEMENTS" after "Sincerely," — `_extract_candidate_name` walked the
+# first 10 resume lines, didn't find the candidate's name, and returned a
+# section header because `^[A-Z][A-Za-z.'-]+$` happily accepts all-caps
+# tokens. The header got interpolated into the prompt as the signature
+# field, the LLM dutifully echoed it, and `_join_cover_letter` rendered
+# it unchanged. Fix: skip pure-uppercase lines before the token-regex
+# check. Human names capitalize the first letter per token, not every
+# letter — a legitimate candidate-name line is never pure-uppercase.
+
+
+@pytest.mark.parametrize("name", [
+    "Jordan Doe",
+    "Dhamo Sankaran",
+    "Mary-Kate O'Neill",
+    "Alice Johnson",
+    "Dr. Alice Johnson",
+    "Jean-Luc Picard",
+])
+def test_b023_extract_candidate_name_accepts_real_mixed_case_names(name):
+    """Positives: real human names still resolve to the line verbatim."""
+    resume = f"{name}\nalice@example.com | (555) 123-4567\n\nSummary\n..."
+    assert _extract_candidate_name(resume) == name
+
+
+@pytest.mark.parametrize("header", [
+    "KEY ACHIEVEMENTS",
+    "PROFESSIONAL SUMMARY",
+    "WORK EXPERIENCE",
+    "EDUCATION",
+])
+def test_b023_extract_candidate_name_rejects_all_caps_section_headers(header):
+    """Negatives: all-caps resume section headers must not be returned as
+    the candidate's name. Before B-023, "KEY ACHIEVEMENTS" would leak into
+    the cover-letter signature slot and render "Sincerely,\\nKEY ACHIEVEMENTS".
+    After the guard, the fallback "The Applicant" stands.
+    """
+    # Header at the top with no real name anywhere in the first 10 lines.
+    resume = f"{header}\n- Led platform reliability initiative\n- Reduced P50 by 40%"
+    assert _extract_candidate_name(resume) == "The Applicant"
+
+
+def test_b023_extract_candidate_name_skips_header_finds_real_name_below():
+    """Defense-in-depth: when a section header precedes the real name in
+    the first 10 lines, the helper skips the header and returns the name.
+    """
+    resume = (
+        "PROFESSIONAL SUMMARY\n"
+        "Alice Johnson\n"
+        "alice@example.com\n"
+    )
+    assert _extract_candidate_name(resume) == "Alice Johnson"
+
+
+def test_b023_extract_candidate_name_blank_resume_falls_back():
+    """Fallback: empty or no-match resume text yields "The Applicant"."""
+    assert _extract_candidate_name("") == "The Applicant"
+    assert _extract_candidate_name("   \n\t  \n") == "The Applicant"
+
 
 @pytest.mark.integration_llm
 @pytest.mark.skipif(
