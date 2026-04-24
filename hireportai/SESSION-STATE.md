@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|-------|
-| **HEAD commit** | `e93e950` — P5-S-B032 Optimize-button paywall gate (closes B-032, opens B-033). Prior HEAD was `1499ad2` (spec #56 draft). |
+| **HEAD commit** | *(pending this commit)* — 2026-04-23 BACKLOG bookkeeping slice: opens E-042 / E-043 / E-044 / E-045 / E-046, annotates E-017 as superseded-pending, files D-020 (tracker `jd_hash` drift). Prior HEAD was `a9a4f37` (P5-S56-impl: free-tier 1-scan lifetime cap server-side). HEAD before that was `1bf6c3b` (B-032 backfill). SHA backfillable post-commit per the established pattern. |
 | **Branch** | `main` (NOT yet pushed to `origin/main` as of 2026-04-23 — 23 commits ahead since `794dc28`) |
 | **CODE-REALITY.md sha (repo)** | Partial ⚠️ — regen blob at top of the file was authored for the (still-uncommitted) E-018b content in the working tree; add E-040's touches on next regen: new `AdminGate` FE component (`src/components/auth/AdminGate.tsx`), new `reconcile_admin_role` service helper in `app/services/user_service.py`, new `Settings.admin_emails` + `admin_emails_set`, new `ADMIN_EMAILS` env var in AGENTS.md table, `/admin` + `/admin/analytics` routes now wrapped in `<AdminGate>`, new `admin_role_reconciled` PostHog event. |
 | **CODE-REALITY.md in chat Project** | Stale ❌ — re-upload after a clean regen lands (E-018b commits + E-040 touches together) |
@@ -42,6 +42,7 @@
 | D-017 | 2026-04-22 | `docs/status/E2E-WALKTHROUGH-2026-04-21.md` finding #2 — "No active mission found" rendered as alert/error for new users | `docs/status/PERSONA-FLOWS-VERIFICATION-2026-04-21.md:66,144` + on-disk code (`CountdownWidget.tsx:96-106`, `MissionMode.tsx:378-387`) | Walkthrough finding #2 says new users see a "No active mission found" alert/error on `/home`. Scout (2026-04-22) grepped `No active`, `no active`, `No Mission`, `no mission`, `mission.*active`, `role="alert"`, `text-danger`, `bg-danger` across `hirelens-frontend/src/` — the literal string does not exist; the only `role="alert"` in mission-adjacent code is `CountdownWidget.tsx:87` ("Couldn't save your date" date-save error path, unrelated). The mission-empty path renders a CTA button `"Start a Mission sprint"` via `DashboardWidget`'s `action` prop (CountdownWidget.tsx:102-106), not an alert. Prior verification doc explicitly states **"Dhamo's 'No active mission' finding is by design, not a bug"** — mission is explicit user action. Walkthrough finding may be a paraphrase of styling that read as warning-coloured, a toast from elsewhere, or a duplicate of the 2026-04-21 already-resolved finding. Cannot file a BACKLOG row without reproducible evidence (CLAUDE.md N6). | 🟡 OPEN, latent. Close shape: re-verify on next walkthrough pass with (a) screenshot, (b) exact copy string, (c) persona + page where observed. Close as RESOLVED / BY-DESIGN if still not reproducible and the prior verification doc stands; open a BACKLOG row only if reproduced with evidence. Dropped from 2026-04-22 HomeDashboard copy/rendering slice scope per Dhamo approval. |
 | D-018 | 2026-04-23 | Chat-Claude Slice 2 prompt for E-018b | `docs/specs/phase-5/38-admin-analytics.md` §API Contract + §Rollout Slice 2 | Slice-2 prompt drifted from spec on three points: (a) proposed 3 metrics (DAU/MAU, paying users, retention) + WoW delta instead of spec AC-2's full 6 OKRs with 7d+30d deltas; (b) proposed Sentry + PostHog for performance latency/error, contradicting spec §Rollout Slice 2 "no PostHog Query API dependency" and introducing Sentry as a new dep with no spec backing; (c) proposed `?period=7\|30\|90` query param instead of spec's `?from=&to=` contract. Claude Code flagged all three at SOP-5/N7 and Dhamo confirmed (A) spec-verbatim wins. Logged here so future chat-Claude prompts are drafted with a second-pass spec diff before handing off, especially when proposing new external deps (Sentry) or query-param contracts. | ✅ RESOLVED 2026-04-23 — resolved inline in the slice by deferring `api_latency` + `error_rate_24h_pct` to follow-up BACKLOG rows (E-018b-follow + E-018b-follow-errors) and honouring spec's 6-OKR `?from=&to=` contract. Process guardrail: starter-message verification (SOP-7) catches SHA / BACKLOG-ID drift; this is a different class — "prompt scope drifts from cited spec." Mitigation: when a chat-Claude prompt names a spec, first action after reads should be a diff-based spec-vs-prompt audit, not just a spec read. |
 | D-019 | 2026-04-23 | Concurrent-session interleave — E-018b slice pre-authored SESSION-STATE + CODE-REALITY edits in the working tree; E-040 slice committed on top of `806c199` with those working-tree edits still uncommitted | Git log (HEAD = `1148354` — `22dccfc` + `71f9d4b` + `1148354`) | SESSION-STATE.md was pre-filled with an "E-018b slice 2/4" Last-Completed-Slice block and HEAD `(pending commit)` header; CODE-REALITY.md was regenerated for E-018b additions — both describing a commit that has NOT landed on `main`. E-040 committed three clean commits on top of `806c199`. The E-018b pre-authored content was preserved (not stomped) so whoever resumes E-018b can finish their commit without re-authoring; E-040's Last-Completed-Slice entry was prepended above it with a clear marker. Different class than D-015 (which was HEAD-move between `git commit` / `--amend` in a single session). D-019 is "content pre-authored for a future commit, then another slice lands first" — needs a coordination protocol: at start-of-slice, check working-tree diff vs HEAD for stale pre-authoring, and either resume / coexist / reset. | 🟡 OPEN — mitigation: (a) starting a slice, `git status` + `git diff HEAD` on SESSION-STATE/CODE-REALITY before Step 0 reads (catches in-flight edits); (b) if in-flight content exists, either resume its slice or preserve-and-coexist (this slice chose the latter); (c) after committing, flag the preservation in the header and in a D-entry so the original author can resume cleanly. No revert needed; both files remain consistent (header accurate, E-018b draft clearly marked as pre-authored). |
+| D-020 | 2026-04-23 | `CODE-REALITY.md` §2 drift notes — `tracker_applications_v2` schema documented with a `jd_hash` column for scan-dedup / re-scan continuity | Live DB schema (Alembic history + `app/models/tracker_application.py`) | `jd_hash` is documented in CODE-REALITY §2 as part of the intended tracker schema but has no column on disk — no Alembic migration ever added it, the ORM model does not declare it, and no code reads or writes it. Callers rely on `(user_id, scan_id)` uniqueness plus the `jd_requirements` payload embedded per-scan. Blast radius: low today (no feature depends on `jd_hash`), but it's a forward-dependency for any "re-scan THIS JD against updated resume" path — the re-scan loop needs a stable JD fingerprint to tie together a before/after pair without re-uploading the same JD text. | 🟡 OPEN — cross-referenced by new BACKLOG row **E-043** (ATS re-scan loop per tracker application). Close shape: (a) decide whether to add `jd_hash: str | null` as its own Alembic migration BEFORE E-043 spec work starts, OR bundle the `jd_hash` + `jd_text` columns into a single tracker-schema migration inside E-043's impl slice; (b) if bundled, E-043 spec must call out the `jd_hash` drift resolution as an explicit line item in its migration section; (c) if standalone-first, file a new `E-04X` row for the migration-only slice. Not blocking anything today. |
 
 ---
 
@@ -63,6 +64,51 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 ---
 
 ## Last Completed Slice
+
+**2026-04-23 — BACKLOG bookkeeping: 2026-04-23 product-scope conversation landed as 5 rows + E-017 supersession + D-020 tracker-drift flag. Docs-only; no code.** Single commit. No tests. No spec files authored (two of the new rows explicitly signal "spec TBD — chat-Claude Mode 4 slice forthcoming"; three are 🟦 no-spec-needed). CODEX review applies per Rule 11.
+
+**Rows added to `BACKLOG.md` Enhancements table (after E-041):**
+- **E-042** `tracker | Tracker-level interview date + company (deprecates user-level fields) | P1 | 🔴 | TBD`. Moves `interview_target_date` + `interview_target_company` off `users` onto per-application `tracker_applications_v2` rows. Countdown widget on `/home` reads "nearest upcoming `interview_date` across the user's active tracker rows" instead of the user-level field. **Supersedes E-017.** Notes cross-ref E-025 (P5-S5 tracker-autopopulate spec backfill — spec pointer `docs/specs/phase-5/29-tracker-autopopulate.md` is on-disk absent per N1-SUPPLEMENT; E-025 is its own backfill commitment, cross-ref only).
+- **E-043** `tracker | ATS re-scan loop per tracker application (close PRD scan→study→re-scan→improve loop) | P1 | 🔴 | TBD`. Depends on E-042 (home-widget routing) AND D-020 resolution (missing `jd_hash` column). Adds `jd_text` column to `tracker_applications_v2`, new `POST /api/v1/analyze/rescan` endpoint, score-delta history per tracker row, new `<ScoreDeltaWidget>` on both tracker-row detail and `/home` interview-prepper variant.
+- **E-044** `content | Educational video for product walkthrough | P3 | 🟦`. Gate (ALL THREE): Phase 5 core flows stable (no 🟡 PARTIAL rows in billing / study / results) AND ≥ 20 paying Pro users AND no feature rename / reroute planned in the next 30 days. Rationale: product still changing weekly; video goes stale.
+- **E-045** `research | Lifecycle CRM validation probe (single in-product feedback question) | P3 | 🟦`. Gate: ≥ 50 paying Pro users (Month-3 OKR milestone). Single microsurvey on paying users' willingness to pay $X more/month for end-to-end interview lifecycle tracking. **Option D strategic lock stays in force — probe-only, NOT a commitment to build.**
+- **E-046** `tracker | Real-time recruiter-call AI copilot | P3 | 🟦`. **DO-NOT-BUILD (permanent rejection)** in Notes — no status marker change (🟦 reused; no new ⛔ introduced per Dhamo direction). Rationale: TOS-violation surface on target employers' interview processes, one-party-recording-law liability across jurisdictions, commoditized LLM-wrapper space with no moat extension. No gate. No spec. Row exists to be pointed at when the idea resurfaces.
+
+**Row annotations edited:**
+- **E-017** (persona | P5-S30 Profile-side editor for `users.interview_target_date`): appended "**Superseded-pending — see E-042**" preamble to Notes. Removed stale "Depends on E-003." dependency (E-003 closed 2026-04-18 by `2c01cc7`). Row stays 🔴; does NOT flip to ✅ until E-042's refactor commits land and the supersession is codified in code, not just in BACKLOG notes.
+
+**Drift flag filed:** **D-020** (this file, Drift flags table). Source A = CODE-REALITY §2 drift notes claiming `tracker_applications_v2.jd_hash` column exists; Source B = live DB schema + Alembic history + ORM model showing the column is absent. Cross-referenced by E-043 notes. 🟡 OPEN. Close shape deferred to E-043 spec decision (standalone migration first vs. bundled with `jd_text`).
+
+**On-disk spec verification (N1-SUPPLEMENT):**
+- Spec #34 (persona-picker-and-home) — PRESENT ✅.
+- Spec #29 (tracker-autopopulate) — ABSENT on disk; referenced via E-025's spec pointer as a backfill commitment. E-042's new row notes this cross-ref explicitly rather than pointing at a missing file. Neither E-042 nor E-043 names spec #29 as its own spec pointer (both use "TBD" — chat-Claude Mode 4 slice forthcoming).
+- **Option A+ spec file (Profile editor for `users.interview_target_date`) — ABSENT on disk.** `ls docs/specs/phase-5/ | grep -iE "option|profile-editor|interview-editor|persona-editor|target-editor"` returned empty. Nothing at #57/#58/#59/#60. Flagged in commit message per prompt direction. No spec file was edited in this slice.
+
+**SESSION-STATE edits in this slice:**
+- Session Header HEAD updated `e93e950 → a9a4f37` (stale since the P5-S56-impl slice).
+- Drift flags table: D-020 appended after D-019.
+- Last Completed Slice: this block prepended above the P5-S56-impl block (which remains authoritative for `a9a4f37`'s content).
+- New section **On the Horizon** added (after Next Slice): records the two TBD spec slices (E-042 + E-043) and flips Option A+ (Profile editor) to "paused — pending tracker-level refactor."
+
+**Commit contract (single commit):** MODIFIED — `BACKLOG.md`, `SESSION-STATE.md`. No code files. No spec files. No test files. No `.agent/skills/*`.
+
+**Pre-existing dirty files untouched per C2:** `../.DS_Store`, `Enhancements.txt`, `hirelens-backend/scripts/wipe_local_user_data.py`; untracked `.agent/skills/stripe-best-practices/`, `.agent/skills/stripe-projects/`, `.agent/skills/upgrade-stripe/`, `.gitattributes`, `BACKLOG_PRIORITIZED.md`, `docs/audits/`, `docs/status/E2E-READINESS-2026-04-21.md`, `skills-lock.json`. None enter the commit.
+
+**Judgment calls logged:**
+- **Do-not-build marker for E-046.** Reused 🟦 status + "DO-NOT-BUILD (permanent rejection)" language in Notes per greenlit direction. No new ⛔ / ❌ marker introduced (would need a legend edit beyond this slice's scope).
+- **E-017 kept 🔴, not ✅.** The prompt specified "Do NOT close E-017 yet — annotate it as superseded-pending with a pointer to this new row." Followed verbatim. E-017's supersession becomes ✅ at the commit that lands E-042's refactor, not here.
+- **D-020 filed to SESSION-STATE Drift flags table**, not BACKLOG. The prompt's phrase "BACKLOG D-entry" does not match a section that exists in BACKLOG.md — all on-disk D-entries live in SESSION-STATE.md's Drift flags table. Interpreted the intent as "file the drift flag in its canonical on-disk location" and cross-referenced from E-043 Notes instead of duplicating.
+- **No spec files authored.** Prompt explicitly forbade spec files ("no spec files"). E-042 + E-043 spec pointers read "TBD (chat-Claude Mode 4 spec slice forthcoming)".
+
+**Skills / specs read (SOP-4 / SOP-5):**
+- Prompt cited no skill files and no spec numbers directly. Scout read `docs/specs/phase-5/34-persona-picker-and-home.md` (persona spec, already in context from prior slice) and `docs/specs/phase-5/53-interview-target-optional-fields.md` reference (LD-3 / OD-2 still governs the CountdownWidget single-surface design until E-042 ships).
+- No skill-inventory gaps for this bookkeeping slice.
+
+**R14 classification:** exception (a) retrofits / backfills — BACKLOG rowing + drift-flag filing + annotation; no new feature surface shipped. Two rows are spec-first-when-picked-up, explicitly marked.
+
+**Verification step run pre-commit:** see final report below for the per-row status / priority / spec-pointer confirmation table.
+
+---
 
 **2026-04-23 — P5-S56-impl: free-tier 1-scan lifetime cap enforced server-side (closes B-031 🟡 → ✅; amends spec #42 LD-1 via spec #56 §6).** Mode 2 implementation slice for spec #56. B-031's spec half landed in `6242cba`; this slice wires BE enforcement + FE hydration and flips 🟡 → ✅. Pre-amend SHA `2080577` referenced in BACKLOG close-line.
 
@@ -312,6 +358,36 @@ Kept `Profile.subscription.test.tsx` untouched (its inline `signOut: vi.fn()` mo
 **P5-S17** — Frontend PersonaPicker page + PersonaGate + AppShell hide-list + legacy cleanup. New full-page picker at `/onboarding/persona` (`src/pages/PersonaPicker.tsx`) renders 3 cards using PRD §1.3 copy (Interview-Prepper, Career-Climber, Team Lead); Interview-Prepper card expands with optional `<input type="date">` and a `maxLength={100}` company input (live counter). Continue calls `updatePersona()` → `PATCH /api/v1/users/me/persona`, merges the response into AuthContext via `updateUser`, then `navigate('/home', { replace: true })`. Inline error on API failure, selection preserved. Fires `persona_picker_shown` on mount and `persona_selected` after 2xx (both new, added to `.agent/skills/analytics.md`). New `src/components/PersonaGate.tsx` wraps the protected subtree inside `ProtectedRoute` — redirects `user.persona === null` to `/onboarding/persona` on every protected path except `/`, `/login`, `/onboarding/persona`. `AppShell.CHROMELESS_PATHS` now includes `/onboarding/persona` so TopNav/MobileNav hide there. `AuthUser.persona` narrowed to `Persona = 'interview_prepper' | 'career_climber' | 'team_lead'`; legacy `target_company?`/`target_date?` fields dropped. `services/api.ts` `completeOnboarding` + legacy `updatePersona` (+ their request types) deleted; new `updatePersona(body): Promise<AuthUser>` targets the new endpoint. `StudyDashboard` `PERSONA_CONFIG` rekeyed to snake_case, literal comparisons updated (`'interview_prepper' | 'career_climber' | 'team_lead'`), field reads renamed to `user.interview_target_*`; settings-modal launchers ("Change goal" button + "Set your goal →" button) + `showPersonaPicker` state + legacy import all removed. `LoginPage` doc comment refreshed. Legacy `src/components/onboarding/PersonaPicker.tsx` deleted; `components/onboarding/` kept (holds `GuidedTour.tsx`). Existing test fixtures (`TopNav.test.tsx`, `MobileNav.test.tsx`, `App.redirects.test.tsx`) updated — dropped legacy fields, `'climber' → 'career_climber'`, and `App.redirects.test.tsx` now stubs `@/pages/PersonaPicker` instead of the deleted path. Analytics catalog: `persona_picker_shown` + `persona_selected` added to the active table; the two legacy events (`persona_changed`, `onboarding_persona_selected`) preserved in a new `#### Deprecated Frontend Events` subsection with commit-b5f42c2 markers so historical PostHog data + the Phase-4 dashboards spec stay cross-referenced (post-amend). AGENTS.md Frontend Routes table gained a `/onboarding/persona` row and the nav-chrome-hides sentence now lists the new path. Test counts: FE **38/38** (27 → 38: +6 PersonaPicker, +3 PersonaGate, +2 AppShell); BE unchanged at **184 unit + 6 integration deselected**. TypeScript clean, `npm run build` succeeds.
 
 **Shipped:** P5-S17 committed as `2c01cc7` (amend of `b5f42c2`) pushed to `origin/main` at 2026-04-18 19:49 UTC. Auto-deploys to Vercel (frontend) + Railway (backend — no-op this slice) per CLAUDE.md §Rule 9. Resolves the known S16-leftover runtime breakage on `/learn` (`PERSONA_CONFIG[user.persona]` returning `undefined` for snake_case persona values).
+
+---
+
+## On the Horizon
+
+> Forward-looking staging area for work that has been *scoped but not yet speced*. Distinct from **Next Slice** (immediate) and **Known-Broken Features** (in-flight bugs). Entries here are checkpoints for planning-level conversations — not commitments for the next Claude Code run.
+
+**Two TBD spec slices (chat-Claude Mode 4 drafts forthcoming):**
+
+1. **Tracker-level interview date + company** (BACKLOG E-042 🔴 P1, spec TBD).
+   - Move `interview_target_date` + `interview_target_company` off the `users` table and onto per-application `tracker_applications_v2` rows.
+   - Countdown widget on `/home` reads "nearest upcoming `interview_date` across user's active tracker rows" instead of the user-level field.
+   - **Supersedes BACKLOG E-017** (P5-S30 Profile-side editor for `users.interview_target_date`). E-017 is annotated "superseded-pending" — flips to ✅ when E-042 refactor commits land.
+   - No dependency; can start with the spec anytime.
+   - Unblocks: E-043 (home-widget routing for the re-scan before/after score).
+
+2. **ATS re-scan loop per tracker application** (BACKLOG E-043 🔴 P1, spec TBD).
+   - Closes the PRD "scan → study → re-scan → improve" loop.
+   - Adds `jd_text` column to `tracker_applications_v2` (complementary to `jd_hash` — see D-020).
+   - New `POST /api/v1/analyze/rescan` endpoint taking `{tracker_application_id, resume_text}` → fresh `AnalysisResponse` + score-delta history.
+   - New `<ScoreDeltaWidget>` on tracker row detail + `/home` interview-prepper variant.
+   - Depends on: **E-042** (tracker-level target for widget routing) AND **D-020** resolution (missing `jd_hash` column — either standalone migration first or bundled with `jd_text` in E-043's impl slice; spec decides).
+
+**Paused — pending tracker-level refactor:**
+
+- **Option A+** (Profile-side interview-date editor for `users.interview_target_date`).
+  - Status: **paused pending E-042**. The Profile-editor surface becomes obsolete once interview targets live per-application on `tracker_applications_v2` rows rather than on the `users` record.
+  - Source: 2026-04-23 interview-date CTA audit (scout report earlier this session — CountdownWidget + MissionDateGate both navigate to PersonaPicker for optional-field edit, inconsistent UX).
+  - Spec file: **NOT present on disk** (`ls docs/specs/phase-5/ | grep -iE "option|profile-editor|interview-editor"` empty). No spec authored in the prior scout slice. If a chat-Claude Option A+ draft is mid-flight elsewhere, it must be reconciled against E-042 before landing — the Profile editor for the user-level field is no longer the intended shape.
+  - Do not resume impl on E-017 until E-042's refactor commits land.
 
 ---
 
