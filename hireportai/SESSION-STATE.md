@@ -65,6 +65,43 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 ## Last Completed Slice
 
+**2026-04-23 — P5-S58 spec slice: Legacy rewrite router auth + quota (B-033 🟡 PARTIAL). Spec-only; no code; no tests.** Single commit. Authored `docs/specs/phase-5/58-legacy-rewrite-router-auth-quota.md` (15 sections, 14 ACs, 10 LDs). Flipped B-033 🔴 → 🟡 PARTIAL (impl slice flips 🟡 → ✅). CODEX review applies per Rule 11.
+
+**Scope locked (Dhamo D1–D10, 2026-04-23):**
+- **LD-1 hybrid bucket:** `/rewrite` + `/rewrite/section` share `"rewrite"` bucket (Option a recommended — single key, telemetry granularity via `attempted_action` prop); `/cover-letter` is its own `"cover_letter"` bucket.
+- **LD-2 Pro-only hard gate:** `PLAN_LIMITS["free"]["rewrite"] = 0`, `…["cover_letter"] = 0` (dead values become live).
+- **LD-3 hard auth:** `Depends(get_current_user)` on all three handlers — anonymous → `401`.
+- **LD-4 triggers:** reuse B-032's `rewrite_limit` (widens FE-only → BE-authoritative; **not a rename**); introduce NEW `cover_letter_limit` `PaywallTrigger` value.
+- **LD-5 hard-wall carve-out:** both new triggers bypass spec #42 grace — same mechanism as spec #56 §6 for `scan_limit`.
+- **LD-6 FE hydration:** extended `/payments/usage` response, flat additive.
+- **LD-7 `PremiumGate` stays** as defense-in-depth (BE canonical; `PremiumGate`→`PaywallModal` convergence is separate follow-up).
+- **LD-8 confirmed factual:** no separate cover-letter page; shares `Rewrite.tsx`.
+- **LD-9 implicit grandfather** (moot under Pro-only).
+- **LD-10 CODE-REALITY.md regen** required at impl time.
+
+**Cross-spec amendments codified in spec #58 body (NOT edits to source specs #42 / #56):**
+- **Spec #42 LD-1 amendment** for `rewrite_limit` + `cover_letter_limit` grace carve-out (§7) — mirrors spec #56 §6 mechanism.
+- **Spec #56 §4.3 amendment** extending `/payments/usage` response (§5) flat with six new fields: `rewrites_{used,remaining,max}` + `cover_letters_{used,remaining,max}`. `-1` sentinel = unlimited, per spec #56 convention. `is_admin` kept as single orthogonal flag.
+- **B-032 `rewrite_limit` semantics widened** from FE-plan-check-only to BE-authoritative quota trigger. In-code cross-reference comment at impl time.
+
+**Cost framing (in spec §1.1, P0 justification):** ~$7,200/mo sustained-abuse ceiling across the three `reasoning`-tier Gemini 2.5 Pro endpoints (rewrite ~$0.05/call, section ~$0.015/call, cover-letter ~$0.035/call at $5/1M blended tokens).
+
+**Side-benefit documented (§12):** `admin_analytics_service.py:53-54` maps `"rewrite"`/`"cover_letter"` → `"reasoning"` tier for spend estimation but sees zero rows today (dead `PLAN_LIMITS`). Post-impl `log_usage` firing retroactively surfaces the category in the admin cost dashboard — **no explicit retrofit needed**, flagged so it isn't treated as a bug later.
+
+**Blast radius explicit on FE (spec §10):** `PaywallModal.tsx` HEADLINES + SUBLINES + `PaywallTrigger` union + `src/components/__tests__/PaywallModal.test.tsx` `Record<PaywallTrigger, string>` exhaustive map all extend for `cover_letter_limit` — tsc will fail without this. B-032 regression pattern pinned in AC-12 so impl slice does not rediscover mid-commit. AC-13 regression pins `Results.reanalyze.test.tsx` (B-030, 4/4) + `Results.optimize.test.tsx` (B-032, 5/5).
+
+**Out of scope in spec §13:** `GET /rewrite/templates` auth, rate-limit tightening on rewrite/cover-letter endpoints, win-back email for new triggers (follow-up gated by dismissal data), `PremiumGate`→`PaywallModal` UX consistency slice, legacy `/api/*` prefix deprecation, repo-wide `user_id=None` analytics sweep.
+
+**Dependencies:** spec #42 (shipped `91fa915`), spec #56 (shipped `a9a4f37`), B-032 (shipped `e93e950`). R14 default (new feature + security fix — not an exception).
+
+**Dhamo decision points for the impl slice to finalize:**
+- §4.1 Option a (single `"rewrite"` key) vs Option b (add `"section_rewrite"` PLAN_LIMITS key) — spec recommends (a).
+- Helper shape for rewrite/cover-letter counters in `/payments/usage`: extend `get_analyze_usage` → generalized `get_feature_usage(user_id, feature, db, window)` vs siblings. Impl picks.
+
+**Pre-existing dirty files unstaged (C2 compliance):** `../.DS_Store`, `Enhancements.txt`, `hirelens-backend/scripts/wipe_local_user_data.py`, `.gitattributes`, `BACKLOG_PRIORITIZED.md`, `docs/audits/`, `docs/status/E2E-READINESS-2026-04-21.md`, `skills-lock.json`, `.agent/skills/stripe-*/`, `.agent/skills/upgrade-stripe/`, untracked `docs/specs/phase-5/57-tracker-level-interview-date.md` (E-042 precursor, not part of this slice).
+
+---
+
 **2026-04-23 — BACKLOG bookkeeping: 2026-04-23 product-scope conversation landed as 5 rows + E-017 supersession + D-020 tracker-drift flag. Docs-only; no code.** Single commit. No tests. No spec files authored (two of the new rows explicitly signal "spec TBD — chat-Claude Mode 4 slice forthcoming"; three are 🟦 no-spec-needed). CODEX review applies per Rule 11.
 
 **Rows added to `BACKLOG.md` Enhancements table (after E-041):**
