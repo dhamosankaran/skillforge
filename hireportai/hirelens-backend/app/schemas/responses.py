@@ -1,4 +1,5 @@
 """Pydantic v2 response models for HirePort AI API."""
+from datetime import date as date_type
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
@@ -166,6 +167,7 @@ class TrackerApplication(BaseModel):
     scan_id: Optional[str] = None
     skills_matched: Optional[List[str]] = None
     skills_missing: Optional[List[str]] = None
+    interview_date: Optional[date_type] = None
     created_at: str
 
 

@@ -46,6 +46,7 @@ def _to_response(model: TrackerApplicationModel) -> TrackerApplication:
         scan_id=model.scan_id,
         skills_matched=matched,
         skills_missing=missing,
+        interview_date=model.interview_date,
         created_at=str(model.created_at),
     )
 
@@ -70,6 +71,7 @@ async def create_application(
         scan_id=data.scan_id,
         skills_matched=json.dumps(skills_matched) if skills_matched else None,
         skills_missing=json.dumps(skills_missing) if skills_missing else None,
+        interview_date=data.interview_date,
     )
     db.add(app)
     await db.flush()
@@ -144,6 +146,14 @@ async def update_application(
         return None
 
     updates = data.model_dump(exclude_none=True)
+    # Spec #57: PATCH semantics differ for interview_date — an explicit
+    # null clears the date, whereas other fields treat null as "absent."
+    # Detect explicit null via model_fields_set and re-inject it.
+    if (
+        "interview_date" in data.model_fields_set
+        and data.interview_date is None
+    ):
+        updates["interview_date"] = None
     for key, value in updates.items():
         setattr(model, key, value)
 

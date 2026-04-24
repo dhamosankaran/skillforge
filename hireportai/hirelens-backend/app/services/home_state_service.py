@@ -28,7 +28,7 @@ from app.models.mission import Mission
 from app.models.subscription import Subscription
 from app.models.tracker import TrackerApplicationModel
 from app.models.user import User
-from app.schemas.home import HomeStateContext, HomeStateResponse
+from app.schemas.home import HomeStateContext, HomeStateResponse, NextInterview
 
 logger = logging.getLogger(__name__)
 
@@ -190,6 +190,48 @@ def _check_first_session_done(
     return has_first_review_badge and total_reps <= FIRST_SESSION_REPS_CAP
 
 
+# ── Next-interview selection (spec #57 §2.2) ───────────────────────────────
+
+
+async def get_next_interview(
+    user_id: str, db: AsyncSession
+) -> Optional[NextInterview]:
+    """Return the user's nearest upcoming tracker-level interview, if any.
+
+    Selection rule (spec #57 §2.2):
+      MIN(interview_date)
+        WHERE user_id = :user_id
+          AND interview_date IS NOT NULL
+          AND interview_date >= CURRENT_DATE
+          AND status IN ('Applied', 'Interview')
+      tie-break: earliest created_at wins.
+
+    Returns ``None`` when no row matches.
+    """
+    today = date.today()
+    stmt = (
+        select(
+            TrackerApplicationModel.id,
+            TrackerApplicationModel.interview_date,
+            TrackerApplicationModel.company,
+        )
+        .where(TrackerApplicationModel.user_id == user_id)
+        .where(TrackerApplicationModel.interview_date.is_not(None))
+        .where(TrackerApplicationModel.interview_date >= today)
+        .where(TrackerApplicationModel.status.in_(["Applied", "Interview"]))
+        .order_by(
+            TrackerApplicationModel.interview_date.asc(),
+            TrackerApplicationModel.created_at.asc(),
+        )
+        .limit(1)
+    )
+    row = (await db.execute(stmt)).first()
+    if row is None:
+        return None
+    tracker_id, iv_date, company = row
+    return NextInterview(date=iv_date, company=company, tracker_id=tracker_id)
+
+
 # ── Compute (uncached) ──────────────────────────────────────────────────────
 
 
@@ -265,6 +307,16 @@ async def _load_context(
     except Exception as exc:  # noqa: BLE001
         logger.warning(
             "home_state: active mission lookup failed for %s: %s",
+            user_id,
+            exc,
+        )
+
+    # next_interview — spec #57 §2.2 selection rule.
+    try:
+        context.next_interview = await get_next_interview(user_id, db)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "home_state: next_interview lookup failed for %s: %s",
             user_id,
             exc,
         )

@@ -2,21 +2,73 @@
 
 Introduced in P5-S16. See spec
 `docs/specs/phase-5/34-persona-picker-and-home.md` §API Contract.
+
+Spec #57 (2026-04-23) deprecates ``users.interview_target_date`` +
+``users.interview_target_company``. This endpoint continues to accept and
+persist them for one release (dual-write safety), AND attempts a
+best-effort dual-write of ``interview_target_date`` onto the user's
+most-recent active tracker row so the new per-application surface stays
+in sync. Column drop is a Phase-6 cleanup slice.
 """
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Request
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.routes.auth import _user_dict
 from app.core.deps import get_current_user
 from app.core.rate_limit import limiter
 from app.db.session import get_db
+from app.models.tracker import TrackerApplicationModel
 from app.models.user import User
 from app.schemas.user import PersonaUpdateRequest
 from app.services import home_state_service
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
+
+
+async def _dual_write_tracker_interview_date(
+    user_id: str, new_date, db: AsyncSession
+) -> None:
+    """Best-effort mirror of the new persona date onto the user's most-
+    recent active tracker row, when that row has no interview_date yet.
+
+    Rule matches spec #57 §2.3 / AC-8 find-and-seed: most-recent by
+    ``created_at DESC`` among rows with ``status IN ('Applied', 'Interview')``.
+    Never overwrites an existing non-null ``interview_date`` — once the
+    user has set it explicitly via the new tracker API, the persona
+    endpoint stops being a writer for that row.
+
+    Failures are logged and swallowed; the caller's persona update must
+    not depend on this succeeding (spec AC-7 + prompt Step 4.3).
+    """
+    if new_date is None:
+        return
+    try:
+        stmt = (
+            select(TrackerApplicationModel)
+            .where(TrackerApplicationModel.user_id == user_id)
+            .where(TrackerApplicationModel.status.in_(["Applied", "Interview"]))
+            .order_by(TrackerApplicationModel.created_at.desc())
+            .limit(1)
+        )
+        row = (await db.execute(stmt)).scalar_one_or_none()
+        if row is None:
+            return  # No active tracker row — backfill-only synthesis, not here.
+        if row.interview_date is not None:
+            return  # Never overwrite.
+        row.interview_date = new_date
+        db.add(row)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "persona dual-write to tracker failed for user_id=%s: %s",
+            user_id,
+            exc,
+        )
 
 
 @router.patch("/users/me/persona")
@@ -42,6 +94,11 @@ async def update_persona(
         user.onboarding_completed = True
 
     db.add(user)
+    # Spec #57 dual-write — best-effort mirror onto tracker before commit
+    # so the single transaction keeps both writes atomic where possible.
+    await _dual_write_tracker_interview_date(
+        user.id, body.interview_target_date, db
+    )
     await db.commit()
     await db.refresh(user)
     home_state_service.invalidate(user.id)

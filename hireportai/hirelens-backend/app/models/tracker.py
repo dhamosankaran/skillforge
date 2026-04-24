@@ -1,7 +1,7 @@
 """Tracker application ORM model."""
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, UUIDPrimaryKeyMixin
@@ -23,6 +23,10 @@ class TrackerApplicationModel(Base, UUIDPrimaryKeyMixin):
     scan_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     skills_matched: Mapped[str | None] = mapped_column(Text, nullable=True)
     skills_missing: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Spec #57 — per-application interview target. Home countdown selects
+    # MIN(interview_date) across the user's active (Applied/Interview) rows;
+    # see home_state_service.get_next_interview.
+    interview_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )

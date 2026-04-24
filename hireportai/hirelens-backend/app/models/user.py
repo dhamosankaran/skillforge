@@ -21,6 +21,11 @@ class User(Base, UUIDPrimaryKeyMixin):
     onboarding_completed: Mapped[bool] = mapped_column(
         Boolean, server_default=text("false"), nullable=False
     )
+    # DEPRECATED — see spec #57 (docs/specs/phase-5/57-tracker-level-interview-date.md).
+    # Read via tracker_applications_v2.interview_date + the tracker row's
+    # company; new code MUST NOT read these columns. Dual-write retained for
+    # one release post-spec-57 for backfill safety; column drop is a
+    # Phase-6 cleanup slice gated on zero in-code readers.
     interview_target_company: Mapped[str | None] = mapped_column(String(100), nullable=True)
     interview_target_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     # Set by customer.subscription.deleted webhook. Consumed by the deferred

@@ -9,6 +9,7 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.requests import TrackerApplicationCreate, TrackerApplicationUpdate
 from app.schemas.responses import TrackerApplication
+from app.services import home_state_service
 from app.services.tracker_service_v2 import (
     create_application,
     delete_application,
@@ -35,7 +36,11 @@ async def create_app(
     db: AsyncSession = Depends(get_db),
 ):
     """Save a new job application for the current user."""
-    return await create_application(body, db, user_id=user.id)
+    result = await create_application(body, db, user_id=user.id)
+    # Spec #57 §4.4 — bust the home-state cache whenever a tracker write
+    # could change next_interview.
+    home_state_service.invalidate(user.id)
+    return result
 
 
 @router.patch("/tracker/{app_id}", response_model=TrackerApplication)
@@ -49,6 +54,7 @@ async def update_app(
     result = await update_application(app_id, body, db, user_id=user.id)
     if result is None:
         raise HTTPException(status_code=404, detail=f"Application {app_id} not found.")
+    home_state_service.invalidate(user.id)
     return result
 
 
@@ -62,3 +68,4 @@ async def delete_app(
     deleted = await delete_application(app_id, db, user_id=user.id)
     if not deleted:
         raise HTTPException(status_code=404, detail=f"Application {app_id} not found.")
+    home_state_service.invalidate(user.id)

@@ -7,6 +7,19 @@ from typing import Optional
 from pydantic import BaseModel
 
 
+class NextInterview(BaseModel):
+    """Per-user nearest-upcoming interview (spec #57 §4.3 / AC-4).
+
+    Computed server-side from ``tracker_applications_v2`` via the
+    selection rule in spec #57 §2.2: MIN(interview_date) WHERE the row
+    is the user's AND date >= today AND status IN ('Applied','Interview').
+    """
+
+    date: date
+    company: str
+    tracker_id: str
+
+
 class HomeStateContext(BaseModel):
     """Context fields backing the state-aware home dashboard.
 
@@ -22,6 +35,7 @@ class HomeStateContext(BaseModel):
     last_scan_date: Optional[datetime] = None
     plan: str = "free"
     last_activity_at: Optional[datetime] = None
+    next_interview: Optional[NextInterview] = None
 
 
 class HomeStateResponse(BaseModel):
