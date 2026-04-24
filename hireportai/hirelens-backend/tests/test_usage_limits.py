@@ -92,6 +92,134 @@ async def test_usage_resets_monthly(db_session):
     assert result["remaining"] == 2  # 3 limit - 1 just used
 
 
+# ── spec #56 — free-tier 1-scan lifetime cap ──────────────────────────────
+
+
+async def _insert_analyze_log(db_session, user_id: str):
+    log = UsageLog(user_id=user_id, feature_used="analyze", tokens_consumed=0)
+    db_session.add(log)
+    await db_session.flush()
+
+
+async def test_free_user_one_scan_allowed(db_session):
+    """Free user with zero history gets exactly one successful analyze (AC-1)."""
+    user = await _create_user(db_session, plan="free")
+
+    first = await check_and_increment(
+        user.id, "analyze", db_session, window="lifetime"
+    )
+    assert first["allowed"] is True
+    assert first["limit"] == 1
+    assert first["used"] == 1
+    assert first["remaining"] == 0
+
+
+async def test_free_user_second_scan_blocked_lifetime(db_session):
+    """Second lifetime scan is walled (AC-2)."""
+    user = await _create_user(db_session, plan="free")
+
+    await check_and_increment(user.id, "analyze", db_session, window="lifetime")
+    second = await check_and_increment(
+        user.id, "analyze", db_session, window="lifetime"
+    )
+    assert second["allowed"] is False
+    assert second["used"] == 1
+    assert second["remaining"] == 0
+    assert second["limit"] == 1
+    assert second["plan"] == "free"
+
+
+async def test_pro_user_unlimited_scans(db_session):
+    """Pro user scans unlimited — no counter check (AC-3)."""
+    user = await _create_user(db_session, plan="pro")
+    for _ in range(5):
+        result = await check_and_increment(
+            user.id, "analyze", db_session, window="lifetime"
+        )
+        assert result["allowed"] is True
+        assert result["limit"] == -1
+        assert result["remaining"] == -1
+
+
+async def test_admin_bypass_scan_cap(db_session):
+    """Admin bypasses regardless of plan (AC-4)."""
+    user = await _create_user(db_session, plan="free")
+    user.role = "admin"
+    await db_session.flush()
+
+    # Seed a prior analyze row so the cap would fire for non-admins.
+    await _insert_analyze_log(db_session, user.id)
+
+    result = await check_and_increment(
+        user.id, "analyze", db_session, window="lifetime"
+    )
+    assert result["allowed"] is True
+    assert result["limit"] == -1
+    assert result["remaining"] == -1
+
+
+async def test_lifetime_window_ignores_created_at(db_session):
+    """Lifetime window counts rows regardless of age — proves monthly
+    logic is not leaking in (AC-6)."""
+    user = await _create_user(db_session, plan="free")
+
+    # Insert an analyze row dated 365 days ago.
+    log = UsageLog(user_id=user.id, feature_used="analyze", tokens_consumed=0)
+    db_session.add(log)
+    await db_session.flush()
+    from sqlalchemy import update
+    backdate = datetime.utcnow() - timedelta(days=365)
+    await db_session.execute(
+        update(UsageLog)
+        .where(UsageLog.user_id == user.id)
+        .values(created_at=backdate)
+    )
+    await db_session.flush()
+
+    # Cap should still fire.
+    result = await check_and_increment(
+        user.id, "analyze", db_session, window="lifetime"
+    )
+    assert result["allowed"] is False
+    assert result["used"] == 1
+
+
+async def test_implicit_grandfather_new_rule_fresh_count(db_session):
+    """Existing free user with no historical analyze rows gets one fresh
+    scan under the new rule — spec #56 LD-5 (AC-9)."""
+    user = await _create_user(db_session, plan="free")
+    # No pre-existing analyze rows — matches the pre-deploy reality.
+
+    first = await check_and_increment(
+        user.id, "analyze", db_session, window="lifetime"
+    )
+    assert first["allowed"] is True
+
+
+async def test_monthly_window_default_unchanged(db_session):
+    """Regression guard: interview_prep still uses monthly (no leak of
+    lifetime into other features)."""
+    user = await _create_user(db_session, plan="free")
+
+    # 3 last-month interview logs should NOT count against this month.
+    last_month = datetime.utcnow().replace(day=1) - timedelta(days=1)
+    for _ in range(3):
+        log = UsageLog(user_id=user.id, feature_used="interview_prep", tokens_consumed=0)
+        db_session.add(log)
+    await db_session.flush()
+    from sqlalchemy import update
+    await db_session.execute(
+        update(UsageLog)
+        .where(UsageLog.user_id == user.id)
+        .values(created_at=last_month)
+    )
+    await db_session.flush()
+
+    result = await check_and_increment(user.id, "interview_prep", db_session)
+    assert result["allowed"] is True
+    assert result["remaining"] == 2
+
+
 async def test_gap_to_card_link_returns_matching_category(db_session):
     """Gap mapping service should return matching categories for known skill gaps."""
     from app.services.gap_mapping_service import map_gaps_to_categories

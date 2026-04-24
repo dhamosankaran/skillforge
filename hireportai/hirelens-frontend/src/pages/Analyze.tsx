@@ -105,15 +105,20 @@ export default function Analyze() {
             Upload your resume and paste the job description to get your instant ATS score.
           </p>
 
-          {/* Usage indicator for free tier */}
-          {usage.plan === 'free' && (
+          {/* Usage indicator for free tier. maxScans comes from BE (spec #56 LD-2);
+              never hardcoded. `-1` sentinel would mean unlimited — which is
+              filtered by the plan==='free' && !isAdmin guard above it. */}
+          {usage.plan === 'free' && !usage.isAdmin && usage.maxScans > 0 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
               className="inline-flex items-center gap-2 mt-4 px-3 py-1.5 rounded-lg bg-contrast/[0.03] border border-contrast/[0.06] text-xs text-text-muted"
             >
-              <span className="font-mono">{usage.scansUsed}/3</span> free scans used
+              <span className="font-mono">
+                {usage.scansUsed}/{usage.maxScans}
+              </span>{' '}
+              free scans used
               {!canScan && (
                 <span className="text-warning font-medium ml-1">
                   — Upgrade for more

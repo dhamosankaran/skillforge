@@ -64,6 +64,44 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 ## Last Completed Slice
 
+**2026-04-23 — P5-S56-impl: free-tier 1-scan lifetime cap enforced server-side (closes B-031 🟡 → ✅; amends spec #42 LD-1 via spec #56 §6).** Mode 2 implementation slice for spec #56. B-031's spec half landed in `6242cba`; this slice wires BE enforcement + FE hydration and flips 🟡 → ✅. Pre-amend SHA `2080577` referenced in BACKLOG close-line.
+
+**Spec amendment in-commit:** spec #56 §4.3 gained `is_admin: bool` on `GET /payments/usage` response (2026-04-23 amendment note in §4.3). Admin-with-plan=free returns `{plan: "free", is_admin: true, scans_remaining: -1, max_scans: -1}` — orthogonal to plan, avoids enum conflation.
+
+**Backend (spec #56 LD-1..LD-7 codified):**
+- `app/services/usage_service.py` — `PLAN_LIMITS["free"]["analyze"]: 3 → 1`. `check_and_increment` + `check_usage_limit` gain `window: Literal["monthly","lifetime"]="monthly"` param; analyze passes `"lifetime"`; interview_prep / resume_optimize stay monthly. Admin bypass via in-helper `User.role` fetch (mirrors `paywall_service.py:168` convention) — short-circuits before counter check. Return dict extended with `used: int` for 402 envelope. New `get_analyze_usage(user_id, db)` helper.
+- `app/api/routes/analyze.py` — quota gate at top of handler (post-auth, pre-parse). Anonymous scans bypass (spec §10); authenticated free walled on 402 with payload mirroring spec #50's `DailyReviewLimitError` shape: `{error: "free_tier_limit", trigger: "scan_limit", scans_used, scans_limit, plan}`.
+- `app/services/paywall_service.py` — spec #56 LD-4 carve-out: `trigger=='scan_limit'` on a free user always returns `{show: True, attempts_until_next: 0}` regardless of dismissal history. Pro/admin short-circuit precedes the carve-out. Daily_review grace unchanged. **Amends spec #42 LD-1 in code; spec #42 source is NOT edited in this slice** — the cross-reference comment in `paywall_service.py` + spec #56 §6 are the canonical record.
+- `app/api/routes/payments.py` — new `GET /payments/usage` endpoint (auth `get_current_user`) returning `{plan, scans_used, scans_remaining, max_scans, is_admin}` per spec §4.3 + amendment.
+
+**Frontend (spec #56 LD-2 — BE authoritative; localStorage is display cache only):**
+- `src/context/UsageContext.tsx` rewritten. Hydrates from `fetchUsage()` on mount + on every `refreshUsage()` call. Removed hardcoded `maxScans: 3` literals (was at lines 40/46/79). State: `{plan, scansUsed, maxScans, isAdmin}`; `canScan` + `canUsePro` derived from BE response; `-1` sentinel = unlimited. `localStorage["skillforge_usage"]` is a write-through display cache — non-authoritative per LD-2; clearing it never grants an extra scan. `incrementScan()` removed (BE is source of truth); callers use `refreshUsage()` post-scan. `PlanType` extended to include `"enterprise"`.
+- `src/pages/Analyze.tsx` — usage indicator reads `{usage.scansUsed}/{usage.maxScans}` dynamically; gated on `plan==='free' && !isAdmin && maxScans > 0` so Pro / Enterprise / admin hide the counter cleanly.
+- `src/hooks/useAnalysis.ts` — dual gate: client-side pre-gate (`!canScan` short-circuits to `free_scan_cap_hit` event + `setShowUpgradeModal(true)`); BE-side 402 handler unwraps the spec #50-shape payload via `extractScanLimitDetail`, fires `free_scan_cap_hit { attempted_action, scans_used_at_hit }` with server count, calls `refreshUsage()`, opens modal. The app-root `<UpgradeModal>` (already in `main.tsx:81`) renders the `scan_limit` trigger — no new mount.
+- `src/services/api.ts` — new `fetchUsage()` client + `UsageResponse` type.
+
+**Tests:** BE 399 → **417** (+18). New `tests/test_payments_usage_route.py` (+6). New `tests/test_analyze_quota.py` (+2). Extensions to `tests/test_usage_limits.py` (+7 — one scan allowed, second blocked lifetime, pro unlimited, admin bypass, lifetime ignores created_at, implicit grandfather, monthly-window regression). Extensions to `tests/test_paywall_service.py` (+3 — scan_limit bypasses grace, scan_limit pro short-circuit, daily_review grace retained). FE new files `tests/context/UsageContext.hydration.test.tsx` (+5) + `tests/pages/Analyze.gate.test.tsx` (+5). **AC-10 regression guards pass unchanged:** `tests/pages/Results.reanalyze.test.tsx` (4/4, B-030) + `tests/pages/Results.optimize.test.tsx` (5/5, B-032). **Full-suite note:** parallel vitest hit CPU-starvation timeouts (798s runtime vs normal ~12s) causing spurious 5s test-timeout failures in unrelated files (DashboardWidget / MissionDateGate / CountdownWidget / TodaysReviewWidget). All pass cleanly in smaller batches. No code regression; infra-only.
+
+**Analytics:** `.agent/skills/analytics.md` gains `free_scan_cap_hit {attempted_action, scans_used_at_hit}` row.
+
+**CODE-REALITY.md targeted regen:** §1 endpoint count 63→64+; §3 flat endpoint table — new `GET /api/v1/payments/usage` row, `POST /api/v1/analyze` gains 402-branch note, legacy `/api/analyze` mirrors, `GET /should-show-paywall` row extended with LD-4 carve-out note; §4 `paywall_service.py` + `usage_service.py` rows updated. Header HEAD bumped (pre-amend SHA).
+
+**BACKLOG:** B-031 🟡 PARTIAL → ✅ with close-line pointing at pre-amend SHA `2080577`. Row notes document the is_admin spec amendment + AC-10 regression pin.
+
+**Pre-existing dirty files untouched per C2:** `../.DS_Store`, `Enhancements.txt`, `hirelens-backend/scripts/wipe_local_user_data.py`; untracked `.agent/skills/stripe-best-practices/`, `.agent/skills/stripe-projects/`, `.agent/skills/upgrade-stripe/`, `.gitattributes`, `BACKLOG_PRIORITIZED.md`, `docs/audits/`, `docs/status/E2E-READINESS-2026-04-21.md`, `skills-lock.json`. None entered the commit.
+
+**Judgment calls logged:**
+- **In-helper User fetch for admin bypass (Option A)** — keeps `check_and_increment(user_id, feature, db, window=...)` signature stable; no cascade into `interview_storage_service.py:60` or `resume.py:78`. Extra SELECT negligible.
+- **Window param (Option A)** — single helper with `window: Literal["monthly","lifetime"]`; cleaner than a parallel `check_and_increment_lifetime`.
+- **402 envelope shape** mirrors spec #50's `DailyReviewLimitError` exactly (`error: "free_tier_limit"`, `trigger: "scan_limit"`, counter fields, `plan`). B-015's axios interceptor unwraps the detail-object cleanly — no FE interceptor change.
+- **Spec #42 amendment scope**: spec #56 §6 + in-code comment in `paywall_service.should_show_paywall` are canonical. Spec #42 source file unchanged (separate hygiene slice if needed).
+- **`UsageContext.incrementScan` removed.** FE no longer optimistically increments — BE is authoritative and `refreshUsage()` re-hydrates post-scan.
+- **No data migration.** Per LD-5 (implicit grandfathering). Confirmed by `test_implicit_grandfather_new_rule_fresh_count`.
+
+**R16 blast radius:** stayed within spec §12.
+
+---
+
 **2026-04-23 — P5-S-B032 Optimize-button paywall gate (closes B-032 ✅, opens B-033 🔴).** Parallel-shape sibling to B-030. Single commit. Pure revenue-surface / UX regression closure (R14 exception (b)). Two ungated click-paths on `Results.tsx` navigated free users to `/prep/rewrite` without firing the canonical `PaywallModal` (spec #11) — header "Optimize" button (line 169) and sidebar "AI Rewrite" CTA (line 424-431). Both wired to a **single new `handleOptimizeClick` handler** mirroring B-030's `handleReanalyzeClick` structure exactly (fires `optimize_clicked {plan}`, free → open PaywallModal with new `rewrite_limit` trigger, Pro → `navigate('/prep/rewrite')`).
 
 **Changes:**

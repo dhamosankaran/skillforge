@@ -15,6 +15,7 @@ from app.db.session import get_db
 from app.models.user import User
 from app.services import paywall_service
 from app.services.geo_pricing_service import get_pricing
+from app.services.usage_service import get_analyze_usage
 from app.services.payment_service import (
     InvalidSignatureError,
     NotProSubscriberError,
@@ -132,6 +133,14 @@ class ShouldShowPaywallResponse(BaseModel):
     attempts_until_next: int
 
 
+class UsageResponse(BaseModel):
+    plan: str
+    scans_used: int
+    scans_remaining: int
+    max_scans: int
+    is_admin: bool
+
+
 @router.post("/payments/paywall-dismiss", response_model=PaywallDismissResponse)
 async def paywall_dismiss(
     body: PaywallDismissRequest,
@@ -188,6 +197,23 @@ async def should_show_paywall(
         attempts_since_dismiss=attempts_since_dismiss,
     )
     return ShouldShowPaywallResponse(**result)
+
+
+@router.get("/payments/usage", response_model=UsageResponse)
+async def get_usage(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> UsageResponse:
+    """Lifetime `analyze` usage snapshot for the caller (spec #56 §4.3).
+
+    FE hydrates `UsageContext` from this endpoint on mount and after each
+    successful scan. `-1` sentinel on `scans_remaining` / `max_scans`
+    signals unlimited (Pro / Enterprise / admin bypass). `is_admin` is an
+    orthogonal flag so the FE can render admin UX without conflating role
+    with plan.
+    """
+    result = await get_analyze_usage(user.id, db)
+    return UsageResponse(**result)
 
 
 @router.post("/payments/webhook")

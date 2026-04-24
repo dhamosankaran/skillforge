@@ -51,6 +51,57 @@ async def _make_user(
 # ── record_dismissal ────────────────────────────────────────────────────────
 
 
+# ── spec #56 LD-4 carve-out (amends spec #42 LD-1 for scan_limit) ─────
+
+
+async def test_scan_limit_bypasses_grace(db_session):
+    """Free user with dismissal history still sees the scan_limit modal —
+    no grace, per spec #56 LD-4."""
+    user = await _make_user(db_session)
+    # Seed a dismissal + 1 attempt since — under normal grace this would
+    # return show=False. For scan_limit it must return show=True.
+    await paywall_service.record_dismissal(
+        db_session, user_id=user.id, trigger="scan_limit"
+    )
+    result = await paywall_service.should_show_paywall(
+        db_session,
+        user=user,
+        trigger="scan_limit",
+        attempts_since_dismiss=1,
+    )
+    assert result == {"show": True, "attempts_until_next": 0}
+
+
+async def test_scan_limit_pro_still_short_circuits(db_session):
+    """Pro user on scan_limit still gets show=False — plan short-circuit
+    precedes the carve-out."""
+    user = await _make_user(db_session, plan="pro")
+    result = await paywall_service.should_show_paywall(
+        db_session,
+        user=user,
+        trigger="scan_limit",
+        attempts_since_dismiss=0,
+    )
+    assert result == {"show": False, "attempts_until_next": 0}
+
+
+async def test_daily_review_grace_still_applies(db_session):
+    """Regression guard: the grace carve-out is scoped to scan_limit only;
+    daily_review retains the spec #42 default 3-attempt grace."""
+    user = await _make_user(db_session)
+    await paywall_service.record_dismissal(
+        db_session, user_id=user.id, trigger="daily_review"
+    )
+    result = await paywall_service.should_show_paywall(
+        db_session,
+        user=user,
+        trigger="daily_review",
+        attempts_since_dismiss=1,
+    )
+    assert result["show"] is False
+    assert result["attempts_until_next"] > 0
+
+
 async def test_record_dismissal_inserts_row(db_session):
     user = await _make_user(db_session)
     result = await paywall_service.record_dismissal(

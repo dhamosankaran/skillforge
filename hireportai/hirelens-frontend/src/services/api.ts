@@ -553,6 +553,27 @@ export async function shouldShowPaywall(
   return response.data
 }
 
+// ─── Usage snapshot (spec #56 §4.3) ───────────────────────────────────────────
+
+export interface UsageResponse {
+  /** Actual subscription plan — never the admin role. */
+  plan: 'free' | 'pro' | 'enterprise'
+  /** Lifetime count of successful analyze rows for this user. */
+  scans_used: number
+  /** -1 sentinel = unlimited (Pro / Enterprise / admin). */
+  scans_remaining: number
+  /** -1 sentinel = unlimited (Pro / Enterprise / admin). */
+  max_scans: number
+  /** Role flag, orthogonal to plan. Admin with plan=free has is_admin=true. */
+  is_admin: boolean
+}
+
+/** Lifetime analyze-usage snapshot for the current user (spec #56 §4.3). */
+export async function fetchUsage(): Promise<UsageResponse> {
+  const response = await api.get<UsageResponse>('/api/v1/payments/usage')
+  return response.data
+}
+
 export interface ChecklistStep {
   id: string
   title: string

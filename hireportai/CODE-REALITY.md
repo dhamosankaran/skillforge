@@ -9,13 +9,13 @@
 
 | Field | Value |
 |-------|-------|
-| Commit sha (short) | `7ca2e90` (HEAD after E-018b backfill). Prior regen snapshots referenced `806c199` / `96e6096` / `a13c217` / `3cef6c3`. |
+| Commit sha (short) | `1bf6c3b` (HEAD after B-032 SHA backfill). Targeted updates on this pass for spec #56 / B-031 impl: §1 endpoint count, §3 `POST /analyze` 402 branch + new `GET /payments/usage` row, §4 `usage_service.py` (lifetime window + admin bypass + `get_analyze_usage` helper), `paywall_service.py` (scan_limit carve-out branch). Prior regen snapshots: `7ca2e90` / `806c199` / `96e6096` / `a13c217` / `3cef6c3`. |
 | Branch | `main` (24 commits ahead of `origin/main`; not yet pushed — scheduled for push alongside this regen) |
 | Generated | 2026-04-23 (body sweep completed: Sections 1-8 + 11-12 audited against HEAD `7ca2e90`. Caught up: E-018a `admin_audit_log` model (§2), E-018b `admin_analytics_service` + routes + `AdminAnalytics.tsx` (§3-4-6-7), E-040 `AdminGate` + `reconcile_admin_role` (§4-6-12), B-001 `/rewrite/section` + `RewriteError` (§3-4), B-014 `SECTION_THINKING_BUDGET` headroom (§4 gpt_service), B-016 `users.home_first_visit_seen_at` (§2) + `POST /users/me/home-first-visit` (§3), B-021 + B-024 `_extract_company_name` LLM-primary orchestrator (§4 nlp.py), B-022 `job_fit_explanation` reasoning tier (§4), B-023 `_extract_candidate_name` all-caps guard (§4), B-027 HomeDashboard `isFirstVisit` snapshot (§7), B-028 UserMenu + Profile account section (§6-7), AdminGate wraps both admin routes closing §12 Q4. Section 9 (dead code) + Section 10 (skills inventory) + Section 11 (drift flags) not re-checked in this pass — treat as potentially stale beyond the known skill-file addition and drift items carried forward below. |
 | Backend model files | 19 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models` — adds `admin_audit_log.py`) |
 | Backend service files | 31 top-level (+1 `admin_analytics_service.py`) + 3 under `services/llm/` = 34 |
 | Backend router files | 18 v1 (+1 `admin_analytics.py`) + 6 legacy = 24 |
-| Backend endpoints (total) | 63+ (new: `GET /admin/audit`, `GET /admin/analytics/metrics`, `GET /admin/analytics/performance`, `POST /users/me/home-first-visit`). `analyze` / `rewrite` / `cover_letter` / `interview` legacy routers are each mounted at both `/api/*` and `/api/v1/*`, so 5 paths appear twice. |
+| Backend endpoints (total) | 64+ (new this slice: `GET /api/v1/payments/usage` for spec #56 free-tier scan snapshot; prior additions: `GET /admin/audit`, `GET /admin/analytics/metrics`, `GET /admin/analytics/performance`, `POST /users/me/home-first-visit`). `analyze` / `rewrite` / `cover_letter` / `interview` legacy routers are each mounted at both `/api/*` and `/api/v1/*`, so 5 paths appear twice. |
 | Alembic revisions | 22 (adds `508df0110037` B-016, `538fe233b639` E-018a) |
 | Frontend pages | 20 (+`AdminAnalytics.tsx`) |
 | Frontend components (`.tsx` under `src/components/`, excl. `__tests__`) | 63+ (+`layout/UserMenu.tsx` B-028, +`mission/MissionDateGate.tsx` B-018, +`auth/AdminGate.tsx` E-040; not counted individually — verify on next full regen) |
@@ -388,7 +388,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 
 | Method | Path | Handler | Auth | Tags |
 |--------|------|---------|------|------|
-| POST | /api/analyze | analyze_resume | get_current_user_optional | Analysis |
+| POST | /api/analyze | analyze_resume | get_current_user_optional | Analysis *(spec #56, B-031 — 402 quota branch, see `/api/v1/analyze` row below for full notes)* |
 | POST | /api/cover-letter | generate_cover_letter | none | Cover Letter |
 | POST | /api/interview-prep | generate_interview_prep | get_current_user_optional | Interview Prep |
 | POST | /api/rewrite | rewrite_resume | none | Rewrite |
@@ -406,7 +406,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | GET | /api/v1/admin/audit | list_admin_audit_log | audit_admin_request → require_admin | v1 Admin *(spec #38 E-018a)* |
 | GET | /api/v1/admin/analytics/metrics | metrics_endpoint | audit_admin_request → require_admin | v1 Admin Analytics *(spec #38 E-018b slice 2/4)* |
 | GET | /api/v1/admin/analytics/performance | performance_endpoint | audit_admin_request → require_admin | v1 Admin Analytics *(spec #38 E-018b slice 2/4)* |
-| POST | /api/v1/analyze | analyze_resume | get_current_user_optional | v1 Analysis |
+| POST | /api/v1/analyze | analyze_resume | get_current_user_optional | v1 Analysis *(spec #56, B-031 — 402 branch via `check_and_increment(..., "analyze", window="lifetime")` for authenticated free users; anonymous + Pro + Enterprise + admin bypass; payload shape mirrors `DailyReviewLimitError` / spec #50)* |
 | POST | /api/v1/auth/google | google_auth | none | v1 Auth |
 | POST | /api/v1/auth/logout | logout | get_current_user | v1 Auth |
 | GET | /api/v1/auth/me | get_me | get_current_user | v1 Auth |
@@ -432,7 +432,8 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | GET | /api/v1/payments/pricing | get_pricing_endpoint | none | v1 Payments |
 | POST | /api/v1/payments/portal | create_portal | get_current_user | v1 Payments |
 | POST | /api/v1/payments/paywall-dismiss | paywall_dismiss | get_current_user | v1 Payments *(spec #42, P5-S26b-impl-BE — fires `paywall_dismissed` PostHog on logged=true; LD-8 60s dedup)* |
-| GET | /api/v1/payments/should-show-paywall | should_show_paywall | get_current_user | v1 Payments *(spec #42, P5-S26b-impl-BE — Pro/admin bypass returns `{show: false, attempts_until_next: 0}`; free-user grace via `attempts_since_dismiss` query param, Strategy A)* |
+| GET | /api/v1/payments/should-show-paywall | should_show_paywall | get_current_user | v1 Payments *(spec #42, P5-S26b-impl-BE — Pro/admin bypass returns `{show: false, attempts_until_next: 0}`; free-user grace via `attempts_since_dismiss` query param, Strategy A; spec #56 LD-4 carve-out — `trigger='scan_limit'` always returns `{show: true, attempts_until_next: 0}` for free users regardless of dismissal history)* |
+| GET | /api/v1/payments/usage | get_usage | get_current_user | v1 Payments *(spec #56 / B-031 — lifetime `analyze` usage snapshot; returns `{plan, scans_used, scans_remaining, max_scans, is_admin}` with `-1` sentinel for unlimited Pro/Enterprise/admin)* |
 | POST | /api/v1/payments/webhook | stripe_webhook | none | v1 Payments *(spec #43 idempotency; spec #42 — `customer.subscription.deleted` branch also stamps `user.downgraded_at`)* |
 | GET | /api/v1/progress/heatmap | get_heatmap | get_current_user | v1 Progress |
 | GET | /api/v1/progress/radar | get_radar | get_current_user | v1 Progress |
@@ -483,14 +484,14 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | onboarding_checklist_service.py | Interview-Prepper onboarding checklist from telemetry-derived state. | get_checklist, WrongPersonaError | — |
 | parser.py | Resume parser supporting PDF and DOCX formats. | parse_pdf, parse_docx, detect_sections, extract_bullets, extract_contact_info | — |
 | payment_service.py | Payment service — thin wrapper around Stripe. `_handle_subscription_deleted` also writes `user.downgraded_at` per spec #42 LD-5 (dormant until win-back E-031 activates). | create_checkout_session, create_billing_portal_session, handle_webhook, PaymentError, InvalidSignatureError, UserNotFoundError, NotProSubscriberError | Stripe |
-| paywall_service.py | Paywall dismissal service (spec #42). `record_dismissal` with LD-8 60s idempotency per (user_id, trigger); `should_show_paywall` with Pro/admin bypass + Strategy A grace counter via FE-passed `attempts_since_dismiss`. Win-back eligibility + send are DEFERRED to BACKLOG E-031 (🟦 back-burner). | record_dismissal, should_show_paywall, RecordDismissalResult, ShouldShowPaywallResult, GRACE_ATTEMPTS, IDEMPOTENCY_WINDOW_SECONDS | — |
+| paywall_service.py | Paywall dismissal service (spec #42). `record_dismissal` with LD-8 60s idempotency per (user_id, trigger); `should_show_paywall` with Pro/admin bypass + Strategy A grace counter via FE-passed `attempts_since_dismiss`. Spec #56 LD-4 carve-out: `trigger=='scan_limit'` on a free user always returns `{show: True, attempts_until_next: 0}` regardless of dismissal history — hard 1-lifetime cap has NO grace. Win-back eligibility + send are DEFERRED to BACKLOG E-031 (🟦 back-burner). | record_dismissal, should_show_paywall, RecordDismissalResult, ShouldShowPaywallResult, GRACE_ATTEMPTS, IDEMPOTENCY_WINDOW_SECONDS | — |
 | progress_service.py | Progress analytics service with category radar and activity heatmap. [INFERRED] | get_category_coverage, get_activity_heatmap | — |
 | reminder_service.py | Daily email reminder service. | get_users_needing_reminder, build_email_body, build_subject, send_daily_reminders | Resend |
 | resume_templates.py | Resume template definitions for AI-powered rewriting. | get_template, get_template_names, auto_select_template | — |
 | scorer.py | ATS scoring engine for resume ATS compatibility. [INFERRED] | ATSScorer | — |
 | study_service.py | FSRS spaced-repetition study service with server-side scheduling. Also enforces the free-tier daily-card review wall (spec #50) via private `_check_daily_wall` helper — Redis INCR keyed `daily_cards:{user_id}:{YYYY-MM-DD}` in user-local tz, 48h TTL, fail-open on Redis outage; admin + Pro/Enterprise bypass. | get_daily_review, create_progress, review_card, get_progress, CardNotFoundError, CardForbiddenError, DailyReviewLimitError | Redis |
 | tracker_service_v2.py | SQLAlchemy-backed job application tracker service (v2). | create_application, find_by_scan_id, get_applications, get_application_by_id, update_application, delete_application | — |
-| usage_service.py | Usage tracking and plan limit enforcement. [INFERRED] | log_usage, check_usage_limit, check_and_increment, get_usage_summary | — |
+| usage_service.py | Usage tracking + plan-limit enforcement. Per spec #56 / B-031 (2026-04-23): `PLAN_LIMITS["free"]["analyze"] = 1` (lifetime). `check_and_increment` and `check_usage_limit` accept `window: Literal["monthly","lifetime"] = "monthly"` — analyze callers pass `"lifetime"`; interview_prep and resume_optimize keep monthly. Admin bypass via in-helper User role fetch (mirrors paywall_service:168 convention); short-circuits to `allowed=True, limit=-1` before counter check. Return dict extended with `used: int` for the 402 envelope. `get_analyze_usage(user_id, db)` is the read-only helper powering `GET /api/v1/payments/usage` — returns `{plan, scans_used, scans_remaining, max_scans, is_admin}` with `-1` sentinel for unlimited plans/admin. | log_usage, check_usage_limit, check_and_increment, get_usage_summary, get_analyze_usage, PLAN_LIMITS, Window | — |
 | user_service.py | User CRUD + admin-role reconciliation. Post-E-040 (`1148354`, spec #54): `reconcile_admin_role(user, admin_emails_set) -> (action, prior_role, new_role)` is a pure mutation function that sets `user.role` to `"admin"` if `email.lower() in admin_emails_set` and `"user"` otherwise. Action ∈ `{"promoted", "demoted", "unchanged"}`; caller owns commit / audit / analytics. Invoked from `auth.py::google_auth` on every login — the `unchanged` case doubles as a dashboard heartbeat. | get_or_create_user, get_user_by_id, reconcile_admin_role | — |
 
 ### `app/services/llm/` (legacy provider factory — do not extend)

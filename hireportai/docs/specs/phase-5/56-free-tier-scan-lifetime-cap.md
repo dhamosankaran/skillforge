@@ -95,16 +95,19 @@ Scope: read-only snapshot used by the FE to render remaining-scan text and decid
 **Response (200):**
 ```
 {
-  "plan": "free" | "pro" | "enterprise",
+  "plan": "free" | "pro" | "enterprise",  // actual subscription plan, never "admin"
   "scans_used": int,      // lifetime count from usage_logs
   "scans_remaining": int, // max(0, limit - used); -1 for unlimited plans
-  "max_scans": int        // PLAN_LIMITS["<plan>"]["analyze"]; -1 for unlimited
+  "max_scans": int,       // PLAN_LIMITS["<plan>"]["analyze"]; -1 for unlimited
+  "is_admin": bool        // separate flag — orthogonal to plan
 }
 ```
 
 **Errors:** `401` on missing/invalid JWT (auth dependency). No other errors.
 
-Admin bypass: returns `{plan: "<actual plan>", scans_used: N, scans_remaining: -1, max_scans: -1}` so the FE reads admin as unlimited while still showing the real count for audit-friendly UX.
+Admin bypass: returns `{plan: "<actual plan>", scans_used: N, scans_remaining: -1, max_scans: -1, is_admin: true}` so the FE reads admin as unlimited while still showing the real count for audit-friendly UX.
+
+**`is_admin` amendment (impl-slice addition, 2026-04-23):** added to §4.3 during impl. Rationale: role=admin is orthogonal to subscription plan — an admin may still have `plan="free"` with `is_admin=true`, and the FE needs that separation for the unlimited-scans admin UX without enum conflation. Keeping `plan` as the actual subscription plan ("free" / "pro" / "enterprise") preserves clean downgrade semantics; a separate `is_admin` bool signals the bypass.
 
 Impl may reuse `get_usage_summary` (`usage_service.py:129`) as a starting point; that helper today returns a monthly breakdown across all features. The new endpoint scopes to `analyze` and uses lifetime window.
 

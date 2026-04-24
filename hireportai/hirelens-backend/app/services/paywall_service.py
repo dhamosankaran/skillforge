@@ -168,6 +168,14 @@ async def should_show_paywall(
     if getattr(user, "role", "user") == "admin" or not _is_free(user):
         return ShouldShowPaywallResult(show=False, attempts_until_next=0)
 
+    # Spec #56 LD-4 carve-out (amends spec #42 LD-1): the `scan_limit` trigger
+    # enforces a hard 1-lifetime cap with NO dismissal grace. Every attempt
+    # past the first re-opens the modal for free users regardless of
+    # paywall_dismissals history. Dismissal rows are still logged (for
+    # win-back telemetry under E-031) — we just don't silence the next prompt.
+    if trigger == "scan_limit":
+        return ShouldShowPaywallResult(show=True, attempts_until_next=0)
+
     last = (
         await db.execute(
             select(PaywallDismissal.dismissed_at)

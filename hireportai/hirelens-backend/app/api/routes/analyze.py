@@ -30,6 +30,7 @@ from app.services.parser import parse_docx, parse_pdf
 from app.services.scorer import ATSScorer
 from app.services import home_state_service
 from app.services.tracker_service_v2 import create_application, find_by_scan_id
+from app.services.usage_service import check_and_increment
 
 router = APIRouter()
 scorer = ATSScorer()
@@ -64,6 +65,27 @@ async def analyze_resume(
     7. Formatting compliance check
     8. Optional GPT-powered explanations
     """
+    # Free-tier lifetime scan cap (spec #56 / B-031). Anonymous scans bypass —
+    # spec §10 scopes this cap to authenticated free users only. Admin + Pro +
+    # Enterprise short-circuit inside `check_and_increment`. On 402 we mirror
+    # spec #50's `DailyReviewLimitError` payload shape exactly (error / trigger /
+    # counter fields / plan) so the FE axios interceptor unwraps it identically.
+    if current_user is not None:
+        usage = await check_and_increment(
+            current_user.id, "analyze", db, window="lifetime"
+        )
+        if not usage["allowed"]:
+            raise HTTPException(
+                status_code=402,
+                detail={
+                    "error": "free_tier_limit",
+                    "trigger": "scan_limit",
+                    "scans_used": usage["used"],
+                    "scans_limit": usage["limit"],
+                    "plan": usage["plan"],
+                },
+            )
+
     # Validate file type
     filename = resume_file.filename or ""
     if not (filename.endswith(".pdf") or filename.endswith(".docx")):
