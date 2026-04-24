@@ -553,22 +553,30 @@ export async function shouldShowPaywall(
   return response.data
 }
 
-// ─── Usage snapshot (spec #56 §4.3) ───────────────────────────────────────────
+// ─── Usage snapshot (spec #56 §4.3 + spec #58 §5) ─────────────────────────────
 
 export interface UsageResponse {
   /** Actual subscription plan — never the admin role. */
   plan: 'free' | 'pro' | 'enterprise'
-  /** Lifetime count of successful analyze rows for this user. */
+  /** Role flag, orthogonal to plan. Admin with plan=free has is_admin=true. */
+  is_admin: boolean
+  // spec #56 — scans
   scans_used: number
   /** -1 sentinel = unlimited (Pro / Enterprise / admin). */
   scans_remaining: number
   /** -1 sentinel = unlimited (Pro / Enterprise / admin). */
   max_scans: number
-  /** Role flag, orthogonal to plan. Admin with plan=free has is_admin=true. */
-  is_admin: boolean
+  // spec #58 — rewrites (shared bucket: /rewrite + /rewrite/section)
+  rewrites_used: number
+  rewrites_remaining: number
+  rewrites_max: number
+  // spec #58 — cover letters (separate bucket)
+  cover_letters_used: number
+  cover_letters_remaining: number
+  cover_letters_max: number
 }
 
-/** Lifetime analyze-usage snapshot for the current user (spec #56 §4.3). */
+/** Lifetime usage snapshot for the current user (spec #56 §4.3 + spec #58 §5). */
 export async function fetchUsage(): Promise<UsageResponse> {
   const response = await api.get<UsageResponse>('/api/v1/payments/usage')
   return response.data

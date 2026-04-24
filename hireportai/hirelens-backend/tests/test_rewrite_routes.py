@@ -14,18 +14,63 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
+from app.core.deps import get_current_user
+from app.db.session import get_db
 from app.main import app
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 
+class _FakeUser:
+    """Minimal stand-in; rewrite routes only read `id` off the user."""
+    id = "test-user-id"
+
+
+async def _fake_user():
+    return _FakeUser()
+
+
+async def _fake_db():
+    # Quota gate patched via the `_bypass_quota` autouse fixture, so the
+    # session injected here is never exercised.
+    yield None
+
+
 @pytest_asyncio.fixture(loop_scope="session")
 async def client():
-    """Plain AsyncClient — rewrite routes don't depend on the DB."""
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
-        yield c
+    """AsyncClient with `get_current_user` + `get_db` overridden so format
+    / 502 / validation tests reach the service layer. Quota behavior is
+    covered in `tests/test_rewrite_quota.py`."""
+    app.dependency_overrides[get_current_user] = _fake_user
+    app.dependency_overrides[get_db] = _fake_db
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as c:
+            yield c
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+        app.dependency_overrides.pop(get_db, None)
+
+
+@pytest.fixture(autouse=True)
+def _bypass_quota():
+    """Stub the spec #58 quota gate so pre-existing route-format tests keep
+    exercising their original downstream paths (200 / 502 / 422)."""
+    async def _allowed(*args, **kwargs):
+        return {
+            "allowed": True,
+            "used": 0,
+            "remaining": -1,
+            "limit": -1,
+            "plan": "pro",
+        }
+
+    with patch(
+        "app.api.routes.rewrite.check_and_increment",
+        side_effect=_allowed,
+    ):
+        yield
 
 
 def _echo_title_mock():

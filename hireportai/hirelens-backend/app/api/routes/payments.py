@@ -15,7 +15,7 @@ from app.db.session import get_db
 from app.models.user import User
 from app.services import paywall_service
 from app.services.geo_pricing_service import get_pricing
-from app.services.usage_service import get_analyze_usage
+from app.services.usage_service import get_usage_snapshot
 from app.services.payment_service import (
     InvalidSignatureError,
     NotProSubscriberError,
@@ -134,11 +134,29 @@ class ShouldShowPaywallResponse(BaseModel):
 
 
 class UsageResponse(BaseModel):
+    """Lifetime usage snapshot per spec #56 §4.3 (extended by spec #58 §5).
+
+    Shape is flat additive — rewrite + cover-letter counters share the
+    same response as scans, per spec #58 §5 D1a. `-1` sentinel on any
+    `*_max` / `*_remaining` field = unlimited (Pro / Enterprise / admin).
+    `is_admin` is orthogonal to `plan` — admin with plan='free' returns
+    `plan='free'` + `is_admin=true` + all sentinels.
+    """
+
     plan: str
+    is_admin: bool
+    # spec #56 — scans
     scans_used: int
     scans_remaining: int
     max_scans: int
-    is_admin: bool
+    # spec #58 — rewrites (shared bucket: /rewrite + /rewrite/section)
+    rewrites_used: int
+    rewrites_remaining: int
+    rewrites_max: int
+    # spec #58 — cover letters (separate bucket)
+    cover_letters_used: int
+    cover_letters_remaining: int
+    cover_letters_max: int
 
 
 @router.post("/payments/paywall-dismiss", response_model=PaywallDismissResponse)
@@ -204,15 +222,14 @@ async def get_usage(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> UsageResponse:
-    """Lifetime `analyze` usage snapshot for the caller (spec #56 §4.3).
+    """Lifetime usage snapshot for the caller.
 
-    FE hydrates `UsageContext` from this endpoint on mount and after each
-    successful scan. `-1` sentinel on `scans_remaining` / `max_scans`
-    signals unlimited (Pro / Enterprise / admin bypass). `is_admin` is an
-    orthogonal flag so the FE can render admin UX without conflating role
-    with plan.
+    Shape: spec #56 §4.3 (scans) extended by spec #58 §5 with rewrite
+    + cover-letter counters (flat additive; consumers that only read
+    scan fields continue to work). FE hydrates `UsageContext` from this
+    endpoint on mount and after each gated action.
     """
-    result = await get_analyze_usage(user.id, db)
+    result = await get_usage_snapshot(user.id, db)
     return UsageResponse(**result)
 
 

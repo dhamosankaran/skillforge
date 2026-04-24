@@ -168,12 +168,16 @@ async def should_show_paywall(
     if getattr(user, "role", "user") == "admin" or not _is_free(user):
         return ShouldShowPaywallResult(show=False, attempts_until_next=0)
 
-    # Spec #56 LD-4 carve-out (amends spec #42 LD-1): the `scan_limit` trigger
-    # enforces a hard 1-lifetime cap with NO dismissal grace. Every attempt
-    # past the first re-opens the modal for free users regardless of
-    # paywall_dismissals history. Dismissal rows are still logged (for
-    # win-back telemetry under E-031) — we just don't silence the next prompt.
-    if trigger == "scan_limit":
+    # Hard-wall carve-outs (amend spec #42 LD-1). Triggers listed below bypass
+    # the 3-attempt grace for free users — every attempt re-opens the modal
+    # regardless of `paywall_dismissals` history. Dismissal rows are still
+    # logged (win-back telemetry / E-031); only the silencing is skipped.
+    #   - `scan_limit`        — spec #56 LD-4 (1 lifetime ATS scan for free).
+    #   - `rewrite_limit`     — spec #58 LD-5 (Pro-only; /rewrite +
+    #                           /rewrite/section share the `"rewrite"` bucket
+    #                           per spec #58 §4.1 Option a).
+    #   - `cover_letter_limit`— spec #58 LD-5 (Pro-only; separate bucket).
+    if trigger in {"scan_limit", "rewrite_limit", "cover_letter_limit"}:
         return ShouldShowPaywallResult(show=True, attempts_until_next=0)
 
     last = (

@@ -86,8 +86,8 @@ async def test_scan_limit_pro_still_short_circuits(db_session):
 
 
 async def test_daily_review_grace_still_applies(db_session):
-    """Regression guard: the grace carve-out is scoped to scan_limit only;
-    daily_review retains the spec #42 default 3-attempt grace."""
+    """Regression guard: the grace carve-out is scoped to hard-wall triggers
+    only; daily_review retains the spec #42 default 3-attempt grace."""
     user = await _make_user(db_session)
     await paywall_service.record_dismissal(
         db_session, user_id=user.id, trigger="daily_review"
@@ -100,6 +100,55 @@ async def test_daily_review_grace_still_applies(db_session):
     )
     assert result["show"] is False
     assert result["attempts_until_next"] > 0
+
+
+# ── spec #58 LD-5 carve-out (amends spec #42 LD-1 for rewrite_limit +
+#                             cover_letter_limit) ───────────────────────
+
+
+async def test_rewrite_limit_bypasses_grace(db_session):
+    """Free user with a rewrite_limit dismissal still sees the modal on
+    every attempt — spec #58 LD-5 mirrors the scan_limit pattern."""
+    user = await _make_user(db_session)
+    await paywall_service.record_dismissal(
+        db_session, user_id=user.id, trigger="rewrite_limit"
+    )
+    result = await paywall_service.should_show_paywall(
+        db_session,
+        user=user,
+        trigger="rewrite_limit",
+        attempts_since_dismiss=1,
+    )
+    assert result == {"show": True, "attempts_until_next": 0}
+
+
+async def test_cover_letter_limit_bypasses_grace(db_session):
+    """Free user with a cover_letter_limit dismissal still sees the modal —
+    same hard-wall shape as rewrite_limit (spec #58 LD-5)."""
+    user = await _make_user(db_session)
+    await paywall_service.record_dismissal(
+        db_session, user_id=user.id, trigger="cover_letter_limit"
+    )
+    result = await paywall_service.should_show_paywall(
+        db_session,
+        user=user,
+        trigger="cover_letter_limit",
+        attempts_since_dismiss=2,
+    )
+    assert result == {"show": True, "attempts_until_next": 0}
+
+
+async def test_rewrite_limit_pro_still_short_circuits(db_session):
+    """Pro user on rewrite_limit gets show=False — plan short-circuit
+    precedes the carve-out, same as scan_limit (spec #42 LD-7)."""
+    user = await _make_user(db_session, plan="pro")
+    result = await paywall_service.should_show_paywall(
+        db_session,
+        user=user,
+        trigger="rewrite_limit",
+        attempts_since_dismiss=0,
+    )
+    assert result == {"show": False, "attempts_until_next": 0}
 
 
 async def test_record_dismissal_inserts_row(db_session):

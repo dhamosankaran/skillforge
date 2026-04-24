@@ -63,22 +63,41 @@ async def _seed_analyze_log(db_session, user_id: str) -> None:
     await db_session.flush()
 
 
+async def _seed_feature_log(db_session, user_id: str, feature: str) -> None:
+    db_session.add(
+        UsageLog(user_id=user_id, feature_used=feature, tokens_consumed=0)
+    )
+    await db_session.flush()
+
+
 async def test_usage_requires_auth(client):
     resp = await client.get("/api/v1/payments/usage")
     assert resp.status_code == 401
 
 
 async def test_usage_free_user_zero_history(client, db_session):
+    """Full-shape equality pin: exercises spec #56 §4.3 + spec #58 §5
+    flat-extension. A future slice that reshapes the payload will trip
+    this assertion and force the spec update to land alongside the code."""
     user = await _seed_user(db_session, plan="free")
     resp = await client.get("/api/v1/payments/usage", headers=_auth(user))
     assert resp.status_code == 200
     body = resp.json()
     assert body == {
         "plan": "free",
+        "is_admin": False,
+        # spec #56 — scans
         "scans_used": 0,
         "scans_remaining": 1,
         "max_scans": 1,
-        "is_admin": False,
+        # spec #58 — rewrites (Pro-only; free = 0/0)
+        "rewrites_used": 0,
+        "rewrites_remaining": 0,
+        "rewrites_max": 0,
+        # spec #58 — cover letters (Pro-only; free = 0/0)
+        "cover_letters_used": 0,
+        "cover_letters_remaining": 0,
+        "cover_letters_max": 0,
     }
 
 
@@ -131,3 +150,61 @@ async def test_usage_enterprise_is_admin_false_and_unlimited(client, db_session)
     assert body["scans_remaining"] == -1
     assert body["max_scans"] == -1
     assert body["is_admin"] is False
+
+
+# ── spec #58 §5 — rewrite + cover-letter counters on /usage ────────────
+
+
+async def test_usage_free_user_rewrite_and_cover_letter_zeroed(client, db_session):
+    """AC-8: free plan sees rewrite + cover-letter buckets as 0/0/0."""
+    user = await _seed_user(db_session, plan="free")
+    resp = await client.get("/api/v1/payments/usage", headers=_auth(user))
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["rewrites_used"] == 0
+    assert body["rewrites_remaining"] == 0
+    assert body["rewrites_max"] == 0
+    assert body["cover_letters_used"] == 0
+    assert body["cover_letters_remaining"] == 0
+    assert body["cover_letters_max"] == 0
+
+
+async def test_usage_pro_user_rewrite_counter_surfaces_used_unlimited_sentinel(
+    client, db_session
+):
+    """AC-9: Pro user shows the real `used` count but `-1` sentinels for
+    `remaining` / `max`. `/rewrite/section` shares the bucket — a single
+    `feature_used='rewrite'` row therefore bumps `rewrites_used` to 1
+    regardless of which handler wrote it."""
+    user = await _seed_user(db_session, plan="pro")
+    await _seed_feature_log(db_session, user.id, "rewrite")
+    await _seed_feature_log(db_session, user.id, "cover_letter")
+    await _seed_feature_log(db_session, user.id, "cover_letter")
+    resp = await client.get("/api/v1/payments/usage", headers=_auth(user))
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["rewrites_used"] == 1
+    assert body["rewrites_remaining"] == -1
+    assert body["rewrites_max"] == -1
+    assert body["cover_letters_used"] == 2
+    assert body["cover_letters_remaining"] == -1
+    assert body["cover_letters_max"] == -1
+
+
+async def test_usage_admin_free_plan_rewrite_unlimited_with_is_admin(
+    client, db_session
+):
+    """AC-10: admin-on-free gets `-1` sentinels on every feature counter,
+    keeps `plan='free'` + `is_admin=true`."""
+    user = await _seed_user(db_session, plan="free", role="admin")
+    await _seed_feature_log(db_session, user.id, "rewrite")
+    resp = await client.get("/api/v1/payments/usage", headers=_auth(user))
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["plan"] == "free"
+    assert body["is_admin"] is True
+    assert body["rewrites_used"] == 1
+    assert body["rewrites_remaining"] == -1
+    assert body["rewrites_max"] == -1
+    assert body["cover_letters_remaining"] == -1
+    assert body["cover_letters_max"] == -1

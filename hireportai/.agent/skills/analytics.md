@@ -112,8 +112,10 @@ Preserved for historical PostHog data cross-reference. Source files no longer ex
 | `ats_scanned` | `app/api/routes/analyze.py` | `{user_id, scan_id, resume_id, job_description_length}` |
 | `tracker_auto_created_from_scan` | `app/api/routes/analyze.py` | `{user_id, company, role, matched_skills}` |
 | `resume_rewrite_generated` | `app/api/routes/rewrite.py` | `{resume_chars, missing_keywords_count, template_type}` |
+| `rewrite_limit_hit` | `app/api/routes/rewrite.py` | `{attempted_action: 'full' \| 'section', plan: 'free', auth_status: 'authed'}` — fires on the 402 path before the `free_tier_limit` envelope is raised for the `rewrite_limit` trigger (spec #58 §8). `attempted_action='full'` from `POST /rewrite`; `'section'` from `POST /rewrite/section`. Both share the `"rewrite"` usage bucket per spec #58 §4.1 Option (a); `attempted_action` preserves funnel granularity without a second PLAN_LIMITS key. |
 | `cover_letter_succeeded` | `app/api/routes/cover_letter.py` | `{tone, body_paragraphs_count, model_used}` — fires on 200 after the structured response passes Pydantic validation (spec #52 §9, B-002). |
 | `cover_letter_failed` | `app/api/routes/cover_letter.py` | `{error_code, tone}` where `error_code ∈ {cover_letter_truncated, cover_letter_parse_error, cover_letter_validation_error, cover_letter_llm_error}` — fires on the 502 path before the HTTP error is raised (spec #52 §9, B-002). |
+| `cover_letter_limit_hit` | `app/api/routes/cover_letter.py` | `{plan: 'free', auth_status: 'authed'}` — fires on the 402 path before the `free_tier_limit` envelope is raised for the `cover_letter_limit` trigger (spec #58 §8). Separate bucket from rewrite; no `attempted_action` (single entry point). |
 | `experience_generated` | `app/services/experience_service.py` | `{user_id, word_count}` |
 | `card_reviewed` | `app/services/study_service.py` | `{user_id, card_id, rating, ease_factor, interval_days}` |
 | `mission_created` | `app/services/mission_service.py` | `{user_id, mission_id, categories, target_date}` |

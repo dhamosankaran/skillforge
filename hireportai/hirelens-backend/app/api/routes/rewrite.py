@@ -2,14 +2,19 @@
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.analytics import track as analytics_track
+from app.core.deps import get_current_user
+from app.db.session import get_db
 from app.models.request_models import RewriteRequest
 from app.models.response_models import RewriteResponse, RewriteSection
-from app.services.nlp import extract_job_requirements, extract_skills
+from app.models.user import User
 from app.services.keywords import match_keywords
+from app.services.nlp import extract_job_requirements, extract_skills
+from app.services.usage_service import check_and_increment
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -41,9 +46,60 @@ def _rewrite_error_body(error_code: str, message: str, retry_hint: str) -> dict:
     }
 
 
+async def _enforce_rewrite_quota(
+    user: User,
+    attempted_action: str,
+    db: AsyncSession,
+) -> None:
+    """Gate the rewrite bucket for a single request (spec #58 §4.1).
+
+    `/rewrite` and `/rewrite/section` share the same `"rewrite"` bucket
+    per spec #58 §4.1 Option (a). Telemetry granularity is preserved via
+    the `attempted_action` prop on the 402 body + analytics event — not
+    via distinct PLAN_LIMITS keys.
+
+    Fires `rewrite_limit_hit` (spec #58 §8) on 402 and raises. On the
+    success path the caller continues; `log_usage` is already invoked
+    inside `check_and_increment` so no additional bookkeeping is needed.
+    """
+    usage = await check_and_increment(
+        user.id, "rewrite", db, window="lifetime"
+    )
+    if usage["allowed"]:
+        return
+
+    analytics_track(
+        user_id=user.id,
+        event="rewrite_limit_hit",
+        properties={
+            "attempted_action": attempted_action,
+            "plan": usage["plan"],
+            "auth_status": "authed",
+        },
+    )
+    raise HTTPException(
+        status_code=402,
+        detail={
+            "error": "free_tier_limit",
+            "trigger": "rewrite_limit",
+            "feature": "rewrite",
+            "attempted_action": attempted_action,
+            "plan": usage["plan"],
+            "used": usage["used"],
+            "limit": usage["limit"],
+        },
+    )
+
+
 @router.post("/rewrite", response_model=RewriteResponse)
-async def rewrite_resume(body: RewriteRequest) -> RewriteResponse:
+async def rewrite_resume(
+    body: RewriteRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> RewriteResponse:
     """Generate an ATS-optimized rewrite tailored to the candidate's resume."""
+    await _enforce_rewrite_quota(current_user, "full", db)
+
     try:
         from app.services.gpt_service import (
             RewriteError,
@@ -83,7 +139,7 @@ async def rewrite_resume(body: RewriteRequest) -> RewriteResponse:
         )
     except RewriteError as exc:
         analytics_track(
-            user_id=None,
+            user_id=current_user.id,
             event="rewrite_failed",
             properties={
                 "reason": exc.error_code,
@@ -110,7 +166,7 @@ async def rewrite_resume(body: RewriteRequest) -> RewriteResponse:
 
     output_chars = len(result.full_text)
     analytics_track(
-        user_id=None,
+        user_id=current_user.id,
         event="rewrite_succeeded",
         properties={
             "resume_chars": resume_chars,
@@ -133,8 +189,14 @@ async def rewrite_resume(body: RewriteRequest) -> RewriteResponse:
 
 
 @router.post("/rewrite/section", response_model=SectionRewriteResponse)
-async def rewrite_section(body: SectionRewriteRequest) -> SectionRewriteResponse:
+async def rewrite_section(
+    body: SectionRewriteRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> SectionRewriteResponse:
     """Regenerate a single section of the resume (spec #51 §6.2)."""
+    await _enforce_rewrite_quota(current_user, "section", db)
+
     try:
         from app.services.gpt_service import (
             RewriteError,
@@ -153,7 +215,7 @@ async def rewrite_section(body: SectionRewriteRequest) -> SectionRewriteResponse
         )
     except RewriteError as exc:
         analytics_track(
-            user_id=None,
+            user_id=current_user.id,
             event="rewrite_failed",
             properties={
                 "reason": exc.error_code,

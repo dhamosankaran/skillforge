@@ -26,6 +26,7 @@ export type PaywallTrigger =
   | 'interview_limit'
   | 'skill_gap_study'
   | 'rewrite_limit'
+  | 'cover_letter_limit'
 
 interface PaywallModalProps {
   open: boolean
@@ -42,6 +43,7 @@ const HEADLINES: Record<PaywallTrigger, string> = {
   interview_limit: "You've used your free interview preps",
   skill_gap_study: 'Study skill gaps with flashcards',
   rewrite_limit: 'AI Rewrite is a Pro feature',
+  cover_letter_limit: 'Cover letters are a Pro feature',
 }
 
 const SUBLINES: Record<PaywallTrigger, string> = {
@@ -59,6 +61,8 @@ const SUBLINES: Record<PaywallTrigger, string> = {
     'Pro unlocks the full flashcard library so you can study every skill gap detected in your resume scan.',
   rewrite_limit:
     'Upgrade to Pro to get ATS-optimized resume rewrites, tailored cover letters, and PDF export.',
+  cover_letter_limit:
+    'Upgrade to Pro to generate tailored cover letters, ATS-optimized resume rewrites, and PDF export.',
 }
 
 const VALUE_PROPS = [

@@ -9,7 +9,7 @@ amends: spec #42 LD-1 (grace carve-out for `rewrite_limit` + `cover_letter_limit
 
 # SPEC: Legacy Rewrite Router — Auth + Quota Enforcement
 
-## Status: Draft
+## Status: Shipped (spec + impl) — closes B-033. Impl half landed 2026-04-23.
 
 ## 1. Problem
 

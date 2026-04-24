@@ -18,6 +18,8 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from app.api.routes.cover_letter import router as cover_letter_router
+from app.core.deps import get_current_user
+from app.db.session import get_db
 from app.schemas.responses import CoverLetterRecipient, CoverLetterResponse
 from app.services.gpt_service import (
     CoverLetterError,
@@ -26,6 +28,22 @@ from app.services.gpt_service import (
     _join_cover_letter,
     generate_cover_letter,
 )
+
+
+class _FakeUser:
+    """Minimal stand-in for app.models.user.User — the cover-letter route
+    only reads `id` off the Depends(get_current_user) return value."""
+    id = "test-user-id"
+
+
+async def _fake_user():
+    return _FakeUser()
+
+
+async def _fake_db():
+    # The route's `check_and_increment` is patched to a no-op via
+    # `_bypass_quota()` below, so the db session it gets is never queried.
+    yield None
 
 
 # ---------------------------------------------------------------------------
@@ -83,9 +101,39 @@ def _fake_llm(payload: dict):
 
 
 def _app_with_cover_letter_route() -> FastAPI:
+    """Mini-app exercising the cover-letter route in isolation.
+
+    Spec #58 added `Depends(get_current_user)` + quota enforcement; these
+    route-format tests exercise the 200 / 502 / validation paths downstream
+    of the gate, so we override both dependencies with fakes and stub
+    `check_and_increment` via the `_bypass_quota` context manager at each
+    call site.
+    """
     app = FastAPI()
     app.include_router(cover_letter_router, prefix="/api")
+    app.dependency_overrides[get_current_user] = _fake_user
+    app.dependency_overrides[get_db] = _fake_db
     return app
+
+
+@pytest.fixture(autouse=True)
+def _bypass_quota():
+    """Stub the spec #58 quota gate so format / 502 tests reach the service
+    layer. Real quota behavior is covered by `tests/test_rewrite_quota.py`."""
+    async def _allowed(*args, **kwargs):
+        return {
+            "allowed": True,
+            "used": 0,
+            "remaining": -1,
+            "limit": -1,
+            "plan": "pro",
+        }
+
+    with patch(
+        "app.api.routes.cover_letter.check_and_increment",
+        side_effect=_allowed,
+    ):
+        yield
 
 
 # ---------------------------------------------------------------------------

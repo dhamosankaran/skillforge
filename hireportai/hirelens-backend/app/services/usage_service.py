@@ -220,35 +220,84 @@ async def get_usage_summary(user_id: str, db: AsyncSession) -> dict:
     }
 
 
-async def get_analyze_usage(user_id: str, db: AsyncSession) -> dict:
-    """Lifetime analyze-usage snapshot for the `/payments/usage` endpoint.
+def _counter_triple(used: int, max_uses: int, is_admin: bool) -> tuple[int, int, int]:
+    """Return (used, remaining, max) with -1 sentinel for admin / unlimited.
 
-    Returns {plan, scans_used, scans_remaining, max_scans, is_admin} per
-    spec #56 §4.3 (with `is_admin` per the 2026-04-23 impl-slice amendment).
+    Shared by every feature column in the `/payments/usage` response.
+    `used` echoes the raw lifetime count even for Pro / admin so admin
+    dashboards can read real consumption; `remaining` / `max` flip to the
+    unlimited sentinel.
+    """
+    if is_admin or max_uses == -1:
+        return used, -1, -1
+    remaining = max(0, max_uses - used)
+    return used, remaining, max_uses
+
+
+async def get_usage_snapshot(user_id: str, db: AsyncSession) -> dict:
+    """Lifetime usage snapshot for the `/payments/usage` endpoint.
+
+    Returns the flat shape defined by spec #56 §4.3 (scan fields) as
+    extended by spec #58 §5 for rewrite + cover-letter counters:
+
+        {
+          plan, is_admin,
+          scans_used, scans_remaining, max_scans,
+          rewrites_used, rewrites_remaining, rewrites_max,
+          cover_letters_used, cover_letters_remaining, cover_letters_max,
+        }
+
+    `/rewrite/section` shares the `"rewrite"` bucket per spec #58 §4.1
+    Option (a), so `rewrites_used` counts `feature_used='rewrite'` rows
+    only — the section handler writes into that same feature column.
+
+    All `*_max` / `*_remaining` fields use the `-1` unlimited sentinel
+    for Pro / Enterprise / admin; `plan` stays the actual subscription
+    plan (admin-on-free returns `plan='free'` + `is_admin=true`).
     """
     plan, role = await _get_plan_and_role(user_id, db)
     is_admin = role == "admin"
-
-    scans_used = await _count_usage(user_id, "analyze", db, window="lifetime")
-
     limits = PLAN_LIMITS.get(plan, PLAN_LIMITS["free"])
-    max_scans = limits.get("analyze", 0)
 
-    if is_admin or max_scans == -1:
-        # Admin bypass OR unlimited plan → -1 sentinel for both fields.
-        return {
-            "plan": plan,
-            "scans_used": scans_used,
-            "scans_remaining": -1,
-            "max_scans": -1,
-            "is_admin": is_admin,
-        }
+    scans_used_raw = await _count_usage(user_id, "analyze", db, window="lifetime")
+    rewrites_used_raw = await _count_usage(user_id, "rewrite", db, window="lifetime")
+    cover_letters_used_raw = await _count_usage(
+        user_id, "cover_letter", db, window="lifetime"
+    )
 
-    remaining = max(0, max_scans - scans_used)
+    scans_used, scans_remaining, max_scans = _counter_triple(
+        scans_used_raw, limits.get("analyze", 0), is_admin
+    )
+    rewrites_used, rewrites_remaining, rewrites_max = _counter_triple(
+        rewrites_used_raw, limits.get("rewrite", 0), is_admin
+    )
+    (
+        cover_letters_used,
+        cover_letters_remaining,
+        cover_letters_max,
+    ) = _counter_triple(
+        cover_letters_used_raw, limits.get("cover_letter", 0), is_admin
+    )
+
     return {
         "plan": plan,
-        "scans_used": scans_used,
-        "scans_remaining": remaining,
-        "max_scans": max_scans,
         "is_admin": is_admin,
+        # spec #56 — scans
+        "scans_used": scans_used,
+        "scans_remaining": scans_remaining,
+        "max_scans": max_scans,
+        # spec #58 — rewrites (shared bucket: /rewrite + /rewrite/section)
+        "rewrites_used": rewrites_used,
+        "rewrites_remaining": rewrites_remaining,
+        "rewrites_max": rewrites_max,
+        # spec #58 — cover letters (separate bucket)
+        "cover_letters_used": cover_letters_used,
+        "cover_letters_remaining": cover_letters_remaining,
+        "cover_letters_max": cover_letters_max,
     }
+
+
+# Back-compat alias — some older callers (and tests) import the pre-spec-#58
+# name. Kept so existing imports do not break; new callers should use
+# `get_usage_snapshot` directly.
+get_analyze_usage = get_usage_snapshot

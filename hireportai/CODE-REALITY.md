@@ -9,7 +9,7 @@
 
 | Field | Value |
 |-------|-------|
-| Commit sha (short) | `1bf6c3b` (HEAD after B-032 SHA backfill). Targeted updates on this pass for spec #56 / B-031 impl: §1 endpoint count, §3 `POST /analyze` 402 branch + new `GET /payments/usage` row, §4 `usage_service.py` (lifetime window + admin bypass + `get_analyze_usage` helper), `paywall_service.py` (scan_limit carve-out branch). Prior regen snapshots: `7ca2e90` / `806c199` / `96e6096` / `a13c217` / `3cef6c3`. |
+| Commit sha (short) | `1bf6c3b` (HEAD after B-032 SHA backfill). Targeted updates on this pass for spec #58 / B-033 impl: §1 endpoint count stays the same (6 route bodies changed, no new route); §3 `POST /rewrite`, `POST /rewrite/section`, `POST /cover-letter` (each x 2 mount prefixes = 6 rows) gain `get_current_user` auth + 402 quota branch, `GET /payments/usage` response extends with 6 new fields for rewrite + cover-letter counters; §4 `usage_service.py` (renamed `get_analyze_usage` → `get_usage_snapshot` with back-compat alias; new `_counter_triple` helper; lifetime counters for `rewrite` + `cover_letter`), `paywall_service.py` (hard-wall trigger set expanded from `{scan_limit}` to `{scan_limit, rewrite_limit, cover_letter_limit}`). Prior spec #56 pass touched: `POST /analyze` 402 branch + new `GET /payments/usage` row, `get_analyze_usage` helper, `scan_limit` carve-out. Prior regen snapshots: `7ca2e90` / `806c199` / `96e6096` / `a13c217` / `3cef6c3`. |
 | Branch | `main` (24 commits ahead of `origin/main`; not yet pushed — scheduled for push alongside this regen) |
 | Generated | 2026-04-23 (body sweep completed: Sections 1-8 + 11-12 audited against HEAD `7ca2e90`. Caught up: E-018a `admin_audit_log` model (§2), E-018b `admin_analytics_service` + routes + `AdminAnalytics.tsx` (§3-4-6-7), E-040 `AdminGate` + `reconcile_admin_role` (§4-6-12), B-001 `/rewrite/section` + `RewriteError` (§3-4), B-014 `SECTION_THINKING_BUDGET` headroom (§4 gpt_service), B-016 `users.home_first_visit_seen_at` (§2) + `POST /users/me/home-first-visit` (§3), B-021 + B-024 `_extract_company_name` LLM-primary orchestrator (§4 nlp.py), B-022 `job_fit_explanation` reasoning tier (§4), B-023 `_extract_candidate_name` all-caps guard (§4), B-027 HomeDashboard `isFirstVisit` snapshot (§7), B-028 UserMenu + Profile account section (§6-7), AdminGate wraps both admin routes closing §12 Q4. Section 9 (dead code) + Section 10 (skills inventory) + Section 11 (drift flags) not re-checked in this pass — treat as potentially stale beyond the known skill-file addition and drift items carried forward below. |
 | Backend model files | 19 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models` — adds `admin_audit_log.py`) |
@@ -360,9 +360,9 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | Effective mount | File | Endpoints | Auth deps observed |
 |-----------------|------|-----------|---------------------|
 | `/api/analyze` | `app/api/routes/analyze.py` | 1 | `get_current_user_optional` |
-| `/api/cover-letter` | `app/api/routes/cover_letter.py` | 1 | none |
+| `/api/cover-letter` | `app/api/routes/cover_letter.py` | 1 | `get_current_user` *(spec #58 / B-033 — 402 on cap hit, `cover_letter_limit` trigger)* |
 | `/api/interview-prep` | `app/api/routes/interview.py` | 1 | `get_current_user_optional` |
-| `/api/rewrite` | `app/api/routes/rewrite.py` | 2 | none *(both `/rewrite` and `/rewrite/section`; latter added in B-001 impl `167b70f`)* |
+| `/api/rewrite` | `app/api/routes/rewrite.py` | 2 | `get_current_user` *(spec #58 / B-033 — 402 on cap hit, shared `"rewrite"` bucket for both `/rewrite` and `/rewrite/section`, `rewrite_limit` trigger)* |
 | `/api/v1/onboarding` | `app/api/routes/onboarding.py` *(legacy folder, v1 mount)* | 2 | `get_current_user` |
 | `/api/v1/payments` | `app/api/routes/payments.py` *(legacy folder, v1 mount)* | 6 | `get_current_user` (4), none (2) |
 | `/api/v1/admin` | `app/api/v1/routes/admin.py` | 9 | `audit_admin_request` (router-level, chains `require_admin`) |
@@ -370,7 +370,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | `/api/v1/analyze` | `app/api/v1/routes/analyze.py` | 1 | `get_current_user_optional` |
 | `/api/v1/auth` | `app/api/v1/routes/auth.py` | 4 | `get_current_user` (1), none (3) |
 | `/api/v1/cards` | `app/api/v1/routes/cards.py` | 4 | `get_current_user` (4) |
-| `/api/v1/cover-letter` | `app/api/v1/routes/cover_letter.py` | 1 *(re-exports legacy)* | none |
+| `/api/v1/cover-letter` | `app/api/v1/routes/cover_letter.py` | 1 *(re-exports legacy)* | `get_current_user` *(spec #58)* |
 | `/api/v1/email-preferences` | `app/api/v1/routes/email_prefs.py` | 2 | `get_current_user` (2) |
 | `/api/v1/feedback` + `/api/v1/admin/feedback` | `app/api/v1/routes/feedback.py` | 3 | `get_current_user` (1), `require_admin` (2) |
 | `/api/v1/gamification` | `app/api/v1/routes/gamification.py` | 1 | `get_current_user` |
@@ -379,7 +379,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | `/api/v1/missions/*` | `app/api/v1/routes/mission.py` | 4 | `get_current_user` (4) |
 | `/api/v1/progress` | `app/api/v1/routes/progress.py` | 2 | `get_current_user` (2) |
 | `/api/v1/resume` | `app/api/v1/routes/resume.py` | 4 | `get_current_user` (3), `require_plan` (1) |
-| `/api/v1/rewrite` | `app/api/v1/routes/rewrite.py` | 2 *(re-exports legacy — includes `/rewrite/section`)* | none |
+| `/api/v1/rewrite` | `app/api/v1/routes/rewrite.py` | 2 *(re-exports legacy — includes `/rewrite/section`)* | `get_current_user` *(spec #58)* |
 | `/api/v1/study` | `app/api/v1/routes/study.py` | 4 | `get_current_user` (4) |
 | `/api/v1/tracker` | `app/api/v1/routes/tracker.py` | 4 | `get_current_user` (4) |
 | `/api/v1/users` | `app/api/v1/routes/users.py` | 1 | `get_current_user` |
@@ -389,10 +389,10 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | Method | Path | Handler | Auth | Tags |
 |--------|------|---------|------|------|
 | POST | /api/analyze | analyze_resume | get_current_user_optional | Analysis *(spec #56, B-031 — 402 quota branch, see `/api/v1/analyze` row below for full notes)* |
-| POST | /api/cover-letter | generate_cover_letter | none | Cover Letter |
+| POST | /api/cover-letter | generate_cover_letter | get_current_user | Cover Letter *(spec #58 / B-033 — 402 `free_tier_limit` / `cover_letter_limit` for free plan; admin + Pro + Enterprise bypass)* |
 | POST | /api/interview-prep | generate_interview_prep | get_current_user_optional | Interview Prep |
-| POST | /api/rewrite | rewrite_resume | none | Rewrite |
-| POST | /api/rewrite/section | rewrite_section | none | Rewrite *(spec #51, B-001 impl — per-section regen)* |
+| POST | /api/rewrite | rewrite_resume | get_current_user | Rewrite *(spec #58 / B-033 — 402 `free_tier_limit` / `rewrite_limit` with `attempted_action='full'` for free plan)* |
+| POST | /api/rewrite/section | rewrite_section | get_current_user | Rewrite *(spec #51, B-001 impl — per-section regen. spec #58 / B-033 — shares `"rewrite"` bucket; 402 envelope `attempted_action='section'`)* |
 | GET | /api/v1/admin/cards | list_cards | require_admin | v1 Admin |
 | POST | /api/v1/admin/cards | create_card | require_admin | v1 Admin |
 | PUT | /api/v1/admin/cards/{card_id} | update_card | require_admin | v1 Admin |
@@ -416,7 +416,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | GET | /api/v1/cards/search | search_cards | get_current_user | v1 Cards |
 | GET | /api/v1/cards/{card_id} | get_card | get_current_user | v1 Cards |
 | POST | /api/v1/cards/{card_id}/feedback | submit_feedback | get_current_user | v1 Feedback |
-| POST | /api/v1/cover-letter | generate_cover_letter | none | v1 Cover Letter |
+| POST | /api/v1/cover-letter | generate_cover_letter | get_current_user | v1 Cover Letter *(spec #58 / B-033)* |
 | GET | /api/v1/email-preferences | get_email_preferences | get_current_user | v1 Email Preferences |
 | PUT | /api/v1/email-preferences | update_email_preferences | get_current_user | v1 Email Preferences |
 | GET | /api/v1/gamification/stats | get_gamification_stats | get_current_user | v1 Gamification |
@@ -433,7 +433,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | POST | /api/v1/payments/portal | create_portal | get_current_user | v1 Payments |
 | POST | /api/v1/payments/paywall-dismiss | paywall_dismiss | get_current_user | v1 Payments *(spec #42, P5-S26b-impl-BE — fires `paywall_dismissed` PostHog on logged=true; LD-8 60s dedup)* |
 | GET | /api/v1/payments/should-show-paywall | should_show_paywall | get_current_user | v1 Payments *(spec #42, P5-S26b-impl-BE — Pro/admin bypass returns `{show: false, attempts_until_next: 0}`; free-user grace via `attempts_since_dismiss` query param, Strategy A; spec #56 LD-4 carve-out — `trigger='scan_limit'` always returns `{show: true, attempts_until_next: 0}` for free users regardless of dismissal history)* |
-| GET | /api/v1/payments/usage | get_usage | get_current_user | v1 Payments *(spec #56 / B-031 — lifetime `analyze` usage snapshot; returns `{plan, scans_used, scans_remaining, max_scans, is_admin}` with `-1` sentinel for unlimited Pro/Enterprise/admin)* |
+| GET | /api/v1/payments/usage | get_usage | get_current_user | v1 Payments *(spec #56 / B-031 + spec #58 / B-033 — lifetime usage snapshot; returns flat `{plan, is_admin, scans_{used,remaining,max}, rewrites_{used,remaining,max}, cover_letters_{used,remaining,max}}` with `-1` sentinel for unlimited Pro/Enterprise/admin. Rewrite + cover-letter counters added by spec #58 §5)* |
 | POST | /api/v1/payments/webhook | stripe_webhook | none | v1 Payments *(spec #43 idempotency; spec #42 — `customer.subscription.deleted` branch also stamps `user.downgraded_at`)* |
 | GET | /api/v1/progress/heatmap | get_heatmap | get_current_user | v1 Progress |
 | GET | /api/v1/progress/radar | get_radar | get_current_user | v1 Progress |
@@ -441,8 +441,8 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | GET | /api/v1/resume/{resume_id}/diff | get_resume_diff | get_current_user | v1 Resume |
 | POST | /api/v1/resume/{resume_id}/optimize | optimize_resume | require_plan | v1 Resume |
 | POST | /api/v1/resume/upload | upload_resume | get_current_user | v1 Resume |
-| POST | /api/v1/rewrite | rewrite_resume | none | v1 Rewrite |
-| POST | /api/v1/rewrite/section | rewrite_section | none | v1 Rewrite *(spec #51, B-001 impl — per-section regen)* |
+| POST | /api/v1/rewrite | rewrite_resume | get_current_user | v1 Rewrite *(spec #58 / B-033 — shared `"rewrite"` bucket)* |
+| POST | /api/v1/rewrite/section | rewrite_section | get_current_user | v1 Rewrite *(spec #51, B-001 impl — per-section regen. spec #58 / B-033 — shares `"rewrite"` bucket)* |
 | GET | /api/v1/study/daily | get_daily_review | get_current_user | v1 Study |
 | POST | /api/v1/study/experience | generate_experience | get_current_user | v1 Study |
 | GET | /api/v1/study/progress | get_progress | get_current_user | v1 Study |
@@ -484,14 +484,14 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | onboarding_checklist_service.py | Interview-Prepper onboarding checklist from telemetry-derived state. | get_checklist, WrongPersonaError | — |
 | parser.py | Resume parser supporting PDF and DOCX formats. | parse_pdf, parse_docx, detect_sections, extract_bullets, extract_contact_info | — |
 | payment_service.py | Payment service — thin wrapper around Stripe. `_handle_subscription_deleted` also writes `user.downgraded_at` per spec #42 LD-5 (dormant until win-back E-031 activates). | create_checkout_session, create_billing_portal_session, handle_webhook, PaymentError, InvalidSignatureError, UserNotFoundError, NotProSubscriberError | Stripe |
-| paywall_service.py | Paywall dismissal service (spec #42). `record_dismissal` with LD-8 60s idempotency per (user_id, trigger); `should_show_paywall` with Pro/admin bypass + Strategy A grace counter via FE-passed `attempts_since_dismiss`. Spec #56 LD-4 carve-out: `trigger=='scan_limit'` on a free user always returns `{show: True, attempts_until_next: 0}` regardless of dismissal history — hard 1-lifetime cap has NO grace. Win-back eligibility + send are DEFERRED to BACKLOG E-031 (🟦 back-burner). | record_dismissal, should_show_paywall, RecordDismissalResult, ShouldShowPaywallResult, GRACE_ATTEMPTS, IDEMPOTENCY_WINDOW_SECONDS | — |
+| paywall_service.py | Paywall dismissal service (spec #42). `record_dismissal` with LD-8 60s idempotency per (user_id, trigger); `should_show_paywall` with Pro/admin bypass + Strategy A grace counter via FE-passed `attempts_since_dismiss`. Hard-wall carve-outs (amend spec #42 LD-1 — trigger set is now `{scan_limit, rewrite_limit, cover_letter_limit}`): for any of those three triggers on a free user, always returns `{show: True, attempts_until_next: 0}` regardless of dismissal history. `scan_limit` from spec #56 LD-4; `rewrite_limit` + `cover_letter_limit` added by spec #58 LD-5 (Pro-only features — no legitimate "browse" surface to soften). Win-back eligibility + send are DEFERRED to BACKLOG E-031. | record_dismissal, should_show_paywall, RecordDismissalResult, ShouldShowPaywallResult, GRACE_ATTEMPTS, IDEMPOTENCY_WINDOW_SECONDS | — |
 | progress_service.py | Progress analytics service with category radar and activity heatmap. [INFERRED] | get_category_coverage, get_activity_heatmap | — |
 | reminder_service.py | Daily email reminder service. | get_users_needing_reminder, build_email_body, build_subject, send_daily_reminders | Resend |
 | resume_templates.py | Resume template definitions for AI-powered rewriting. | get_template, get_template_names, auto_select_template | — |
 | scorer.py | ATS scoring engine for resume ATS compatibility. [INFERRED] | ATSScorer | — |
 | study_service.py | FSRS spaced-repetition study service with server-side scheduling. Also enforces the free-tier daily-card review wall (spec #50) via private `_check_daily_wall` helper — Redis INCR keyed `daily_cards:{user_id}:{YYYY-MM-DD}` in user-local tz, 48h TTL, fail-open on Redis outage; admin + Pro/Enterprise bypass. | get_daily_review, create_progress, review_card, get_progress, CardNotFoundError, CardForbiddenError, DailyReviewLimitError | Redis |
 | tracker_service_v2.py | SQLAlchemy-backed job application tracker service (v2). | create_application, find_by_scan_id, get_applications, get_application_by_id, update_application, delete_application | — |
-| usage_service.py | Usage tracking + plan-limit enforcement. Per spec #56 / B-031 (2026-04-23): `PLAN_LIMITS["free"]["analyze"] = 1` (lifetime). `check_and_increment` and `check_usage_limit` accept `window: Literal["monthly","lifetime"] = "monthly"` — analyze callers pass `"lifetime"`; interview_prep and resume_optimize keep monthly. Admin bypass via in-helper User role fetch (mirrors paywall_service:168 convention); short-circuits to `allowed=True, limit=-1` before counter check. Return dict extended with `used: int` for the 402 envelope. `get_analyze_usage(user_id, db)` is the read-only helper powering `GET /api/v1/payments/usage` — returns `{plan, scans_used, scans_remaining, max_scans, is_admin}` with `-1` sentinel for unlimited plans/admin. | log_usage, check_usage_limit, check_and_increment, get_usage_summary, get_analyze_usage, PLAN_LIMITS, Window | — |
+| usage_service.py | Usage tracking + plan-limit enforcement. Per spec #56 / B-031 (2026-04-23): `PLAN_LIMITS["free"]["analyze"] = 1` (lifetime). `check_and_increment` and `check_usage_limit` accept `window: Literal["monthly","lifetime"] = "monthly"` — analyze + rewrite + cover_letter callers pass `"lifetime"` (spec #58 §4.1); interview_prep and resume_optimize keep monthly. Admin bypass via in-helper User role fetch (mirrors paywall_service:168 convention); short-circuits to `allowed=True, limit=-1` before counter check. Return dict extended with `used: int` for the 402 envelope. Per spec #58 / B-033 (2026-04-23): `get_analyze_usage` replaced by `get_usage_snapshot` (back-compat alias retained) — returns the flat extended shape with scan + rewrite + cover-letter counters for `GET /api/v1/payments/usage`. New `_counter_triple(used, max, is_admin)` helper centralizes the `-1` sentinel collapse for admin / unlimited plans. `/rewrite` + `/rewrite/section` share the `"rewrite"` feature key (spec #58 §4.1 Option a) — no separate `section_rewrite` PLAN_LIMITS entry; `/cover-letter` uses its own `"cover_letter"` key. `PLAN_LIMITS["free"]["rewrite"] = 0` and `…["cover_letter"] = 0` are live (no longer dead code — consumed by the route handlers post-B-033). | log_usage, check_usage_limit, check_and_increment, get_usage_summary, get_usage_snapshot, get_analyze_usage (alias), _counter_triple, PLAN_LIMITS, Window | — |
 | user_service.py | User CRUD + admin-role reconciliation. Post-E-040 (`1148354`, spec #54): `reconcile_admin_role(user, admin_emails_set) -> (action, prior_role, new_role)` is a pure mutation function that sets `user.role` to `"admin"` if `email.lower() in admin_emails_set` and `"user"` otherwise. Action ∈ `{"promoted", "demoted", "unchanged"}`; caller owns commit / audit / analytics. Invoked from `auth.py::google_auth` on every login — the `unchanged` case doubles as a dashboard heartbeat. | get_or_create_user, get_user_by_id, reconcile_admin_role | — |
 
 ### `app/services/llm/` (legacy provider factory — do not extend)

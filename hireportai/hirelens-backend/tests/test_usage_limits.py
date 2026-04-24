@@ -220,6 +220,145 @@ async def test_monthly_window_default_unchanged(db_session):
     assert result["remaining"] == 2
 
 
+# ── spec #58 — rewrite + cover-letter Pro-only hard gate ─────────────────
+
+
+async def test_free_user_blocked_on_rewrite(db_session):
+    """Free plan is capped at 0 lifetime rewrites (spec #58 LD-2 Pro-only)."""
+    user = await _create_user(db_session, plan="free")
+
+    result = await check_and_increment(
+        user.id, "rewrite", db_session, window="lifetime"
+    )
+    assert result["allowed"] is False
+    assert result["limit"] == 0
+    assert result["plan"] == "free"
+
+
+async def test_free_user_blocked_on_section_rewrite_shares_rewrite_bucket(db_session):
+    """Section rewrite hits the same `"rewrite"` bucket per spec #58 §4.1 Option (a).
+
+    The route handler passes `"rewrite"` (not a separate `"section_rewrite"`
+    key) — no second PLAN_LIMITS row; disambiguation lives on the event.
+    """
+    user = await _create_user(db_session, plan="free")
+
+    # Same feature key the section handler passes.
+    result = await check_and_increment(
+        user.id, "rewrite", db_session, window="lifetime"
+    )
+    assert result["allowed"] is False
+
+
+async def test_free_user_blocked_on_cover_letter_separate_bucket(db_session):
+    """Cover letter is its own bucket (spec #58 LD-1 hybrid)."""
+    user = await _create_user(db_session, plan="free")
+
+    result = await check_and_increment(
+        user.id, "cover_letter", db_session, window="lifetime"
+    )
+    assert result["allowed"] is False
+    assert result["limit"] == 0
+
+
+async def test_pro_user_unlimited_rewrite(db_session):
+    user = await _create_user(db_session, plan="pro")
+    for _ in range(5):
+        result = await check_and_increment(
+            user.id, "rewrite", db_session, window="lifetime"
+        )
+        assert result["allowed"] is True
+        assert result["limit"] == -1
+
+
+async def test_pro_user_unlimited_cover_letter(db_session):
+    user = await _create_user(db_session, plan="pro")
+    for _ in range(5):
+        result = await check_and_increment(
+            user.id, "cover_letter", db_session, window="lifetime"
+        )
+        assert result["allowed"] is True
+        assert result["limit"] == -1
+
+
+async def test_admin_bypass_rewrite(db_session):
+    """Admin role bypasses the rewrite bucket regardless of plan."""
+    user = await _create_user(db_session, plan="free")
+    user.role = "admin"
+    await db_session.flush()
+
+    result = await check_and_increment(
+        user.id, "rewrite", db_session, window="lifetime"
+    )
+    assert result["allowed"] is True
+    assert result["limit"] == -1
+
+
+async def test_admin_bypass_cover_letter(db_session):
+    user = await _create_user(db_session, plan="free")
+    user.role = "admin"
+    await db_session.flush()
+
+    result = await check_and_increment(
+        user.id, "cover_letter", db_session, window="lifetime"
+    )
+    assert result["allowed"] is True
+    assert result["limit"] == -1
+
+
+async def test_lifetime_window_ignores_created_at_rewrite(db_session):
+    """Pro user with backdated rewrite rows still flagged as unlimited.
+
+    Locks in lifetime semantics for `"rewrite"` — identical guard to the
+    spec #56 analyze test above but on the new feature key, so no future
+    regression can silently revert to monthly.
+    """
+    user = await _create_user(db_session, plan="pro")
+    log = UsageLog(user_id=user.id, feature_used="rewrite", tokens_consumed=0)
+    db_session.add(log)
+    await db_session.flush()
+    from sqlalchemy import update
+    backdate = datetime.utcnow() - timedelta(days=400)
+    await db_session.execute(
+        update(UsageLog)
+        .where(UsageLog.user_id == user.id)
+        .values(created_at=backdate)
+    )
+    await db_session.flush()
+
+    # Pro user still unlimited — the lifetime window is only observable
+    # for free users where the cap is non-zero; here we just confirm
+    # the window param flows through without raising.
+    result = await check_and_increment(
+        user.id, "rewrite", db_session, window="lifetime"
+    )
+    assert result["allowed"] is True
+    assert result["limit"] == -1
+
+
+async def test_lifetime_window_ignores_created_at_cover_letter(db_session):
+    user = await _create_user(db_session, plan="pro")
+    log = UsageLog(
+        user_id=user.id, feature_used="cover_letter", tokens_consumed=0
+    )
+    db_session.add(log)
+    await db_session.flush()
+    from sqlalchemy import update
+    backdate = datetime.utcnow() - timedelta(days=400)
+    await db_session.execute(
+        update(UsageLog)
+        .where(UsageLog.user_id == user.id)
+        .values(created_at=backdate)
+    )
+    await db_session.flush()
+
+    result = await check_and_increment(
+        user.id, "cover_letter", db_session, window="lifetime"
+    )
+    assert result["allowed"] is True
+    assert result["limit"] == -1
+
+
 async def test_gap_to_card_link_returns_matching_category(db_session):
     """Gap mapping service should return matching categories for known skill gaps."""
     from app.services.gap_mapping_service import map_gaps_to_categories

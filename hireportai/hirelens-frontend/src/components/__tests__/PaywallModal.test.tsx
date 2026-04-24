@@ -80,6 +80,7 @@ describe('PaywallModal', () => {
       interview_limit: "You've used your free interview preps",
       skill_gap_study: 'Study skill gaps with flashcards',
       rewrite_limit: 'AI Rewrite is a Pro feature',
+      cover_letter_limit: 'Cover letters are a Pro feature',
     }
 
     for (const [trigger, headline] of Object.entries(expected)) {
@@ -87,6 +88,15 @@ describe('PaywallModal', () => {
       expect(screen.getByText(headline)).toBeInTheDocument()
       unmount()
     }
+  })
+
+  it('cover_letter_limit renders spec #58 §9 subline copy', () => {
+    renderModal({ trigger: 'cover_letter_limit' })
+    expect(
+      screen.getByText(
+        'Upgrade to Pro to generate tailored cover letters, ATS-optimized resume rewrites, and PDF export.',
+      ),
+    ).toBeInTheDocument()
   })
 
   it('CTA calls createCheckoutSession', async () => {

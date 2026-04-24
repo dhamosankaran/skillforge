@@ -12,6 +12,14 @@ interface UsageState {
   maxScans: number
   /** Role flag — orthogonal to plan. Admin with plan=free has isAdmin=true. */
   isAdmin: boolean
+  // spec #58 §5 — rewrite + cover-letter counters (Pro-only per LD-2; free
+  // reads 0/0, Pro reads n/-1). Display-only today; `canUsePremium` stays
+  // the canonical gate on Rewrite.tsx (LD-7). Exposed so future UX slices
+  // that replace PremiumGate with PaywallModal can read remaining counts.
+  rewritesUsed: number
+  rewritesMax: number
+  coverLettersUsed: number
+  coverLettersMax: number
 }
 
 interface UsageContextValue {
@@ -43,6 +51,11 @@ const DEFAULT_STATE: UsageState = {
   scansUsed: 0,
   maxScans: 1,  // spec #56 LD-1 — 1 lifetime scan for free; BE overwrites on hydrate
   isAdmin: false,
+  // spec #58 — Pro-only features default to 0/0 pre-hydrate.
+  rewritesUsed: 0,
+  rewritesMax: 0,
+  coverLettersUsed: 0,
+  coverLettersMax: 0,
 }
 
 function loadDisplayCache(): UsageState {
@@ -55,6 +68,10 @@ function loadDisplayCache(): UsageState {
         scansUsed: parsed.scansUsed ?? 0,
         maxScans: parsed.maxScans ?? 1,
         isAdmin: parsed.isAdmin ?? false,
+        rewritesUsed: parsed.rewritesUsed ?? 0,
+        rewritesMax: parsed.rewritesMax ?? 0,
+        coverLettersUsed: parsed.coverLettersUsed ?? 0,
+        coverLettersMax: parsed.coverLettersMax ?? 0,
       }
     }
   } catch {
@@ -77,6 +94,10 @@ function fromResponse(r: UsageResponse): UsageState {
     scansUsed: r.scans_used,
     maxScans: r.max_scans,
     isAdmin: r.is_admin,
+    rewritesUsed: r.rewrites_used,
+    rewritesMax: r.rewrites_max,
+    coverLettersUsed: r.cover_letters_used,
+    coverLettersMax: r.cover_letters_max,
   }
 }
 
@@ -115,10 +136,13 @@ export function UsageProvider({ children }: { children: ReactNode }) {
     // BE response on next refreshUsage(). Called after a successful checkout
     // return so the UI reflects Pro immediately.
     setUsage((prev) => {
+      const isPaid = plan !== 'free'
       const next: UsageState = {
         ...prev,
         plan,
-        maxScans: plan === 'free' ? 1 : -1,
+        maxScans: isPaid ? -1 : 1,
+        rewritesMax: isPaid ? -1 : 0,
+        coverLettersMax: isPaid ? -1 : 0,
       }
       writeDisplayCache(next)
       return next
