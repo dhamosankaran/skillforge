@@ -90,6 +90,7 @@ export default function App() {
           <Route path="/learn/mission"      element={<ProtectedRoute><MissionMode /></ProtectedRoute>} />
 
           {/* /prep/* — interview prep */}
+          <Route path="/prep"           element={<ProtectedRoute><Navigate to="/prep/analyze" replace /></ProtectedRoute>} />
           <Route path="/prep/analyze"   element={<ProtectedRoute><Analyze /></ProtectedRoute>} />
           <Route path="/prep/results"   element={<ProtectedRoute><Results /></ProtectedRoute>} />
           <Route path="/prep/rewrite"   element={<ProtectedRoute><Rewrite /></ProtectedRoute>} />

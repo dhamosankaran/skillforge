@@ -117,6 +117,17 @@ describe('App transitional redirects', () => {
     expect(screen.getByTestId('location-probe')).toHaveAttribute('data-pathname', '/learn/card/xyz-789')
   })
 
+  it('redirects bare /prep to /prep/analyze (B-034)', async () => {
+    render(
+      <MemoryRouter initialEntries={['/prep']}>
+        <App />
+        <LocationProbe />
+      </MemoryRouter>,
+    )
+    expect(await screen.findByTestId('page-analyze')).toBeInTheDocument()
+    expect(screen.getByTestId('location-probe')).toHaveAttribute('data-pathname', '/prep/analyze')
+  })
+
   it('renders the HomeDashboard at /home', async () => {
     render(
       <MemoryRouter initialEntries={['/home']}>
