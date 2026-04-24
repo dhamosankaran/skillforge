@@ -171,6 +171,17 @@ export async function analyzeResume(
   return response.data
 }
 
+/** Spec #59 — fetch a previously-persisted scan by id. Used by Results.tsx
+ *  to hydrate when the user lands on /prep/results?scan_id=... on a
+ *  fresh session (in-memory AnalysisContext is empty). 404 for unknown
+ *  or non-owner scans; 410 for legacy scans where analysis_payload is NULL. */
+export async function fetchScanById(scanId: string): Promise<AnalysisResponse> {
+  const response = await api.get<AnalysisResponse>(
+    `/api/v1/analyze/${encodeURIComponent(scanId)}`,
+  )
+  return response.data
+}
+
 export async function rewriteResume(
   resumeText: string,
   jdText: string,

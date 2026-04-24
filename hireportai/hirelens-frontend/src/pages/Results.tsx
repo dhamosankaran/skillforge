@@ -4,10 +4,11 @@ import { motion } from 'framer-motion'
 import {
   Target, BarChart3, GitMerge, AlertTriangle, Zap,
   MessageSquare, TrendingUp, RefreshCw, FileText,
-  Brain, CheckCircle2
+  Brain, CheckCircle2, Clock
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { fetchOnboardingRecommendations } from '@/services/api'
+import axios from 'axios'
+import { fetchOnboardingRecommendations, fetchScanById } from '@/services/api'
 import { PaywallModal, type PaywallTrigger } from '@/components/PaywallModal'
 import { useAuth } from '@/context/AuthContext'
 import { useUsage } from '@/context/UsageContext'
@@ -37,8 +38,21 @@ const NAV_ITEMS = [
   { id: 'bullets', label: 'Bullets', icon: Zap },
 ]
 
+/** Spec #59 — three-way empty-state signal for Results. `idle` is "no
+ *  URL scan_id, nothing to hydrate." `fetching` drives the skeleton.
+ *  `success` means AnalysisContext is now populated (the render path
+ *  drops out of the empty-state branch). `legacy` / `not_found` /
+ *  `error` select distinct empty-state copy. */
+type HydrateStatus =
+  | 'idle'
+  | 'fetching'
+  | 'success'
+  | 'legacy'
+  | 'not_found'
+  | 'error'
+
 export default function Results() {
-  const { state } = useAnalysisContext()
+  const { state, dispatch } = useAnalysisContext()
   const navigate = useNavigate()
   const { canUsePro } = useUsage()
   const { user } = useAuth()
@@ -49,6 +63,7 @@ export default function Results() {
   const [showPaywall, setShowPaywall] = useState(false)
   const [paywallTrigger, setPaywallTrigger] = useState<PaywallTrigger>('scan_limit')
   const [gapMappings, setGapMappings] = useState<import('@/types').GapMapping[]>([])
+  const [hydrateStatus, setHydrateStatus] = useState<HydrateStatus>('idle')
 
   // Spec #55 — gate Re-analyze on plan. Free users hit the existing
   // PaywallModal with `scan_limit` trigger; Pro users flow through to
@@ -86,6 +101,38 @@ export default function Results() {
     user === null ? 'anonymous' : canUsePro ? 'pro' : 'free'
   // AC-8: `return_to` is derived from the URL's scan_id, not from result state.
   const urlScanId = searchParams.get('scan_id')
+
+  // Spec #59 — hydrate AnalysisContext from URL scan_id when the page
+  // is reached on a fresh session (result === null). Fires once per
+  // URL via the `hydrateStatus !== 'idle'` idempotency guard. Three
+  // distinct empty-state branches key off the final status:
+  //   success  → dispatch populates result; dashboard renders
+  //   legacy   → 410; scan pre-dates persistence
+  //   not_found → 404; unknown / non-owner (LD-4 no-leak)
+  //   error    → network / 5xx; retryable
+  useEffect(() => {
+    if (result || !urlScanId || hydrateStatus !== 'idle') return
+    setHydrateStatus('fetching')
+    fetchScanById(urlScanId)
+      .then((payload) => {
+        dispatch({ type: 'SET_RESULT', payload })
+        setHydrateStatus('success')
+        capture('scan_rehydrated', { scan_id: urlScanId })
+      })
+      .catch((err) => {
+        const status = axios.isAxiosError(err) ? err.response?.status : undefined
+        const next: HydrateStatus =
+          status === 410 ? 'legacy'
+            : status === 404 ? 'not_found'
+              : 'error'
+        setHydrateStatus(next)
+        capture('scan_rehydrate_failed', {
+          scan_id: urlScanId,
+          reason: next,
+          http_status: status ?? 0,
+        })
+      })
+  }, [result, urlScanId, hydrateStatus, dispatch])
 
   // Fetch gap-to-category mappings when results load
   useEffect(() => {
@@ -127,7 +174,7 @@ export default function Results() {
     )
   }, [result?.scan_id, navigate])
 
-  if (isLoading) {
+  if (isLoading || hydrateStatus === 'fetching') {
     return (
       <PageWrapper className="min-h-screen bg-bg-base">
         <div className="max-w-7xl mx-auto px-4 py-12">
@@ -138,15 +185,51 @@ export default function Results() {
   }
 
   if (!result) {
+    // Spec #59 — three-way empty-state copy switch. `legacy` is a scan
+    // that exists but predates payload persistence; `not_found` is the
+    // generic "no scan / wrong user" case (LD-4 — no existence leak);
+    // `error` is a retryable network / 5xx.
+    const emptyCopy =
+      hydrateStatus === 'legacy'
+        ? {
+            icon: Clock,
+            heading: 'Results Not Available',
+            body: 'This scan is from before we stored full results — re-scan to view.',
+            cta: 'Re-scan resume',
+            onCta: () => navigate('/prep/analyze'),
+          }
+        : hydrateStatus === 'error'
+          ? {
+              icon: AlertTriangle,
+              heading: "Couldn't Load Results",
+              body: 'We hit a snag fetching your scan. Try again in a moment.',
+              cta: 'Retry',
+              onCta: () => setHydrateStatus('idle'),
+            }
+          : {
+              // 'not_found' and 'idle' (no scan_id at all) share the same copy —
+              // both point the user at starting a new analysis.
+              icon: Target,
+              heading: 'No Analysis Yet',
+              body: 'Upload your resume to see your results.',
+              cta: 'Start Analysis',
+              onCta: () => navigate('/prep/analyze'),
+            }
+    const Icon = emptyCopy.icon
     return (
       <PageWrapper className="min-h-screen bg-bg-base">
-        <div className="max-w-6xl mx-auto px-4 py-24 text-center">
-          <Target size={48} className="text-text-muted mx-auto mb-4" />
-          <h2 className="font-display text-2xl font-bold mb-2 text-text-primary">No Analysis Yet</h2>
-          <p className="text-text-secondary mb-8">Upload your resume to see your results.</p>
-          <GlowButton onClick={() => navigate('/prep/analyze')}>
+        <div
+          data-testid={`results-empty-${hydrateStatus}`}
+          className="max-w-6xl mx-auto px-4 py-24 text-center"
+        >
+          <Icon size={48} className="text-text-muted mx-auto mb-4" />
+          <h2 className="font-display text-2xl font-bold mb-2 text-text-primary">
+            {emptyCopy.heading}
+          </h2>
+          <p className="text-text-secondary mb-8">{emptyCopy.body}</p>
+          <GlowButton onClick={emptyCopy.onCta}>
             <Zap size={14} />
-            Start Analysis
+            {emptyCopy.cta}
           </GlowButton>
         </div>
       </PageWrapper>

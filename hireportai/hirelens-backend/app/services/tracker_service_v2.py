@@ -1,10 +1,11 @@
 """SQLAlchemy-backed job application tracker service (v2)."""
 import json
 import uuid
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import undefer
 
 from app.models.tracker import TrackerApplicationModel
 from app.schemas.requests import TrackerApplicationCreate, TrackerApplicationUpdate
@@ -57,8 +58,14 @@ async def create_application(
     user_id: str,
     skills_matched: Optional[List[str]] = None,
     skills_missing: Optional[List[str]] = None,
+    analysis_payload: Optional[dict[str, Any]] = None,
 ) -> TrackerApplication:
-    """Create a new job application for the given user."""
+    """Create a new job application for the given user.
+
+    Spec #59: `analysis_payload` persists the full AnalysisResponse for
+    scan re-view. None for non-scan-originated rows (manual adds via the
+    tracker page).
+    """
     _require_user_id(user_id)
     app = TrackerApplicationModel(
         id=str(uuid.uuid4()),
@@ -72,10 +79,35 @@ async def create_application(
         skills_matched=json.dumps(skills_matched) if skills_matched else None,
         skills_missing=json.dumps(skills_missing) if skills_missing else None,
         interview_date=data.interview_date,
+        analysis_payload=analysis_payload,
     )
     db.add(app)
     await db.flush()
     return _to_response(app)
+
+
+async def get_scan_by_id(
+    scan_id: str,
+    db: AsyncSession,
+    user_id: str,
+) -> Optional[TrackerApplicationModel]:
+    """Return the ORM row for a scan owned by the current user.
+
+    Spec #59 §8. Unlike the other readers in this service (which return
+    the Pydantic `TrackerApplication` summary), this returns the ORM
+    model so the route can access `analysis_payload` directly. Ownership
+    is enforced by matching `user_id`; rows owned by other users return
+    None (→ 404 at the route, not 403, per LD-4).
+    """
+    _require_user_id(user_id)
+    stmt = (
+        select(TrackerApplicationModel)
+        .where(TrackerApplicationModel.scan_id == scan_id)
+        .where(TrackerApplicationModel.user_id == user_id)
+        .options(undefer(TrackerApplicationModel.analysis_payload))
+    )
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
 
 
 async def find_by_scan_id(

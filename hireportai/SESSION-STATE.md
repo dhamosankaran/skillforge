@@ -15,7 +15,7 @@
 | **CODE-REALITY.md sha (repo)** | Partial ⚠️ — regen blob at top of the file was authored for the (still-uncommitted) E-018b content in the working tree; add E-040's touches on next regen: new `AdminGate` FE component (`src/components/auth/AdminGate.tsx`), new `reconcile_admin_role` service helper in `app/services/user_service.py`, new `Settings.admin_emails` + `admin_emails_set`, new `ADMIN_EMAILS` env var in AGENTS.md table, `/admin` + `/admin/analytics` routes now wrapped in `<AdminGate>`, new `admin_role_reconciled` PostHog event. |
 | **CODE-REALITY.md in chat Project** | Stale ❌ — re-upload after a clean regen lands (E-018b commits + E-040 touches together) |
 | **CODE-REALITY stale (either copy)?** | Both need follow-up — repo copy has E-018b content ahead of its commit; E-040 additions not yet mapped |
-| **Last hand-edit** | 2026-04-23 — P5-S59 spec authoring: new spec `docs/specs/phase-5/59-scan-persistence.md` (Option B follow-on to Mode-3 audit earlier in session). Docs-only slice, no code, no tests, no BACKLOG flips. Placeholder `B-0XX` reserved for P5-S59-impl commit per R15. Prior hand-edit: 2026-04-23 — P5-S58-impl: legacy rewrite router auth + quota (closes B-033). BE **417 → 462 (+45)**; FE **+1** new (PaywallModal `cover_letter_limit` subline; full FE suite reads 260 on this machine — varies from prior 249 counts due to environment / pre-existing test discovery differences on the concurrent E-042 commits). `tsc --noEmit` clean. Single commit. |
+| **Last hand-edit** | 2026-04-24 — P5-S59-impl: Scan persistence + Results hydration from URL scan_id — closes B-035 🔴 → ✅. BE **463 → 472 passed (+9)**; FE **256 → 263 passed (+7)**. Pre-existing 5 failures in `UsageContext.hydration.test.tsx` (uncommitted working-tree change, not this slice) unchanged. Alembic head `eb59d4fc1f7e → 30bf39fa04f8`. `tsc --noEmit` clean. Single commit. Prior hand-edit: 2026-04-23 — P5-S59 spec authoring (`058f148` + D-022 amend `a5a3d4a`). |
 
 > **Stale-marking rule**: Mark CODE-REALITY stale at the end of any slice that touched routes, models, top-level types, `App.tsx`, or layout components. Regenerate the repo copy AND re-upload to the chat Project before the next plan-level prompt.
 
@@ -66,6 +66,45 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 ---
 
 ## Last Completed Slice
+
+**2026-04-24 — P5-S59-impl: Scan persistence + Results hydration from URL scan_id — closes B-035 🔴 → ✅.** Single commit (bookkeeping backfill follow-up commit for the `<PENDING-SHA>` placeholder). BE **463 → 472 passed (+9)**; FE **256 → 263 passed (+7)**. Alembic `eb59d4fc1f7e → 30bf39fa04f8`. `tsc --noEmit` clean. CODEX review applies per Rule 11.
+
+**Shipped BE (5 files):**
+- `alembic/versions/30bf39fa04f8_add_analysis_payload_to_tracker_.py` — new Alembic revision. Adds `analysis_payload JSONB NULL` to `tracker_applications_v2`. No backfill (LD-5 — legacy rows return 410 Gone). `down_revision = 'eb59d4fc1f7e'`.
+- `app/models/tracker.py` — `analysis_payload: Mapped[dict[str, Any] | None] = deferred(mapped_column(JSONB, nullable=True))`. `deferred()` is load-bearing: prevents `GET /tracker` list responses from inflating (LD-2, verified by `test_list_tracker_response_omits_analysis_payload` asserting the JSON envelope has no `analysis_payload` key).
+- `app/services/tracker_service_v2.py` — (a) `create_application` gains `analysis_payload: Optional[dict] = None` kwarg; (b) new `get_scan_by_id(scan_id, db, user_id) -> TrackerApplicationModel | None` returning the ORM model (single service-wide exception to "return TrackerApplication summary" pattern — route needs `analysis_payload` which is not on the summary schema) with `.options(undefer(TrackerApplicationModel.analysis_payload))` applied. Ownership enforced by `.where(user_id == user_id)`; cross-user returns None → 404, never 403 (LD-4 — no existence leak).
+- `app/api/routes/analyze.py` — (a) restructured to construct `AnalysisResponse` once, persist `response.model_dump(mode="json")` alongside tracker summary via extended `create_application(..., analysis_payload=...)` call (same `db.flush()` covers both), return the same instance (LD-3 — byte-identical at scan time and re-view time); (b) new `GET /analyze/{scan_id}` handler with `Depends(get_current_user)` + `Depends(get_db)` — 404 unknown/cross-user, 410 NULL payload with `detail.error="scan_payload_unavailable"` + `detail.code="legacy_scan_pre_persistence"`, 200 `AnalysisResponse(**row.analysis_payload)` on owner. Mount-parity: handler on the legacy router surfaces at both `/api/analyze/{scan_id}` and `/api/v1/analyze/{scan_id}` via the existing v1 re-export shim.
+- Route registration in `app/main.py` — unchanged. The v1 shim at `app/api/v1/routes/analyze.py` remains a 2-line re-export.
+
+**Judgment call (§7 deviation):** spec §7 proposed a new `APIRouter(prefix="/api/v1/analyze")` in a fresh v1 file. Shipped instead as a handler on the existing legacy router, auto-exposed on both mount prefixes via the re-export shim. Rationale: matches the existing pattern for `POST /analyze` (shared router, two mount prefixes); smaller diff; preserves `POST /api/v1/analyze` without a parallel router; single source of truth for the `/analyze` surface. Canonical frontend path is `/api/v1/analyze/{scan_id}` per spec §7.
+
+**Shipped FE (2 files):**
+- `src/services/api.ts` — `fetchScanById(scanId: string): Promise<AnalysisResponse>` — `GET /api/v1/analyze/${encodeURIComponent(scanId)}`.
+- `src/pages/Results.tsx` — new `HydrateStatus` type + `useEffect` that fires `fetchScanById(urlScanId)` when `result === null && urlScanId && hydrateStatus === 'idle'`. On 200 → `dispatch({type:'SET_RESULT', payload})` + `capture('scan_rehydrated', {scan_id})`. On 410 → `hydrateStatus='legacy'`, renders `"Results Not Available" + "This scan is from before we stored full results — re-scan to view."` + `/prep/analyze` CTA. On 404 → `hydrateStatus='not_found'`, renders generic `"No Analysis Yet"`. On network/5xx → `hydrateStatus='error'`, renders `"Couldn't Load Results"` + retry button (CTA resets status to `idle`, re-triggering the effect). Skeleton during `fetching`. `data-testid="results-empty-<status>"` on each branch for test targeting. Failed paths fire `capture('scan_rehydrate_failed', {scan_id, reason, http_status})`. Idle branch (no URL scan_id) re-uses the `not_found` copy per spec §10 (both point to Start Analysis).
+
+**Tests (+9 BE / +7 FE):**
+- NEW `tests/test_tracker_service_scan_payload.py` (+4): payload persists via `create_application` kwarg / NULL without kwarg / `get_scan_by_id` returns None for cross-user (LD-4 ownership leak closed) / returns None for unknown id.
+- NEW `tests/test_analyze_scan_by_id.py` (+6): 401 anonymous / 404 unknown scan_id / 404 cross-user — explicitly not 403 / 410 legacy with `code == "legacy_scan_pre_persistence"` assertion / 200 owner round-trip with rich sub-object equality (score_breakdown.keyword_match, skill_gaps[0].skill, job_fit_explanation verbatim) / GET /tracker envelope omits `analysis_payload` key (LD-2 deferred regression guard).
+- NEW `tests/pages/Results.hydration.test.tsx` (+7): 200 success + dispatch + `scan_rehydrated` capture / 410 legacy empty-state copy + `scan_rehydrate_failed` with reason=legacy / 404 generic empty-state + reason=not_found / network error retryable + reason=error + http_status=0 / no URL scan_id short-circuit (no fetch) / context already populated short-circuit / retry CTA re-triggers fetch.
+
+**Telemetry (`.agent/skills/analytics.md`):** +2 frontend rows — `scan_rehydrated {scan_id}` + `scan_rehydrate_failed {scan_id, reason: 'legacy'|'not_found'|'error', http_status}`. `scan_age_days` property deferred (would require adding `scan_created_at` to `AnalysisResponse` per spec §17 open question; out of scope this slice).
+
+**Acceptance criteria (spec §14):** AC-1 (persist on write) ✅ via `test_create_application_persists_analysis_payload` + response instance reused. AC-2 (200 full payload) ✅ via `test_owner_gets_full_payload_round_trip`. AC-3 (list envelope unchanged) ✅ via `test_list_tracker_response_omits_analysis_payload`. AC-4 (404 not 403) ✅ via `test_cross_user_scan_returns_404_not_403`. AC-5 (410 legacy + code) ✅ via `test_legacy_scan_returns_410_with_code`. AC-6 (3-way FE empty-state) ✅ via Results.hydration.test.tsx three branches. AC-7 (returning free user manual flow) — not manually verified; wired end-to-end via test suite, golden-path covered.
+
+**Baseline preservation:** Pre-existing 5 failures in `tests/context/UsageContext.hydration.test.tsx` (tied to uncommitted working-tree change on `src/context/UsageContext.tsx` at session start, NOT part of this slice) remain failing — unchanged baseline, no regression introduced.
+
+**CODE-REALITY regen (LD-10):** NOT performed in-commit — repo state already carries E-018b + E-040 pre-authored content ahead of header SHA per 2026-04-23 drift notes. Updating selectively now would conflict with that pre-authored content. Flagged for the next clean CODE-REALITY regen pass to pick up (a) §1 endpoint count +1, (b) §3 `GET /analyze/{scan_id}` row (mounted on both `/api/*` and `/api/v1/*`, auth=`get_current_user`, 404/410/200 branches), (c) §4 `tracker_service_v2.py` new `get_scan_by_id` + extended `create_application`, (d) §2 tracker model +1 deferred JSONB column.
+
+**No new drift flags.** D-022 concurrent-session-staging lesson held — specific-path staging used throughout.
+
+**Follow-up bookkeeping commit:** this slice's impl commit carries `<PENDING-SHA>` placeholder in BACKLOG.md B-035 row and in the Closed table. A one-line `chore(backlog): backfill B-035 close SHA` commit immediately after replaces the placeholder with the actual SHA (mirrors 2026-04-23 B-034 pattern via `5e1a5d7`). R15 file+close happens in the impl commit; the chore commit is pure bookkeeping.
+
+**Judgment calls:**
+- Spec §7 v1-router deviation (see above) — added handler to existing legacy router; smaller diff, same path surface, preserves v1 POST.
+- `scan_age_days` property deferred (§17 open question) — would require `AnalysisResponse.scan_created_at` additive field; no tracker row `created_at` is returned inside `AnalysisResponse` today, so plumbing it is a 4-line change. Deferred to keep slice surgical; FE `scan_rehydrated` fires without the prop today (missing-prop = null in PostHog, acceptable).
+- CODE-REALITY regen deferred (see above) — flagged for next clean regen pass.
+
+---
 
 **2026-04-23 — P5-S59 spec authoring: Scan persistence + Results hydration from URL scan_id.** Docs-only; no code; no tests; no BACKLOG flips. Single commit. CODEX review applies per Rule 11.
 

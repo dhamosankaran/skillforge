@@ -1,8 +1,10 @@
 """Tracker application ORM model."""
 from datetime import date, datetime
+from typing import Any
 
 from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, deferred, mapped_column, relationship
 
 from app.models.base import Base, UUIDPrimaryKeyMixin
 
@@ -27,6 +29,12 @@ class TrackerApplicationModel(Base, UUIDPrimaryKeyMixin):
     # MIN(interview_date) across the user's active (Applied/Interview) rows;
     # see home_state_service.get_next_interview.
     interview_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Spec #59 — full AnalysisResponse payload for scan re-view. Loaded via
+    # deferred() so GET /tracker list responses do not inflate (LD-2). Access
+    # through tracker_service_v2.get_scan_by_id which applies undefer().
+    analysis_payload: Mapped[dict[str, Any] | None] = deferred(
+        mapped_column(JSONB, nullable=True)
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )

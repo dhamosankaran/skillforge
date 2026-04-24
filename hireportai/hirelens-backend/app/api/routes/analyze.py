@@ -17,7 +17,7 @@ from app.models.response_models import (
     SkillOverlapData,
 )
 from app.core.analytics import track as analytics_track
-from app.core.deps import get_current_user_optional
+from app.core.deps import get_current_user, get_current_user_optional
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.requests import TrackerApplicationCreate
@@ -29,7 +29,11 @@ from app.services.nlp import extract_job_requirements, extract_skills
 from app.services.parser import parse_docx, parse_pdf
 from app.services.scorer import ATSScorer
 from app.services import home_state_service
-from app.services.tracker_service_v2 import create_application, find_by_scan_id
+from app.services.tracker_service_v2 import (
+    create_application,
+    find_by_scan_id,
+    get_scan_by_id,
+)
 from app.services.usage_service import check_and_increment
 
 router = APIRouter()
@@ -223,6 +227,28 @@ async def analyze_resume(
         },
     )
 
+    # Spec #59 — construct the AnalysisResponse once, persist its JSON
+    # dump alongside the tracker summary (LD-3), and return the same
+    # instance. Guarantees byte-identical re-view on GET /analyze/{scan_id}
+    # (AC-1).
+    response = AnalysisResponse(
+        scan_id=scan_id,
+        ats_score=score_result["total"],
+        grade=score_result["grade"],
+        score_breakdown=ATSScoreBreakdown(**score_result["breakdown"]),
+        matched_keywords=matched_keywords,
+        missing_keywords=missing_keywords,
+        skill_gaps=skill_gaps,
+        bullet_analysis=bullet_analyses,
+        formatting_issues=formatting_issues_raw,
+        job_fit_explanation=job_fit_explanation,
+        top_strengths=top_strengths,
+        top_gaps=top_gaps,
+        keyword_chart_data=[KeywordChartData(**kcd) for kcd in keyword_chart],
+        skills_overlap_data=[SkillOverlapData(**sod) for sod in skills_overlap],
+        resume_text=resume_text,
+    )
+
     # Auto-populate the job tracker for authenticated users
     if current_user:
         existing = await find_by_scan_id(scan_id, db, user_id=current_user.id)
@@ -245,6 +271,7 @@ async def analyze_resume(
                 user_id=current_user.id,
                 skills_matched=matched_keywords,
                 skills_missing=missing_keywords,
+                analysis_payload=response.model_dump(mode="json"),
             )
             analytics_track(
                 user_id=current_user.id,
@@ -256,20 +283,43 @@ async def analyze_resume(
             )
         home_state_service.invalidate(current_user.id)
 
-    return AnalysisResponse(
-        scan_id=scan_id,
-        ats_score=score_result["total"],
-        grade=score_result["grade"],
-        score_breakdown=ATSScoreBreakdown(**score_result["breakdown"]),
-        matched_keywords=matched_keywords,
-        missing_keywords=missing_keywords,
-        skill_gaps=skill_gaps,
-        bullet_analysis=bullet_analyses,
-        formatting_issues=formatting_issues_raw,
-        job_fit_explanation=job_fit_explanation,
-        top_strengths=top_strengths,
-        top_gaps=top_gaps,
-        keyword_chart_data=[KeywordChartData(**kcd) for kcd in keyword_chart],
-        skills_overlap_data=[SkillOverlapData(**sod) for sod in skills_overlap],
-        resume_text=resume_text,
-    )
+    return response
+
+
+@router.get("/analyze/{scan_id}", response_model=AnalysisResponse)
+async def get_scan_analysis(
+    scan_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> AnalysisResponse:
+    """Return the full stored AnalysisResponse for a scan owned by the
+    current user.
+
+    Spec #59. 404 if scan_id unknown OR owned by a different user (LD-4 —
+    do not leak existence). 410 if the tracker row exists but
+    `analysis_payload` is NULL (LD-5 — legacy row written before spec
+    #59 shipped). 200 with the full payload otherwise.
+
+    Mounted at both `/api/analyze/{scan_id}` (legacy) and
+    `/api/v1/analyze/{scan_id}` (via v1 re-export shim) — the v1 path is
+    the canonical one for new callers per spec §7.
+    """
+    row = await get_scan_by_id(scan_id=scan_id, db=db, user_id=current_user.id)
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "scan_not_found", "scan_id": scan_id},
+        )
+    if row.analysis_payload is None:
+        raise HTTPException(
+            status_code=410,
+            detail={
+                "error": "scan_payload_unavailable",
+                "code": "legacy_scan_pre_persistence",
+                "scan_id": scan_id,
+                "message": (
+                    "This scan was created before full results were stored."
+                ),
+            },
+        )
+    return AnalysisResponse(**row.analysis_payload)
