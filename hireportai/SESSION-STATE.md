@@ -66,6 +66,20 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 ## Last Completed Slice
 
+**2026-04-23 — Spec #58 §11/§12 errata correction — admin-analytics side-benefit claim corrected (closes D-021 item (c)).** Docs-only; no code; no tests. Single commit. CODEX review applies per Rule 11.
+
+**Scope:** `docs/specs/phase-5/58-legacy-rewrite-router-auth-quota.md` §12 body replaced. §11 untouched (prompt cited §11/§12 for parallelism; only §12 carried the false claim). No other spec touched. No D-021 row rewrite (row wording was accurate; only its close-shape "(c) needs follow-up spec-errata slice" now reads as resolved by this commit).
+
+**Replaced claim (verbatim struck):** *"Post-impl, every Pro rewrite / cover-letter call writes a row through `log_usage` inside `check_and_increment`, and the admin dashboard retroactively surfaces the spend. No explicit retrofit needed."*
+
+**Accurate claim (new §12):** Pro / Enterprise / admin callers never write `usage_logs` rows for `rewrite` or `cover_letter` because `check_and_increment` short-circuits on admin role (`:145`), unlimited plans (`:151`, `max_uses == -1`), and zero-cap features (`:153`, `max_uses == 0`) **before** reaching `log_usage` (`:168`). Under LD-2 Pro-only, every caller path hits one of the three short-circuits. Admin-analytics spend dashboard remains empty for these features. The B-033 quota gate is correctly enforced; only the admin-analytics byproduct was overclaimed. Forward pointer added: if Pro-user LLM-spend visibility becomes a cost-management priority, fix shape is a dedicated `log_llm_usage` path decoupled from `check_and_increment` (future slice, not B-033).
+
+**D-021 item (c) status:** RESOLVED by this commit. Items (a) + (b) remain resolved-no-op. Row wording unchanged — close-shape now matches reality.
+
+**No BACKLOG row filed** (spec-correctness correction; no new work). No test changes (spec-body text, no code). No CODE-REALITY regen (no route / model / service change).
+
+---
+
 **2026-04-23 — P5-S58-impl: Legacy rewrite router auth + quota — closes B-033 🟡 → ✅.** Single commit. BE **417 → 462 (+45)**; FE **+1** (PaywallModal exhaustive map + `cover_letter_limit` subline verbatim). `tsc --noEmit` clean. CODEX review applies per Rule 11.
 
 **Shipped BE (6 files):**

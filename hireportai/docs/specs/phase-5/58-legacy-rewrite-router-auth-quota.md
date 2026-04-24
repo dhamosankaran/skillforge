@@ -513,22 +513,37 @@ not rediscover this mid-commit.
 | `GET` | `/api/v1/payments/should-show-paywall?trigger=rewrite_limit` | Branch: always `{show: True}` for free (LD-5) | unchanged: `get_current_user` |
 | `GET` | `/api/v1/payments/should-show-paywall?trigger=cover_letter_limit` | Branch: always `{show: True}` for free (LD-5) | unchanged: `get_current_user` |
 
-## 12. Admin analytics side-benefit
+## 12. Admin analytics — spend visibility (post-impl, corrected)
 
 `admin_analytics_service.py:53-54` maps `"rewrite": "reasoning"` and
-`"cover_letter": "reasoning"` for LLM-spend estimation. Today no
-`usage_logs` rows exist for either feature, so all rewrite + cover-letter
-spend is invisible in the admin cost dashboard — the category appears
-empty.
+`"cover_letter": "reasoning"` for LLM-spend estimation. Post-B-033, the
+input table (`usage_logs` with `feature_used ∈ {"rewrite", "cover_letter"}`)
+remains empty for Pro / Enterprise / admin callers — the same "silent
+invisible spend" state as pre-impl.
 
-Post-impl, every Pro rewrite / cover-letter call writes a row through
-`log_usage` inside `check_and_increment`, and the admin dashboard
-retroactively surfaces the spend. **No explicit retrofit needed.**
-Documented here so future-you reading the spec in isolation does not
-treat the sudden "new" category as a bug.
+**Why:** `check_and_increment` short-circuits on admin role
+(`usage_service.py:145`), unlimited plans (`:151`, `max_uses == -1`), and
+zero-cap features (`:153`, `max_uses == 0`) **before** reaching the
+`log_usage` call (`:168`). Under spec #58 LD-2 (Pro-only), every caller
+path hits one of the three short-circuits and no row is written. Free
+callers at zero-cap return `allowed=False` at `:153` — also pre-log.
 
-No schema change. No migration. The cost-dashboard column is already
-wired; the data source simply starts populating.
+The quota gate is correctly enforced regardless; this note only scopes
+the admin-analytics byproduct. Pro-user rewrite / cover-letter spend is
+still invisible in the cost dashboard. No schema change. No migration.
+
+If Pro-user LLM-spend visibility becomes a cost-management priority, the
+fix shape is a dedicated `log_llm_usage` path decoupled from
+`check_and_increment`'s quota gate — tracked as a future slice if / when
+prioritized; not a B-033 deliverable.
+
+**Amendment (2026-04-23, post-impl):** the original §12 claim that
+"every Pro rewrite / cover-letter call writes a row through `log_usage`
+inside `check_and_increment`, and the admin dashboard retroactively
+surfaces the spend" was discovered at B-033 impl test time
+(commit `c69562e`) to be incorrect — the short-circuit order in
+`check_and_increment` prevents that log write. Corrected above. Filed
+as D-021 item (c) in `SESSION-STATE.md`; this commit closes the item.
 
 ## 13. Out of Scope
 
