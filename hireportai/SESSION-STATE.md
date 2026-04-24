@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|-------|
-| **HEAD commit** | *(pending this commit)* — 2026-04-23 BACKLOG bookkeeping slice: opens E-042 / E-043 / E-044 / E-045 / E-046, annotates E-017 as superseded-pending, files D-020 (tracker `jd_hash` drift). Prior HEAD was `a9a4f37` (P5-S56-impl: free-tier 1-scan lifetime cap server-side). HEAD before that was `1bf6c3b` (B-032 backfill). SHA backfillable post-commit per the established pattern. |
+| **HEAD commit** | `6e710f5` — 2026-04-23 BACKLOG bookkeeping slice: opens E-042 / E-043 / E-044 / E-045 / E-046, annotates E-017 as superseded-pending, files D-020 (tracker `jd_hash` drift). Prior HEAD was `a9a4f37` (P5-S56-impl: free-tier 1-scan lifetime cap server-side). HEAD before that was `1bf6c3b` (B-032 backfill). |
 | **Branch** | `main` (NOT yet pushed to `origin/main` as of 2026-04-23 — 23 commits ahead since `794dc28`) |
 | **CODE-REALITY.md sha (repo)** | Partial ⚠️ — regen blob at top of the file was authored for the (still-uncommitted) E-018b content in the working tree; add E-040's touches on next regen: new `AdminGate` FE component (`src/components/auth/AdminGate.tsx`), new `reconcile_admin_role` service helper in `app/services/user_service.py`, new `Settings.admin_emails` + `admin_emails_set`, new `ADMIN_EMAILS` env var in AGENTS.md table, `/admin` + `/admin/analytics` routes now wrapped in `<AdminGate>`, new `admin_role_reconciled` PostHog event. |
 | **CODE-REALITY.md in chat Project** | Stale ❌ — re-upload after a clean regen lands (E-018b commits + E-040 touches together) |
