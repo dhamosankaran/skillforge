@@ -56,6 +56,14 @@ claims, verify each claim against disk at Step 0 before acting on it.
 Starter messages are notes, not gospel — they can drift from reality
 between the time they were written and the time the session runs.
 
+**SOP-8 Concurrent-session guard.** Run `git log --oneline -20` and
+`git status`. Surface BACKLOG status of any rows the slice plans to
+touch (the target row, any rows the prompt cites, any rows the spec
+body cross-refs). If any cited row has flipped status, or if any
+commit since the prompt was drafted touches files in the slice's
+planned scope, STOP and report — concurrent sessions may have shipped
+since prompt draft.
+
 ## During Work
 
 **R1 Test first**: Write tests before implementation.
