@@ -11,11 +11,8 @@
 - Start BE: `uvicorn app.main:app --reload --port 8000`
 - Start FE: `npm run dev -- --port 5199`
 
-## MUST-READ Before Any Task
-1. Read `AGENTS.md` for project conventions
-2. Read `SESSION-STATE.md` for current state (HEAD, test counts, active slice, drift ledger)
-3. Read the relevant spec in `docs/specs/` if the prompt cites one
-4. Read the relevant skill file in `.agent/skills/` (see Step 0 SOP below)
+## Before Any Task
+Run SOP-1..9 below. Spec, skill, and state reads happen there.
 
 ## Standing Operating Procedure (Step 0 — Run on EVERY prompt)
 
@@ -56,13 +53,52 @@ claims, verify each claim against disk at Step 0 before acting on it.
 Starter messages are notes, not gospel — they can drift from reality
 between the time they were written and the time the session runs.
 
-**SOP-8 Concurrent-session guard.** Run `git log --oneline -20` and
+**SOP-8 Concurrent-session detection.** Run `git log --oneline -20` and
 `git status`. Surface BACKLOG status of any rows the slice plans to
 touch (the target row, any rows the prompt cites, any rows the spec
 body cross-refs). If any cited row has flipped status, or if any
 commit since the prompt was drafted touches files in the slice's
 planned scope, STOP and report — concurrent sessions may have shipped
 since prompt draft.
+
+**SOP-9 No concurrent CC sessions on one tree.** Do not run two Claude
+Code sessions against the same working tree simultaneously. If a second
+session is required, the second session must operate on a separate
+branch. Concurrent same-tree sessions race on staging — confirmed via
+reflog in D-019, D-021a, D-022. SOP-8 detects it at execution; SOP-9
+prevents it upfront.
+
+## Chat-Claude ↔ Claude Code Handoff
+
+These rules apply to the chat-Claude side of the workflow (prompt
+drafting). They are stated here so Claude Code can recognize and reject
+prompts that violate them.
+
+**H1 Drafted prompts are thin.** A drafted CC prompt contains: goal,
+mode (audit / spec-author / implementation), specs by number+path,
+BACKLOG references with R17 caveat, close-line format, expected test
+counts, current HEAD SHA. It does NOT restate SOP-1..9, R-rules, N-rules,
+or the Review Layer. Restating creates drift between disk and prompt
+when CLAUDE.md changes.
+
+**H2 SOP is the verification layer.** Chat-Claude does not add literal
+verify blocks (`ls docs/specs/`, `grep -n BACKLOG.md`, etc.) to prompt
+bodies. SOP-5, SOP-6, SOP-7 already perform these checks at execution
+time, regardless of prompt content. Adding them to the prompt body
+duplicates the safety net.
+
+**H3 CC stops on phantoms — that is correct.** When CC catches a phantom
+spec number, BACKLOG ID, or SHA via SOP-5/6/7 and stops, that is the
+safety net working as designed. It is not a chat-side failure to
+prevent. The correct chat-side response is to acknowledge the catch,
+fix the citation, and re-issue the prompt — not to add defensive rules
+to prevent it next time.
+
+**H4 BACKLOG IDs in drafted prompts use the R17 caveat.** Chat-Claude
+may reference an existing BACKLOG ID by number, but for new rows the
+prompt should say "file the next available B-### at execution time per
+R17 watermark" rather than hardcoding an ID. Pre-allocated IDs collide
+with concurrent sessions (B-037 incident).
 
 ## During Work
 
@@ -110,25 +146,30 @@ touch extraction, embeddings, or LLM services. Coverage (`pytest-cov`) is
 deliberately NOT installed — do not add `--cov` flags without updating
 `requirements-dev.txt` and getting sign-off.
 
-**R14 No new feature without a spec** — even small ones. Every new feature
-gets a spec at `docs/specs/phase-N/NN-name.md` **before** code is written,
-following the template in the playbook §3.2. Exceptions: (a) retrofits /
-backfills, (b) pure bug fixes with no design surface, (c) explicit user
-override. Default = spec first.
+**R14 No new feature without a spec**. Every new feature gets a spec at
+`docs/specs/phase-N/NN-name.md` **before** code is written, following
+the template in the playbook §3.2. Exceptions: (a) retrofits / backfills,
+(b) pure bug fixes with no design surface, (c) explicit user override.
+Default = spec first.
 
-**R15 Backlog-first**: Every implementation prompt must reference the
+**R15 Backlog-first (closure + filing in one rule)**.
+
+(a) Reference required: every implementation prompt must reference the
 `BACKLOG.md` item ID(s) it closes (e.g., `closes B-005, E-002`). If no
-item exists, create one in `BACKLOG.md` first, then proceed. Status
-updates (🔴 → 🟡 → ✅ → 🟦) are the only `BACKLOG.md` edits Claude Code
-may make autonomously — priority, scope, and new rows require Dhamo
-unless the prompt explicitly authorizes row creation.
+item exists, create one in `BACKLOG.md` first, then proceed.
 
-**R15 closure rule (sharpened)**: Before any commit that's supposed to
-close a BACKLOG ID, list every ID referenced in the slice and confirm
-each is flipped 🔴→✅ with a close-line referencing the implementation
-commit SHA. Pre-amend SHAs are acceptable (findable via `git log --all`).
-If unsure, STOP and ask. Closure happens in the implementation commit,
-not a separate slice.
+(b) Status updates (🔴 → 🟡 → ✅ → 🟦) are the only `BACKLOG.md` edits
+Claude Code may make autonomously. Priority, scope, and new rows
+require Dhamo unless the prompt explicitly authorizes row creation.
+
+(c) Pre-commit gate: before EVERY commit on a slice that touches
+`BACKLOG.md`, list every BACKLOG ID referenced in the slice. For each
+closed ID, confirm 🔴→✅ flip with a close-line referencing the
+implementation commit SHA. For each filed-only ID, confirm row exists
+with status 🔴 and any gating notes. Pre-amend SHAs are acceptable
+(findable via `git log --all`). Closure happens in the implementation
+commit, not a separate slice. If any ID can't be confirmed, STOP and
+ask. Non-optional. (Formerly R18; merged into R15(c) on 2026-04-26.)
 
 **R16 Audit-scoped step 1**: Every implementation prompt's step 1 must be
 an audit calibrated to the blast radius of the change. Minimum scope by
@@ -157,23 +198,35 @@ may be stale by the time the slice runs. Watermark grep is non-optional,
 not a fallback. Concurrent sessions can claim IDs between when chat
 drafts and when CC executes. Reference: B-037 ID-collision incident.
 
-**R18 Pre-commit BACKLOG verification**: Before EVERY commit on a slice
-that touches `BACKLOG.md`:
+**R19 Push-back rule**: If anything genuinely surprises you OR the prompt
+contradicts on-disk reality, STOP and ask. Don't silently reconcile.
+Minor judgment calls inside a slice — make the call, log it in your
+final report.
 
-1. List every BACKLOG ID referenced in this slice.
-2. For each closed ID: confirm 🔴→✅ flip + close-line with commit SHA
-   in `BACKLOG.md`.
-3. For each filed-only ID: confirm row exists with status 🔴 and any
-   gating notes.
+Examples of "genuine surprise" that warrant STOP:
+- Prompt names a BACKLOG ID that doesn't exist on disk
+- Prompt asks you to create a row that already exists
+- HEAD doesn't match what the prompt expects
+- Test counts mismatch on an implementation slice
+- Working tree has unexpected dirty files suggesting mid-flight work
+- Spec the prompt cites conflicts with the prompt's own instructions
+- Slice would require creating a new BACKLOG row and prompt didn't
+  authorize it
 
-If any ID can't be confirmed, STOP and ask. R18 complements R15: R15
-covers closure semantics, R18 is the multi-bucket pre-commit gate
-covering both closed and filed-only IDs. Non-optional.
+(Formerly the second R3; renamed to R19 on 2026-04-26 to resolve ID
+collision with R3 "Never skip auth".)
 
 ## Commit Hygiene
 
-**C1 Never `git add -A`** from above `hireportai/`. Always
-`git add <specific paths>`.
+**C1 Never `git add -A` from above `hireportai/`**: The git root is
+`SkillForge/`, parent of `hireportai/`. `git add -A` from that level
+will sweep in `archive/`, sibling project files, and unrelated work.
+Always `cd hireportai/` first OR stage explicit paths. When a prompt
+template says `git add -A`, override it with explicit paths. The
+template language is itself a footgun — pre-existing dirty files in
+`SkillForge/` (above `hireportai/`) will bundle. Reference: B-034
+bloated-commit incident. (Merges former C5 — sharpening text folded
+in 2026-04-26.)
 
 **C2 Pre-existing dirty files** (mode changes, dotfiles, orphan `.DS_Store`)
 get unstaged — never bundle into a feat/fix commit. Report them in your
@@ -188,38 +241,13 @@ don't silently fix it in the current commit.
 BACKLOG ID, include it in the message: e.g.
 `fix(rewrite): preserve sections — closes B-001`.
 
-**C5 No `git add -A` from above `hireportai/`**: The git root is
-`SkillForge/`, parent of `hireportai/`. `git add -A` from that level
-will sweep in `archive/`, sibling project files, and unrelated work.
-Always `cd hireportai/` first OR stage explicit paths. When a prompt
-template says `git add -A`, override it with explicit paths. The
-template language is itself a footgun — pre-existing dirty files in
-`SkillForge/` (above `hireportai/`) will bundle. Reference: B-034
-bloated-commit incident. Sharpens C1; C1/C2/C3 override applies.
-
 ## Review Layer
 
 **CODEX review**: All commits in every slice are reviewed by CODEX
 (external review tool) after commit. Write code, commit messages, and
 spec/doc edits with that in mind — clarity over cleverness, no silent
-compromises. Chat-Claude no longer needs to restate this in every prompt
-body; it applies always.
-
-## R3 Push-back Rule
-
-If anything genuinely surprises you OR the prompt contradicts on-disk
-reality, STOP and ask. Don't silently reconcile. Minor judgment calls
-inside a slice — make the call, log it in your final report.
-
-Examples of "genuine surprise" that warrant STOP:
-- Prompt names a BACKLOG ID that doesn't exist on disk
-- Prompt asks you to create a row that already exists
-- HEAD doesn't match what the prompt expects
-- Test counts mismatch on an implementation slice
-- Working tree has unexpected dirty files suggesting mid-flight work
-- Spec the prompt cites conflicts with the prompt's own instructions
-- Slice would require creating a new BACKLOG row and prompt didn't
-  authorize it
+compromises. Chat-Claude does not need to restate this in prompt bodies;
+it applies always. (See H1.)
 
 ## Final Report (Every Slice)
 
@@ -321,3 +349,12 @@ Reference: D-019, D-022 class incidents.
 - Email: Resend (from Phase 2)
 - Deploy: Vercel + Railway (continuous from Phase 0)
 - DB URL: `postgresql+asyncpg://hireport:dev_password@localhost:5432/hireport`
+
+## Revision history
+- 2026-04-26: R18 (filed by B-039 on 2026-04-25) merged into R15(c).
+  R3 "Push-back rule" renamed to R19 to resolve ID collision with R3
+  "Never skip auth". Added Chat-Claude ↔ CC Handoff section (H1–H4)
+  and SOP-9 "No concurrent CC sessions on one tree" (alongside
+  existing SOP-8 detection). Removed redundant MUST-READ section
+  (duplicated SOP). Merged C5 sharpening text into C1. N1-SUPPLEMENT
+  promotion to N9 deferred (6 callsites). Reference: B-048.
