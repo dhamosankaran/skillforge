@@ -63,7 +63,7 @@ The gate card renders in place of the 2-column upload grid (Analyze.tsx:132-144)
 - **Headline:** `"You've used your free ATS scan"`
 - **Body:** `"Upgrade to Pro for unlimited scans and full study features."`
 - **Primary CTA label:** `"Upgrade to Pro"`
-- **Primary CTA action:** `setShowPaywall(true)` opens the existing `<PaywallModal>` mounted on the page with `trigger="scan_limit"`. Modal copy is provided by `PaywallModal.tsx` HEADLINES/SUBLINES (already on disk, verbatim):
+- **Primary CTA action:** `setShowUpgradeModal(true)` (from `useUsage()`) opens the app-root `<UpgradeModal>` wrapper mounted in `main.tsx`, which internally renders `<PaywallModal trigger="scan_limit">`. Modal copy is provided by `PaywallModal.tsx` HEADLINES/SUBLINES (already on disk, verbatim):
   - HEADLINES["scan_limit"]: `"You've hit your free scan limit"`
   - SUBLINES["scan_limit"]: `"You've used all your free ATS scans. Upgrade to Pro for unlimited scans and the full study library."`
 - **No secondary CTA.** No "Not now" button. The user closes via the existing PaywallModal X / backdrop / "Not now" inside the modal (which already POSTs `/payments/paywall-dismiss` per spec #42 §5.4 — that path stays unchanged). Page itself has no "Not now" affordance because the gate IS the page state — there is nothing to dismiss back to.
@@ -160,7 +160,7 @@ This spec adds zero database columns, zero tables, zero endpoints. All work is F
 
 - **AC-2 — Form absent (not just disabled).** Vitest assertion: `screen.queryByRole('button', { name: /Analyze Resume/i })` returns null when AC-1's preconditions hold. `screen.queryByText(/upload your resume/i)` (or whatever the dropzone's placeholder is) returns null. The form is gone, not greyed out.
 
-- **AC-3 — Primary CTA opens correct modal.** Clicking the gate card's "Upgrade to Pro" button calls `setShowPaywall(true)` and the `<PaywallModal>` opens with `trigger="scan_limit"`. PaywallModal HEADLINE renders as `"You've hit your free scan limit"` (verbatim from `PaywallModal.tsx:39`).
+- **AC-3 — Primary CTA opens correct modal.** Clicking the gate card's "Upgrade to Pro" button calls `setShowUpgradeModal(true)` and the app-root `<UpgradeModal>` wrapper opens its inner `<PaywallModal trigger="scan_limit">`. PaywallModal HEADLINE renders as `"You've hit your free scan limit"` (verbatim from `PaywallModal.tsx:39`).
 
 - **AC-4 — Pro user unaffected.** A user with `usage.plan === 'pro'` (or `'enterprise'`, or `usage.isAdmin === true` regardless of plan) who navigates to `/prep/analyze` sees the form normally (`<ResumeDropzone>` + `<JDInput>` + `<GlowButton>` all present). No gate card. No `paywall_hit {surface: 'analyze_page_load'}` event fires.
 
@@ -288,3 +288,7 @@ This spec resolves the "(decision deferred to spec slice)" branch from E-047 by 
 
 - `.agent/skills/analytics.md:41` — the impl-slice (P5-S61-impl) commit MUST update the `paywall_hit` row to document the new optional `surface` property. Per the P5-S21b convention (catalog updated alongside event introduction).
 - No spec-source amendments to spec #42 / #55 / #56 / #58 are required by this slice. The hard-wall vs soft-wall reasoning that drives §3.5's `paywall_hit` fire decision is documented inline here (not in spec #42).
+
+### Drift / amendments
+
+- **2026-04-25 (post-impl `3c962d8`):** §3.1 line 66 + §5 AC-3 originally said the primary CTA called `setShowPaywall(true)` and opened "the existing `<PaywallModal>` mounted on the page." On-disk reality is `setShowUpgradeModal(true)` from `useUsage()` opening the app-root `<UpgradeModal>` wrapper (`main.tsx:81`), which internally renders `<PaywallModal trigger="scan_limit">`. Same UX outcome, same `scan_limit` trigger, same modal copy — only the function name + mount-point wording differed. Reconciled in this slice; spec text now matches the impl. Cross-ref: B-045 close notes already flagged this drift as non-blocking.
