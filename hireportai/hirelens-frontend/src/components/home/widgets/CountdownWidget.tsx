@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { DashboardWidget, type WidgetState } from '@/components/home/DashboardWidget'
 import { Countdown } from '@/components/mission/Countdown'
+import { InterviewDateModal } from '@/components/home/InterviewDateModal'
 import { type Persona } from '@/context/AuthContext'
 import { fetchActiveMission } from '@/services/api'
 import { capture } from '@/utils/posthog'
@@ -20,11 +20,11 @@ function daysUntil(iso: string): number {
 }
 
 export function CountdownWidget({ persona, date }: CountdownWidgetProps) {
-  const navigate = useNavigate()
   const shownRef = useRef(false)
 
   const [mission, setMission] = useState<MissionDetailResponse | null>(null)
   const [missionChecked, setMissionChecked] = useState(false)
+  const [dateModalOpen, setDateModalOpen] = useState(false)
 
   useEffect(() => {
     if (!date) {
@@ -47,34 +47,43 @@ export function CountdownWidget({ persona, date }: CountdownWidgetProps) {
     capture('countdown_unlock_cta_shown', { surface: 'home_countdown' })
   }, [date])
 
-  // Mode 1 — no date set: render the LD-3 unlock affordance (link-only per
-  // OD-2; the pre-B-018 inline date-setter form is dropped — no two surfaces
-  // with divergent interaction models for the same no-date state).
+  // Mode 1 — no date set: open an inline modal with a date-only editor.
+  // B-037 supersedes spec #53 LD-3 / OD-2 for this surface only — the
+  // pre-fix link to /onboarding/persona sent returning users back through
+  // new-user onboarding. MissionDateGate retains the link-only affordance
+  // (different surface, different context). See spec #53 §Supersession.
   if (!date) {
     return (
-      <DashboardWidget
-        title="Countdown"
-        testid="countdown"
-        persona={persona}
-        state="data"
-      >
-        <div className="flex flex-col gap-3">
-          <p className="text-sm text-text-secondary">
-            Add an interview date to unlock countdown.
-          </p>
-          <button
-            type="button"
-            data-testid="countdown-unlock-cta"
-            onClick={() => {
-              capture('countdown_unlock_cta_clicked', { surface: 'home_countdown' })
-              navigate('/onboarding/persona?return_to=%2Fhome')
-            }}
-            className="self-start px-4 py-2 rounded-md bg-accent-primary text-white text-sm font-medium hover:bg-accent-primary/90 transition-colors"
-          >
-            Add interview date
-          </button>
-        </div>
-      </DashboardWidget>
+      <>
+        <DashboardWidget
+          title="Countdown"
+          testid="countdown"
+          persona={persona}
+          state="data"
+        >
+          <div className="flex flex-col gap-3">
+            <p className="text-sm text-text-secondary">
+              Add an interview date to unlock countdown.
+            </p>
+            <button
+              type="button"
+              data-testid="countdown-unlock-cta"
+              onClick={() => {
+                capture('countdown_unlock_cta_clicked', { surface: 'home_countdown' })
+                setDateModalOpen(true)
+              }}
+              className="self-start px-4 py-2 rounded-md bg-accent-primary text-white text-sm font-medium hover:bg-accent-primary/90 transition-colors"
+            >
+              Add interview date
+            </button>
+          </div>
+        </DashboardWidget>
+        <InterviewDateModal
+          open={dateModalOpen}
+          onClose={() => setDateModalOpen(false)}
+          surface="home_countdown"
+        />
+      </>
     )
   }
 

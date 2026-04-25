@@ -6,8 +6,10 @@ import type { AuthUser } from '@/context/AuthContext'
 import type { MissionDetailResponse } from '@/types'
 
 const fetchActiveMission = vi.fn()
+const updatePersona = vi.fn()
 vi.mock('@/services/api', () => ({
   fetchActiveMission: (...args: unknown[]) => fetchActiveMission(...args),
+  updatePersona: (...args: unknown[]) => updatePersona(...args),
 }))
 
 const capture = vi.fn()
@@ -86,6 +88,7 @@ function mission(
 
 beforeEach(() => {
   fetchActiveMission.mockReset()
+  updatePersona.mockReset()
   updateUser.mockReset()
   capture.mockReset()
   navigate.mockReset()
@@ -129,14 +132,98 @@ describe('CountdownWidget', () => {
     expect(shownCalls).toHaveLength(1)
   })
 
-  it('Mode 1 CTA click fires clicked event + navigates to PersonaPicker with return_to=/home', async () => {
+  // ── B-037: Mode 1 CTA opens an inline date modal instead of navigating ─
+  // away to the new-user onboarding page. Spec #53 §Supersession.
+
+  it('Mode 1 CTA click fires clicked event + opens the inline date modal (B-037)', async () => {
     const user = userEvent.setup()
     renderWidget(null)
+    expect(screen.queryByTestId('interview-date-modal')).toBeNull()
     await user.click(screen.getByTestId('countdown-unlock-cta'))
     expect(capture).toHaveBeenCalledWith('countdown_unlock_cta_clicked', {
       surface: 'home_countdown',
     })
-    expect(navigate).toHaveBeenCalledWith('/onboarding/persona?return_to=%2Fhome')
+    expect(await screen.findByTestId('interview-date-modal')).toBeInTheDocument()
+    // Regression guard: must NOT route through the onboarding PersonaPicker.
+    expect(navigate).not.toHaveBeenCalledWith(
+      expect.stringContaining('/onboarding/persona'),
+    )
+  })
+
+  it('Mode 1 modal Save calls PATCH with persona + date + preserves existing company (B-037 / B-038 read-and-preserve)', async () => {
+    mockUser = {
+      ...mockUser,
+      interview_target_company: 'JPMorgan',
+      interview_target_date: null,
+    }
+    updatePersona.mockResolvedValueOnce({
+      ...mockUser,
+      interview_target_date: '2026-06-01',
+    })
+    const user = userEvent.setup()
+    renderWidget(null)
+    await user.click(screen.getByTestId('countdown-unlock-cta'))
+    const input = await screen.findByTestId('interview-date-input')
+    await user.type(input, '2026-06-01')
+    await user.click(screen.getByTestId('interview-date-save'))
+    await waitFor(() => {
+      expect(updatePersona).toHaveBeenCalledWith({
+        persona: 'interview_prepper',
+        interview_target_date: '2026-06-01',
+        interview_target_company: 'JPMorgan',
+      })
+    })
+    expect(updateUser).toHaveBeenCalledWith(
+      expect.objectContaining({ interview_target_date: '2026-06-01' }),
+    )
+    expect(capture).toHaveBeenCalledWith('interview_target_date_added', {
+      source: 'persona_edit',
+      surface: 'home_countdown',
+    })
+  })
+
+  it('Mode 1 modal Save sends interview_target_company=null when user has none', async () => {
+    mockUser = {
+      ...mockUser,
+      interview_target_company: null,
+      interview_target_date: null,
+    }
+    updatePersona.mockResolvedValueOnce({
+      ...mockUser,
+      interview_target_date: '2026-06-01',
+    })
+    const user = userEvent.setup()
+    renderWidget(null)
+    await user.click(screen.getByTestId('countdown-unlock-cta'))
+    await user.type(screen.getByTestId('interview-date-input'), '2026-06-01')
+    await user.click(screen.getByTestId('interview-date-save'))
+    await waitFor(() => {
+      expect(updatePersona).toHaveBeenCalledWith({
+        persona: 'interview_prepper',
+        interview_target_date: '2026-06-01',
+        interview_target_company: null,
+      })
+    })
+  })
+
+  it('Mode 1 modal Cancel closes without calling PATCH', async () => {
+    const user = userEvent.setup()
+    renderWidget(null)
+    await user.click(screen.getByTestId('countdown-unlock-cta'))
+    expect(await screen.findByTestId('interview-date-modal')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /cancel/i }))
+    await waitFor(() =>
+      expect(screen.queryByTestId('interview-date-modal')).toBeNull(),
+    )
+    expect(updatePersona).not.toHaveBeenCalled()
+    expect(updateUser).not.toHaveBeenCalled()
+  })
+
+  it('Mode 1 modal Save is disabled until a date is entered', async () => {
+    const user = userEvent.setup()
+    renderWidget(null)
+    await user.click(screen.getByTestId('countdown-unlock-cta'))
+    expect(await screen.findByTestId('interview-date-save')).toBeDisabled()
   })
 
   it('Mode 2 (date set) renders the Countdown component', async () => {

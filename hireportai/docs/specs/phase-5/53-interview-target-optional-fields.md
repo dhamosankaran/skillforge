@@ -282,3 +282,9 @@ No production smoke required — this is a render-contract change, not an integr
 - **Walkthrough finding #15 — Mission auto-creation from persona.** Out of scope here. If revisited, it interacts with LD-1 β (first-class no-date state) — an auto-created mission would collapse the no-date state into an auto-date state, which is a different UX direction. Mission-auto-create needs its own spec.
 - **"Add a date later" persona-edit UX telemetry.** `interview_target_date_added` with `source='persona_edit'` captures this once E-017 ships. Dashboards for persona-edit conversion rate land in E-017's scope.
 - **Rich-date affordances** (relative offsets like "in 2 weeks", recurring, ranges). Not needed for V1. Future spec if telemetry motivates.
+
+---
+
+## Supersession (2026-04-25)
+
+LD-3 / OD-2 link-only affordance is superseded for the home-countdown surface only. `/home` Countdown widget Mode 1 now opens an inline modal (see B-037, component `InterviewDateModal`). MissionDateGate retains the link-only affordance — unchanged.
