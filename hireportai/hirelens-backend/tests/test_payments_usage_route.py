@@ -98,6 +98,10 @@ async def test_usage_free_user_zero_history(client, db_session):
         "cover_letters_used": 0,
         "cover_letters_remaining": 0,
         "cover_letters_max": 0,
+        # spec #49 §3.4 — interview_prep monthly cap (free = 3/month)
+        "interview_preps_used": 0,
+        "interview_preps_remaining": 3,
+        "interview_preps_max": 3,
     }
 
 
@@ -208,3 +212,74 @@ async def test_usage_admin_free_plan_rewrite_unlimited_with_is_admin(
     assert body["rewrites_max"] == -1
     assert body["cover_letters_remaining"] == -1
     assert body["cover_letters_max"] == -1
+
+
+# ── interview_prep monthly counter on /usage (spec #49 §3.4) ──────────
+
+
+async def test_usage_free_user_at_interview_prep_cap_shows_zero_remaining(
+    client, db_session,
+):
+    """Free user with 3 interview_prep usage_logs in the current month →
+    used=3, remaining=0, max=3. Pre-flight gate signal for Interview.tsx
+    derives from these fields; the FE reads `interviewPrepsUsed >=
+    interviewPrepsMax` to disable the Generate button before the click.
+    """
+    user = await _seed_user(db_session, plan="free")
+    for _ in range(3):
+        await _seed_feature_log(db_session, user.id, "interview_prep")
+    resp = await client.get("/api/v1/payments/usage", headers=_auth(user))
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["plan"] == "free"
+    assert body["interview_preps_used"] == 3
+    assert body["interview_preps_remaining"] == 0
+    assert body["interview_preps_max"] == 3
+
+
+async def test_usage_pro_user_interview_prep_unlimited_sentinel(
+    client, db_session,
+):
+    """Pro user shows real used count but `-1` sentinels for remaining/max."""
+    user = await _seed_user(db_session, plan="pro")
+    await _seed_feature_log(db_session, user.id, "interview_prep")
+    await _seed_feature_log(db_session, user.id, "interview_prep")
+    resp = await client.get("/api/v1/payments/usage", headers=_auth(user))
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["plan"] == "pro"
+    assert body["interview_preps_used"] == 2
+    assert body["interview_preps_remaining"] == -1
+    assert body["interview_preps_max"] == -1
+
+
+async def test_usage_admin_free_plan_interview_prep_unlimited_with_is_admin(
+    client, db_session,
+):
+    """Admin-on-free flips remaining/max to `-1` regardless of plan limit."""
+    user = await _seed_user(db_session, plan="free", role="admin")
+    await _seed_feature_log(db_session, user.id, "interview_prep")
+    resp = await client.get("/api/v1/payments/usage", headers=_auth(user))
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["plan"] == "free"
+    assert body["is_admin"] is True
+    assert body["interview_preps_used"] == 1
+    assert body["interview_preps_remaining"] == -1
+    assert body["interview_preps_max"] == -1
+
+
+async def test_usage_free_max_reads_live_from_plan_limits(client, db_session):
+    """Free `interview_preps_max` mirrors `PLAN_LIMITS["free"]["interview_prep"]`.
+
+    Guards against regressions where a future tuning of the cap (3 → N) in
+    `usage_service.PLAN_LIMITS` is silently inconsistent with the snapshot
+    response. If this fails after a cap change, both the constant and this
+    pin update together.
+    """
+    from app.services.usage_service import PLAN_LIMITS
+
+    user = await _seed_user(db_session, plan="free")
+    resp = await client.get("/api/v1/payments/usage", headers=_auth(user))
+    assert resp.status_code == 200
+    assert resp.json()["interview_preps_max"] == PLAN_LIMITS["free"]["interview_prep"]

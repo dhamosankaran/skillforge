@@ -154,27 +154,25 @@ export default function Interview() {
 
   const canGenerate = resumeText.trim().length > 50 && jobDescription.trim().length > 50
   const isFreeTier = usage.plan === 'free'
+  // Pre-flight free-tier gate (spec #49 §3.4). `interviewPrepsMax === -1` is
+  // the unlimited sentinel for Pro / Enterprise / admin. The post-hoc 403
+  // path via `limitInfo` is kept as defense-in-depth for users whose snapshot
+  // hasn't hydrated yet.
+  const interviewLimitReached =
+    isFreeTier &&
+    usage.interviewPrepsMax > 0 &&
+    usage.interviewPrepsUsed >= usage.interviewPrepsMax
+  const limitReached = interviewLimitReached || limitInfo?.limitReached === true
 
   const handleGenerate = () => {
     runInterviewPrep(resumeText, jobDescription)
   }
 
   const handleRegenerate = () => {
-    if (isFreeTier) {
-      const remainingCopy = limitInfo
-        ? `${limitInfo.remaining}`
-        : 'your monthly free'
-      const ok = window.confirm(
-        `This will use 1 of ${remainingCopy} free generations. Continue?`,
-      )
-      if (!ok) return
-      capture('interview_questions_regenerated', {
-        from_free_tier: true,
-        remaining_free_quota: limitInfo?.remaining,
-      })
-    } else {
-      capture('interview_questions_regenerated', { from_free_tier: false })
-    }
+    capture('interview_questions_regenerated', {
+      from_free_tier: isFreeTier,
+      remaining_free_quota: isFreeTier ? usage.interviewPrepsRemaining : undefined,
+    })
     runInterviewPrep(resumeText, jobDescription, { forceRegenerate: true })
   }
 
@@ -250,7 +248,7 @@ export default function Interview() {
           >
             <Target size={16} className="text-accent-primary flex-shrink-0" />
             <p className="text-sm text-text-secondary">
-              Using your resume and job description from the last analysis.{' '}
+              Using your latest resume and job role + skills from your last analysis.{' '}
               <span className="text-accent-primary font-medium">Ready to generate questions.</span>
             </p>
           </motion.div>
@@ -292,14 +290,14 @@ export default function Interview() {
         )}
 
         {/* Limit reached banner */}
-        {limitInfo?.limitReached && (
+        {limitReached && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             className="mb-6 p-4 rounded-xl bg-warning/[0.08] border border-warning/20 text-center"
           >
             <p className="text-sm text-text-primary font-medium mb-1">
-              Free limit reached ({limitInfo.limit} per month)
+              Free limit reached ({limitInfo?.limit ?? usage.interviewPrepsMax} per month)
             </p>
             <p className="text-xs text-text-secondary mb-3">
               Upgrade to Pro for unlimited interview prep generations.
@@ -314,7 +312,7 @@ export default function Interview() {
         )}
 
         {/* Generate button (pre-result state) */}
-        {!interviewResult && !limitInfo?.limitReached && (
+        {!interviewResult && !limitReached && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

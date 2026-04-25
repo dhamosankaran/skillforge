@@ -20,6 +20,12 @@ interface UsageState {
   rewritesMax: number
   coverLettersUsed: number
   coverLettersMax: number
+  // spec #49 §3.4 — interview_prep monthly cap. Free default 3/month;
+  // -1 sentinel = unlimited (Pro / Enterprise / admin). Surfaced for
+  // the Interview.tsx pre-flight Generate-button gate.
+  interviewPrepsUsed: number
+  interviewPrepsRemaining: number
+  interviewPrepsMax: number
 }
 
 interface UsageContextValue {
@@ -56,6 +62,10 @@ const DEFAULT_STATE: UsageState = {
   rewritesMax: 0,
   coverLettersUsed: 0,
   coverLettersMax: 0,
+  // spec #49 §3.4 — free default 3/month; BE overwrites on hydrate.
+  interviewPrepsUsed: 0,
+  interviewPrepsRemaining: 3,
+  interviewPrepsMax: 3,
 }
 
 function loadDisplayCache(): UsageState {
@@ -72,6 +82,9 @@ function loadDisplayCache(): UsageState {
         rewritesMax: parsed.rewritesMax ?? 0,
         coverLettersUsed: parsed.coverLettersUsed ?? 0,
         coverLettersMax: parsed.coverLettersMax ?? 0,
+        interviewPrepsUsed: parsed.interviewPrepsUsed ?? 0,
+        interviewPrepsRemaining: parsed.interviewPrepsRemaining ?? 3,
+        interviewPrepsMax: parsed.interviewPrepsMax ?? 3,
       }
     }
   } catch {
@@ -98,6 +111,9 @@ function fromResponse(r: UsageResponse): UsageState {
     rewritesMax: r.rewrites_max,
     coverLettersUsed: r.cover_letters_used,
     coverLettersMax: r.cover_letters_max,
+    interviewPrepsUsed: r.interview_preps_used,
+    interviewPrepsRemaining: r.interview_preps_remaining,
+    interviewPrepsMax: r.interview_preps_max,
   }
 }
 
@@ -143,6 +159,8 @@ export function UsageProvider({ children }: { children: ReactNode }) {
         maxScans: isPaid ? -1 : 1,
         rewritesMax: isPaid ? -1 : 0,
         coverLettersMax: isPaid ? -1 : 0,
+        interviewPrepsMax: isPaid ? -1 : 3,
+        interviewPrepsRemaining: isPaid ? -1 : Math.max(0, 3 - prev.interviewPrepsUsed),
       }
       writeDisplayCache(next)
       return next

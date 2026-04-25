@@ -779,13 +779,14 @@ def generate_interview_questions(
     jd_requirements: Dict[str, Any],
 ) -> InterviewPrepResponse:
     """Generate likely interview questions with STAR method frameworks."""
-    resume_text = resume_data.get("full_text", "")[:1500]
+    # resume_budget=3000 — tuned to fit experience section in prompt envelope; do not change without re-tuning prompt.
+    resume_text = resume_data.get("full_text", "")[:3000]
     jd_title = jd_requirements.get("job_title", "this role")
     required_skills = ", ".join(jd_requirements.get("required_skills", [])[:10])
 
     prompt = f"""Generate 10 likely interview questions for a candidate applying for the role of {jd_title}.
 The role requires: {required_skills}
-Candidate background: {resume_text[:800]}
+Candidate background: {resume_text}
 
 For each question, provide a STAR method answer framework (guidance on what to cover, not a full answer).
 

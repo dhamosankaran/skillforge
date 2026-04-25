@@ -21,9 +21,21 @@ vi.mock('@/services/api', async (importOriginal) => {
 })
 
 let mockPlan: 'free' | 'pro' = 'free'
+let mockInterviewPrepsUsed = 0
+let mockInterviewPrepsMax = 3
 vi.mock('@/context/UsageContext', () => ({
   useUsage: () => ({
-    usage: { plan: mockPlan, scansUsed: 0, maxScans: mockPlan === 'free' ? 3 : Infinity },
+    usage: {
+      plan: mockPlan,
+      scansUsed: 0,
+      maxScans: mockPlan === 'free' ? 3 : Infinity,
+      interviewPrepsUsed: mockInterviewPrepsUsed,
+      interviewPrepsRemaining:
+        mockInterviewPrepsMax === -1
+          ? -1
+          : Math.max(0, mockInterviewPrepsMax - mockInterviewPrepsUsed),
+      interviewPrepsMax: mockInterviewPrepsMax,
+    },
     canScan: true,
     canUsePro: mockPlan === 'pro',
     canUsePremium: mockPlan === 'pro',
@@ -72,6 +84,8 @@ beforeEach(() => {
   capture.mockReset()
   generateInterviewPrep.mockReset()
   mockPlan = 'free'
+  mockInterviewPrepsUsed = 0
+  mockInterviewPrepsMax = 3
 })
 
 afterEach(() => {
@@ -134,7 +148,8 @@ describe('Interview page — cache-aware UI (5.17b)', () => {
       model_used: 'gemini-2.5-pro',
     } as InterviewPrepResponse)
 
-    // Free-tier path triggers a confirm() — auto-accept it.
+    // window.confirm was dropped — pre-flight gate makes it redundant.
+    // If it ever resurfaces, this spy's call count will catch it.
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
 
     renderInterview()
@@ -147,10 +162,64 @@ describe('Interview page — cache-aware UI (5.17b)', () => {
     // First call: no force_regenerate; second call: forceRegenerate:true.
     expect(generateInterviewPrep.mock.calls[0][2]).toBeUndefined()
     expect(generateInterviewPrep.mock.calls[1][2]).toEqual({ forceRegenerate: true })
-    expect(confirmSpy).toHaveBeenCalledTimes(1)
+    expect(confirmSpy).not.toHaveBeenCalled()
     expect(capture).toHaveBeenCalledWith(
       'interview_questions_regenerated',
       expect.objectContaining({ from_free_tier: true }),
     )
+  })
+})
+
+describe('Interview page — pre-flight free-tier gate', () => {
+  it('hides Generate and renders the limit-reached banner + upgrade CTA when free user is at cap', () => {
+    mockPlan = 'free'
+    mockInterviewPrepsUsed = 3
+    mockInterviewPrepsMax = 3
+
+    renderInterview()
+
+    // Pre-flight: Generate button is not mounted; banner + Upgrade CTA are.
+    expect(
+      screen.queryByRole('button', { name: /Generate Interview Questions/i }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText(/Free limit reached/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Upgrade to Pro/i })).toBeInTheDocument()
+    expect(generateInterviewPrep).not.toHaveBeenCalled()
+  })
+
+  it('keeps Generate enabled for free user with quota remaining (no banner pre-click)', () => {
+    mockPlan = 'free'
+    mockInterviewPrepsUsed = 1
+    mockInterviewPrepsMax = 3
+
+    renderInterview()
+
+    const btn = screen.getByRole('button', { name: /Generate Interview Questions/i })
+    expect(btn).not.toBeDisabled()
+    expect(screen.queryByText(/Free limit reached/i)).not.toBeInTheDocument()
+  })
+
+  it('keeps Generate enabled for Pro regardless of interviewPrepsUsed (-1 sentinel)', () => {
+    mockPlan = 'pro'
+    mockInterviewPrepsUsed = 99
+    mockInterviewPrepsMax = -1
+
+    renderInterview()
+
+    const btn = screen.getByRole('button', { name: /Generate Interview Questions/i })
+    expect(btn).not.toBeDisabled()
+    expect(screen.queryByText(/Free limit reached/i)).not.toBeInTheDocument()
+  })
+
+  it('renders the softened "Using your latest resume…" copy when context is present', () => {
+    mockPlan = 'pro'
+    mockInterviewPrepsUsed = 0
+    mockInterviewPrepsMax = -1
+
+    renderInterview()
+
+    expect(
+      screen.getByText(/Using your latest resume and job role \+ skills from your last analysis\./i),
+    ).toBeInTheDocument()
   })
 })

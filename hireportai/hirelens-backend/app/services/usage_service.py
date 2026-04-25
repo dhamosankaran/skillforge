@@ -264,6 +264,10 @@ async def get_usage_snapshot(user_id: str, db: AsyncSession) -> dict:
     cover_letters_used_raw = await _count_usage(
         user_id, "cover_letter", db, window="lifetime"
     )
+    # interview_prep is monthly, not lifetime — see PLAN_LIMITS comment.
+    interview_preps_used_raw = await _count_usage(
+        user_id, "interview_prep", db, window="monthly"
+    )
 
     scans_used, scans_remaining, max_scans = _counter_triple(
         scans_used_raw, limits.get("analyze", 0), is_admin
@@ -277,6 +281,13 @@ async def get_usage_snapshot(user_id: str, db: AsyncSession) -> dict:
         cover_letters_max,
     ) = _counter_triple(
         cover_letters_used_raw, limits.get("cover_letter", 0), is_admin
+    )
+    (
+        interview_preps_used,
+        interview_preps_remaining,
+        interview_preps_max,
+    ) = _counter_triple(
+        interview_preps_used_raw, limits.get("interview_prep", 0), is_admin
     )
 
     return {
@@ -294,6 +305,11 @@ async def get_usage_snapshot(user_id: str, db: AsyncSession) -> dict:
         "cover_letters_used": cover_letters_used,
         "cover_letters_remaining": cover_letters_remaining,
         "cover_letters_max": cover_letters_max,
+        # spec #49 §3.4 — interview_prep monthly cap; FE pre-flight gates the
+        # Generate button on `interview_preps_used >= interview_preps_max`.
+        "interview_preps_used": interview_preps_used,
+        "interview_preps_remaining": interview_preps_remaining,
+        "interview_preps_max": interview_preps_max,
     }
 
 

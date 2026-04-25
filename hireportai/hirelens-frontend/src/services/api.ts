@@ -585,6 +585,10 @@ export interface UsageResponse {
   cover_letters_used: number
   cover_letters_remaining: number
   cover_letters_max: number
+  // spec #49 §3.4 — interview_prep monthly cap (free = 3/month).
+  interview_preps_used: number
+  interview_preps_remaining: number
+  interview_preps_max: number
 }
 
 /** Lifetime usage snapshot for the current user (spec #56 §4.3 + spec #58 §5). */

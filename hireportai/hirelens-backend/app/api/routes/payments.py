@@ -157,6 +157,11 @@ class UsageResponse(BaseModel):
     cover_letters_used: int
     cover_letters_remaining: int
     cover_letters_max: int
+    # spec #49 §3.4 — interview_prep monthly cap (free = 3/month).
+    # Pre-flight signal for Interview.tsx Generate button.
+    interview_preps_used: int
+    interview_preps_remaining: int
+    interview_preps_max: int
 
 
 @router.post("/payments/paywall-dismiss", response_model=PaywallDismissResponse)
