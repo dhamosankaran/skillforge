@@ -38,7 +38,7 @@ PostHog is instrumented from Phase 1 and runs on both tiers:
 | `onboarding_tour_skipped` | `components/GuidedTour.tsx` | — |
 | `gap_card_clicked` | `pages/Onboarding.tsx` | `{gap_id, gap_name}` |
 | `gap_study_clicked` **(DEPRECATED P5-S22b)** | `components/dashboard/MissingSkillsPanel.tsx` | `{gap_name, category_id, user_plan}` — replaced by `missing_skills_cta_clicked` (see below). No longer fires after commit `fd4ca3d`. |
-| `paywall_hit` | `components/PaywallModal.tsx` | `{trigger, category_name?, cards_viewed?}` |
+| `paywall_hit` | `components/PaywallModal.tsx`, `pages/Analyze.tsx` | `{trigger, category_name?, cards_viewed?, surface?: 'analyze_page_load', plan?: 'free'}` — `surface` and `plan` are additive optional props introduced by spec #60 / B-045 for the `/prep/analyze` pre-flight gate (fires on gate-card mount, not modal-open). PaywallModal mount path omits `surface` (existing behavior preserved). |
 | `optimize_clicked` | `pages/Results.tsx` | `{plan: 'free' \| 'pro'}` — fires on both header "Optimize" and sidebar "AI Rewrite" buttons; free users see the paywall (trigger=`rewrite_limit`), Pro users navigate to `/prep/rewrite` (B-032) |
 | `checkout_started` | `components/PaywallModal.tsx` | `{trigger, plan, price, currency}` |
 | `payment_completed` | `pages/Pricing.tsx` | `{plan, price, currency, source: 'stripe_checkout_return'}` |

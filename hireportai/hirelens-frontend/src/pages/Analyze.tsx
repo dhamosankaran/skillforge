@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Cpu, ChevronRight, Shield } from 'lucide-react'
+import { Cpu, ChevronRight, Shield, Sparkles } from 'lucide-react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { ResumeDropzone } from '@/components/upload/ResumeDropzone'
 import { JDInput } from '@/components/upload/JDInput'
 import { GlowButton } from '@/components/ui/GlowButton'
 import { useAnalysis } from '@/hooks/useAnalysis'
 import { useUsage } from '@/context/UsageContext'
+import { capture } from '@/utils/posthog'
 
 const LOADING_MESSAGES = [
   'Parsing resume structure...',
@@ -83,9 +84,28 @@ function LoadingOverlay() {
 
 export default function Analyze() {
   const { resumeFile, jobDescription, isLoading, setFile, setJobDescription, runAnalysis } = useAnalysis()
-  const { usage, canScan } = useUsage()
+  const { usage, canScan, setShowUpgradeModal } = useUsage()
 
   const canAnalyze = !!resumeFile && jobDescription.trim().length >= 50
+
+  // Spec #60 §3.1 — pre-flight gate for free-tier scan exhaustion. Three-clause
+  // condition matches LD-6: Pro / admin / Enterprise bypass via canScan === true.
+  const gateActive = !canScan && usage.plan === 'free' && !usage.isAdmin
+
+  // Spec #60 §3.5 / AC-7 — fire paywall_hit once per page-load when the gate
+  // mounts. useRef idempotency guard matches the home_dashboard_viewed
+  // convention so React Strict-Mode's double-invoked effect captures once.
+  const gateFiredRef = useRef(false)
+  useEffect(() => {
+    if (!gateActive) return
+    if (gateFiredRef.current) return
+    gateFiredRef.current = true
+    capture('paywall_hit', {
+      trigger: 'scan_limit',
+      surface: 'analyze_page_load',
+      plan: 'free',
+    })
+  }, [gateActive])
 
   return (
     <PageWrapper className="min-h-screen bg-bg-base">
@@ -119,56 +139,84 @@ export default function Analyze() {
                 {usage.scansUsed}/{usage.maxScans}
               </span>{' '}
               free scans used
-              {!canScan && (
-                <span className="text-warning font-medium ml-1">
-                  — Upgrade for more
-                </span>
-              )}
             </motion.div>
           )}
         </motion.div>
 
-        {/* Upload area */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.08 }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8"
-        >
-          <div className="bg-bg-surface/50 border border-contrast/[0.06] rounded-2xl p-5 min-h-[300px] flex flex-col transition-colors hover:border-contrast/[0.1]">
-            <ResumeDropzone file={resumeFile} onFileChange={setFile} />
-          </div>
-          <div className="bg-bg-surface/50 border border-contrast/[0.06] rounded-2xl p-5 min-h-[300px] flex flex-col transition-colors hover:border-contrast/[0.1]">
-            <JDInput value={jobDescription} onChange={setJobDescription} />
-          </div>
-        </motion.div>
-
-        {/* Analyze button */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.16 }}
-          className="flex flex-col items-center gap-4"
-        >
-          <GlowButton
-            size="lg"
-            className="w-full max-w-sm"
-            onClick={runAnalysis}
-            disabled={!canAnalyze}
-            isLoading={isLoading}
+        {gateActive ? (
+          /* Spec #60 §3.1 — gate card replaces the upload form when free-at-cap.
+             Form fields are absent (not disabled) per LD-2. Locked copy. */
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08 }}
+            data-testid="analyze-scan-gate"
+            className="max-w-md mx-auto bg-bg-surface/50 border border-contrast/[0.06] rounded-2xl p-8 mb-8 text-center"
           >
-            {isLoading ? 'Analyzing...' : 'Analyze Resume'}
-            {!isLoading && <ChevronRight size={14} />}
-          </GlowButton>
-
-          {!canAnalyze && !isLoading && (
-            <p className="text-[11px] text-text-muted text-center">
-              {!resumeFile
-                ? 'Upload your resume to continue'
-                : 'Add more content to the job description (50+ words)'}
+            <div className="w-14 h-14 rounded-2xl bg-accent-primary/10 border border-accent-primary/20 flex items-center justify-center mx-auto mb-5">
+              <Sparkles size={24} className="text-accent-primary" />
+            </div>
+            <h2 className="font-display text-xl font-bold text-text-primary mb-2">
+              You&apos;ve used your free ATS scan
+            </h2>
+            <p className="text-sm text-text-secondary leading-relaxed mb-6">
+              Upgrade to Pro for unlimited scans and full study features.
             </p>
-          )}
-        </motion.div>
+            <GlowButton
+              size="lg"
+              className="w-full"
+              data-testid="analyze-scan-gate-cta"
+              onClick={() => setShowUpgradeModal(true)}
+            >
+              Upgrade to Pro
+              <ChevronRight size={14} />
+            </GlowButton>
+          </motion.div>
+        ) : (
+          <>
+            {/* Upload area */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 }}
+              className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8"
+            >
+              <div className="bg-bg-surface/50 border border-contrast/[0.06] rounded-2xl p-5 min-h-[300px] flex flex-col transition-colors hover:border-contrast/[0.1]">
+                <ResumeDropzone file={resumeFile} onFileChange={setFile} />
+              </div>
+              <div className="bg-bg-surface/50 border border-contrast/[0.06] rounded-2xl p-5 min-h-[300px] flex flex-col transition-colors hover:border-contrast/[0.1]">
+                <JDInput value={jobDescription} onChange={setJobDescription} />
+              </div>
+            </motion.div>
+
+            {/* Analyze button */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.16 }}
+              className="flex flex-col items-center gap-4"
+            >
+              <GlowButton
+                size="lg"
+                className="w-full max-w-sm"
+                onClick={runAnalysis}
+                disabled={!canAnalyze}
+                isLoading={isLoading}
+              >
+                {isLoading ? 'Analyzing...' : 'Analyze Resume'}
+                {!isLoading && <ChevronRight size={14} />}
+              </GlowButton>
+
+              {!canAnalyze && !isLoading && (
+                <p className="text-[11px] text-text-muted text-center">
+                  {!resumeFile
+                    ? 'Upload your resume to continue'
+                    : 'Add more content to the job description (50+ words)'}
+                </p>
+              )}
+            </motion.div>
+          </>
+        )}
 
         <motion.div
           initial={{ opacity: 0 }}

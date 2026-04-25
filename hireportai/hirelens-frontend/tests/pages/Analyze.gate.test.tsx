@@ -115,19 +115,21 @@ describe('Analyze page — spec #56 free-tier gate', () => {
     expect(screen.queryByText('0/3')).not.toBeInTheDocument()
   })
 
-  it('free user past cap: submit opens upgrade modal + fires free_scan_cap_hit + does not call API', async () => {
+  // Spec #56's submit-time gate path is preserved as defense-in-depth in
+  // `useAnalysis.ts` (cross-tab race per spec #60 LD-7) but is no longer
+  // user-reachable from /prep/analyze — spec #60's pre-flight gate hides the
+  // Analyze button before the click can happen. The gate behavior is covered
+  // by the spec #60 describe block below; the defense-in-depth path is covered
+  // by useAnalysis hook tests, not this page-level harness. Test rewritten to
+  // assert the new at-cap path (gate visible, no API call) rather than the
+  // now-unreachable submit-click.
+  it('free user past cap: gate card replaces form + does not call API on page load', () => {
     usageState.scansUsed = 1
     usageState.canScan = false
-    const user = userEvent.setup()
     renderPage()
 
-    await user.click(screen.getByRole('button', { name: /analyze resume/i }))
-
-    expect(setShowUpgradeModal).toHaveBeenCalledWith(true)
-    expect(capture).toHaveBeenCalledWith('free_scan_cap_hit', {
-      attempted_action: 'initial',
-      scans_used_at_hit: 1,
-    })
+    expect(screen.getByTestId('analyze-scan-gate')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^analyze resume$/i })).toBeNull()
     expect(mockAnalyzeResume).not.toHaveBeenCalled()
   })
 
@@ -184,5 +186,112 @@ describe('Analyze page — spec #56 free-tier gate', () => {
     usageState.canUsePro = true
     renderPage()
     expect(screen.queryByText(/free scans used/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('Analyze page — spec #60 pre-flight gate (B-045)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    usageState.plan = 'free'
+    usageState.scansUsed = 0
+    usageState.maxScans = 1
+    usageState.isAdmin = false
+    usageState.canScan = true
+    usageState.canUsePro = false
+  })
+
+  it('AC-1/AC-2 — free user at cap: gate card renders, upload form absent', () => {
+    usageState.scansUsed = 1
+    usageState.canScan = false
+    renderPage()
+    expect(screen.getByTestId('analyze-scan-gate')).toBeInTheDocument()
+    expect(screen.getByText(/you've used your free ats scan/i)).toBeInTheDocument()
+    // Dropzone, JD textarea, Analyze button all absent (form replaced, not disabled).
+    expect(screen.queryByRole('button', { name: /^analyze resume$/i })).toBeNull()
+    expect(screen.queryByLabelText(/resume file upload/i)).toBeNull()
+    expect(screen.queryByLabelText(/job description text/i)).toBeNull()
+  })
+
+  it('AC-3 — gate Upgrade CTA opens app-root paywall via setShowUpgradeModal(true)', async () => {
+    usageState.scansUsed = 1
+    usageState.canScan = false
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(screen.getByTestId('analyze-scan-gate-cta'))
+    expect(setShowUpgradeModal).toHaveBeenCalledWith(true)
+  })
+
+  it('AC-4 — Pro user: form renders, no gate card', () => {
+    usageState.plan = 'pro'
+    usageState.canScan = true
+    usageState.canUsePro = true
+    usageState.maxScans = -1
+    renderPage()
+    expect(screen.queryByTestId('analyze-scan-gate')).toBeNull()
+    expect(screen.getByRole('button', { name: /analyze resume/i })).toBeInTheDocument()
+  })
+
+  it('AC-4 — Enterprise user: form renders, no gate card', () => {
+    usageState.plan = 'enterprise'
+    usageState.canScan = true
+    usageState.canUsePro = true
+    usageState.maxScans = -1
+    renderPage()
+    expect(screen.queryByTestId('analyze-scan-gate')).toBeNull()
+    expect(screen.getByRole('button', { name: /analyze resume/i })).toBeInTheDocument()
+  })
+
+  it('AC-4 — admin on free plan: form renders, no gate card', () => {
+    usageState.plan = 'free'
+    usageState.isAdmin = true
+    usageState.canScan = true
+    usageState.canUsePro = true
+    usageState.maxScans = -1
+    renderPage()
+    expect(screen.queryByTestId('analyze-scan-gate')).toBeNull()
+    expect(screen.getByRole('button', { name: /analyze resume/i })).toBeInTheDocument()
+  })
+
+  it('AC-5 — free user with quota remaining: form renders, no gate card', () => {
+    usageState.scansUsed = 0
+    usageState.canScan = true
+    renderPage()
+    expect(screen.queryByTestId('analyze-scan-gate')).toBeNull()
+    expect(screen.getByRole('button', { name: /analyze resume/i })).toBeInTheDocument()
+  })
+
+  it('AC-6 — quota chip stays visible above gate at cap; dead "Upgrade for more" span removed', () => {
+    usageState.scansUsed = 1
+    usageState.canScan = false
+    renderPage()
+    expect(screen.getByText('1/1')).toBeInTheDocument()
+    expect(screen.getByText(/free scans used/i)).toBeInTheDocument()
+    // Regression guard: dead span from spec #56 era removed entirely (LD-3).
+    expect(screen.queryByText(/upgrade for more/i)).toBeNull()
+  })
+
+  it('AC-7 — paywall_hit fires once on gate mount with {trigger, surface, plan}', () => {
+    usageState.scansUsed = 1
+    usageState.canScan = false
+    renderPage()
+    const calls = capture.mock.calls.filter((c) => c[0] === 'paywall_hit')
+    expect(calls).toHaveLength(1)
+    expect(calls[0][1]).toEqual({
+      trigger: 'scan_limit',
+      surface: 'analyze_page_load',
+      plan: 'free',
+    })
+  })
+
+  it('AC-7 negative — paywall_hit does NOT fire when form renders normally', () => {
+    usageState.plan = 'pro'
+    usageState.canScan = true
+    usageState.canUsePro = true
+    usageState.maxScans = -1
+    renderPage()
+    const calls = capture.mock.calls.filter(
+      (c) => c[0] === 'paywall_hit' && (c[1] as { surface?: string }).surface === 'analyze_page_load',
+    )
+    expect(calls).toHaveLength(0)
   })
 })
