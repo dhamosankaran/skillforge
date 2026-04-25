@@ -543,6 +543,11 @@ Kept `Profile.subscription.test.tsx` untouched (its inline `signOut: vi.fn()` mo
    - New `<ScoreDeltaWidget>` on tracker row detail + `/home` interview-prepper variant.
    - Depends on: **E-042** (tracker-level target for widget routing) AND **D-020** resolution (missing `jd_hash` column — either standalone migration first or bundled with `jd_text` in E-043's impl slice; spec decides).
 
+**Filed 2026-04-25 from chat UX audit — awaiting spec / audit slices:**
+
+- **E-047** (P1, 🔴) — `/prep/analyze` post-scan-limit dead-end: "Upgrade for more" is plain text not a link; form remains enabled post-quota. Next slice is spec-author (Mode 4) to decide gate-vs-link, then implement-to-spec.
+- **E-048** (P1 audit-slice, 🔴) — HomeDashboard widget composition contradictions for free-user-post-scan (Mission-in-flight + Countdown framing same mission twice; InterviewTarget empty alongside active Mission; next-action buried). Next slice is audit-only (Mode 1, no code) against `{persona × plan × has_mission × has_recent_scan × streak_state}`; severity TBD post-audit. Likely lands inside P5-S18b (state-aware) scope rather than net-new.
+
 **Paused — pending tracker-level refactor:**
 
 - **Option A+** (Profile-side interview-date editor for `users.interview_target_date`).
