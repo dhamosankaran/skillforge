@@ -319,6 +319,16 @@ async def get_scan_by_id(
 
 Mount in `app/main.py` alongside the other v1 routers.
 
+**Amendment (2026-04-24, post-impl):** Shipped 2026-04-23 in commit
+`0b35440` on the existing shared legacy router (the same router that
+hosts `POST /analyze`) with `/api/v1` re-export, **not** a new
+v1-specific router as originally specced above. Matches the existing
+`POST /analyze` pattern — same path surface (canonical FE path
+`/api/v1/analyze/{scan_id}` is unchanged), one source of truth for the
+`/analyze/*` routes, smaller diff. Recorded as judgment call #1 in the
+P5-S59-impl final report. The original §7 sketch above is preserved as
+the author-time intent; the amendment is the as-shipped reality.
+
 ## 8. Service ownership check
 
 `app/services/tracker_service_v2.py`:
