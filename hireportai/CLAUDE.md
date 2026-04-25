@@ -357,4 +357,4 @@ Reference: D-019, D-022 class incidents.
   and SOP-9 "No concurrent CC sessions on one tree" (alongside
   existing SOP-8 detection). Removed redundant MUST-READ section
   (duplicated SOP). Merged C5 sharpening text into C1. N1-SUPPLEMENT
-  promotion to N9 deferred (6 callsites). Reference: B-048.
+  promotion to N9 deferred (6 callsites). Reference: B-048 (closed by `e2714b4`).
