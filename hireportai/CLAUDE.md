@@ -135,6 +135,33 @@ change type:
 Reference `CODE-REALITY.md` for the live state. If `CODE-REALITY.md` is
 older than the current HEAD, regenerate it before drafting the audit.
 
+**R17 Live BACKLOG ID check before filing new rows**: Before drafting a
+commit message that references a new `B-###` or filing a new BACKLOG
+row, run:
+
+```
+grep -E "^\| B-0[0-9]+" BACKLOG.md | tail -3
+```
+
+Use the next ID after the highest one returned. This check applies even
+when a prompt names a specific `B-###` — chat-Claude's pre-allocated IDs
+may be stale by the time the slice runs. Watermark grep is non-optional,
+not a fallback. Concurrent sessions can claim IDs between when chat
+drafts and when CC executes. Reference: B-037 ID-collision incident.
+
+**R18 Pre-commit BACKLOG verification**: Before EVERY commit on a slice
+that touches `BACKLOG.md`:
+
+1. List every BACKLOG ID referenced in this slice.
+2. For each closed ID: confirm 🔴→✅ flip + close-line with commit SHA
+   in `BACKLOG.md`.
+3. For each filed-only ID: confirm row exists with status 🔴 and any
+   gating notes.
+
+If any ID can't be confirmed, STOP and ask. R18 complements R15: R15
+covers closure semantics, R18 is the multi-bucket pre-commit gate
+covering both closed and filed-only IDs. Non-optional.
+
 ## Commit Hygiene
 
 **C1 Never `git add -A`** from above `hireportai/`. Always
@@ -152,6 +179,15 @@ don't silently fix it in the current commit.
 **C4 Commit message format**: `type(scope): description`. When closing a
 BACKLOG ID, include it in the message: e.g.
 `fix(rewrite): preserve sections — closes B-001`.
+
+**C5 No `git add -A` from above `hireportai/`**: The git root is
+`SkillForge/`, parent of `hireportai/`. `git add -A` from that level
+will sweep in `archive/`, sibling project files, and unrelated work.
+Always `cd hireportai/` first OR stage explicit paths. When a prompt
+template says `git add -A`, override it with explicit paths. The
+template language is itself a footgun — pre-existing dirty files in
+`SkillForge/` (above `hireportai/`) will bundle. Reference: B-034
+bloated-commit incident. Sharpens C1; C1/C2/C3 override applies.
 
 ## Review Layer
 
@@ -238,6 +274,13 @@ of guessing.
 
 **N7** Silently reconciling conflicts between prompt instructions and
 on-disk reality. Flag the conflict, STOP, ask.
+
+**N8 SESSION-STATE.md preserve-and-coexist**: If `SESSION-STATE.md` has
+pre-authored content from another session at the start of your slice,
+do NOT overwrite it. Add your slice's entry alongside. If your slice
+does not need to write to `SESSION-STATE.md`, leave it untouched and
+surface the concurrent edit as a drift flag in the final report.
+Reference: D-019, D-022 class incidents.
 
 ## How to Add a Feature
 1. Check spec exists in `docs/specs/`
