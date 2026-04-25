@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect } from 'rea
 import type { ReactNode } from 'react'
 import toast from 'react-hot-toast'
 import { fetchUsage, type UsageResponse } from '@/services/api'
+import { useAuth } from '@/context/AuthContext'
 
 export type PlanType = 'free' | 'pro' | 'enterprise'
 
@@ -120,6 +121,7 @@ function fromResponse(r: UsageResponse): UsageState {
 const UsageContext = createContext<UsageContextValue | null>(null)
 
 export function UsageProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
   const [usage, setUsage] = useState<UsageState>(loadDisplayCache)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
@@ -131,6 +133,10 @@ export function UsageProvider({ children }: { children: ReactNode }) {
   const canScan = canUsePro || usage.maxScans === -1 || usage.scansUsed < usage.maxScans
 
   const refreshUsage = useCallback(async () => {
+    // Guests have no auth; calling /payments/usage returns 401, which the
+    // api interceptor would convert into a hard redirect to "/", triggering
+    // an infinite reload loop on public pages (landing, login, pricing).
+    if (!user) return
     try {
       const data = await fetchUsage()
       const next = fromResponse(data)
@@ -141,7 +147,7 @@ export function UsageProvider({ children }: { children: ReactNode }) {
       // because the BE is still authoritative on the next analyze call
       // (the 402 is the hard gate).
     }
-  }, [])
+  }, [user])
 
   useEffect(() => {
     void refreshUsage()

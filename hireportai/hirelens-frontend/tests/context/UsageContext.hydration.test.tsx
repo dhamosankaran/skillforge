@@ -13,6 +13,13 @@ vi.mock('@/services/api', async (importOriginal) => {
   }
 })
 
+// UsageProvider now calls useAuth() and short-circuits refreshUsage when
+// user is null (guest 401-redirect-loop guard). Stub a non-null user so
+// every case here exercises the authed hydration path.
+vi.mock('@/context/AuthContext', () => ({
+  useAuth: () => ({ user: { id: 'test-user', email: 'test@example.com' } }),
+}))
+
 // ─── Harness ──────────────────────────────────────────────────────────────
 
 function Probe() {
