@@ -10,6 +10,14 @@ import type { MissionDetailResponse } from '@/types'
 interface CountdownWidgetProps {
   persona: Persona
   date: string | null | undefined
+  /**
+   * Spec #61 §3.1 — when the state-aware Mission slot renders for the
+   * same active mission as this user's `interview_target_date`, the
+   * static Countdown is suppressed to avoid the duplicate-render
+   * symptom (audit finding #1). HomeDashboard computes this and passes
+   * it down. Default false.
+   */
+  suppressedByMissionState?: boolean
 }
 
 function daysUntil(iso: string): number {
@@ -19,8 +27,14 @@ function daysUntil(iso: string): number {
   return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
 }
 
-export function CountdownWidget({ persona, date }: CountdownWidgetProps) {
+export function CountdownWidget({
+  persona,
+  date,
+  suppressedByMissionState = false,
+}: CountdownWidgetProps) {
   const shownRef = useRef(false)
+
+  if (suppressedByMissionState) return null
 
   const [mission, setMission] = useState<MissionDetailResponse | null>(null)
   const [missionChecked, setMissionChecked] = useState(false)

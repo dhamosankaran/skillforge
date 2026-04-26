@@ -1,4 +1,3 @@
-import { useHomeState } from '@/hooks/useHomeState'
 import { StreakAtRiskWidget } from '@/components/home/widgets/StreakAtRiskWidget'
 import { MissionActiveWidget } from '@/components/home/widgets/MissionActiveWidget'
 import { MissionOverdueWidget } from '@/components/home/widgets/MissionOverdueWidget'
@@ -6,10 +5,17 @@ import { ResumeStaleWidget } from '@/components/home/widgets/ResumeStaleWidget'
 import { InactiveReturnerWidget } from '@/components/home/widgets/InactiveReturnerWidget'
 import { FirstSessionDoneWidget } from '@/components/home/widgets/FirstSessionDoneWidget'
 import type { Persona } from '@/context/AuthContext'
-import type { HomeStateContext, HomeStateName } from '@/types/homeState'
+import type {
+  HomeStateContext,
+  HomeStateName,
+  HomeStateResponse,
+} from '@/types/homeState'
 
 interface StateAwareWidgetsProps {
   persona: Persona
+  data: HomeStateResponse | null
+  isLoading: boolean
+  error: Error | null
 }
 
 function _renderWidget(
@@ -39,10 +45,18 @@ function _renderWidget(
  * Renders the priority-slot widget for the user's top active state. On
  * loading, error, or empty `states[]`, renders nothing — the static S18
  * persona grid stands alone in those cases (spec #40 §7).
+ *
+ * Spec #61: data is now received as a prop from HomeDashboard rather
+ * than fetched here, so HomeDashboard can derive `topState` once and
+ * pass it both to this component (for rendering the slot) and to
+ * static-grid widgets (for §3 composition suppression).
  */
-export function StateAwareWidgets({ persona }: StateAwareWidgetsProps) {
-  const { data, isLoading, error } = useHomeState()
-
+export function StateAwareWidgets({
+  persona,
+  data,
+  isLoading,
+  error,
+}: StateAwareWidgetsProps) {
   if (isLoading || error || !data || data.states.length === 0) return null
 
   const top = data.states[0]

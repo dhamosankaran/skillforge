@@ -1,7 +1,11 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import type { HomeStateResponse } from '@/types/homeState'
+
+// Spec #61 — StateAwareWidgets now receives data/isLoading/error as
+// props from HomeDashboard rather than fetching itself, so the hook
+// mock is gone. Tests pass the hook-shape state directly.
 
 type HookState = {
   data: HomeStateResponse | null
@@ -10,15 +14,6 @@ type HookState = {
 }
 
 let mockState: HookState = { data: null, isLoading: true, error: null }
-
-vi.mock('@/hooks/useHomeState', () => ({
-  useHomeState: () => ({
-    data: mockState.data,
-    isLoading: mockState.isLoading,
-    error: mockState.error,
-    refetch: vi.fn(),
-  }),
-}))
 
 import { StateAwareWidgets } from '@/components/home/StateAwareWidgets'
 
@@ -37,7 +32,12 @@ function emptyContext() {
 function renderSlot() {
   return render(
     <MemoryRouter>
-      <StateAwareWidgets persona="career_climber" />
+      <StateAwareWidgets
+        persona="career_climber"
+        data={mockState.data}
+        isLoading={mockState.isLoading}
+        error={mockState.error}
+      />
     </MemoryRouter>,
   )
 }

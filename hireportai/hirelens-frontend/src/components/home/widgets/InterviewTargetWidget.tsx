@@ -5,6 +5,14 @@ interface InterviewTargetWidgetProps {
   persona: Persona
   company: string | null | undefined
   date: string | null | undefined
+  /**
+   * Spec #61 §5 — when the state-aware Mission slot renders
+   * (mission_active or mission_overdue), this widget is suppressed
+   * entirely; mission framing already covers the date and the
+   * company-gap empty state is moot mid-mission (audit finding #2).
+   * HomeDashboard computes this and passes it down. Default false.
+   */
+  suppressedByMissionState?: boolean
 }
 
 function formatDate(iso: string): string {
@@ -40,7 +48,10 @@ export function InterviewTargetWidget({
   persona,
   company,
   date,
+  suppressedByMissionState = false,
 }: InterviewTargetWidgetProps) {
+  if (suppressedByMissionState) return null
+
   const hasBoth = Boolean(company && date)
   const state: WidgetState = hasBoth ? 'data' : 'empty'
 

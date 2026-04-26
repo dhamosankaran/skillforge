@@ -136,7 +136,9 @@ The widget is rendered above the persona-mode grid (above `InterviewPrepperMode`
   Primary CTA (button, prominent):
     "Study the gaps from your last scan" → /learn?source=last_scan
   Secondary CTA (link, de-emphasized, below primary, smaller font):
-    "Or upgrade to unlock unlimited study + Pro features" → opens PaywallModal trigger="study_engine_unlock"
+    "Or upgrade to unlock unlimited study + Pro features" → opens PaywallModal trigger="skill_gap_study"
+
+> _Amended in B-051 impl: original `'study_engine_unlock'` did not exist in the on-disk `PaywallTrigger` union (`hirelens-frontend/src/components/PaywallModal.tsx:21-29`); substituted existing `'skill_gap_study'` trigger which has semantically closer headline ("Study skill gaps with flashcards") + subline ("Pro unlocks the full flashcard library so you can study every skill gap detected in your resume scan") copy. No PaywallTrigger union widening, no new HEADLINES/SUBLINES entries. See B-051 impl report._
 ```
 
 **Copy bounds (per LD-1):** primary CTA wording is locked. Body copy and headline are tunable by the impl slice within these constraints:

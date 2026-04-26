@@ -6,11 +6,22 @@ import type { TrackerApplication } from '@/types'
 
 interface LastScanWidgetProps {
   persona: Persona
+  /**
+   * Spec #61 §4.1 — when StudyGapsPromptWidget renders, this widget
+   * is suppressed; the prompt rolls last-scan content into its body
+   * (audit finding #3 — promote rather than just unbury). Default false.
+   */
+  suppressed?: boolean
 }
 
-export function LastScanWidget({ persona }: LastScanWidgetProps) {
+export function LastScanWidget({
+  persona,
+  suppressed = false,
+}: LastScanWidgetProps) {
   const [state, setState] = useState<WidgetState>('loading')
   const [latest, setLatest] = useState<TrackerApplication | null>(null)
+
+  if (suppressed) return null
 
   const load = useCallback(() => {
     setState('loading')
@@ -31,8 +42,9 @@ export function LastScanWidget({ persona }: LastScanWidgetProps) {
   }, [])
 
   useEffect(() => {
+    if (suppressed) return
     load()
-  }, [load])
+  }, [load, suppressed])
 
   const action =
     state === 'data' && latest

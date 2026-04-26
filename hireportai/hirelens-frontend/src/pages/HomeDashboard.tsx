@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useAuth, type Persona } from '@/context/AuthContext'
 import { markHomeFirstVisit } from '@/services/api'
 import { capture } from '@/utils/posthog'
+import { useHomeState } from '@/hooks/useHomeState'
 import { TodaysReviewWidget } from '@/components/home/widgets/TodaysReviewWidget'
 import { StreakWidget } from '@/components/home/widgets/StreakWidget'
 import { WeeklyProgressWidget } from '@/components/home/widgets/WeeklyProgressWidget'
@@ -11,15 +12,31 @@ import { CountdownWidget } from '@/components/home/widgets/CountdownWidget'
 import { TeamComingSoonWidget } from '@/components/home/widgets/TeamComingSoonWidget'
 import { StateAwareWidgets } from '@/components/home/StateAwareWidgets'
 import { InterviewPrepperChecklist } from '@/components/home/widgets/InterviewPrepperChecklist'
+import { StudyGapsPromptWidget } from '@/components/home/widgets/StudyGapsPromptWidget'
+import { useUsage } from '@/context/UsageContext'
+import { fetchActiveMission, fetchUserApplications } from '@/services/api'
 
 const GRID = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+
+interface PersonaModeProps {
+  persona: Persona
+  /**
+   * Spec #61 §3 — composition suppression flags computed once in
+   * HomeDashboard from the resolved state-slot data + user fields.
+   */
+  countdownSuppressedByMissionState: boolean
+  interviewTargetSuppressedByMissionState: boolean
+  lastScanSuppressed: boolean
+}
 
 function InterviewPrepperMode({
   persona,
   company,
   date,
-}: {
-  persona: Persona
+  countdownSuppressedByMissionState,
+  interviewTargetSuppressedByMissionState,
+  lastScanSuppressed,
+}: PersonaModeProps & {
   company: string | null | undefined
   date: string | null | undefined
 }) {
@@ -27,22 +44,34 @@ function InterviewPrepperMode({
     <>
       <InterviewPrepperChecklist />
       <div data-testid="home-mode-interview_prepper" className={GRID}>
-        <CountdownWidget persona={persona} date={date} />
-        <InterviewTargetWidget persona={persona} company={company} date={date} />
+        <CountdownWidget
+          persona={persona}
+          date={date}
+          suppressedByMissionState={countdownSuppressedByMissionState}
+        />
+        <InterviewTargetWidget
+          persona={persona}
+          company={company}
+          date={date}
+          suppressedByMissionState={interviewTargetSuppressedByMissionState}
+        />
         <TodaysReviewWidget persona={persona} />
-        <LastScanWidget persona={persona} />
+        <LastScanWidget persona={persona} suppressed={lastScanSuppressed} />
       </div>
     </>
   )
 }
 
-function CareerClimberMode({ persona }: { persona: Persona }) {
+function CareerClimberMode({
+  persona,
+  lastScanSuppressed,
+}: PersonaModeProps) {
   return (
     <div data-testid="home-mode-career_climber" className={GRID}>
       <StreakWidget persona={persona} />
       <TodaysReviewWidget persona={persona} />
       <WeeklyProgressWidget persona={persona} />
-      <LastScanWidget persona={persona} />
+      <LastScanWidget persona={persona} suppressed={lastScanSuppressed} />
     </div>
   )
 }
@@ -58,10 +87,76 @@ function TeamLeadMode({ persona }: { persona: Persona }) {
   )
 }
 
+/**
+ * StudyGapsPromptWidget needs the same predicate set HomeDashboard uses
+ * for the LastScan suppression flag (avoid double-fetch and ensure the
+ * suppression flag and the prompt's render decision agree). Hoist the
+ * predicate fetches into a small hook.
+ */
+function useStudyPromptEligibility() {
+  const { usage } = useUsage()
+  const [hasRecentScan, setHasRecentScan] = useState<boolean | null>(null)
+  const [hasActiveMission, setHasActiveMission] = useState<boolean | null>(null)
+
+  const planEligible = usage.plan === 'free' && !usage.isAdmin
+
+  useEffect(() => {
+    if (!planEligible) return
+    let cancelled = false
+    fetchUserApplications()
+      .then((apps) => !cancelled && setHasRecentScan(apps.length > 0))
+      .catch(() => !cancelled && setHasRecentScan(false))
+    return () => {
+      cancelled = true
+    }
+  }, [planEligible])
+
+  useEffect(() => {
+    if (!planEligible) return
+    let cancelled = false
+    fetchActiveMission()
+      .then((m) => !cancelled && setHasActiveMission(m?.status === 'active'))
+      .catch(() => !cancelled && setHasActiveMission(false))
+    return () => {
+      cancelled = true
+    }
+  }, [planEligible])
+
+  return {
+    eligible:
+      planEligible && hasRecentScan === true && hasActiveMission === false,
+  }
+}
+
 export default function HomeDashboard() {
   const { user, updateUser } = useAuth()
   const capturedRef = useRef(false)
   const stampedRef = useRef(false)
+
+  // Spec #61 — single source of truth for state-slot data; passed to
+  // both StateAwareWidgets (slot rendering) and persona modes (§3
+  // composition suppression flags).
+  const homeState = useHomeState()
+  const topState = homeState.data?.states[0] ?? null
+
+  // Spec #61 §3.1 — Mission state suppresses Countdown only when the
+  // active mission's target_date matches user.interview_target_date
+  // (per-mission suppression). InterviewTarget §5 suppression is
+  // broader: any Mission state in the slot.
+  const missionStateActive =
+    topState === 'mission_active' || topState === 'mission_overdue'
+  const missionTargetMatchesUser =
+    homeState.data?.context.mission_target_date != null &&
+    user?.interview_target_date != null &&
+    homeState.data.context.mission_target_date === user.interview_target_date
+  const countdownSuppressedByMissionState =
+    missionStateActive && missionTargetMatchesUser
+  const interviewTargetSuppressedByMissionState = missionStateActive
+
+  // Spec #61 §4.1 — when StudyGapsPromptWidget renders, suppress
+  // LastScan from the static grid; prompt rolls scan content into body.
+  const studyPrompt = useStudyPromptEligibility()
+  const lastScanSuppressed = studyPrompt.eligible
 
   useEffect(() => {
     if (!user?.persona) return
@@ -108,16 +203,34 @@ export default function HomeDashboard() {
         <h1 className="font-display text-2xl sm:text-3xl font-bold text-text-primary mb-8">
           {greeting}
         </h1>
-        <StateAwareWidgets persona={user.persona} />
+        <StateAwareWidgets
+          persona={user.persona}
+          data={homeState.data}
+          isLoading={homeState.isLoading}
+          error={homeState.error}
+        />
+        <StudyGapsPromptWidget suppressed={!studyPrompt.eligible} />
         {user.persona === 'interview_prepper' && (
           <InterviewPrepperMode
             persona={user.persona}
             company={user.interview_target_company}
             date={user.interview_target_date}
+            countdownSuppressedByMissionState={
+              countdownSuppressedByMissionState
+            }
+            interviewTargetSuppressedByMissionState={
+              interviewTargetSuppressedByMissionState
+            }
+            lastScanSuppressed={lastScanSuppressed}
           />
         )}
         {user.persona === 'career_climber' && (
-          <CareerClimberMode persona={user.persona} />
+          <CareerClimberMode
+            persona={user.persona}
+            countdownSuppressedByMissionState={false}
+            interviewTargetSuppressedByMissionState={false}
+            lastScanSuppressed={lastScanSuppressed}
+          />
         )}
         {user.persona === 'team_lead' && <TeamLeadMode persona={user.persona} />}
       </div>

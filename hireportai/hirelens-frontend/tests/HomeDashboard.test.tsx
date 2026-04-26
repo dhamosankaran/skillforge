@@ -10,11 +10,17 @@ vi.mock('@/utils/posthog', () => ({
 }))
 
 const markHomeFirstVisit = vi.fn()
+const fetchHomeState = vi.fn()
+const fetchUserApplications = vi.fn()
+const fetchActiveMission = vi.fn()
 vi.mock('@/services/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/api')>()
   return {
     ...actual,
     markHomeFirstVisit: () => markHomeFirstVisit(),
+    fetchHomeState: () => fetchHomeState(),
+    fetchUserApplications: () => fetchUserApplications(),
+    fetchActiveMission: () => fetchActiveMission(),
   }
 })
 
@@ -29,14 +35,31 @@ vi.mock('@/components/home/widgets/StreakWidget', () => ({
 vi.mock('@/components/home/widgets/WeeklyProgressWidget', () => ({
   WeeklyProgressWidget: () => <div data-testid="widget-weekly-progress" />,
 }))
+// Spec #61 — mocks honor suppression props (otherwise the suppression
+// composition tests can't observe the early-null return path).
 vi.mock('@/components/home/widgets/LastScanWidget', () => ({
-  LastScanWidget: () => <div data-testid="widget-last-scan" />,
+  LastScanWidget: ({ suppressed }: { suppressed?: boolean }) =>
+    suppressed ? null : <div data-testid="widget-last-scan" />,
 }))
 vi.mock('@/components/home/widgets/InterviewTargetWidget', () => ({
-  InterviewTargetWidget: () => <div data-testid="widget-interview-target" />,
+  InterviewTargetWidget: ({
+    suppressedByMissionState,
+  }: {
+    suppressedByMissionState?: boolean
+  }) =>
+    suppressedByMissionState ? null : (
+      <div data-testid="widget-interview-target" />
+    ),
 }))
 vi.mock('@/components/home/widgets/CountdownWidget', () => ({
-  CountdownWidget: () => <div data-testid="widget-countdown" />,
+  CountdownWidget: ({
+    suppressedByMissionState,
+  }: {
+    suppressedByMissionState?: boolean
+  }) =>
+    suppressedByMissionState ? null : (
+      <div data-testid="widget-countdown" />
+    ),
 }))
 vi.mock('@/components/home/widgets/TeamComingSoonWidget', () => ({
   TeamComingSoonWidget: () => <div data-testid="widget-team-coming-soon" />,
@@ -46,6 +69,31 @@ vi.mock('@/components/home/widgets/TeamComingSoonWidget', () => ({
 vi.mock('@/components/home/StateAwareWidgets', () => ({
   StateAwareWidgets: () => null,
 }))
+// Spec #61 §4 — StudyGapsPromptWidget has its own dedicated test file
+// (tests/home/widgets/StudyGapsPromptWidget.test.tsx). Stub here so the
+// shell test stays focused on persona-mode + widget-order assertions.
+vi.mock('@/components/home/widgets/StudyGapsPromptWidget', () => ({
+  StudyGapsPromptWidget: () => null,
+}))
+
+// Spec #61 — HomeDashboard now calls useUsage() (via useStudyPromptEligibility)
+// for the StudyGapsPrompt eligibility / LastScan suppression flag. Mock to a
+// free + non-admin default so the existing shell-behavior tests behave as
+// they did pre-spec; spec #61 composition tests below override as needed.
+let mockUsageState = { plan: 'free' as const, isAdmin: false }
+vi.mock('@/context/UsageContext', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/context/UsageContext')>(
+      '@/context/UsageContext',
+    )
+  return {
+    ...actual,
+    useUsage: () => ({
+      usage: { plan: mockUsageState.plan, isAdmin: mockUsageState.isAdmin },
+      setShowUpgradeModal: vi.fn(),
+    }),
+  }
+})
 
 let mockUser: AuthUser | null = null
 const updateUser = vi.fn()
@@ -101,6 +149,12 @@ beforeEach(() => {
   updateUser.mockReset()
   markHomeFirstVisit.mockReset()
   markHomeFirstVisit.mockResolvedValue(userFixture())
+  fetchHomeState.mockReset()
+  fetchHomeState.mockResolvedValue({ persona: null, states: [], context: {} })
+  fetchUserApplications.mockReset()
+  fetchUserApplications.mockResolvedValue([])
+  fetchActiveMission.mockReset()
+  fetchActiveMission.mockResolvedValue(null)
   mockUser = userFixture()
 })
 
@@ -282,5 +336,124 @@ describe('HomeDashboard', () => {
     mockUser = userFixture({ persona: null as unknown as Persona })
     const { container } = renderHome()
     expect(container.querySelector('[data-testid^="home-mode-"]')).toBeNull()
+  })
+
+  // ── Spec #61 §3 composition suppression — AC-1, AC-2, AC-3, AC-8 ─────────
+  describe('Spec #61 — composition suppression', () => {
+    it('AC-1 + AC-2: when state slot fires mission_active for the user mission, Countdown AND InterviewTarget are suppressed', async () => {
+      mockUser = userFixture({
+        persona: 'interview_prepper',
+        interview_target_date: '2026-06-01',
+        interview_target_company: 'Google',
+      })
+      fetchHomeState.mockResolvedValueOnce({
+        persona: 'interview_prepper',
+        states: ['mission_active'],
+        context: {
+          current_streak: 0,
+          last_review_at: null,
+          active_mission_id: 'm1',
+          mission_target_date: '2026-06-01',
+          last_scan_date: null,
+          plan: 'free',
+          last_activity_at: null,
+        },
+      })
+      const { container } = renderHome()
+      // Wait for useHomeState to resolve and trigger re-render with topState set
+      await waitFor(() => expect(fetchHomeState).toHaveBeenCalled())
+      await waitFor(() => {
+        expect(container.querySelector('[data-testid="widget-countdown"]')).toBeNull()
+        expect(
+          container.querySelector('[data-testid="widget-interview-target"]'),
+        ).toBeNull()
+      })
+    })
+
+    it('AC-3: when no Mission state in slot, both Countdown and InterviewTarget render', async () => {
+      mockUser = userFixture({
+        persona: 'interview_prepper',
+        interview_target_date: '2026-06-01',
+        interview_target_company: 'Google',
+      })
+      fetchHomeState.mockResolvedValueOnce({
+        persona: 'interview_prepper',
+        states: [],
+        context: {
+          current_streak: 0,
+          last_review_at: null,
+          active_mission_id: null,
+          mission_target_date: null,
+          last_scan_date: null,
+          plan: 'free',
+          last_activity_at: null,
+        },
+      })
+      renderHome()
+      await waitFor(() => expect(fetchHomeState).toHaveBeenCalled())
+      // Both widgets present after the hook resolves
+      await waitFor(() => {
+        expect(screen.getByTestId('widget-countdown')).toBeInTheDocument()
+        expect(screen.getByTestId('widget-interview-target')).toBeInTheDocument()
+      })
+    })
+
+    it('AC-1 carve-out: Countdown is NOT suppressed when active mission target_date differs from user.interview_target_date', async () => {
+      mockUser = userFixture({
+        persona: 'interview_prepper',
+        interview_target_date: '2026-06-01',
+        interview_target_company: 'Google',
+      })
+      fetchHomeState.mockResolvedValueOnce({
+        persona: 'interview_prepper',
+        states: ['mission_active'],
+        context: {
+          current_streak: 0,
+          last_review_at: null,
+          active_mission_id: 'm1',
+          mission_target_date: '2026-08-15', // ≠ user's target date
+          last_scan_date: null,
+          plan: 'free',
+          last_activity_at: null,
+        },
+      })
+      renderHome()
+      await waitFor(() => expect(fetchHomeState).toHaveBeenCalled())
+      // Countdown NOT suppressed (different mission); InterviewTarget IS
+      // suppressed (broader rule per §5).
+      await waitFor(() => {
+        expect(screen.getByTestId('widget-countdown')).toBeInTheDocument()
+        expect(
+          screen.queryByTestId('widget-interview-target'),
+        ).toBeNull()
+      })
+    })
+
+    it('AC-8: when StudyGapsPromptWidget eligibility is true, LastScan is suppressed from the static grid', async () => {
+      mockUser = userFixture({
+        persona: 'interview_prepper',
+        interview_target_date: '2026-06-01',
+        interview_target_company: 'Google',
+      })
+      // Eligibility predicates true: free user, has scan, no mission.
+      fetchUserApplications.mockResolvedValue([
+        {
+          id: 'a1',
+          company: 'JPMorgan',
+          role: 'SWE',
+          date_applied: '2026-04-20',
+          status: 'Applied',
+          ats_score: 71,
+          scan_id: 's1',
+          created_at: '2026-04-25',
+        },
+      ])
+      fetchActiveMission.mockResolvedValue(null)
+      const { container } = renderHome()
+      await waitFor(() => expect(fetchUserApplications).toHaveBeenCalled())
+      await waitFor(() =>
+        expect(container.querySelector('[data-testid="widget-last-scan"]')).toBeNull(),
+      )
+    })
   })
 })

@@ -17,11 +17,30 @@ function _daysUntil(targetDate: string | null): number | null {
   return Math.max(0, Math.round(ms / 86_400_000))
 }
 
+function _daysSinceISO(iso: string | null): number | null {
+  if (!iso) return null
+  const last = new Date(iso)
+  const now = new Date()
+  const ms = now.getTime() - last.getTime()
+  return Math.max(0, Math.round(ms / 86_400_000))
+}
+
+const RESUME_STALE_DAYS = 21
+
 export function MissionActiveWidget({
   persona,
   context,
 }: MissionActiveWidgetProps) {
   const days = _daysUntil(context.mission_target_date)
+
+  // Spec #61 §6 — Pro × mission_active footer affordance: surface
+  // resume_stale as a within-mount secondary signal for Pro/Enterprise
+  // users with a 21+d-old scan. Free users don't get this affordance
+  // (re-scan blocked by spec #56 lifetime cap; would dead-end).
+  const isPaid = context.plan === 'pro' || context.plan === 'enterprise'
+  const scanAgeDays = _daysSinceISO(context.last_scan_date)
+  const showStaleScanFooter =
+    isPaid && scanAgeDays !== null && scanAgeDays >= RESUME_STALE_DAYS
 
   return (
     <DashboardWidget
@@ -48,6 +67,14 @@ export function MissionActiveWidget({
         <div className="text-sm text-text-secondary">
           Today's cards are queued up.
         </div>
+        {showStaleScanFooter && (
+          <div
+            data-testid="mission-active-stale-scan-footer"
+            className="mt-2 text-xs text-text-muted"
+          >
+            Your scan is {scanAgeDays} days old — re-scan after this mission.
+          </div>
+        )}
       </div>
     </DashboardWidget>
   )
