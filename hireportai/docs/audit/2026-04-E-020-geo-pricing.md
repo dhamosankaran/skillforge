@@ -102,4 +102,4 @@ Doc-only; no code; no spec; no tests run. R14 exception (a) regenerated audit ar
 
 ---
 
-**Footer note (appended 2026-04-26):** Finding 0 closed by spec #27 authoring slice `pending-amend` — see `docs/specs/phase-5/27-geo-pricing.md`. Audit body otherwise immutable per audit-artifact convention.
+**Footer note (appended 2026-04-26):** Finding 0 closed by spec #27 authoring slice `c16f544` — see `docs/specs/phase-5/27-geo-pricing.md`. Audit body otherwise immutable per audit-artifact convention.
