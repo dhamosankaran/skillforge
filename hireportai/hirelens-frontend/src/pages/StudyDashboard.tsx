@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { BookOpen, Play, RefreshCw, AlertCircle, Filter, Target, Flame, Users, Crosshair } from 'lucide-react'
+import { BookOpen, Play, RefreshCw, AlertCircle, Filter, Target, Flame, Users, Crosshair, X } from 'lucide-react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { GlowButton } from '@/components/ui/GlowButton'
 import { CategoryCard, CategoryCardSkeleton } from '@/components/study/CategoryCard'
@@ -75,6 +75,16 @@ export default function StudyDashboard() {
   const filterMatchedNothing =
     !!filteredCategoryId && !isLoading && visibleCategories.length === 0
 
+  // Spec #62 — ?source=last_scan hero hint. Component-state dismissal
+  // per spec §4 (no sessionStorage; app-wide grep returned zero uses).
+  // URL is NOT mutated on consumption (spec §3.1 — keeping the param
+  // preserves intent if user uses browser back from a downstream page).
+  const sourceParam = searchParams.get('source')
+  const isLastScanSource = sourceParam === 'last_scan'
+  const [sourceHintDismissed, setSourceHintDismissed] = useState(false)
+  const showSourceHint = isLastScanSource && !sourceHintDismissed
+  const sourceHintFiredRef = useRef(false)
+
   // AC-9: fire study_dashboard_viewed once data has loaded
   useEffect(() => {
     if (isLoading) return
@@ -85,6 +95,20 @@ export default function StudyDashboard() {
       plan: usage.plan,
     })
   }, [isLoading]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Spec #62 §7 / AC-5 — fire `study_dashboard_source_hint_shown` once
+  // per mount via `useRef` idempotency (matches `home_dashboard_viewed`
+  // convention). Guard ensures dismiss state changes do not re-fire.
+  useEffect(() => {
+    if (!isLastScanSource) return
+    if (sourceHintFiredRef.current) return
+    sourceHintFiredRef.current = true
+    capture('study_dashboard_source_hint_shown', {
+      source: 'last_scan',
+      persona: user?.persona ?? null,
+      copy_variant: '6A',
+    })
+  }, [isLastScanSource, user?.persona])
 
   function handleTileClick(category: Category) {
     if (category.locked) {
@@ -135,6 +159,30 @@ export default function StudyDashboard() {
             Start Daily Review
           </GlowButton>
         </motion.div>
+
+        {/* ── Spec #62 ?source=last_scan hero hint ───────────────────── */}
+        {showSourceHint && (
+          <motion.div
+            data-testid="study-dashboard-source-hint"
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 flex items-center gap-3 rounded-xl border border-contrast/[0.08] bg-contrast/[0.02] px-4 py-2.5"
+          >
+            <BookOpen size={16} className="text-accent-primary shrink-0" />
+            <p className="flex-1 text-sm text-text-secondary">
+              Studying gaps from your last scan.
+            </p>
+            <button
+              type="button"
+              data-testid="study-dashboard-source-hint-dismiss"
+              aria-label="Dismiss"
+              onClick={() => setSourceHintDismissed(true)}
+              className="rounded-md p-1 text-text-muted hover:text-text-primary hover:bg-contrast/[0.06] transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </motion.div>
+        )}
 
         {/* ── Your Goal card ──────────────────────────────────────────── */}
         {user?.persona ? (() => {
