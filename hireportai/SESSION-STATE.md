@@ -67,6 +67,42 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 ## Last Completed Slice
 
+**2026-04-26 — Free-tier limit env-var plumbing (testing affordance, no spec).** Single commit. BE **477 → 480 (+3)**; FE untouched. R14 exception (b) — pure config plumbing, no design surface, defaults preserve every Locked Decision. No BACKLOG row closed (enabling work, not a feature). No spec or LD amendment. CODEX review applies per Rule 11.
+
+**Shipped BE (3 files + 1 new test file):**
+- `app/core/config.py` — three new `Settings` int fields under a "Free-tier paywall limits (testing affordance)" block: `free_daily_review_limit: int = 15` (spec #50 / LD-001), `free_lifetime_scan_limit: int = 1` (spec #56), `free_monthly_interview_limit: int = 3` (PLAN_LIMITS free.interview_prep). Env override names mirror the field names (`FREE_DAILY_REVIEW_LIMIT`, etc., pydantic-settings case-insensitive).
+- `app/services/usage_service.py` — PLAN_LIMITS dict literal seeded from `get_settings()` at module import (`free.analyze` ← `free_lifetime_scan_limit`, `free.interview_prep` ← `free_monthly_interview_limit`); new `_plan_limits(plan)` helper re-reads the two free cells live from `Settings` so test monkeypatching of `settings.free_*_limit` propagates without rebuilding the dict; replaced 4 internal `limits = PLAN_LIMITS.get(plan, PLAN_LIMITS["free"])` reads with `_plan_limits(plan)`. Pro/Enterprise rows stay literal. Existing `from app.services.usage_service import PLAN_LIMITS` importer (`tests/test_payments_usage_route.py:280`) keeps working since PLAN_LIMITS is still a dict.
+- `app/services/study_service.py` — dropped module-level `_DAILY_CARD_LIMIT = 15` constant; `_check_daily_wall` now binds `cap = get_settings().free_daily_review_limit` once at the top of the function and reuses it across the wall predicate + 402 envelope (`cards_consumed`, `cards_limit`) + posthog `count_after`. `_DAILY_CARD_KEY_TTL_SECONDS` unchanged.
+- `tests/test_free_tier_limit_config.py` — new file, 3 tests: `test_daily_review_limit_respects_env_override` (patches `free_daily_review_limit = 2`, calls `_check_daily_wall` 3× with FakeRedis, asserts 3rd raises `DailyReviewLimitError` with `cards_limit == 2`); `test_lifetime_scan_limit_respects_env_override` (patches `free_lifetime_scan_limit = 0`, calls `check_and_increment(feature='analyze', window='lifetime')`, asserts `allowed=False, limit=0`); `test_monthly_interview_limit_respects_env_override` (mirror for `interview_prep` / monthly).
+
+**Skill update:** `.agent/skills/payments.md` — Free Tier Limits section now records the three env-tunable fields (`FREE_DAILY_REVIEW_LIMIT`, `FREE_LIFETIME_SCAN_LIMIT`, `FREE_MONTHLY_INTERVIEW_LIMIT`) with production defaults preserved. ATS-scans bullet corrected from "small monthly allowance" to "1 lifetime scan (spec #56)" — was already accurate on disk; doc text was stale.
+
+**Active env config (this slice's additions):**
+- `FREE_DAILY_REVIEW_LIMIT` (int, default 15) — free-tier daily card review cap.
+- `FREE_LIFETIME_SCAN_LIMIT` (int, default 1) — free-tier lifetime ATS scan cap.
+- `FREE_MONTHLY_INTERVIEW_LIMIT` (int, default 3) — free-tier monthly interview-prep cap.
+
+**Defaults preservation verified at commit time:** with no env overrides, `get_settings().free_daily_review_limit == 15`, `free_lifetime_scan_limit == 1`, `free_monthly_interview_limit == 3`; `PLAN_LIMITS["free"]["analyze"] == 1`, `PLAN_LIMITS["free"]["interview_prep"] == 3`; `_plan_limits("free")` matches; `_plan_limits("pro")["analyze"] == -1` unchanged. Defaults match production — no runtime behavior change for any existing user.
+
+**R16 audit (Step 1):** ripgrep for `_DAILY_CARD_LIMIT` (5 hits, all in `study_service.py`), `PLAN_LIMITS["free"]["analyze"]` and `["interview_prep"]` (no external readers in `app/`; `tests/test_payments_usage_route.py:280` reads `PLAN_LIMITS` dict at runtime — preserved by keeping PLAN_LIMITS a dict). No callsites outside `usage_service.py` / `study_service.py` read these literals. Other `15` literals in `app/` (`bullet_analyzer.py:72 word_count >= 15`) are unrelated. Audit clean — no scope expansion.
+
+**Tests:** new file 3/3 pass. Regression suite (`test_usage_limits.py` + `test_paywall_service.py` + `test_payments_usage_route.py` + `test_analyze_quota.py` + `test_wall.py` + `test_rewrite_quota.py`) 73/73 green. Full BE non-integration suite **479 passed + 1 skipped + 6 deselected = 486 collected**; baseline before slice was **477 collected**, so net delta is +3 passing tests (1 skipped is a pre-existing baseline). FE not touched.
+
+**Slice baseline note:** prompt's expected baseline of `419 → 422` is stale (last-known counts in this section show BE 463 → 472 from P5-S59-impl two slices ago); operative on-disk baseline at SOP-3 was 477 collected, post-slice 480 collected. Used disk-actual per CLAUDE.md SOP — flagged in final report, not blocking.
+
+**SOP-8 Concurrent-session guard:** clean — `git log --oneline -20` showed `c7c81e8` HEAD matched prompt's expectation, no commits since prompt drafting touched any file in this slice's scope (`config.py` / `usage_service.py` / `study_service.py` / `payments.md`).
+
+**Pre-existing dirty files unstaged (C2 compliance):** `../.DS_Store` (above hireportai/), `Enhancements.txt`, `hirelens-backend/scripts/wipe_local_user_data.py`, plus the long-running untracked set (`.agent/skills/stripe-{best-practices,projects}/`, `.agent/skills/upgrade-stripe/`, `.gitattributes`, `docs/audits/`, `docs/status/E2E-READINESS-2026-04-21.md`, `skills-lock.json`). All untouched. C1 compliance: explicit-path staging only, never `git add -A`.
+
+**No new drift flags. No CODE-REALITY regen needed** (no route / model / top-level type / `App.tsx` / layout change).
+
+**Judgment calls:**
+- Wiring shape: chose option (b) per prompt — PLAN_LIMITS dict mutated at module load — augmented with a `_plan_limits(plan)` live-read helper for the two env-tunable free cells. Keeps the existing `from … import PLAN_LIMITS` test importer working AND lets monkeypatching `settings.free_*_limit` flow through to `check_and_increment` without re-import gymnastics. Both halves carry the production-default seed at module load for byte-identical pre-slice behavior.
+- Dropped a 4th sync defaults-guard test that emitted a pytest-asyncio warning under file-wide `pytestmark`. Defaults preservation is verified inline at commit time via `python -c …` and surfaces in this entry's "Defaults preservation verified" line. Net delta stays at exactly +3 BE tests as the prompt expected.
+- `payments.md` ATS-scans bullet copy correction (small monthly allowance → 1 lifetime scan, spec #56) is in-scope as a single-line skill freshness fix bundled with the new env-var note. Pre-existing doc drift, not introduced by this slice.
+
+---
+
 **2026-04-24 — P5-S59-impl: Scan persistence + Results hydration from URL scan_id — closes B-035 🔴 → ✅.** Single commit (bookkeeping backfill follow-up commit for the `<PENDING-SHA>` placeholder). BE **463 → 472 passed (+9)**; FE **256 → 263 passed (+7)**. Alembic `eb59d4fc1f7e → 30bf39fa04f8`. `tsc --noEmit` clean. CODEX review applies per Rule 11.
 
 **Shipped BE (5 files):**

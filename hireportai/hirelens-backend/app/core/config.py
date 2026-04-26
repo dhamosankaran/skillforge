@@ -66,6 +66,16 @@ class Settings(BaseSettings):
     # --- Admin access (spec #54 / E-040) ---
     admin_emails: str = ""
 
+    # --- Free-tier paywall limits (testing affordance) ---
+    # Defaults match production. Override via env to hit any paywall in
+    # seconds without burning real quota.
+    #   FREE_DAILY_REVIEW_LIMIT — spec #50 / LD-001 (free-tier daily card cap)
+    #   FREE_LIFETIME_SCAN_LIMIT — spec #56 (free-tier lifetime ATS scan cap)
+    #   FREE_MONTHLY_INTERVIEW_LIMIT — PLAN_LIMITS["free"]["interview_prep"]
+    free_daily_review_limit: int = 15
+    free_lifetime_scan_limit: int = 1
+    free_monthly_interview_limit: int = 3
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

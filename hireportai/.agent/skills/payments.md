@@ -73,9 +73,17 @@ India → INR ₹999/mo; everyone else → USD $49/mo. See
 - Config: `app/models/usage_limit.py` — plan × feature → cap
 - Enforcement: `app/services/usage_service.py` → `check_and_increment()`
 - **Free plan caps:**
-  - ATS scans: small monthly allowance (configured per deploy)
+  - ATS scans: **1 lifetime scan** (spec #56)
   - Interview questions: **3 per month**
   - Foundation cards: **15 card reviews per day** for free users. Counter resets at the user's local midnight (via `EmailPreference.timezone`). Enforced server-side via Redis counter keyed by `daily_cards:{user_id}:{YYYY-MM-DD}` (per spec #50). Wall returns HTTP 402 with paywall payload. Pro/Enterprise/admin bypass.
+- **Env-tunable caps (testing affordance):** the three free-tier values
+  above are sourced from `Settings` so a local `FREE_DAILY_REVIEW_LIMIT`,
+  `FREE_LIFETIME_SCAN_LIMIT`, or `FREE_MONTHLY_INTERVIEW_LIMIT` env
+  override flips the corresponding paywall in seconds without burning
+  real quota. Defaults match production. Internal lookups go through
+  `usage_service._plan_limits(plan)` and `study_service._check_daily_wall`
+  so monkeypatching `settings.free_*_limit` propagates without rebuilding
+  PLAN_LIMITS.
 - Pro/Enterprise: unlimited (`usage_limit` row absent or very high).
 - On cap hit, the service raises a 403 that the frontend catches and
   converts into a PaywallModal with the matching `trigger`.

@@ -5,18 +5,29 @@ from typing import Literal
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.models.subscription import Subscription
 from app.models.usage_log import UsageLog
 from app.models.user import User
 
 # Plan limits: {plan: {feature: max_per_window}}
 # Window semantics: monthly by default. `analyze` uses lifetime (spec #56 LD-3).
+#
+# Two free-tier cells are env-tunable for testing affordance —
+# `analyze` (spec #56) and `interview_prep` (spec #49 §3.4) — sourced
+# from Settings.free_lifetime_scan_limit / free_monthly_interview_limit.
+# Defaults match production. Internal callers go through `_plan_limits(plan)`
+# so monkeypatching `settings.free_*_limit` propagates without rebuilding
+# this dict; PLAN_LIMITS is also seeded from the same Settings on import
+# so direct importers (e.g. tests/test_payments_usage_route.py) see the
+# active production values.
+_settings = get_settings()
 PLAN_LIMITS = {
     "free": {
-        "analyze": 1,  # spec #56 LD-1 — 1 lifetime scan per free user
+        "analyze": _settings.free_lifetime_scan_limit,  # spec #56 LD-1
         "rewrite": 0,
         "cover_letter": 0,
-        "interview_prep": 3,
+        "interview_prep": _settings.free_monthly_interview_limit,
         "resume_optimize": 0,
     },
     "pro": {
@@ -34,6 +45,24 @@ PLAN_LIMITS = {
         "resume_optimize": -1,
     },
 }
+del _settings
+
+
+def _plan_limits(plan: str) -> dict[str, int]:
+    """Per-feature caps for `plan`, with the two env-tunable free cells
+    re-read live from Settings so test monkeypatching of
+    `settings.free_lifetime_scan_limit` / `free_monthly_interview_limit`
+    propagates without rebuilding PLAN_LIMITS.
+    """
+    base = PLAN_LIMITS.get(plan, PLAN_LIMITS["free"])
+    if plan != "free":
+        return base
+    s = get_settings()
+    return {
+        **base,
+        "analyze": s.free_lifetime_scan_limit,
+        "interview_prep": s.free_monthly_interview_limit,
+    }
 
 
 Window = Literal["monthly", "lifetime"]
@@ -112,7 +141,7 @@ async def check_usage_limit(
     if role == "admin":
         return True
 
-    limits = PLAN_LIMITS.get(plan, PLAN_LIMITS["free"])
+    limits = _plan_limits(plan)
     max_uses = limits.get(feature, 0)
 
     if max_uses == -1:
@@ -145,7 +174,7 @@ async def check_and_increment(
     if role == "admin":
         return {"allowed": True, "used": 0, "remaining": -1, "limit": -1, "plan": plan}
 
-    limits = PLAN_LIMITS.get(plan, PLAN_LIMITS["free"])
+    limits = _plan_limits(plan)
     max_uses = limits.get(feature, 0)
 
     if max_uses == -1:
@@ -187,7 +216,7 @@ async def get_usage_summary(user_id: str, db: AsyncSession) -> dict:
     )
     sub = result.scalar_one_or_none()
     plan = sub.plan if sub else "free"
-    limits = PLAN_LIMITS.get(plan, PLAN_LIMITS["free"])
+    limits = _plan_limits(plan)
 
     # Count usage per feature this month
     result = await db.execute(
@@ -257,7 +286,7 @@ async def get_usage_snapshot(user_id: str, db: AsyncSession) -> dict:
     """
     plan, role = await _get_plan_and_role(user_id, db)
     is_admin = role == "admin"
-    limits = PLAN_LIMITS.get(plan, PLAN_LIMITS["free"])
+    limits = _plan_limits(plan)
 
     scans_used_raw = await _count_usage(user_id, "analyze", db, window="lifetime")
     rewrites_used_raw = await _count_usage(user_id, "rewrite", db, window="lifetime")

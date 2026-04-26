@@ -133,7 +133,8 @@ class DailyReviewLimitError(Exception):
 
 # ── Daily-card review wall (spec #50) ─────────────────────────────────────────
 
-_DAILY_CARD_LIMIT = 15
+# Cap is read live from `settings.free_daily_review_limit` inside
+# `_check_daily_wall` (testing affordance — env-tunable per config.py).
 # 48h safety floor — longer than the widest plausible timezone swing
 # (~14h between UTC-12 and UTC+14) plus headroom. The key's date advances
 # at user-local midnight so old keys age out naturally.
@@ -198,6 +199,7 @@ async def _check_daily_wall(user: User, db: AsyncSession) -> None:
         return
 
     plan = sub.plan if sub is not None else "free"
+    cap = get_settings().free_daily_review_limit
 
     r = _get_redis()
     if r is None:
@@ -240,14 +242,14 @@ async def _check_daily_wall(user: User, db: AsyncSession) -> None:
         logger.warning("daily-card INCR failed for user %s; failing open", user.id)
         return
 
-    if count_after > _DAILY_CARD_LIMIT:
+    if count_after > cap:
         resets_at = _next_local_midnight(now_utc, tz)
         analytics_track(
             user_id=user.id,
             event="daily_card_submit",
             properties={
                 "plan": plan,
-                "count_after": _DAILY_CARD_LIMIT,
+                "count_after": cap,
                 "was_walled": True,
                 "counter_unavailable": False,
             },
@@ -256,8 +258,8 @@ async def _check_daily_wall(user: User, db: AsyncSession) -> None:
             {
                 "error": "free_tier_limit",
                 "trigger": "daily_review",
-                "cards_consumed": _DAILY_CARD_LIMIT,
-                "cards_limit": _DAILY_CARD_LIMIT,
+                "cards_consumed": cap,
+                "cards_limit": cap,
                 "resets_at": resets_at.isoformat(),
             }
         )
