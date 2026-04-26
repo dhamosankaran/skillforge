@@ -192,6 +192,24 @@ export interface DailyCard {
   lapses: number
 }
 
+/**
+ * Spec #63 / B-059 — pre-flight wall state echoed on the daily-queue
+ * response. Read-side mirror of the same Redis counter
+ * `study_service._check_daily_wall` writes on submit. `cards_limit === -1`
+ * is the unlimited sentinel (Pro / Enterprise / admin); for free users
+ * `can_review` flips to false once `cards_consumed >= cards_limit`.
+ *
+ * Optional in the type so existing mocks / older FE builds don't break
+ * during the BE → FE deploy ordering window. `DailyReview.tsx` falls
+ * back to a permissive default when the field is missing.
+ */
+export interface DailyStatus {
+  cards_consumed: number
+  cards_limit: number
+  can_review: boolean
+  resets_at: string  // ISO8601
+}
+
 export interface DailyQueueResponse {
   cards: DailyCard[]
   total_due: number
@@ -206,6 +224,7 @@ export interface DailyQueueResponse {
    * during the BE → FE deploy ordering window.
    */
   completed_today?: boolean
+  daily_status?: DailyStatus
 }
 
 // ─── Mission Mode ────────────────────────────────────────────────────────────

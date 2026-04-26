@@ -15,6 +15,7 @@ import { AxiosError } from 'axios'
 import clsx from 'clsx'
 import { shouldShowPaywall, submitReview, submitCardFeedback } from '@/services/api'
 import { capture } from '@/utils/posthog'
+import { formatResetsAt, hoursUntil } from '@/utils/wallCountdown'
 import { PaywallModal } from '@/components/PaywallModal'
 import { WallInlineNudge } from '@/components/study/WallInlineNudge'
 import { useUsage } from '@/context/UsageContext'
@@ -107,27 +108,8 @@ function extractWallPayload(err: unknown): DailyWallPayload | null {
   return null
 }
 
-/** Hours from now until `resetsAtIso`, rounded toward zero per spec §Analytics. */
-function hoursUntil(resetsAtIso: string): number {
-  const diffMs = new Date(resetsAtIso).getTime() - Date.now()
-  return Math.trunc(diffMs / 3_600_000)
-}
-
-/** Relative for ≤12h remaining; absolute "Resets at H:MM AM/PM" otherwise. */
-function formatResetsAt(resetsAtIso: string): string {
-  const diffMs = new Date(resetsAtIso).getTime() - Date.now()
-  const totalMin = Math.max(0, Math.round(diffMs / 60_000))
-  if (totalMin <= 12 * 60) {
-    const h = Math.floor(totalMin / 60)
-    const m = totalMin % 60
-    return `Resets in ${h}h ${m}m`
-  }
-  const localTime = new Date(resetsAtIso).toLocaleTimeString([], {
-    hour: 'numeric',
-    minute: '2-digit',
-  })
-  return `Resets at ${localTime}`
-}
+// Lifted to `@/utils/wallCountdown` in spec #63 / B-059 for reuse by
+// `DailyReviewWalledView`. Re-import below; behavior identical.
 
 // Paywall-dismissal orchestration state (spec #42 §5.4). After a 402,
 // QuizPanel asks the backend whether to render the full modal or the
@@ -157,10 +139,13 @@ export function QuizPanel({
 
   // Fire `daily_card_wall_hit` on 402 (spec #50 AC-10 frontend side).
   // Matches the existing `paywall_hit` open-semantic in PaywallModal.tsx:78.
+  // Spec #63 / B-059 added the `surface` enum so the pre-flight gate can
+  // differentiate page-load fires from submit-time fires.
   useEffect(() => {
     if (wall === null) return
     capture('daily_card_wall_hit', {
       resets_at_hours_from_now: hoursUntil(wall.resets_at),
+      surface: 'daily_review_submit',
     })
   }, [wall])
 

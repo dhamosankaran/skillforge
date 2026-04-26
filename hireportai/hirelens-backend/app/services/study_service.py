@@ -34,7 +34,7 @@ from app.models.card import Card
 from app.models.card_progress import CardProgress
 from app.models.category import Category
 from app.models.user import User
-from app.schemas.study import DailyCardItem, DailyReviewResponse, ReviewResponse, StudyProgressResponse
+from app.schemas.study import DailyCardItem, DailyReviewResponse, DailyStatus, ReviewResponse, StudyProgressResponse
 from app.services import gamification_service, home_state_service
 from app.utils.timezone import get_user_timezone
 
@@ -276,6 +276,75 @@ async def _check_daily_wall(user: User, db: AsyncSession) -> None:
     )
 
 
+# ── Daily-status read (spec #63 — pre-flight gate, side-effect-free) ─────────
+
+
+async def _compute_daily_status(user: User, db: AsyncSession) -> DailyStatus:
+    """Read-side mirror of `_check_daily_wall` for the pre-flight gate.
+
+    Pro / Enterprise / admin → unlimited sentinel (`cards_limit=-1`,
+    `can_review=True`). Free → real values from the same Redis key
+    `_check_daily_wall` writes; counter is read with `Redis.GET` (no
+    INCR). Redis-outage fail-open mirrors `_check_daily_wall` (free user
+    sees `can_review=True` so they can still attempt review; the
+    submit-time wall is the canonical enforcement point).
+    """
+    now_utc = _utcnow()
+    tz = await get_user_timezone(user.id, db)
+    resets_at = _next_local_midnight(now_utc, tz)
+
+    if (user.role or "user") == "admin":
+        return DailyStatus(
+            cards_consumed=0,
+            cards_limit=-1,
+            can_review=True,
+            resets_at=resets_at,
+        )
+
+    sub = user.subscription
+    is_free = sub is None or sub.status != "active" or sub.plan == "free"
+    if not is_free:
+        return DailyStatus(
+            cards_consumed=0,
+            cards_limit=-1,
+            can_review=True,
+            resets_at=resets_at,
+        )
+
+    cap = get_settings().free_daily_review_limit
+    r = _get_redis()
+    if r is None:
+        # Fail-open: same rationale as `_check_daily_wall` — degrade to
+        # permissive on Redis outage; submit-time wall handles enforcement.
+        return DailyStatus(
+            cards_consumed=0,
+            cards_limit=cap,
+            can_review=True,
+            resets_at=resets_at,
+        )
+
+    local_date = now_utc.astimezone(tz).date()
+    key = f"daily_cards:{user.id}:{local_date.isoformat()}"
+    try:
+        raw = r.get(key)
+    except Exception:
+        logger.warning("daily-status GET failed for user %s; failing open", user.id)
+        return DailyStatus(
+            cards_consumed=0,
+            cards_limit=cap,
+            can_review=True,
+            resets_at=resets_at,
+        )
+
+    cards_consumed = int(raw) if raw is not None else 0
+    return DailyStatus(
+        cards_consumed=cards_consumed,
+        cards_limit=cap,
+        can_review=cards_consumed < cap,
+        resets_at=resets_at,
+    )
+
+
 # ── Public service methods ────────────────────────────────────────────────────
 
 
@@ -283,6 +352,8 @@ async def get_daily_review(
     user_id: str,
     is_free: bool,
     db: AsyncSession,
+    *,
+    user: Optional[User] = None,
 ) -> DailyReviewResponse:
     """Return up to 5 cards due for review for the given user.
 
@@ -391,11 +462,23 @@ async def get_daily_review(
     completion_threshold = min(_DAILY_GOAL, daily_pool_today)
     completed_today = reviewed_today >= completion_threshold and completion_threshold > 0
 
+    daily_status = (
+        await _compute_daily_status(user, db) if user is not None else None
+    )
+
+    if daily_status is None:
+        return DailyReviewResponse(
+            cards=result,
+            total_due=len(result),
+            session_id=session_id,
+            completed_today=completed_today,
+        )
     return DailyReviewResponse(
         cards=result,
         total_due=len(result),
         session_id=session_id,
         completed_today=completed_today,
+        daily_status=daily_status,
     )
 
 

@@ -225,6 +225,257 @@ class TestGetDailyReview:
         assert premium_card.id not in card_ids
 
 
+# ── Daily-status pre-flight tests (spec #63 / B-059) ──────────────────────────
+
+
+class _FakeRedis:
+    """Minimal Redis stub for the read-side daily-status helper.
+
+    Only `get` / `incr` / `ping` are exercised by `_compute_daily_status`.
+    Mirrors the test_wall.py FakeRedis shape but trimmed to what spec #63
+    needs.
+    """
+
+    def __init__(self, store: dict[str, int] | None = None) -> None:
+        self.store: dict[str, int] = dict(store or {})
+        self.get_calls: int = 0
+        self.incr_calls: int = 0
+
+    def get(self, key: str):
+        self.get_calls += 1
+        val = self.store.get(key)
+        return str(val) if val is not None else None
+
+    def incr(self, key: str) -> int:
+        self.incr_calls += 1
+        self.store[key] = self.store.get(key, 0) + 1
+        return self.store[key]
+
+    def expire(self, key: str, ttl_seconds: int) -> None:
+        pass
+
+    def ping(self) -> bool:
+        return True
+
+
+async def _set_plan(db_session, user_id: str, *, plan: str, status: str = "active"):
+    """Update the existing subscription row created by _sign_in to a target plan."""
+    from app.models.subscription import Subscription
+    from sqlalchemy import select
+
+    sub = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == user_id)
+        )
+    ).scalar_one()
+    sub.plan = plan
+    sub.status = status
+    await db_session.flush()
+
+
+async def _set_role(db_session, user_id: str, *, role: str) -> None:
+    from sqlalchemy import select
+
+    user = (
+        await db_session.execute(select(User).where(User.id == user_id))
+    ).scalar_one()
+    user.role = role
+    await db_session.flush()
+
+
+class TestDailyStatusPreflight:
+    """Spec #63 / B-059 — `daily_status` block on GET /study/daily."""
+
+    async def test_free_user_under_cap_can_review(self, client, db_session, monkeypatch):
+        """Free user with empty Redis counter → can_review=True, cards_consumed=0."""
+        from app.services import study_service
+
+        fake = _FakeRedis()
+        monkeypatch.setattr(study_service, "_get_redis", lambda: fake)
+        token, _ = await _sign_in(client)
+
+        resp = await client.get(
+            "/api/v1/study/daily", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert resp.status_code == 200
+        ds = resp.json()["daily_status"]
+        assert ds["can_review"] is True
+        assert ds["cards_consumed"] == 0
+        assert ds["cards_limit"] == 10  # production default
+        assert ds["cards_consumed"] < ds["cards_limit"]
+
+    async def test_free_user_at_cap_cannot_review(
+        self, client, db_session, monkeypatch
+    ):
+        """Pre-seed Redis counter to cap → can_review=False, payload shape per spec."""
+        from app.services import study_service
+
+        token, user_id = await _sign_in(client)
+        # Seed counter at exactly the cap so the next would be cap+1.
+        # Key matches `_check_daily_wall` shape (UTC date for the no-EmailPreference path).
+        from datetime import datetime, timezone
+
+        date_key = datetime.now(timezone.utc).date().isoformat()
+        fake = _FakeRedis({f"daily_cards:{user_id}:{date_key}": 10})
+        monkeypatch.setattr(study_service, "_get_redis", lambda: fake)
+
+        resp = await client.get(
+            "/api/v1/study/daily", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert resp.status_code == 200
+        ds = resp.json()["daily_status"]
+        assert ds["can_review"] is False
+        assert ds["cards_consumed"] == 10
+        assert ds["cards_limit"] == 10
+        # Payload shape — all four fields present.
+        assert set(ds.keys()) == {"cards_consumed", "cards_limit", "can_review", "resets_at"}
+
+    async def test_pro_user_unlimited_sentinel(self, client, db_session, monkeypatch):
+        """Pro plan → cards_limit=-1, can_review=True regardless of Redis state."""
+        from app.services import study_service
+
+        # Even with Redis pre-seeded above the (non-existent for Pro) cap,
+        # Pro should bypass entirely.
+        fake = _FakeRedis({})
+        monkeypatch.setattr(study_service, "_get_redis", lambda: fake)
+        token, user_id = await _sign_in(client)
+        await _set_plan(db_session, user_id, plan="pro")
+
+        resp = await client.get(
+            "/api/v1/study/daily", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert resp.status_code == 200
+        ds = resp.json()["daily_status"]
+        assert ds["cards_limit"] == -1
+        assert ds["can_review"] is True
+        # Pro short-circuits BEFORE reaching Redis — no GET should fire.
+        assert fake.get_calls == 0
+
+    async def test_enterprise_user_unlimited_sentinel(
+        self, client, db_session, monkeypatch
+    ):
+        """Enterprise plan mirrors Pro semantics."""
+        from app.services import study_service
+
+        fake = _FakeRedis()
+        monkeypatch.setattr(study_service, "_get_redis", lambda: fake)
+        token, user_id = await _sign_in(client)
+        await _set_plan(db_session, user_id, plan="enterprise")
+
+        resp = await client.get(
+            "/api/v1/study/daily", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert resp.status_code == 200
+        ds = resp.json()["daily_status"]
+        assert ds["cards_limit"] == -1
+        assert ds["can_review"] is True
+
+    async def test_admin_with_free_plan_unlimited_sentinel(
+        self, client, db_session, monkeypatch
+    ):
+        """Admin role + plan=free → admin bypass, cards_limit=-1."""
+        from app.services import study_service
+
+        fake = _FakeRedis()
+        monkeypatch.setattr(study_service, "_get_redis", lambda: fake)
+        token, user_id = await _sign_in(client)
+        await _set_role(db_session, user_id, role="admin")
+        # Plan stays free from _sign_in default.
+
+        resp = await client.get(
+            "/api/v1/study/daily", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert resp.status_code == 200
+        ds = resp.json()["daily_status"]
+        assert ds["cards_limit"] == -1
+        assert ds["can_review"] is True
+        # Admin short-circuits before Redis.
+        assert fake.get_calls == 0
+
+    async def test_resets_at_is_iso8601_future_tz_aware(
+        self, client, db_session, monkeypatch
+    ):
+        """resets_at parses as ISO8601, is in the future, has tz offset."""
+        from datetime import datetime, timezone
+        from app.services import study_service
+
+        fake = _FakeRedis()
+        monkeypatch.setattr(study_service, "_get_redis", lambda: fake)
+        token, _ = await _sign_in(client)
+
+        resp = await client.get(
+            "/api/v1/study/daily", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert resp.status_code == 200
+        resets_at = resp.json()["daily_status"]["resets_at"]
+        parsed = datetime.fromisoformat(resets_at)
+        assert parsed.tzinfo is not None
+        assert parsed > datetime.now(timezone.utc)
+
+    async def test_get_does_not_incr_redis_counter(
+        self, client, db_session, monkeypatch
+    ):
+        """GET /study/daily for a free user does NOT INCR the wall counter."""
+        from app.services import study_service
+
+        token, user_id = await _sign_in(client)
+        from datetime import datetime, timezone
+
+        date_key = datetime.now(timezone.utc).date().isoformat()
+        store_key = f"daily_cards:{user_id}:{date_key}"
+        fake = _FakeRedis({store_key: 3})
+        monkeypatch.setattr(study_service, "_get_redis", lambda: fake)
+
+        resp = await client.get(
+            "/api/v1/study/daily", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert resp.status_code == 200
+        # Counter unchanged AND no incr was issued by the read path.
+        assert fake.store[store_key] == 3
+        assert fake.incr_calls == 0
+        # The read path consulted the counter via GET.
+        assert fake.get_calls >= 1
+
+    async def test_redis_outage_fails_open(self, client, db_session, monkeypatch):
+        """Redis unavailable → fail-open (can_review=True, cards_consumed=0)."""
+        from app.services import study_service
+
+        monkeypatch.setattr(study_service, "_get_redis", lambda: None)
+        token, _ = await _sign_in(client)
+
+        resp = await client.get(
+            "/api/v1/study/daily", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert resp.status_code == 200
+        ds = resp.json()["daily_status"]
+        assert ds["can_review"] is True
+        assert ds["cards_consumed"] == 0
+        assert ds["cards_limit"] == 10  # cap still surfaced for FE display
+
+    async def test_payload_is_additive_existing_fields_unchanged(
+        self, client, db_session, monkeypatch
+    ):
+        """AC-10 — adding daily_status doesn't break existing fields."""
+        from app.services import study_service
+
+        fake = _FakeRedis()
+        monkeypatch.setattr(study_service, "_get_redis", lambda: fake)
+        token, _ = await _sign_in(client)
+
+        resp = await client.get(
+            "/api/v1/study/daily", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        # Existing pre-spec-#63 fields all present and unchanged in shape.
+        assert isinstance(body["cards"], list)
+        assert isinstance(body["total_due"], int)
+        assert isinstance(body["session_id"], str)
+        assert isinstance(body["completed_today"], bool)
+        # Spec #63 additive field present.
+        assert "daily_status" in body
+
+
 # ── Review submission tests ───────────────────────────────────────────────────
 
 

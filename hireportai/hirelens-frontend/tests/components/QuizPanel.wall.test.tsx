@@ -216,7 +216,12 @@ describe('Daily-card review wall — frontend (spec #50)', () => {
         (c) => c[0] === 'daily_card_wall_hit',
       )
       expect(wallHitCall).toBeTruthy()
-      expect(wallHitCall![1]).toEqual({ resets_at_hours_from_now: 5 })
+      // Spec #63 / B-059 AC-6 — submit-time fire gains surface enum so
+      // the pre-flight gate can differentiate page-load fires.
+      expect(wallHitCall![1]).toEqual({
+        resets_at_hours_from_now: 5,
+        surface: 'daily_review_submit',
+      })
     })
   })
 })

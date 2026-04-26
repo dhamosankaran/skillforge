@@ -1,5 +1,5 @@
 """Pydantic v2 schemas for the Study / FSRS endpoints."""
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -27,6 +27,24 @@ class DailyCardItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class DailyStatus(BaseModel):
+    """Free-tier daily-review wall state (spec #63 / B-059).
+
+    Read-side mirror of the same Redis counter `_check_daily_wall` writes
+    on submit. Side-effect-free — the queue handler never INCRs.
+
+    `cards_limit == -1` is the unlimited sentinel for Pro / Enterprise /
+    admin (matches the `-1` convention from `usage_service` /
+    `UsageContext`). `can_review` is the gate `DailyReview.tsx` reads to
+    decide whether to render the pre-flight upsell.
+    """
+
+    cards_consumed: int
+    cards_limit: int
+    can_review: bool
+    resets_at: datetime
+
+
 class DailyReviewResponse(BaseModel):
     """Response for GET /api/v1/study/daily."""
 
@@ -41,6 +59,17 @@ class DailyReviewResponse(BaseModel):
     # `reviewed_today >= min(_DAILY_GOAL, available_cards_count)` so a user
     # whose library is smaller than the goal still has a reachable true.
     completed_today: bool = False
+    # B-059 / spec #63: pre-flight wall state. Default is the
+    # permissive sentinel — old test callers that don't pass `user` to
+    # `study_service.get_daily_review` still get a valid payload.
+    daily_status: DailyStatus = Field(
+        default_factory=lambda: DailyStatus(
+            cards_consumed=0,
+            cards_limit=-1,
+            can_review=True,
+            resets_at=datetime(1970, 1, 1, tzinfo=timezone.utc),
+        )
+    )
 
 
 class ReviewRequest(BaseModel):

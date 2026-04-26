@@ -70,6 +70,7 @@ async def get_daily_review(
         user_id=user.id,
         is_free=_is_free(user),
         db=db,
+        user=user,
     )
 
 

@@ -23,9 +23,12 @@ import { PageWrapper } from '@/components/layout/PageWrapper'
 import { GlowButton } from '@/components/ui/GlowButton'
 import { FlipCard } from '@/components/study/FlipCard'
 import { QuizPanel } from '@/components/study/QuizPanel'
+import { DailyReviewWalledView } from '@/components/study/DailyReviewWalledView'
 import { fetchDailyQueue } from '@/services/api'
 import { useGamification } from '@/context/GamificationContext'
+import { useUsage } from '@/context/UsageContext'
 import { capture } from '@/utils/posthog'
+import { hoursUntil } from '@/utils/wallCountdown'
 import type { DailyCard, FsrsRating, ReviewResponse } from '@/types'
 
 // ─── Tab types (mirrors CardViewer) ──────────────────────────────────────────
@@ -162,7 +165,7 @@ function TabBody({ activeTab, card, sessionId, startTimeMs, onRated }: TabBodyPr
 
 // ─── Phase types ──────────────────────────────────────────────────────────────
 
-type Phase = 'loading' | 'error' | 'empty' | 'reviewing' | 'done'
+type Phase = 'loading' | 'error' | 'empty' | 'reviewing' | 'done' | 'walled'
 
 // ─── Progress bar ─────────────────────────────────────────────────────────────
 
@@ -190,6 +193,9 @@ function ProgressBar({ completed, total }: { completed: number; total: number })
 export default function DailyReview() {
   const navigate = useNavigate()
   const { refresh: refreshGamification } = useGamification()
+  const { usage } = useUsage()
+  const plan = usage.plan
+  const isAdmin = usage.isAdmin
 
   const [phase, setPhase]               = useState<Phase>('loading')
   const [cards, setCards]               = useState<DailyCard[]>([])
@@ -198,13 +204,30 @@ export default function DailyReview() {
   const [completedCount, setCompleted]  = useState(0)
   const [isFlipped, setIsFlipped]       = useState(false)
   const [activeTab, setActiveTab]       = useState<TabId>('quiz')
+  const [resetsAt, setResetsAt]         = useState<string | null>(null)
   const startTimeMs                     = useRef(Date.now())
   const startedFired                    = useRef(false)
+  const wallHitFired                    = useRef(false)
 
   // ── Fetch queue on mount ─────────────────────────────────────────────────
   useEffect(() => {
     fetchDailyQueue()
       .then((data) => {
+        // Spec #63 / B-059 — pre-flight gate. Mirror Analyze.tsx's 3-clause
+        // shape (`!canScan && plan==='free' && !isAdmin`). Pro/Enterprise/admin
+        // bypass via plan check; BE additionally returns `cards_limit=-1`
+        // and `can_review=true` for those plans (defense-in-depth).
+        const ds = data.daily_status
+        const walled =
+          plan === 'free' &&
+          !isAdmin &&
+          ds !== undefined &&
+          ds.can_review === false
+        if (walled && ds) {
+          setResetsAt(ds.resets_at)
+          setPhase('walled')
+          return
+        }
         if (data.cards.length === 0) {
           setPhase('empty')
         } else {
@@ -215,7 +238,17 @@ export default function DailyReview() {
         }
       })
       .catch(() => setPhase('error'))
-  }, [])
+  }, [plan, isAdmin])
+
+  // ── Spec #63 AC-5: fire daily_card_wall_hit once on walled mount ────────
+  useEffect(() => {
+    if (phase !== 'walled' || resetsAt === null || wallHitFired.current) return
+    wallHitFired.current = true
+    capture('daily_card_wall_hit', {
+      resets_at_hours_from_now: hoursUntil(resetsAt),
+      surface: 'daily_review_page_load',
+    })
+  }, [phase, resetsAt])
 
   // ── Fire daily_review_started once queue is loaded ───────────────────────
   useEffect(() => {
@@ -273,6 +306,15 @@ export default function DailyReview() {
             style={{ minHeight: 420 }}
           />
         </div>
+      </PageWrapper>
+    )
+  }
+
+  // ── Spec #63 / B-059 — pre-flight upsell for walled free user ───────────
+  if (phase === 'walled' && resetsAt !== null) {
+    return (
+      <PageWrapper className="min-h-screen bg-bg-base">
+        <DailyReviewWalledView resetsAt={resetsAt} />
       </PageWrapper>
     )
   }
