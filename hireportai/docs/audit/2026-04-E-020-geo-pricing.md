@@ -99,3 +99,7 @@ Doc-only; no code; no spec; no tests run. R14 exception (a) regenerated audit ar
 ---
 
 *Audit complete. No code changed. No status flipped on E-020 (per LD-1, propose-only). Next: chat-Claude to review per-gap recommendations and either (a) green-light Mode 4 spec-author slice for spec #27, (b) green-light Finding-0 path-(b) one-line BACKLOG amend + Gap-B/D Mode 2 slices, or (c) confirm a different disposition.*
+
+---
+
+**Footer note (appended 2026-04-26):** Finding 0 closed by spec #27 authoring slice `pending-amend` — see `docs/specs/phase-5/27-geo-pricing.md`. Audit body otherwise immutable per audit-artifact convention.
