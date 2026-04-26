@@ -9,21 +9,22 @@
 
 | Field | Value |
 |-------|-------|
-| Commit sha (short) | `ce60ea6` (HEAD after B-048 SHA backfill / CLAUDE.md SOP revision). Full regen this pass — all 12 sections refreshed plus net-new §13 specs inventory. Prior regen at `1bf6c3b` was 22 commits stale; deep-content sections (§2 model columns, §4 service surfaces, §6 route map) carried forward verified-against-current-HEAD with deltas applied where the on-disk reality has shifted (tracker model gains 2 columns; alembic +3 revisions; SOP rule-numbering shifts captured in §11). |
-| Branch | `main` (24 commits ahead of `origin/main`; not yet pushed) |
-| Generated | 2026-04-26 (full regen, all 12 sections + net-new §13). LD-1: full regen, not targeted. LD-2: counts via filesystem enumeration. LD-3: ambiguous fields flagged "unknown — flag for next regen" rather than guessed. LD-5: section content replaced, not appended. |
-| Backend model files | 19 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models`) |
-| Backend service files | 31 functional top-level (in `app/services/`, excl. `__init__.py`) + 3 under `services/llm/` = 34 |
-| Backend router files | 18 v1 + 6 legacy = 24 |
-| Backend endpoints (total) | 64 (5 legacy `/api/*` paths each appear at both `/api/*` and `/api/v1/*` mount; the v1 mounts for `analyze`, `cover_letter`, `interview`, `rewrite` are **re-exports** of the legacy router objects) |
-| Alembic revisions | 25 (Head = `30bf39fa04f8`. +3 since prior regen: `9543aa466524` E-042-impl-BE tracker.interview_date, `eb59d4fc1f7e` backfill, `30bf39fa04f8` B-035 tracker.analysis_payload) |
-| Frontend pages | 20 |
-| Frontend components | 65 (excl. `__tests__/*`) |
-| Shared TS types | `src/types/index.ts` (391 lines) + `src/types/homeState.ts` (28 lines) |
-| Skills (tracked) | 20 in `.agent/skills/*.md` |
+| Commit sha (short) | `8a0402e` (HEAD after B-059 SHA backfill — daily-review pre-flight wall gate). Full regen this pass — all 13 sections refreshed. Prior regen content at `ce60ea6` was 28 commits stale (`git log ce60ea6..HEAD --oneline \| wc -l = 28`); chat-Claude attempted a targeted-regen first that R19-stopped on prompt-side staleness misreading (the prompt's premise of "4 slices since `ce60ea6`" missed B-051 / B-052+B-053 / E-023 spec / LD-001 amend / B-055 / d19103c env-config — 7+ code-touching slices were unreflected). Full regen escalation re-counts everything once. |
+| Branch | `main` (52 commits ahead of `origin/main`; not yet pushed) |
+| Generated | 2026-04-26 (full regen, all 13 sections). LD-1 from B-049: full regen, not targeted. LD-2: counts via filesystem enumeration (`find` / `wc`, not estimation). LD-3: ambiguous fields flagged "unknown — flag for next regen" rather than guessed. LD-5: section content replaced, not appended. |
+| Backend model files | 19 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models`) — **unchanged since prior regen** (verified zero delta `git log ce60ea6..HEAD --stat -- hirelens-backend/app/models hirelens-backend/alembic`) |
+| Backend service files | 31 functional top-level (in `app/services/`, excl. `__init__.py`) + 3 under `services/llm/` = 34 — **unchanged since prior regen** (B-051/B-059 modified existing files; no new service file added) |
+| Backend router files | 18 v1 + 6 legacy = 24 — **unchanged since prior regen** |
+| Backend endpoints (total) | 64 — **unchanged since prior regen**. B-059 (`20562ea`) extended `GET /api/v1/study/daily` response shape (added `daily_status: DailyStatus` field) but did NOT add a new route; spec #63 LD-A locked the read-side mirror onto the existing endpoint. (5 legacy `/api/*` paths each appear at both `/api/*` and `/api/v1/*` mount; the v1 mounts for `analyze`, `cover_letter`, `interview`, `rewrite` are **re-exports** of the legacy router objects.) |
+| Alembic revisions | 25 (Head = `30bf39fa04f8`) — **unchanged since prior regen**. No new migrations in the 28-commit gap (B-051/B-052/B-053/B-055/B-057/B-059 are all FE/services/specs; only `d19103c` touched BE config and it has no DDL). |
+| Frontend pages | 20 — **unchanged since prior regen** (no new page files; HomeDashboard / StudyDashboard / DailyReview / Results modified in-place per B-051 / B-052+B-053 / B-059 / B-055) |
+| Frontend components | 67 (excl. `__tests__/*`) — **+2 since prior regen**: `home/widgets/StudyGapsPromptWidget.tsx` (B-051, `ecef895`), `study/DailyReviewWalledView.tsx` (B-059, `20562ea`). `find hirelens-frontend/src/components -name "*.tsx" -not -path "*/__tests__/*" \| wc -l` = 67. |
+| Frontend utils (NEW) | `src/utils/wallCountdown.ts` (B-059, `20562ea`) — exports `formatResetsAt(resetsAtIso) → string` + `hoursUntil(resetsAtIso) → number`. Lifted from private `QuizPanel.tsx` so `DailyReviewWalledView` can render the same `Resets in Xh Ym` / `Resets at H:MM AM/PM` copy. Code-org move only; behavior byte-identical. |
+| Shared TS types | `src/types/index.ts` (~400 lines, +`DailyStatus` interface and `DailyQueueResponse.daily_status?` optional field per B-059) + `src/types/homeState.ts` (28 lines, unchanged) |
+| Skills (tracked) | 20 in `.agent/skills/*.md` — **unchanged since prior regen**. B-051 / B-052+B-053 / B-059 each appended in-place rows to `analytics.md` (`home_study_gaps_clicked`, `home_study_gaps_prompt_shown`, `study_dashboard_source_hint_shown`, plus `daily_card_wall_hit` payload extended with `surface` enum). |
 | Skills (untracked, not committed) | 3 directory-style under `.agent/skills/` — `stripe-best-practices/`, `stripe-projects/`, `upgrade-stripe/` (each contains `SKILL.md` and optionally `references/`); not in git, source unknown — see §10 |
-| Specs | 76 across 6 phases (phase-0=6, phase-1=13, phase-2=8, phase-3=11, phase-4=6, phase-5=32) — see §13 |
-| Tests | BE 472 (per SESSION-STATE prior baseline; not re-run this slice — doc-only); FE 280 |
+| Specs | 80 across 6 phases (phase-0=6, phase-1=13, phase-2=8, phase-3=11, phase-4=6, phase-5=36) — see §13. **+4 phase-5 specs since prior regen**: #27 (geo-pricing, `c16f544`), #61 (HomeDashboard composition, `1262c26`), #62 (StudyDashboard `?source` hint, `ffd66f7`), #63 (daily-review pre-flight, `42a236b`). Spec #50 amended in-place at `b8d0c8c` (LD-001 cap 15→10, no AC shape change). |
+| Tests | BE **489** (was 472 at prior regen — `+17`: `+3` from `d19103c` env-tunable test_free_tier_limit_config.py, `+5` from B-051 / B-052+B-053 trail not BE-touching, `+9` from B-059 test_study_api.py::TestDailyStatusPreflight); FE **328** (was 280 — `+48`: `+23` B-051, `+5` B-052+B-053, `+3` B-055, `+7` B-057, `+10` B-059). Counts per close-lines; not re-run this slice (R14 exception (a), doc-only). |
 
 ---
 
@@ -450,7 +451,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | POST | /api/v1/resume/upload | upload_resume | get_current_user | v1 Resume |
 | POST | /api/v1/rewrite | rewrite_resume | get_current_user | v1 Rewrite *(spec #58 / B-033 — shared `"rewrite"` bucket)* |
 | POST | /api/v1/rewrite/section | rewrite_section | get_current_user | v1 Rewrite *(spec #51, B-001 + spec #58)* |
-| GET | /api/v1/study/daily | get_daily_review | get_current_user | v1 Study |
+| GET | /api/v1/study/daily | get_daily_review | get_current_user | v1 Study *(spec #63 / B-059 — response shape extended with `daily_status: DailyStatus {cards_consumed, cards_limit, can_review, resets_at}`. Read-side mirror of the same Redis key `_check_daily_wall` writes on submit. Side-effect-free GET (no INCR), fail-open on Redis outage. Pro / Enterprise / admin → `cards_limit=-1, can_review=true`. `daily_status` is `Optional[DailyStatus]` — only populated when `user is not None`. No new route.)* |
 | POST | /api/v1/study/experience | generate_experience | get_current_user | v1 Study |
 | GET | /api/v1/study/progress | get_progress | get_current_user | v1 Study |
 | POST | /api/v1/study/review | submit_review | get_current_user | v1 Study *(spec #50, P5-S22-WALL-b — 402 `DailyReviewLimitError` for free users at daily cap)* |
@@ -496,9 +497,9 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | reminder_service.py | Daily email reminder service. | get_users_needing_reminder, build_email_body, build_subject, send_daily_reminders | Resend |
 | resume_templates.py | Resume template definitions for AI rewriting. | get_template, get_template_names, auto_select_template | — |
 | scorer.py | ATS scoring engine. | ATSScorer | — |
-| study_service.py | FSRS spaced-repetition study service. Enforces free-tier daily-card review wall (spec #50) via `_check_daily_wall` — Redis INCR keyed `daily_cards:{user_id}:{YYYY-MM-DD}` in user-local tz, 48h TTL, fail-open on Redis outage; admin + Pro/Enterprise bypass. | get_daily_review, create_progress, review_card, get_progress, CardNotFoundError, CardForbiddenError, DailyReviewLimitError | Redis |
+| study_service.py | FSRS spaced-repetition study service. Enforces free-tier daily-card review wall (spec #50) via `_check_daily_wall` — Redis INCR keyed `daily_cards:{user_id}:{YYYY-MM-DD}` in user-local tz, 48h TTL, fail-open on Redis outage; admin + Pro/Enterprise bypass. Post-`d19103c`: `_check_daily_wall` replaces the prior `_DAILY_CARD_LIMIT` module constant with a function-local `get_settings().free_daily_review_limit` read so monkeypatched env vars propagate live. Post-B-059 (`20562ea`, spec #63): new `_compute_daily_status(user, db) → DailyStatus` helper performs side-effect-free Redis GET (no INCR) for the pre-flight gate read; `get_daily_review` signature gained kw-only `user: User \| None = None` (default keeps the 6 pre-existing test callers green) and the response now includes `daily_status` when `user is not None`. | get_daily_review, create_progress, review_card, get_progress, _compute_daily_status, CardNotFoundError, CardForbiddenError, DailyReviewLimitError | Redis |
 | tracker_service_v2.py | SQLAlchemy-backed job application tracker. `create_application` accepts optional `analysis_payload: dict` kwarg (B-035 / spec #59). | create_application, find_by_scan_id, get_applications, get_application_by_id, update_application, delete_application | — |
-| usage_service.py | Usage tracking + plan-limit enforcement. Per spec #56 / B-031: `PLAN_LIMITS["free"]["analyze"] = 1` (lifetime). `check_and_increment` accepts `window: Literal["monthly","lifetime"] = "monthly"` — analyze + rewrite + cover_letter pass `"lifetime"`. Admin bypass via in-helper User role fetch; short-circuits `allowed=True, limit=-1`. Per spec #58 / B-033: `get_analyze_usage` replaced by `get_usage_snapshot` (back-compat alias). New `_counter_triple(used, max, is_admin)` helper centralizes `-1` sentinel. `/rewrite` + `/rewrite/section` share `"rewrite"` feature key (spec #58 §4.1 Option a). | log_usage, check_usage_limit, check_and_increment, get_usage_summary, get_usage_snapshot, get_analyze_usage (alias), _counter_triple, PLAN_LIMITS, Window | — |
+| usage_service.py | Usage tracking + plan-limit enforcement. Per spec #56 / B-031: `PLAN_LIMITS["free"]["analyze"] = 1` (lifetime). `check_and_increment` accepts `window: Literal["monthly","lifetime"] = "monthly"` — analyze + rewrite + cover_letter pass `"lifetime"`. Admin bypass via in-helper User role fetch; short-circuits `allowed=True, limit=-1`. Per spec #58 / B-033: `get_analyze_usage` replaced by `get_usage_snapshot` (back-compat alias). New `_counter_triple(used, max, is_admin)` helper centralizes `-1` sentinel. `/rewrite` + `/rewrite/section` share `"rewrite"` feature key (spec #58 §4.1 Option a). Post-`d19103c` (env-tunable testing affordance): `PLAN_LIMITS` dict seeded from `get_settings()` at import; new `_plan_limits(plan)` helper re-reads the two free-cell entries (`analyze`/`lifetime`, `interview_prep`/`monthly`) live so test monkeypatching of settings propagates without rebuilding the dict. Pro/Enterprise rows stay literal. | log_usage, check_usage_limit, check_and_increment, get_usage_summary, get_usage_snapshot, get_analyze_usage (alias), _counter_triple, _plan_limits, PLAN_LIMITS, Window | — |
 | user_service.py | User CRUD + admin-role reconciliation. Post-E-040: `reconcile_admin_role(user, admin_emails_set) -> (action, prior_role, new_role)` is a pure mutation. Action ∈ `{"promoted", "demoted", "unchanged"}`. Invoked from `auth.py::google_auth` on every login. | get_or_create_user, get_user_by_id, reconcile_admin_role | — |
 
 ### `app/services/llm/` (legacy provider factory — do not extend)
@@ -553,7 +554,7 @@ Configured in `src/App.tsx`. Top-level wrappers: `<AppShell>` (always), `<Protec
 |------|-----------|----------------|----------------------|-------|
 | `/` | `HomeRoute` → `LandingPage` (guest) / `<Navigate to="/home">` (auth) | AppShell (chromeless) | none | — |
 | `/login` | `LoginPage` | AppShell (chromeless) | none | — |
-| `/pricing` | `Pricing` | AppShell (chromeless) | none | — |
+| `/pricing` | `Pricing` | AppShell (chromeless for guest, **chrome for authed users**) | none | B-057 (`19326de`) — auth-aware carve-out; authed users hitting paywall flows (StudyDashboard quota → /pricing) keep nav so they can navigate away |
 | `/home` | `HomeDashboard` | AppShell | ProtectedRoute → PersonaGate | — |
 | `/onboarding` | `Onboarding` | AppShell | ProtectedRoute → PersonaGate | — |
 | `/onboarding/persona` | `PersonaPicker` | AppShell (chromeless) | ProtectedRoute (PersonaGate allow-listed) | — |
@@ -584,30 +585,30 @@ Configured in `src/App.tsx`. Top-level wrappers: `<AppShell>` (always), `<Protec
 | `/mission` → `/learn/mission` | `<Navigate replace>` | AppShell | none | transitional |
 | `*` | `<Navigate to="/" replace>` | AppShell | none | catch-all |
 
-Nav chrome rendered by `AppShell` (`TopNav` desktop, `MobileNav` mobile). Chromeless paths: `/`, `/login`, `/pricing`, `/onboarding/persona`, `/first-action`.
+Nav chrome rendered by `AppShell` (`TopNav` desktop, `MobileNav` mobile). Chromeless-by-default paths in `AppShell.CHROMELESS_PATHS`: `/`, `/login`, `/onboarding/persona`, `/first-action`. **Auth-aware carve-out (B-057, `19326de`):** `/pricing` is chromeless when `user === null` (guest) but renders chrome when authed — implemented as `pathname === '/pricing' && user === null` in both `AppShell.tsx` (`useAuth()` import) and `MobileNav.tsx` (its own `HIDDEN_PATHS = ['/', '/login']` set + the same one-line carve-out for `/pricing`). The two carve-outs are duplicated rather than lifted to a shared module — see §11 drift item B-058.
 
 **TopNav composition (desktop, `md:block`):** wordmark `SKILL/FORGE` → `/home`; nav links (`Home` / `Learn` / `Prep` / `Admin` if admin — `Profile` removed in B-029); right = `<UserMenu />` (avatar dropdown — Profile + `Sign out` button; B-028, B-029).
 
 **MobileNav composition (`md:hidden`):** five-tab bottom bar (Home/Learn/Prep/Profile/Admin) — no sign-out surface; mobile users sign out via Profile → Account section.
 
-**Wall-aware components (spec #50):** `src/components/study/QuizPanel.tsx` is the single submit chokepoint for `POST /api/v1/study/review` — consumed by `DailyReview`, `CardViewer`, `MissionMode`. On a 402 with `detail.trigger === 'daily_review'`, opens `PaywallModal trigger="daily_review"` and fires `daily_card_wall_hit`.
+**Wall-aware components (spec #50 + spec #63):** `src/components/study/QuizPanel.tsx` is the single submit chokepoint for `POST /api/v1/study/review` — consumed by `DailyReview`, `CardViewer`, `MissionMode`. On a 402 with `detail.trigger === 'daily_review'`, opens `PaywallModal trigger="daily_review"` and fires `daily_card_wall_hit { surface: "daily_review_submit" }`. **Pre-flight (B-059, `20562ea`):** `src/components/study/DailyReviewWalledView.tsx` renders full-page upsell on `/learn/daily` mount when `plan==='free' && !isAdmin && daily_status.can_review===false`; fires `daily_card_wall_hit { surface: "daily_review_page_load" }` once per mount via `useRef` guard. `formatResetsAt` / `hoursUntil` lifted from private `QuizPanel.tsx` to `src/utils/wallCountdown.ts` for reuse.
 
-### Component graph (65 components, organized by directory)
+### Component graph (67 components, organized by directory)
 
 | Directory | Components |
 |-----------|-----------|
 | `auth/` | AdminGate |
 | `dashboard/` (Results page sub-components) | ATSScoreGauge, BulletAnalyzer, FormattingIssues, ImprovementSuggestions, JobFitExplanation, KeywordChart, MissingSkillsPanel, PanelSection, ScoreBreakdown, SkillOverlapChart |
-| `home/` | DashboardWidget, InterviewDateModal *(B-037 — inline date editor)*, StateAwareWidgets |
-| `home/widgets/` (12 widgets) | CountdownWidget, FirstSessionDoneWidget, InactiveReturnerWidget, InterviewPrepperChecklist, InterviewTargetWidget, LastScanWidget, MissionActiveWidget, MissionOverdueWidget, ResumeStaleWidget, StreakAtRiskWidget, StreakWidget, TeamComingSoonWidget, TodaysReviewWidget, WeeklyProgressWidget |
-| `layout/` | AppShell, MobileNav, **Navbar** *(orphan; see §9)*, PageWrapper, TopNav, UserMenu |
+| `home/` | DashboardWidget, InterviewDateModal *(B-037 — inline date editor)*, StateAwareWidgets *(B-051 — switched from internal `useHomeState` call to prop-driven, accepts `{persona, data, isLoading, error}` so HomeDashboard's single hook call feeds both this component and §3 composition-suppression flags)* |
+| `home/widgets/` (15 widgets) | CountdownWidget *(B-051: gained `suppressedByMissionState` prop — suppressed when state slot fires AND `context.mission_target_date === user.interview_target_date`, per-mission carve-out per spec #61 §3.1)*, FirstSessionDoneWidget, InactiveReturnerWidget, InterviewPrepperChecklist, InterviewTargetWidget *(B-051: `suppressedByMissionState` prop — broader rule, suppressed whenever Mission state slot renders per LD-3)*, LastScanWidget *(B-051: `suppressed` prop — suppressed when StudyGapsPromptWidget eligibility resolves true; scan content rolled into the prompt body, audit #3)*, MissionActiveWidget *(B-051: gained Pro stale-scan footer per spec #61 §6)*, MissionOverdueWidget, ResumeStaleWidget *(B-051: free users now route to `setShowUpgradeModal` / PaywallModal instead of inline upgrade copy)*, StreakAtRiskWidget, StreakWidget, **StudyGapsPromptWidget** *(NEW — B-051, `ecef895`. Renders for `plan==='free' && !isAdmin && has_recent_scan && !has_active_mission`. Primary CTA `/learn?source=last_scan` (LD-1 LOCKED), secondary upgrade CTA opens PaywallModal `trigger='skill_gap_study'`. Fires `home_study_gaps_prompt_shown` on mount + `home_study_gaps_clicked {cta: 'primary'\|'secondary_upgrade'}` on click. Closes audit #3, #4, #5)*, TeamComingSoonWidget, TodaysReviewWidget, WeeklyProgressWidget |
+| `layout/` | AppShell *(B-057: added `useAuth` import + `pathname === '/pricing' && user === null` guest-only carve-out alongside `CHROMELESS_PATHS = {'/', '/login', '/onboarding/persona', '/first-action'}`)*, MobileNav *(B-057: same one-line carve-out + `useAuth` import; `HIDDEN_PATHS = {'/', '/login'}`; the duplicated set is tracked at §11 drift item B-058)*, **Navbar** *(orphan; see §9)*, PageWrapper, TopNav, UserMenu |
 | `mission/` | Countdown, DailyTarget, MissionDateGate, MissionSetup |
 | `onboarding/` | **GuidedTour** *(orphan; see §9)* |
 | `profile/` | StreakBadge, XPBar |
 | `progress/` | ActivityHeatmap, SkillRadar |
 | `rewrite/` | CoverLetterViewer, ResumeEditor, **ResumePDFTemplate** *(orphan; see §9)* |
 | `settings/` | EmailPreferences, ThemePicker |
-| `study/` | CategoryCard, FlipCard, QuizPanel, WallInlineNudge |
+| `study/` | CategoryCard, **DailyReviewWalledView** *(NEW — B-059, `20562ea`. Full-page upsell rendered by `DailyReview.tsx` when free user is at cap. Props-only, no context deps. Locked headline "You've used today's free reviews" + countdown subhead via `formatResetsAt` + Upgrade-to-Pro CTA → `/pricing` (relies on B-057 chrome carve-out, AC-7) + Back-to-home CTA. Mirrors spec #60 / B-045 Analyze pre-flight pattern)*, FlipCard, QuizPanel *(B-059: submit-time `capture('daily_card_wall_hit')` payload now includes `surface: 'daily_review_submit'` per AC-6 regression-pin)*, WallInlineNudge |
 | `tracker/` | ApplicationCard, KanbanBoard |
 | `ui/` | AnimatedCard, GlowButton, ProgressBar, ScoreBadge, SkeletonLoader, Tooltip, UpgradeModal |
 | `upload/` | JDInput, ResumeDropzone |
@@ -624,9 +625,9 @@ Nav chrome rendered by `AppShell` (`TopNav` desktop, `MobileNav` mobile). Chrome
 | Analyze.tsx | Analyze | useAnalysis, useUsage | — | paywall_hit *(spec #60 / B-045 — `{trigger: 'scan_limit', surface: 'analyze_page_load', plan: 'free'}` once-on-mount via `useRef` guard when `!canScan && plan==='free' && !isAdmin`)* |
 | CardViewer.tsx | CardViewer | useCardViewer, useGamification | — | card_viewed |
 | CategoryDetail.tsx | CategoryDetail | — | fetchCardsByCategory | category_detail_viewed |
-| DailyReview.tsx | DailyReview | useGamification | fetchDailyQueue | daily_review_started, daily_review_completed |
+| DailyReview.tsx | DailyReview | useGamification, useAuth, useUsage | fetchDailyQueue | daily_review_started, daily_review_completed, daily_card_wall_hit *(B-059 — fires once on walled mount via `useRef` guard with `surface: 'daily_review_page_load'`; only when `plan==='free' && !isAdmin && data.daily_status.can_review===false`)*. **Pre-flight gate (B-059, `20562ea`):** if free user is at cap, renders `<DailyReviewWalledView resetsAt={resetsAt} />` in place of queue. Imports `hoursUntil` from `@/utils/wallCountdown`. |
 | FirstAction.tsx | FirstAction | useAuth | — | first_action_viewed, first_action_primary_clicked, first_action_secondary_clicked |
-| HomeDashboard.tsx | HomeDashboard | useAuth | markHomeFirstVisit *(B-016)* | home_dashboard_viewed. Greeting fork: `isFirstVisit` snapshotted on mount via `useState(() => user.home_first_visit_seen_at == null)` (B-027). |
+| HomeDashboard.tsx | HomeDashboard | useAuth, useUsage, useHomeState *(single call, B-051; was internal to StateAwareWidgets)* | markHomeFirstVisit *(B-016)*, fetchActiveMission, fetchUserApplications | home_dashboard_viewed. Greeting fork: `isFirstVisit` snapshotted on mount via `useState(() => user.home_first_visit_seen_at == null)` (B-027). **Composition refactor (B-051, `ecef895`, spec #61 §3):** single `useHomeState()` call resolves at the page level; derives `topState` + `missionStateActive` + `missionTargetMatchesUser`; passes three suppression flags down to `InterviewPrepperMode` (`countdownSuppressedByMissionState`, `interviewTargetSuppressedByMissionState`, `lastScanSuppressed`). State-slot data flows to `StateAwareWidgets` as a prop (no double-fetch). Free-tier `StudyGapsPromptWidget` mounts on `plan==='free' && !isAdmin` branches; its eligibility predicate (`has_recent_scan && !has_active_mission`) feeds back into `lastScanSuppressed`. CareerClimber + TeamLead modes preserved verbatim. |
 | Interview.tsx | Interview | useAnalysisContext, useUsage, useInterview | generateInterviewPrep | interview_questions_regenerated, interview_questions_cached_served |
 | LandingPage.tsx | LandingPage | useAuth, usePricing | — | landing_page_viewed, cta_clicked |
 | LoginPage.tsx | LoginPage | useAuth | signIn | — |
@@ -635,9 +636,9 @@ Nav chrome rendered by `AppShell` (`TopNav` desktop, `MobileNav` mobile). Chrome
 | PersonaPicker.tsx | PersonaPicker | useAuth | updatePersona | persona_picker_shown, persona_selected, interview_target_date_added *(B-018, B-037)* |
 | Pricing.tsx | Pricing | useUsage, usePricing, useSearchParams | createCheckoutSession | checkout_started, payment_completed |
 | Profile.tsx | Profile | useAuth (incl. signOut), useUsage, useGamification | generateExperience, createBillingPortalSession, api.get | profile_viewed, subscription_portal_opened, experience_generated, sign_out_clicked *(B-028 — `{source: 'profile_page'}`)* |
-| Results.tsx | Results | useAnalysisContext, useUsage | fetchOnboardingRecommendations, fetchAnalysisById *(B-035 / spec #59 — URL `?scan_id=` hydration with three-way empty-state)* | job_fit_explanation_viewed, results_tooltip_opened *(via `PanelSection`, 9-section enum)*, scan_rehydrated *(B-035)* |
+| Results.tsx | Results | useAnalysisContext, useUsage | fetchOnboardingRecommendations, fetchAnalysisById *(B-035 / spec #59 — URL `?scan_id=` hydration with three-way empty-state)* | job_fit_explanation_viewed, results_tooltip_opened *(via `PanelSection`, 9-section enum)*, scan_rehydrated *(B-035)*. **Layout fix (B-055, `4b7f862`):** added `xl:row-end-5` to `ImprovementSuggestions` grid item (line 482) to distribute its height across rows 3–4 of col-3 instead of inflating row-3 alone. Closes the xl-breakpoint vertical void below Skills Radar / Jump-nav. DOM, ordering test invariants, 9 section IDs, and verbatim spec #21 tooltip copy all unchanged. |
 | Rewrite.tsx | Rewrite | useAnalysisContext, useRewrite, useUsage | rewriteSection *(via `useRewrite.regenerateSection`)* | rewrite_requested, rewrite_section_regenerated. BE also emits `rewrite_succeeded` / `rewrite_failed` with `strategy=chunked\|fallback_full`. |
-| StudyDashboard.tsx | StudyDashboard | useStudyDashboard, useAuth, useUsage, useGamification | — | study_dashboard_viewed, locked_tile_clicked, category_tile_clicked |
+| StudyDashboard.tsx | StudyDashboard | useStudyDashboard, useAuth, useUsage, useGamification, useSearchParams | — | study_dashboard_viewed, locked_tile_clicked, category_tile_clicked, **study_dashboard_source_hint_shown** *(NEW — B-052/B-053, `df035e1`. `{source: 'last_scan', persona, copy_variant: '6A'}` — fires once per mount via `useRef` idempotency when URL has `?source=last_scan`. Param is attribution-only — does NOT filter the category grid; only renders a `motion.div` hero hint between header and "Your Goal" card with a dismiss × button. Component-state dismissal (no sessionStorage). URL preserved (no `setSearchParams`). Locked variant `'6A'` neutral copy per spec #62 §10 OQ-1.)* |
 | Tracker.tsx | Tracker | useTracker | — | — |
 
 ---
@@ -671,7 +672,8 @@ Nav chrome rendered by `AppShell` (`TopNav` desktop, `MobileNav` mobile). Chrome
 | `ReviewRequest` | `{ card_id, session_id: string, rating: FsrsRating, time_spent_ms? }` | — |
 | `ReviewResponse` | `{ card_id, fsrs_state, due_date, stability, difficulty, reps, lapses, scheduled_days }` | — |
 | `DailyCard` | `{ card_id, question, answer, category_id, category_name, difficulty, tags[], fsrs_state, due_date, reps, lapses }` | 3 |
-| `DailyQueueResponse` | `{ cards: DailyCard[], total_due: number, session_id: string }` | — |
+| `DailyStatus` *(NEW — B-059)* | `{ cards_consumed: number, cards_limit: number, can_review: boolean, resets_at: string }` — read-side mirror of free-tier daily-card wall counter. `cards_limit === -1` is the unlimited sentinel for Pro / Enterprise / admin (matches `usage_service` / `UsageContext` `-1` convention). FE-canonical name; BE-canonical is `app/schemas/study.py::DailyStatus`. | 1 |
+| `DailyQueueResponse` *(B-059 — additive)* | `{ cards: DailyCard[], total_due: number, session_id: string, daily_status?: DailyStatus }` — `daily_status` is optional (only populated by `GET /api/v1/study/daily` when authed; `null`/`undefined` for legacy callers and unauthed paths). | — |
 | `MissionDayView` | `{ day_number, date, cards_target, cards_completed }` | — |
 | `MissionResponse` | `{ id, title, target_date, category_ids[], daily_target, total_cards, days_remaining, status: active\|completed\|abandoned, progress_pct, created_at }` | 3 |
 | `MissionDetailResponse` | `MissionResponse + { days: MissionDayView[] }` | — |
@@ -773,7 +775,7 @@ Skill discovery tooling that walks `.agent/skills/*.md` will **miss** these (the
 
 ## Section 11 — Drift flags (AGENTS.md / master-doc vs code)
 
-High-signal output — all verified against HEAD `ce60ea6`. **Reconciled against post-B-048 SOP state:** R3 = "Never skip auth" (auth only); R19 = push-back; R18 retired (merged into R15(c)); SOP-8 = concurrent-session detection (codified `2504d6b`); SOP-9 = no concurrent CC sessions on one tree (added by B-048, `e2714b4`); H1–H4 = chat-Claude ↔ CC handoff section (added by B-048).
+High-signal output — all verified against HEAD `8a0402e`. **Reconciled against post-B-048 SOP state:** R3 = "Never skip auth" (auth only); R19 = push-back; R18 retired (merged into R15(c)); SOP-8 = concurrent-session detection (codified `2504d6b`); SOP-9 = no concurrent CC sessions on one tree (added by B-048, `e2714b4`); H1–H4 = chat-Claude ↔ CC handoff section (added by B-048).
 
 1. **AGENTS.md legacy routers table says `/api/cover_letter` (underscore).** `app/api/routes/cover_letter.py:11` decorates `@router.post("/cover-letter", …)` (hyphen). Effective path is `/api/cover-letter`. Same drift: `/api/interview` vs actual `/api/interview-prep`. **Status: still drifted.**
 
@@ -805,6 +807,10 @@ High-signal output — all verified against HEAD `ce60ea6`. **Reconciled against
 
 15. **Pre-existing dirty files (long-standing):** `Enhancements.txt`, `hirelens-backend/scripts/wipe_local_user_data.py`, `../.DS_Store`. None bundled into commits per C2/C5. Plus untracked items: `docs/audits/`, `docs/status/E2E-READINESS-2026-04-21.md`, `skills-lock.json`, `.gitattributes`, `.agent/skills/{stripe-*,upgrade-stripe}/`. **Status: long-standing; not blocking.**
 
+16. **NEW (B-058) — duplicated chromeless-paths sets across `AppShell.tsx` + `MobileNav.tsx`.** B-057 (`19326de`) carved out `/pricing` chrome behavior in two places — `AppShell.CHROMELESS_PATHS = {'/', '/login', '/onboarding/persona', '/first-action'}` plus `pathname === '/pricing' && user === null` guest-only carve-out, and `MobileNav.HIDDEN_PATHS = {'/', '/login'}` plus the same one-line `/pricing` guest carve-out. The `MobileNav` set is intentionally narrower (no onboarding/first-action — bottom-bar is not mounted there anyway), but the `/pricing` rule is duplicated. Drift risk: any future change to chromeless-paths policy must be made in two places. **Tracked at BACKLOG B-058** (P3 nav cleanup) — close shape: lift to `src/components/layout/chromeless.ts` exporting `CHROMELESS_PATHS` + `MOBILE_HIDDEN_PATHS` + shared `isChromeless(pathname, user)` helper. **Status: NEW — surfaced via R19 push-back during B-057 impl.**
+
+17. **NEW (`d19103c` + `b8d0c8c`) — three free-tier paywall env vars not yet reflected in AGENTS.md env-vars table.** `d19103c` plumbed: `Settings.free_daily_review_limit` (env `FREE_DAILY_REVIEW_LIMIT`), `Settings.free_lifetime_scan_limit` (default `1`, env `FREE_LIFETIME_SCAN_LIMIT`), `Settings.free_monthly_interview_limit` (default `3`, env `FREE_MONTHLY_INTERVIEW_LIMIT`). `b8d0c8c` (LD-001 cap tightening, Slice B) flipped `free_daily_review_limit` default from `15` → `10` so the in-code default now matches LD-001's amended cap. Flipping any of the three env vars locally hits the corresponding paywall in seconds without burning real quota. `payments.md` skill records the three under "Free Tier Limits" but `AGENTS.md` env-vars table (canonical source per its own header) does not. **Status: NEW — drift only on the AGENTS.md doc surface; no code drift.**
+
 ---
 
 ## Section 12 — Open questions for Dhamo
@@ -823,20 +829,22 @@ No status changes from prior regen besides the carry-forward of Q4 ✅. Nothing 
 
 ---
 
-## Section 13 — Specs inventory (NEW this regen)
+## Section 13 — Specs inventory
 
-Walked `docs/specs/**/*.md` — 76 spec files across 6 phases. Status field = `^## Status` parse; specs without an explicit status line are flagged "no status".
+Walked `docs/specs/**/*.md` — **80 spec files across 6 phases** (+4 since prior regen content; all four in phase-5: #27 #61 #62 #63). Status field = `^## Status` line OR `^**Status:**` bolded line at the top of the spec body — both styles are observed on disk; tooling that grepped only `^## Status` would undercount by 3 (specs #61, #62 use the `**Status:**` bolded form). Specs without either form are flagged "no status".
 
 ### Per-phase counts
-| Phase | Files | With explicit `## Status` | No status field |
+| Phase | Files | With explicit Status line | No status field |
 |-------|-------|---------------------------|-----------------|
 | phase-0 | 6 | 6 | 0 |
 | phase-1 | 13 | 6 | 7 |
 | phase-2 | 8 | 7 | 1 |
 | phase-3 | 11 | 8 | 3 |
 | phase-4 | 6 | 6 | 0 |
-| phase-5 | 32 | 11 | 21 |
-| **Total** | **76** | **44** | **32** |
+| phase-5 | 36 | 14 | 22 |
+| **Total** | **80** | **47** | **33** |
+
+**Phase-5 delta since prior regen**: +4 files (#27, #61, #62, #63), +3 with-status (#61 `**Status:**`, #62 `**Status:**`, #63 `## Status:`), +1 no-status (#27 — newly authored, no status header). Hygiene gap unchanged in phase-5: 22/36 specs lack a status line, mostly historical pre-spec-template files (status hygiene was not retroactively applied).
 
 ### Status legend (canonical strings observed on disk)
 `Done` · `Complete` · `Implemented — Spec Backfill Pending (P5-S###)` · `Draft` · `Drafted, not shipped` · `Shipped (spec + impl)` · `Done — Shipped in <sha>` · `Partially Done` · `Planned — Known-Broken` · `Deferred` · `Complete — Spec Backfill Pending`
@@ -915,6 +923,7 @@ Walked `docs/specs/**/*.md` — 76 spec files across 6 phases. Status field = `^
 | 12-navigation-restructure.md | (no status field) |
 | 21-analysis-results-improvements.md | Done — Shipped in `1c0817a` (P5-S21b) on 2026-04-19 |
 | 22-plan-aware-missing-skills-cta.md | Draft |
+| 27-geo-pricing.md | (no status field — NEW since prior regen, authored `c16f544` / E-023; behavior contract + Gap B/D/E fix anchors) |
 | 34-persona-picker-and-home.md | (no status field) |
 | 35-home-dashboard-and-widgets.md | (no status field) |
 | 36-subscription-cancellation.md | (no status field) |
@@ -929,7 +938,7 @@ Walked `docs/specs/**/*.md` — 76 spec files across 6 phases. Status field = `^
 | 47-resume-rewrite-content-preservation.md | (no status field) |
 | 48-doc-audit-pattern.md | (no status field) |
 | 49-interview-question-storage.md | (no status field) |
-| 50-free-tier-daily-card-wall.md | Draft |
+| 50-free-tier-daily-card-wall.md | Draft *(amended `b8d0c8c` 2026-04-26 Slice B — LD-001 cap tightening 15→10. Spec body retained `## Status: Draft` with an in-place amendment block at line 13 documenting the cap flip; AC shapes / payload fields / behavior / edge cases UNCHANGED — only the integer literal moves. `daily_card_wall_hit` payload also extended additively by B-059 / `20562ea` with `surface` enum.)* |
 | 51-ai-rewrite-section-preservation.md | (no status field — but B-001 closed `688529d` per BACKLOG; spec needs status line) |
 | 52-cover-letter-format-enforcement.md | (no status field — but B-002 closed per BACKLOG; spec needs status line) |
 | 53-interview-target-optional-fields.md | (no status field — but B-018 shipped `724e5cd`; spec needs status line) |
@@ -940,15 +949,19 @@ Walked `docs/specs/**/*.md` — 76 spec files across 6 phases. Status field = `^
 | 58-legacy-rewrite-router-auth-quota.md | Shipped (spec + impl) — closes B-033. Impl half landed 2026-04-23. |
 | 59-scan-persistence.md | Drafted, not shipped. *(actually shipped per BACKLOG B-035 closed `0b35440` on 2026-04-24 — spec status line needs update)* |
 | 60-analyze-page-preflight-gate.md | (no status field — B-045 closed `3c962d8`; spec needs status line) |
+| 61-home-dashboard-composition-rules.md | **Status:** Drafted, not shipped *(NEW — B-051 spec half `1262c26`. Impl shipped `ecef895` 2026-04-25 closing B-051 + E-048 — spec status line not flipped on impl-merge; matches pattern observed elsewhere in §13.)* |
+| 62-study-dashboard-source-hint.md | **Status:** Drafted, not shipped *(NEW — B-052 spec half `ffd66f7`. Impl shipped `df035e1` 2026-04-26 closing B-052 + B-053 per spec §10 OQ-5 dual-tracking — spec status line not flipped on impl-merge.)* |
+| 63-daily-review-preflight-gate.md | Draft *(NEW — B-059 spec half `42a236b`. Impl shipped `20562ea` 2026-04-26 closing B-059 — spec status line not flipped on impl-merge. Authoring note records the chat-Claude vs disk-reality drift on endpoint name (`/study/daily-queue` cited but disk is `/study/daily`) and `formatResetsAt` reuse claim (cited as importable but was private to QuizPanel — impl had to lift to `wallCountdown.ts`); R19 audit notes preserved in spec body.)* |
 
 ### Numbering anomalies / duplicates / gaps
 
 - **phase-3 spec numbering:** `20-onboarding-polish.md`, `20b-design-system-themes.md`, `20c-resume-cover-letter-fix.md` — three specs sharing the `20*` slot via letter suffixes. Convention is consistent with phase-1 `11a/b/c/d`.
 - **phase-4 numbering:** `22-error-monitoring.md` and `23-error-monitoring.md` — two specs with the SAME title "error-monitoring" at adjacent numbers. One marked Done, one Complete. Likely supersession or duplicate authoring; needs clarification.
-- **phase-5 numbering gaps:** `01`, then `09–12`, then `21–22`, then `34–60` (with gaps at 23–33 and 37, 39). Many gaps suggest reserved-but-not-authored slots; only worth investigating if a citation references a missing number.
+- **phase-5 numbering gaps:** `01`, then `09–12`, then `21–22`, then `27`, then `34–63` (with remaining gaps at 23–26, 28–33, 37, 39). Many gaps suggest reserved-but-not-authored slots; only worth investigating if a citation references a missing number.
 - **phase-5 number `1` reuse:** `01-admin-analytics-early-draft.md` (Done) is superseded by `38-admin-analytics.md` (Draft) per the same OKR surface. Consider archiving #01 or marking it `Superseded`.
-- **Total spec status hygiene gap:** 32 of 76 specs (42%) have no `## Status` line. Concentration in phase-1 (7), phase-3 (3), phase-5 (21). Recommend a one-slice sweep adding status lines to the phase-5 specs that have shipped, dropping the bookkeeping burden of stale Drafts.
+- **Total spec status hygiene gap:** 33 of 80 specs (41%) have no Status line. Concentration in phase-1 (7), phase-3 (3), phase-5 (22). Recommend a one-slice sweep adding status lines to the phase-5 specs that have shipped (#51, #52, #53, #57, #59, #60, #61, #62, #63 are all known-shipped per BACKLOG yet 6 of those 9 have no/unflipped Status line), dropping the bookkeeping burden of stale Drafts.
+- **Spec-body Status format inconsistency:** `## Status:` (heading-2) vs `**Status:**` (bolded paragraph) appear interchangeably; tooling that greps only one form will miscount. Standardize on the heading-2 form to align with template (spec #50, #63 use it; #61, #62 use the bolded form).
 
 ---
 
-*End of snapshot. Generated 2026-04-26 at HEAD `ce60ea6`. Next regen recommended after E-042 FE ships (will move tracker columns to authoritative read source) or after the next batch of phase-5 specs flip Done.*
+*End of snapshot. Generated 2026-04-26 at HEAD `8a0402e` — full regen escalated from a targeted-regen attempt that R19-stopped on prompt-side staleness misreading (chat-Claude treated `ce60ea6` as the regen-commit baseline; on disk it is the SHA the regen content **referenced**, with the regen commit itself one parent later at `3f43927`, so 28 commits had landed since). Next regen recommended after E-042 FE ships (will move tracker columns to authoritative read source) or after the next batch of phase-5 specs flip Done.*
