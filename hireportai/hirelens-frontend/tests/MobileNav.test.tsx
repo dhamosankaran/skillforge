@@ -72,8 +72,8 @@ describe('MobileNav', () => {
     expect(screen.getByTestId('mobile-nav-home')).toHaveAttribute('data-active', 'false')
   })
 
-  it('returns null on public paths (/, /login, /pricing)', () => {
-    for (const path of ['/', '/login', '/pricing']) {
+  it('returns null on guest-only public paths (/, /login)', () => {
+    for (const path of ['/', '/login']) {
       const { unmount } = render(
         <MemoryRouter initialEntries={[path]}>
           <MobileNav />
@@ -82,5 +82,24 @@ describe('MobileNav', () => {
       expect(screen.queryByTestId('mobile-nav')).not.toBeInTheDocument()
       unmount()
     }
+  })
+
+  it('returns null on /pricing for guests but renders for authed users', () => {
+    mockUser = null
+    const guest = render(
+      <MemoryRouter initialEntries={['/pricing']}>
+        <MobileNav />
+      </MemoryRouter>,
+    )
+    expect(screen.queryByTestId('mobile-nav')).not.toBeInTheDocument()
+    guest.unmount()
+
+    mockUser = userFixture()
+    render(
+      <MemoryRouter initialEntries={['/pricing']}>
+        <MobileNav />
+      </MemoryRouter>,
+    )
+    expect(screen.getByTestId('mobile-nav')).toBeInTheDocument()
   })
 })

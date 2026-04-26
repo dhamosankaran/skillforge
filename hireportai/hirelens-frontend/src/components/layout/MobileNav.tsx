@@ -28,7 +28,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Admin',   to: '/admin',   prefix: '/admin',   icon: ShieldOutline, adminOnly: true },
 ]
 
-const HIDDEN_PATHS = new Set(['/', '/login', '/pricing'])
+const HIDDEN_PATHS = new Set(['/', '/login'])
 
 function isActive(pathname: string, item: NavItem): boolean {
   if (item.exact) return pathname === item.prefix
@@ -44,6 +44,9 @@ export function MobileNav() {
   const { user } = useAuth()
 
   if (HIDDEN_PATHS.has(location.pathname)) return null
+  // /pricing is chromeless for guests but authed users keep nav so they can
+  // escape after a mid-flow paywall hit (mirrors AppShell.tsx).
+  if (location.pathname === '/pricing' && user === null) return null
 
   const items = NAV_ITEMS.filter((item) => !item.adminOnly || user?.role === 'admin')
 

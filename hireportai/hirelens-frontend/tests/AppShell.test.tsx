@@ -38,28 +38,51 @@ beforeEach(() => {
   mockUser = userFixture()
 })
 
+function renderAt(pathname: string) {
+  return render(
+    <MemoryRouter initialEntries={[pathname]}>
+      <AppShell>
+        <div data-testid="app-content" />
+      </AppShell>
+    </MemoryRouter>,
+  )
+}
+
 describe('AppShell chrome hide-list', () => {
   it('hides TopNav and MobileNav on /onboarding/persona', () => {
-    render(
-      <MemoryRouter initialEntries={['/onboarding/persona']}>
-        <AppShell>
-          <div data-testid="app-content" />
-        </AppShell>
-      </MemoryRouter>,
-    )
+    renderAt('/onboarding/persona')
     expect(screen.queryByTestId('top-nav')).not.toBeInTheDocument()
     expect(screen.queryByTestId('mobile-nav')).not.toBeInTheDocument()
     expect(screen.getByTestId('app-content')).toBeInTheDocument()
   })
 
   it('renders TopNav and MobileNav on a non-chromeless protected path', () => {
-    render(
-      <MemoryRouter initialEntries={['/home']}>
-        <AppShell>
-          <div data-testid="app-content" />
-        </AppShell>
-      </MemoryRouter>,
-    )
+    renderAt('/home')
+    expect(screen.getByTestId('top-nav')).toBeInTheDocument()
+    expect(screen.getByTestId('mobile-nav')).toBeInTheDocument()
+  })
+
+  it.each(['/', '/login', '/onboarding/persona', '/first-action'])(
+    'stays chromeless on %s regardless of auth state',
+    (path) => {
+      mockUser = userFixture()
+      renderAt(path)
+      expect(screen.queryByTestId('top-nav')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('mobile-nav')).not.toBeInTheDocument()
+    },
+  )
+
+  it('keeps /pricing chromeless for guests (user === null)', () => {
+    mockUser = null
+    renderAt('/pricing')
+    expect(screen.queryByTestId('top-nav')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('mobile-nav')).not.toBeInTheDocument()
+    expect(screen.getByTestId('app-content')).toBeInTheDocument()
+  })
+
+  it('shows TopNav and MobileNav on /pricing for authed users so they can escape paywall flows', () => {
+    mockUser = userFixture()
+    renderAt('/pricing')
     expect(screen.getByTestId('top-nav')).toBeInTheDocument()
     expect(screen.getByTestId('mobile-nav')).toBeInTheDocument()
   })
