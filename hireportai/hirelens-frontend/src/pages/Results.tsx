@@ -470,11 +470,16 @@ export default function Results() {
             </PanelSection>
           </motion.div>
 
-          {/* 9. Improvements — mobile 9th · lg spans both cols at row-7 · xl col-3 row-3 */}
+          {/* 9. Improvements — mobile 9th · lg spans both cols at row-7 · xl col-3 rows 3-4.
+              B-055: spans 2 grid-rows at xl so its height (3-5 stacked recommendation
+              cards) distributes across rows 3-4 of col-3 instead of inflating row-3
+              alone — without this, row-3's auto height = max(Jump-nav, Skills Radar,
+              Improvements) = Improvements, leaving a void below Skills Radar and
+              Jump-nav before row-4 (Bullets / CTAs) starts. */}
           <motion.div
             variants={cardVariants}
             id="improvements"
-            className="lg:col-span-2 lg:col-start-1 lg:row-start-7 xl:col-start-3 xl:col-span-1 xl:row-start-3"
+            className="lg:col-span-2 lg:col-start-1 lg:row-start-7 xl:col-start-3 xl:col-span-1 xl:row-start-3 xl:row-end-5"
           >
             <PanelSection
               title="Improvement Suggestions"
