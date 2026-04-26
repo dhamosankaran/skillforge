@@ -92,7 +92,7 @@ async def submit_review(
 
     Error responses:
       400 — rating outside [1, 4] or time_spent_ms outside [0, 300 000]
-      402 — free user hit the daily 15-card review wall (spec #50)
+      402 — free user hit the daily 10-card review wall (spec #50)
       403 — card exists but is in a category the caller's plan does not permit
       404 — no card with the given card_id
     """

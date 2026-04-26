@@ -75,7 +75,7 @@ India → INR ₹999/mo; everyone else → USD $49/mo. See
 - **Free plan caps:**
   - ATS scans: **1 lifetime scan** (spec #56)
   - Interview questions: **3 per month**
-  - Foundation cards: **15 card reviews per day** for free users. Counter resets at the user's local midnight (via `EmailPreference.timezone`). Enforced server-side via Redis counter keyed by `daily_cards:{user_id}:{YYYY-MM-DD}` (per spec #50). Wall returns HTTP 402 with paywall payload. Pro/Enterprise/admin bypass.
+  - Foundation cards: **10 card reviews per day** for free users (lowered from 15 by LD-001 amendment 2026-04-26 — see SESSION-STATE LD-001). Counter resets at the user's local midnight (via `EmailPreference.timezone`). Enforced server-side via Redis counter keyed by `daily_cards:{user_id}:{YYYY-MM-DD}` (per spec #50). Wall returns HTTP 402 with paywall payload. Pro/Enterprise/admin bypass.
 - **Env-tunable caps (testing affordance):** the three free-tier values
   above are sourced from `Settings` so a local `FREE_DAILY_REVIEW_LIMIT`,
   `FREE_LIFETIME_SCAN_LIMIT`, or `FREE_MONTHLY_INTERVIEW_LIMIT` env

@@ -1,13 +1,17 @@
 """Tests for the free-tier daily-card review wall (spec #50).
 
-The wall enforces LD-001: free-plan users get 15 card reviews per day,
-resetting at the user's local midnight (timezone from
-``EmailPreference.timezone``, default UTC). Pro/Enterprise/admin bypass.
-Implemented by ``study_service._check_daily_wall`` using Redis INCR
-keyed by ``daily_cards:{user_id}:{YYYY-MM-DD}``. Fails open on Redis
-outage (counter skipped; ``counter_unavailable=True`` analytics marker).
+The wall enforces LD-001: free-plan users get
+``Settings.free_daily_review_limit`` card reviews per day (default 10
+per LD-001 amendment 2026-04-26; was 15 prior), resetting at the
+user's local midnight (timezone from ``EmailPreference.timezone``,
+default UTC). Pro/Enterprise/admin bypass. Implemented by
+``study_service._check_daily_wall`` using Redis INCR keyed by
+``daily_cards:{user_id}:{YYYY-MM-DD}``. Fails open on Redis outage
+(counter skipped; ``counter_unavailable=True`` analytics marker).
 
-Tests map 1:1 to the spec's §Test Plan → Backend pytest list.
+Tests map 1:1 to the spec's §Test Plan → Backend pytest list. Boundary
+counts derive from ``settings.free_daily_review_limit`` so the suite
+follows the LD-001 default and the LD-A1 env-override hook.
 """
 from __future__ import annotations
 
@@ -21,6 +25,7 @@ import pytest
 import pytest_asyncio
 from sqlalchemy import select
 
+from app.core.config import get_settings
 from app.models.card import Card
 from app.models.card_progress import CardProgress
 from app.models.category import Category
@@ -30,6 +35,11 @@ from app.models.subscription import Subscription
 from app.models.user import User
 from app.services import study_service
 from app.services.study_service import DailyReviewLimitError
+
+# Active cap for boundary-derived assertions. Reads ``Settings`` so the
+# suite follows the LD-001 amendment 2026-04-26 (15 → 10) and any
+# future env-override at process start.
+CAP = get_settings().free_daily_review_limit
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -176,42 +186,46 @@ def captured_events(monkeypatch):
 
 
 # BE-1 — AC-1
-async def test_free_user_review_1_through_15_succeed(db_session, fake_redis):
-    """Submits 1..15 for a free user all return successfully; counter tracks each."""
+async def test_free_user_review_up_to_cap_succeed(db_session, fake_redis):
+    """Submits 1..CAP for a free user all return successfully; counter tracks each.
+
+    Boundary derives from settings — see LD-001 amendment 2026-04-26.
+    """
     user = await _make_user(db_session, plan="free", timezone_str="UTC")
-    # Need 15 distinct cards so each submit is independent
-    cards = [await _make_card(db_session) for _ in range(15)]
+    # Need CAP distinct cards so each submit is independent
+    cards = [await _make_card(db_session) for _ in range(CAP)]
 
     for card in cards:
         await _submit(db_session, user, card.id)
 
-    # All 15 counted; no wall raised
-    assert fake_redis.incr_calls == 15
+    # All CAP counted; no wall raised
+    assert fake_redis.incr_calls == CAP
     key = next(iter(fake_redis.store))
-    assert fake_redis.store[key] == 15
+    assert fake_redis.store[key] == CAP
 
 
 # BE-2 — AC-2
-async def test_free_user_review_16_returns_402_with_correct_payload(
+async def test_first_review_over_cap_returns_402_with_correct_payload(
     db_session, fake_redis
 ):
-    """16th submit on the same local day raises DailyReviewLimitError with AC-2 payload."""
+    """The (CAP+1)th submit on the same local day raises DailyReviewLimitError
+    with AC-2 payload. Boundary derives from settings."""
     user = await _make_user(db_session, plan="free", timezone_str="Asia/Kolkata")
-    cards = [await _make_card(db_session) for _ in range(16)]
+    cards = [await _make_card(db_session) for _ in range(CAP + 1)]
 
-    for card in cards[:15]:
+    for card in cards[:CAP]:
         await _submit(db_session, user, card.id)
 
-    # 16th card — snapshot its card_progress state to assert no mutation
-    target = cards[15]
+    # (CAP+1)th card — snapshot its card_progress state to assert no mutation
+    target = cards[CAP]
     with pytest.raises(DailyReviewLimitError) as excinfo:
         await _submit(db_session, user, target.id)
 
     payload = excinfo.value.payload
     assert payload["error"] == "free_tier_limit"
     assert payload["trigger"] == "daily_review"
-    assert payload["cards_consumed"] == 15
-    assert payload["cards_limit"] == 15
+    assert payload["cards_consumed"] == CAP
+    assert payload["cards_limit"] == CAP
     # resets_at is ISO 8601 with tz offset
     assert "resets_at" in payload
     resets = datetime.fromisoformat(payload["resets_at"])
@@ -263,38 +277,38 @@ async def test_admin_bypasses_wall_regardless_of_plan(db_session, fake_redis):
 async def test_counter_resets_at_user_local_midnight_tz_la(
     db_session, fake_redis, monkeypatch
 ):
-    """LA user: 15 submits at 15:30 local, 16th at 16:30 same local day → 402.
-    After 00:01 local next day → 200."""
+    """LA user: CAP submits at 15:30 local, (CAP+1)th at 16:30 same local day → 402.
+    After 00:01 local next day → 200. Boundary derives from settings."""
     user = await _make_user(
         db_session, plan="free", timezone_str="America/Los_Angeles"
     )
-    cards = [await _make_card(db_session) for _ in range(17)]
+    cards = [await _make_card(db_session) for _ in range(CAP + 2)]
     la = ZoneInfo("America/Los_Angeles")
 
     # Day-1 at 15:30 LA local = 23:30 UTC (LA is UTC-7 in PDT)
     t1 = datetime(2026, 6, 15, 15, 30, tzinfo=la).astimezone(timezone.utc)
     monkeypatch.setattr(study_service, "_utcnow", lambda: t1)
-    for card in cards[:15]:
+    for card in cards[:CAP]:
         await _submit(db_session, user, card.id)
 
     # Day-1 at 16:30 LA local = 00:30 UTC (next UTC day, same LA day)
     t2 = datetime(2026, 6, 15, 16, 30, tzinfo=la).astimezone(timezone.utc)
     monkeypatch.setattr(study_service, "_utcnow", lambda: t2)
     with pytest.raises(DailyReviewLimitError):
-        await _submit(db_session, user, cards[15].id)
+        await _submit(db_session, user, cards[CAP].id)
 
     # Day-2 at 00:01 LA local = 07:01 UTC next day → fresh Redis key
     t3 = datetime(2026, 6, 16, 0, 1, tzinfo=la).astimezone(timezone.utc)
     monkeypatch.setattr(study_service, "_utcnow", lambda: t3)
-    await _submit(db_session, user, cards[16].id)  # should not raise
+    await _submit(db_session, user, cards[CAP + 1].id)  # should not raise
 
-    # Two distinct keys exist (day-1 had 15 accepted + 1 walled INCR; day-2 at 1).
+    # Two distinct keys exist (day-1 had CAP accepted + 1 walled INCR; day-2 at 1).
     # The walled INCR still mutates the counter — the raise happens after,
-    # leaving the observable store at 16. What the user sees is count_after=15
-    # in the analytics event (capped) and the raise.
+    # leaving the observable store at CAP+1. What the user sees is
+    # count_after=CAP in the analytics event (capped) and the raise.
     assert len(fake_redis.store) == 2
     counts = sorted(fake_redis.store.values())
-    assert counts == [1, 16]
+    assert counts == [1, CAP + 1]
 
 
 # BE-6 — AC-4 default path
@@ -337,23 +351,23 @@ async def test_redis_outage_fails_open(
 async def test_concurrent_submits_at_boundary_increment_atomically(
     db_session, fake_redis, monkeypatch
 ):
-    """Two concurrent wall-checks at count=14 return post-values 15 and 16.
+    """Two concurrent wall-checks at count=CAP-1 return post-values CAP and CAP+1.
 
     SQLAlchemy AsyncSession is not safe to share across concurrent
     coroutines (`InterfaceError: cannot use Connection.transaction() in
     a manually started transaction`), so we exercise the wall helper
     directly to focus the test on Redis INCR atomicity — the actual
     invariant the spec names (§Edge Cases: "Two concurrent callers see
-    post-values 15 and 16 respectively; the 15-call succeeds; the 16-call
-    402s").
+    post-values CAP and CAP+1 respectively; the CAP-call succeeds; the
+    (CAP+1)-call 402s"). Boundary derives from settings.
 
     FakeRedis.incr is atomic under asyncio because the GIL serialises the
     dict mutation, matching real Redis INCR semantics.
     """
     user = await _make_user(db_session, plan="free", timezone_str="UTC")
-    # Pre-seed the counter to 14 so the next two incrs land at 15 and 16.
+    # Pre-seed the counter to CAP-1 so the next two incrs land at CAP and CAP+1.
     key_today = f"daily_cards:{user.id}:{_utc_date_str()}"
-    fake_redis.store[key_today] = 14
+    fake_redis.store[key_today] = CAP - 1
 
     raised: list[bool] = []
 
@@ -366,7 +380,7 @@ async def test_concurrent_submits_at_boundary_increment_atomically(
 
     await asyncio.gather(_attempt(), _attempt())
 
-    assert fake_redis.store[key_today] == 16
+    assert fake_redis.store[key_today] == CAP + 1
     assert sorted(raised) == [False, True]  # exactly one wall; exactly one pass
 
 
@@ -374,21 +388,23 @@ async def test_concurrent_submits_at_boundary_increment_atomically(
 async def test_pro_upgrade_mid_wall_bypasses_immediately(
     db_session, fake_redis
 ):
-    """User hits 402 at #16 as free; flip subscription to pro; #17 goes through; Redis untouched by the pro submit."""
+    """User hits 402 at the (CAP+1)th submit as free; flip subscription to pro;
+    the next submit goes through; Redis untouched by the pro submit. Boundary
+    derives from settings."""
     user = await _make_user(db_session, plan="free", timezone_str="UTC")
-    cards = [await _make_card(db_session) for _ in range(17)]
+    cards = [await _make_card(db_session) for _ in range(CAP + 2)]
 
-    for card in cards[:15]:
+    for card in cards[:CAP]:
         await _submit(db_session, user, card.id)
     with pytest.raises(DailyReviewLimitError):
-        await _submit(db_session, user, cards[15].id)
+        await _submit(db_session, user, cards[CAP].id)
 
     # Simulate Stripe webhook upgrading plan
     user.subscription.plan = "pro"
     await db_session.flush()
 
     pre_incr = fake_redis.incr_calls
-    await _submit(db_session, user, cards[16].id)  # must not raise
+    await _submit(db_session, user, cards[CAP + 1].id)  # must not raise
     # Option 2: no Redis call for pro
     assert fake_redis.incr_calls == pre_incr
 
@@ -419,12 +435,14 @@ async def test_posthog_daily_card_submit_fires_with_correct_props(
 async def test_walled_submit_does_not_consume_streak_freeze(
     db_session, fake_redis
 ):
-    """Walled 16th submit leaves GamificationStats.freezes_available + streak untouched.
+    """Walled (CAP+1)th submit leaves GamificationStats.freezes_available +
+    streak untouched.
 
     AC-6 asserts the *walled submit* has no gamification side-effects. The
-    15 preceding legitimate submits do tick the streak and XP (that's the
-    regular review path), so we snapshot the gamification row AFTER submit
-    15 and assert it's byte-for-byte identical after the walled 16th.
+    CAP preceding legitimate submits do tick the streak and XP (that's the
+    regular review path), so we snapshot the gamification row AFTER the CAPth
+    submit and assert it's byte-for-byte identical after the walled (CAP+1)th.
+    Boundary derives from settings.
     """
     user = await _make_user(db_session, plan="free", timezone_str="UTC")
     stats = GamificationStats(
@@ -437,12 +455,12 @@ async def test_walled_submit_does_not_consume_streak_freeze(
     db_session.add(stats)
     await db_session.flush()
 
-    cards = [await _make_card(db_session) for _ in range(16)]
-    for card in cards[:15]:
+    cards = [await _make_card(db_session) for _ in range(CAP + 1)]
+    for card in cards[:CAP]:
         await _submit(db_session, user, card.id)
 
-    # Snapshot the gamification state between submit 15 (allowed) and the
-    # walled 16th.
+    # Snapshot the gamification state between submit CAP (allowed) and the
+    # walled (CAP+1)th.
     await db_session.refresh(stats)
     snapshot = {
         "current_streak": stats.current_streak,
@@ -452,7 +470,7 @@ async def test_walled_submit_does_not_consume_streak_freeze(
     }
 
     with pytest.raises(DailyReviewLimitError):
-        await _submit(db_session, user, cards[15].id)
+        await _submit(db_session, user, cards[CAP].id)
 
     await db_session.refresh(stats)
     assert stats.freezes_available == snapshot["freezes_available"]

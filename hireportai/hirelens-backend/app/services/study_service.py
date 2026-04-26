@@ -124,7 +124,7 @@ class CardForbiddenError(Exception):
 
 
 class DailyReviewLimitError(Exception):
-    """Raised when a free user exceeds the daily 15-card review budget (spec #50)."""
+    """Raised when a free user exceeds the daily 10-card review budget (spec #50)."""
 
     def __init__(self, payload: dict[str, Any]) -> None:
         self.payload = payload
@@ -173,7 +173,7 @@ def _next_local_midnight(now_utc: datetime, tz: ZoneInfo) -> datetime:
 
 
 async def _check_daily_wall(user: User, db: AsyncSession) -> None:
-    """Enforce the free-tier 15-card-per-day review wall (spec #50).
+    """Enforce the free-tier 10-card-per-day review wall (spec #50).
 
     Invariants:
       * Admins (``user.role == "admin"``) bypass unconditionally (AC-9).
@@ -448,7 +448,7 @@ async def review_card(
         CardNotFoundError     — card_id does not exist in the cards table
         CardForbiddenError    — card's category is not accessible under the
                                 caller's plan (free user + non-foundation card)
-        DailyReviewLimitError — free user has exceeded the daily 15-card
+        DailyReviewLimitError — free user has exceeded the daily 10-card
                                 review budget (spec #50). Only raised when
                                 ``user`` is provided so legacy callers
                                 without a User object skip the wall.

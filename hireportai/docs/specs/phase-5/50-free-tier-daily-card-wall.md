@@ -10,9 +10,11 @@ unblocks: P5-S22b (spec #22), P5-S26b (spec #42 — paywall dismissal)
 
 ## Status: Draft
 
+> **Amended 2026-04-26 (Slice B — LD-001 cap tightening):** Cap value `15 → 10` cards/day. All AC shapes, payload fields, behavior, edge cases UNCHANGED — only the integer literal moves. Test count unchanged (the AC tests parameterize against the active limit, not the literal 15). Cross-ref: SESSION-STATE LD-001 amendment 2026-04-26. Spec body below has been updated in-place; historical citations to "15-card budget" in earlier-authored spec #22 / spec #56 / E2E status docs are intentionally NOT touched in Slice B (they describe history at their authoring date) — they will read as stale until those specs are independently amended.
+
 ## Problem
 
-LD-001 (2026-04-19, `hireportai/SESSION-STATE.md`) locked the policy that "daily review consumes the free-tier 15-card budget" (α). The codebase enforces **nothing** of the sort today:
+LD-001 (2026-04-19, `hireportai/SESSION-STATE.md`; amended 2026-04-26, cap tightened 15 → 10) locked the policy that "daily review consumes the free-tier daily-card budget" (α). The codebase enforces **nothing** of the sort today:
 
 - `app/services/usage_service.py::PLAN_LIMITS` has no `daily_review` / `card_view` entry — the quota dict tracks only `analyze`, `rewrite`, `cover_letter`, `interview_prep`, `resume_optimize`.
 - `app/services/study_service.py::review_card` (line 249-) gates free users only on `Category.source == "foundation"` (line 284). No per-user card counter is incremented.
@@ -22,7 +24,7 @@ LD-001 (2026-04-19, `hireportai/SESSION-STATE.md`) locked the policy that "daily
 This gap blocks two downstream slices:
 
 - **P5-S22b** (plan-aware Missing Skills CTA) — its free-user CTA routes users into `/learn` with copy "Study these cards — free preview". The "preview" framing presumes an existing wall they will eventually hit. Without the wall, free users get unlimited reviews via the Missing-Skills path, contradicting LD-001 and the CTA's own semantics.
-- **P5-S26b** (paywall dismissal + win-back) — its §AC-1 depends on a free user "hitting the 15-card wall"; dismissal logic needs a real paywall to dismiss.
+- **P5-S26b** (paywall dismissal + win-back) — its §AC-1 depends on a free user "hitting the daily-card wall"; dismissal logic needs a real paywall to dismiss.
 
 Close the gap: wire the counter, raise the 402, and hook the existing `daily_review` PaywallModal trigger.
 
@@ -30,18 +32,18 @@ Close the gap: wire the counter, raise the 402, and hook the existing `daily_rev
 
 LD-001 contains two phrasings whose strict readings are in tension:
 
-- "The free-tier 15-card/day budget is consumed by the daily review flow" → suggests **per-day** cap (resets daily).
-- "Free users complete 3 days of active daily review (5 cards/day × 3 = 15) before hitting the paywall wall" → mathematically only holds if the 15 is **lifetime total** (5/day × 3 days = 15 before walled).
+- "The free-tier daily-card/day budget is consumed by the daily review flow" → suggests **per-day** cap (resets daily).
+- "Free users complete N days of active daily review (5 cards/day × N) before hitting the paywall wall" → mathematically only holds if the cap is **lifetime total** (5/day × N days before walled).
 
 This slice's authoring prompt (P5-S22-WALL-a) resolves the ambiguity explicitly toward the **per-day, resets at local midnight** reading. All ACs below follow that reading.
 
-Drift flag implication — `.agent/skills/payments.md:78` also reads "Foundation cards: **15 lifetime**", which aligns with LD-001's second phrasing but contradicts this spec's per-day reading. That skill-doc line will need amendment in the P5-S22-WALL-b commit (or a follow-up docs-sync slice) to say "15 per day (user-local midnight reset)". This amendment is **not** in scope for P5-S22-WALL-a (spec only). Logged as a spec-author observation; a Drift flag can be appended by the impl slice when it lands.
+Drift flag implication — `.agent/skills/payments.md:78` also reads "Foundation cards: **15 lifetime**", which aligns with LD-001's second phrasing but contradicts this spec's per-day reading. That skill-doc line will need amendment in the P5-S22-WALL-b commit (or a follow-up docs-sync slice) to say "10 per day (user-local midnight reset)". This amendment is **not** in scope for P5-S22-WALL-a (spec only). Logged as a spec-author observation; a Drift flag can be appended by the impl slice when it lands.
 
 **Resolution:** Ambiguity resolved in the follow-up amendment commit. LD-001 now unambiguously states per-day budget with user-local-midnight reset. `.agent/skills/payments.md` line updated in the same commit. See Ops Log entry dated 2026-04-19.
 
 ## Solution
 
-Per-user per-day counter that increments on FSRS review submit. When the counter reaches 15 for a free user on their local calendar day, the next submit returns HTTP 402 with a structured paywall payload. Counter resets at the user's local midnight. Pro / Enterprise / admin bypass the check entirely.
+Per-user per-day counter that increments on FSRS review submit. When the counter reaches the active free-tier cap (`Settings.free_daily_review_limit`, default 10 per LD-001 amendment 2026-04-26) for a free user on their local calendar day, the next submit returns HTTP 402 with a structured paywall payload. Counter resets at the user's local midnight. Pro / Enterprise / admin bypass the check entirely.
 
 Storage: Redis `INCR` with a key scoped by `user_id + YYYY-MM-DD` (date in user's timezone). Reuses the `_get_redis()` fail-open pattern already live in `app/services/home_state_service.py` and `app/services/geo_pricing_service.py`.
 
@@ -53,27 +55,27 @@ Convention note: the existing free-tier-cap precedent (`.agent/skills/payments.m
 
 ## Acceptance Criteria
 
-- **AC-1** — A free-plan user submitting their 1st through 15th daily review within a single user-local calendar day receives `200 OK` with the existing `ReviewResponse` payload. No behavior change for reviews 1–15. Verified by pytest that seeds 15 submissions and asserts each returns 200.
-- **AC-2** — A free-plan user submitting their 16th daily review within the same user-local calendar day receives `402 Payment Required` with JSON body:
+- **AC-1** — A free-plan user submitting their 1st through 10th daily review within a single user-local calendar day receives `200 OK` with the existing `ReviewResponse` payload. No behavior change for reviews 1–10. Verified by pytest that seeds 10 submissions and asserts each returns 200.
+- **AC-2** — A free-plan user submitting their 11th daily review within the same user-local calendar day receives `402 Payment Required` with JSON body:
   ```json
   {
     "error": "free_tier_limit",
     "trigger": "daily_review",
-    "cards_consumed": 15,
-    "cards_limit": 15,
+    "cards_consumed": 10,
+    "cards_limit": 10,
     "resets_at": "<ISO 8601 timestamp, user-local midnight + 1 day, with tz offset>"
   }
   ```
-  The FSRS progress row for that card is NOT mutated (the review did not happen). Verified by pytest: seed 15 submissions; submit the 16th; assert 402 + exact payload shape + `card_progress` row unchanged.
+  The FSRS progress row for that card is NOT mutated (the review did not happen). Verified by pytest: seed 10 submissions; submit the 11th; assert 402 + exact payload shape + `card_progress` row unchanged.
 - **AC-3** — Pro and Enterprise users never hit the 402 path regardless of count. Per §Counter Scope below (Option 2), the counter does **not** increment for Pro / Enterprise — the wall check is skipped entirely when `_is_free(user) is False`. Verified by pytest: submit 20 Pro-user reviews in one day, assert all 200.
-- **AC-4** — Counter resets at the user's local midnight, resolved from `EmailPreference.timezone`. Users without an `EmailPreference` row or with `timezone IS NULL` default to UTC. Verified by pytest: freeze `datetime.now(timezone.utc)` to 23:30 UTC, set user timezone to `America/Los_Angeles` (UTC-8, so it's still 15:30 local), seed 15 reviews, attempt 16th → 402. Advance frozen time to 00:30 UTC (now 16:30 local, same calendar day) → still 402. Advance to 08:01 UTC (00:01 local next day) → 200.
+- **AC-4** — Counter resets at the user's local midnight, resolved from `EmailPreference.timezone`. Users without an `EmailPreference` row or with `timezone IS NULL` default to UTC. Verified by pytest: freeze `datetime.now(timezone.utc)` to 23:30 UTC, set user timezone to `America/Los_Angeles` (UTC-8, so it's still 15:30 local), seed up-to-cap reviews, attempt the next → 402. Advance frozen time to 00:30 UTC (now 16:30 local, same calendar day) → still 402. Advance to 08:01 UTC (00:01 local next day) → 200.
 - **AC-5** — Mission Mode reviews do not consume this counter. Rationale: Mission Mode is already Pro-gated (`/learn/mission` lazy-loads `MissionMode` which is Pro-only per `.agent/skills/mission-mode.md`). Since only Pros reach it, and Pros skip the wall per AC-3, this is a correctness property, not new logic. Verified by inspection: the Mission-submit code path (if distinct from `/api/v1/study/review`) does not invoke the wall-check helper.
 - **AC-6** — Streak-freeze tokens (`GamificationStats.freezes_available`) have no interaction with the wall. Freezes affect streak continuity only. Verified by pytest negative assertion: walled-16th submit does not consume a freeze, does not change `freezes_available`, does not affect `current_streak`.
 - **AC-7** — `PaywallModal` renders on the 402 response with `trigger="daily_review"`, displaying a human-readable `resets_at` time ("resets in 4h 17m" / "resets at 12:00 AM") and the existing "Upgrade to Pro" CTA. The existing `PaywallTrigger` union already permits `'daily_review'`; no new trigger is added. Verified by Vitest test that mocks a 402 response and asserts modal open + copy + CTA.
 - **AC-8** — On Pro upgrade via Stripe webhook mid-wall, the counter is **not** reset — it's simply ignored thereafter because `_is_free(user)` returns False after the subscription activates. Verified by pytest: user hits 402 at 16th review; simulate `payment_service.handle_webhook` upgrading the subscription; 17th submit returns 200 without Redis key mutation.
 - **AC-9** — Admin users (`User.role == "admin"`) bypass the wall regardless of `_is_free(user)`'s return value. Rationale: admins need unobstructed test traversal. The bypass check is an early-exit in the wall-check helper. Verified by pytest: admin + plan=free + 20 submissions → all 200.
 - **AC-10** — PostHog analytics:
-  - `daily_card_submit` fires on every submit attempt — including walled — with props `{ plan: "free" | "pro" | "enterprise", count_after: int, was_walled: bool }`. For walled submits, `count_after` equals the cap (15) and `was_walled: true`. Fires from the **backend** (consistent with `card_reviewed` from `.agent/skills/study-engine.md`, also backend-fired).
+  - `daily_card_submit` fires on every submit attempt — including walled — with props `{ plan: "free" | "pro" | "enterprise", count_after: int, was_walled: bool }`. For walled submits, `count_after` equals the active cap (`Settings.free_daily_review_limit`, default 10) and `was_walled: true`. Fires from the **backend** (consistent with `card_reviewed` from `.agent/skills/study-engine.md`, also backend-fired).
   - `daily_card_wall_hit` fires only on 402 response, from the **frontend** when `PaywallModal` opens with `trigger="daily_review"` (consistent with the existing `paywall_hit` convention in `PaywallModal.tsx`, which also fires FE-side). Props: `{ resets_at_hours_from_now: int }` (integer hours, rounded toward zero).
   - Both events MUST be added to `.agent/skills/analytics.md` in the impl commit per the P5-S21b convention (catalog updated alongside event introduction).
 
@@ -84,7 +86,7 @@ Convention note: the existing free-tier-cap precedent (`.agent/skills/payments.m
 - Key format: `daily_cards:{user_id}:{YYYY-MM-DD}` where `YYYY-MM-DD` is the user's **local** calendar date at the moment the review is submitted (not UTC).
 - TTL: 48 hours, set on first `INCR` per key. 48h is a safety floor — the key's date rolls forward at user-local midnight, so a fresh key is allocated daily and the 48h TTL on the old key naturally ages it out. TTL does NOT need to align with the day boundary; it only needs to be longer than the longest plausible timezone swing (~14 hours between UTC-12 and UTC+14) plus headroom.
 - Value: integer. `INCR` is atomic.
-- Read for AC check: `GET` key, parse int, compare to 15. `INCR` returns the new value, so the service can read the post-increment count in a single round-trip when incrementing.
+- Read for AC check: `GET` key, parse int, compare to the active cap (`Settings.free_daily_review_limit`, default 10). `INCR` returns the new value, so the service can read the post-increment count in a single round-trip when incrementing.
 
 ### Rationale for Redis over DB
 
@@ -144,8 +146,8 @@ except study_service.DailyReviewLimitError as exc:      # new → 402
 ### Backwards compatibility
 
 - Pro users — zero change. All existing Pro-user integration tests remain green.
-- Free users submitting ≤15 reviews per day — zero change. All existing free-user integration tests submit ≤1 review per user-day (audit of `tests/test_study_service.py` and `tests/test_study_api.py` confirms: `test_review_card_returns_fsrs_state`, `test_review_advances_schedule`, `test_first_review_creates_progress_row`, `test_review_nonexistent_card_returns_404`, `test_review_invalid_rating_returns_422`, `test_free_user_review_premium_card_returns_403`, `test_review_card_awards_xp` all submit ≤1 review). No test requires adjustment to remain green under the wall.
-- Free users submitting >15 reviews per day — the 16th and beyond will 402 post-ship. Any external client hammering the endpoint as a benchmark will break; no such client exists.
+- Free users submitting ≤cap reviews per day — zero change. All existing free-user integration tests submit ≤1 review per user-day (audit of `tests/test_study_service.py` and `tests/test_study_api.py` confirms: `test_review_card_returns_fsrs_state`, `test_review_advances_schedule`, `test_first_review_creates_progress_row`, `test_review_nonexistent_card_returns_404`, `test_review_invalid_rating_returns_422`, `test_free_user_review_premium_card_returns_403`, `test_review_card_awards_xp` all submit ≤1 review). No test requires adjustment to remain green under the wall.
+- Free users submitting >cap reviews per day — the (cap+1)th and beyond will 402 post-ship. Any external client hammering the endpoint as a benchmark will break; no such client exists.
 
 ## Data Model Changes
 
@@ -160,7 +162,7 @@ Admin bypass (AC-9): check `user.role == "admin"` before `_is_free`. If admin, r
 ## UI/UX
 
 - 402 response from `POST /api/v1/study/review` is caught by the existing review-submit handler in `hirelens-frontend/src/pages/DailyReview.tsx` (or wherever the submit call lives per P5-S22-WALL-b's Step 1 audit — likely `useStudyDashboard` or a sibling hook).
-- Caught 402 opens `PaywallModal` with `trigger="daily_review"`. The existing modal copy ("Daily Review is a Pro feature" / "Daily Review uses FSRS to schedule the exact cards you need to revisit. Pro unlocks the full queue.") is re-used — no copy change in this slice. A follow-up slice may refine the copy to mention the 15-card budget and the reset time; out of scope here.
+- Caught 402 opens `PaywallModal` with `trigger="daily_review"`. The existing modal copy ("Daily Review is a Pro feature" / "Daily Review uses FSRS to schedule the exact cards you need to revisit. Pro unlocks the full queue.") is re-used — no copy change in this slice. A follow-up slice may refine the copy to mention the daily-card budget and the reset time; out of scope here.
 - Modal MUST surface `resets_at` in a human-readable format. Two options, impl picks:
   - "Resets in 4h 17m" (relative).
   - "Resets at 12:00 AM" (absolute, user-local).
@@ -188,10 +190,10 @@ The existing `card_reviewed` event (per `.agent/skills/study-engine.md:43`) fire
 
 - **User changes timezone mid-day**: `EmailPreference.timezone` updates → next submit computes a new local date key → user could theoretically regain budget by jumping to a later timezone. Accepted — attack surface is minimal; closing it adds state complexity for a vanishingly small exploit population.
 - **Admin bypass** (AC-9): `user.role == "admin"` early-exits before the Redis call. Admin + free plan is valid (dev / test accounts).
-- **Concurrent submits at count=14 and count=15**: Redis `INCR` is atomic. Two concurrent callers see post-values 15 and 16 respectively. The 15-call succeeds; the 16-call 402s. Correct by design.
+- **Concurrent submits at count=cap-1 and count=cap**: Redis `INCR` is atomic. Two concurrent callers see post-values `cap` and `cap+1` respectively. The `cap`-call succeeds; the `cap+1`-call 402s. Correct by design.
 - **Redis outage**: fail-open per §Counter Storage. `daily_card_submit` fires with `counter_unavailable: true`. Monitor via PostHog; if seen, page ops.
 - **User upgrades mid-wall** (AC-8): next submit's `_is_free(user)` returns False → wall-check early-exits → review proceeds. Redis key is orphaned but ages out via its 48h TTL.
-- **Free user on day 1 at 14:00 UTC submits 15 reviews, at 18:00 UTC (same local day) attempts #16**: walled correctly. At 00:01 next local day → new key, `INCR` returns 1, allowed.
+- **Free user on day 1 at 14:00 UTC submits up-to-cap reviews, at 18:00 UTC (same local day) attempts the next**: walled correctly. At 00:01 next local day → new key, `INCR` returns 1, allowed.
 - **Rating submit of a card the user has already reviewed today**: still counts. The wall is a **submit counter**, not a **unique-card counter**. Rationale: FSRS re-reviews (due-again cards) are reviews for budget purposes; undercounting them would let a user loop "Again" on the same card for free unlimited review.
 - **Card FSRS state mutated by the service BEFORE the wall raises**: do NOT. The wall check MUST run before any FSRS / `card_progress` mutation. P5-S22-WALL-b's test suite explicitly asserts the 402-path leaves `card_progress` untouched (AC-2).
 - **User in a locale whose timezone is not in the IANA tzdb** (or malformed `EmailPreference.timezone` string): `ZoneInfo(tz_string)` raises `ZoneInfoNotFoundError`. Catch and default to UTC; log a warning with the bad tz string so we can clean it up.
@@ -210,17 +212,17 @@ The existing `card_reviewed` event (per `.agent/skills/study-engine.md:43`) fire
 
 ### Backend pytest (to be written in P5-S22-WALL-b BEFORE implementation per Rule 1)
 
-- `test_free_user_review_1_through_15_succeed` — AC-1. Seeds 15 foundation-card submissions; asserts each returns 200 + `card_progress` row updates.
-- `test_free_user_review_16_returns_402_with_correct_payload` — AC-2. Seeds 15; submits #16; asserts 402 + exact JSON shape + `card_progress` row unchanged.
-- `test_pro_user_never_hits_wall` — AC-3. Submits 20 Pro-user reviews; asserts all 200; asserts Redis key absent (Option 2 → no increment for Pros).
+- `test_free_user_review_up_to_cap_succeed` — AC-1. Seeds `cap` foundation-card submissions; asserts each returns 200 + `card_progress` row updates. `cap` reads `Settings.free_daily_review_limit` so the test follows the LD-001 default (currently 10 after the 2026-04-26 amendment).
+- `test_first_review_over_cap_returns_402_with_correct_payload` — AC-2. Seeds `cap`; submits the next; asserts 402 + exact JSON shape + `card_progress` row unchanged.
+- `test_pro_user_never_hits_wall` — AC-3. Submits 20 Pro-user reviews (above any plausible cap); asserts all 200; asserts Redis key absent (Option 2 → no increment for Pros).
 - `test_admin_bypasses_wall_regardless_of_plan` — AC-9. User with `role="admin"` and `plan="free"`; 20 submissions; all 200.
-- `test_counter_resets_at_user_local_midnight_tz_la` — AC-4. `freezegun` + user tz=`America/Los_Angeles`; 15 submissions at 15:30 local; attempt 16 at 16:30 local (same day); still 402; advance to 00:01 local next day; 200.
+- `test_counter_resets_at_user_local_midnight_tz_la` — AC-4. `freezegun` + user tz=`America/Los_Angeles`; `cap` submissions at 15:30 local; attempt the next at 16:30 local (same day); still 402; advance to 00:01 local next day; 200.
 - `test_counter_defaults_to_utc_when_user_has_no_timezone` — AC-4 default path. User without `EmailPreference` row; wall boundary = UTC midnight.
 - `test_redis_outage_fails_open` — §Counter Storage fail-open. Monkeypatch `_get_redis()` → None; 20 free-user submissions; all 200; `daily_card_submit` events emit `counter_unavailable: true`.
-- `test_concurrent_submits_at_boundary_increment_atomically` — §Edge Cases. Two `asyncio.gather`'d submits at count=14; one returns 200 (post=15), the other returns 200 (post=15 as well? — confirm Redis INCR semantics under test fixture; if both race to 15 they both succeed since the check is `count <= 15` post-increment). Exact assertion: no two submits both returning 402 at count=14→15; only the one landing at post=16+ 402s.
-- `test_pro_upgrade_mid_wall_bypasses_immediately` — AC-8. User hits 402 at #16; simulate Stripe webhook upgrading to Pro; #17 returns 200; Redis key untouched.
+- `test_concurrent_submits_at_boundary_increment_atomically` — §Edge Cases. Two `asyncio.gather`'d submits with the counter pre-seeded to `cap-1`; one returns post=`cap` and succeeds, the other returns post=`cap+1` and 402s. Exact assertion: exactly one wall raise across the pair.
+- `test_pro_upgrade_mid_wall_bypasses_immediately` — AC-8. User hits 402 at the (cap+1)th submit; simulate Stripe webhook upgrading to Pro; the next submit returns 200; Redis key untouched.
 - `test_posthog_daily_card_submit_fires_with_correct_props` — AC-10 (BE side). Stub PostHog client; submit one free review; assert event name + props.
-- `test_walled_submit_does_not_consume_streak_freeze` — AC-6. Set `freezes_available=3`; hit wall on #16; assert `freezes_available` unchanged.
+- `test_walled_submit_does_not_consume_streak_freeze` — AC-6. Set `freezes_available=3`; hit wall on the (cap+1)th; assert `freezes_available` unchanged.
 
 Expected backend test count delta at P5-S22-WALL-b ship: **+11** (248 → 259 non-integration).
 
@@ -236,20 +238,20 @@ Expected frontend test count delta at P5-S22-WALL-b ship: **+5** (142 → 147).
 
 ### Manual post-deploy
 
-- **Free user (Pro needed as contrast)**: log in as a test free user with `EmailPreference.timezone = "Asia/Kolkata"` (IST, UTC+5:30). Submit 15 foundation-card reviews. Attempt 16 — see `PaywallModal` with `daily_review` trigger and a sensible "resets in Xh" or "resets at 12:00 AM" string. Wait past local midnight (or advance the test user's timezone), submit again, succeed.
+- **Free user (Pro needed as contrast)**: log in as a test free user with `EmailPreference.timezone = "Asia/Kolkata"` (IST, UTC+5:30). Submit up-to-cap (10) foundation-card reviews. Attempt the next — see `PaywallModal` with `daily_review` trigger and a sensible "resets in Xh" or "resets at 12:00 AM" string. Wait past local midnight (or advance the test user's timezone), submit again, succeed.
 - **Pro user**: submit 20+ reviews in a day, never see the modal. Verify `PaywallModal` never opens.
 - **Admin user**: same as Pro.
 - **Redis outage simulation** (staging only): kill Redis; submit 20 free-user reviews; all succeed; PostHog shows `daily_card_submit` events with `counter_unavailable: true`.
 
 ## Out of Scope / Follow-ups
 
-- **Proactive counter display** (e.g., "12 of 15 reviewed today" banner on `/learn/daily`) — adds design surface; ship only if PostHog data shows the wall-hit rate is high and users report surprise.
+- **Proactive counter display** (e.g., "8 of 10 reviewed today" banner on `/learn/daily`) — adds design surface; ship only if PostHog data shows the wall-hit rate is high and users report surprise.
 - **Streak-freeze "buy-back a review" mechanic** — speculative feature; not planned.
-- **Per-category wall limits** — current design is flat 15/day across all foundation cards. Premium-category access remains gated by `Category.source` (existing 403 path, untouched).
+- **Per-category wall limits** — current design is flat cap/day across all foundation cards (see `Settings.free_daily_review_limit`). Premium-category access remains gated by `Category.source` (existing 403 path, untouched).
 - **Redis counter persistence for historical analytics** — PostHog handles analytics; don't duplicate. The 48h TTL is intentional — the key is transient session state, not a log.
-- **Grace period on first-day-of-wall** (e.g., warn at 13, wall at 15) — simpler to ship without; revisit if wall-hit UX testing shows friction.
+- **Grace period on first-day-of-wall** (e.g., warn at 8, wall at 10) — simpler to ship without; revisit if wall-hit UX testing shows friction.
 - **Migrating `check_and_increment` call-sites from 403 → 402** for free-tier-cap consistency — separate cleanup slice; this spec explicitly uses 402 for the wall while leaving other caps at 403 for now.
 - **403→402 migration for the existing interview-prep monthly cap** — tracked as future hygiene; not in this slice, not in P5-S22-WALL-b.
 - **Streak-vs-wall midnight alignment** — flagged in §Timezone Handling as a product inconsistency. Needs a Locked Decision (unify both to user-local midnight, or unify both to UTC). Not blocking P5-S22-WALL-b ship.
-- **`.agent/skills/payments.md:78` "Foundation cards: 15 **lifetime**" amendment** — needs update to "15 per day (user-local midnight reset)" per this spec's Interpretation note. Include in P5-S22-WALL-b commit or a follow-up docs-sync slice.
+- **`.agent/skills/payments.md:78` "Foundation cards: 15 **lifetime**" amendment** — needs update to "10 per day (user-local midnight reset)" per this spec's Interpretation note + LD-001 amendment 2026-04-26. Include in P5-S22-WALL-b commit or a follow-up docs-sync slice.
 - **`.agent/skills/study-engine.md` Daily-5 line update** — already flagged in the existing 2026-04-18 Locked Decision §1B implementation note ("Update study-engine.md skill: change 'Daily 5 = ... LIMIT 5' line to reflect 20-cap"). Orthogonal to this spec; bundled cleanup candidate if P5-S22-WALL-b touches that skill file anyway.

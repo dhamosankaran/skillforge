@@ -140,7 +140,7 @@ Senior/Staff/Principal engineers preparing for $200K+ roles face a fragmented le
 ```
 Sign in (Google) → Upload resume (free) → See ATS score + skill gaps
      → "You're weak in RAG and System Design — here are cards"
-          → Browse cards → Hit 15-card wall → Pay $49/mo (or ₹999/mo)
+          → Browse cards → Hit 10-card wall → Pay $49/mo (or ₹999/mo)
                → Daily 5 (FSRS) → Quiz → Come back tomorrow
 ```
 
@@ -202,7 +202,7 @@ Sign in (Google) → Upload resume (free) → See ATS score + skill gaps
 | Week | What they experience | Phase |
 |------|---------------------|-------|
 | W3 | Sign in → scan resume → see gaps → "You need RAG + System Design" → browse cards | 1 |
-| W3 | Hit 15-card limit → pay $49/mo (or ₹999 if Indian IP) → unlock full library | 1 |
+| W3 | Hit 10-card limit → pay $49/mo (or ₹999 if Indian IP) → unlock full library | 1 |
 | W3 | Daily 5 starts → quiz after each card → FSRS schedules reviews | 1 |
 | W7 | **Start Mission**: "Google in 14 days" → daily targets → countdown | 2 |
 | W7 | Streaks + XP visible → daily email: "8 cards due, 12 days left" | 2 |
