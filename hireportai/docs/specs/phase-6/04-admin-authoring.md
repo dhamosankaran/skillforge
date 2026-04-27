@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.4: Admin Authoring (multi-route admin shell + deck/lesson/quiz_item CRUD + lesson_service DB swap + fixture retirement)
 
-## Status: Drafted, not shipped
+## Status: Partially shipped — slice 6.4a shipped (closes B-064 by `b0806d0`); slice 6.4b pending B-065
 
 | Field | Value |
 |-------|-------|
@@ -925,6 +925,7 @@ events set `internal: true` in properties per
 | `admin_lesson_archived` | BE `lesson_admin_service.archive_lesson` — only on NULL → non-NULL transition. | `{admin_id, lesson_id, deck_id, was_published: bool, internal: true}` | ✓ | (6.0) |
 | `admin_quiz_item_created` | BE `quiz_item_admin_service.create_quiz_item` — end of transaction. | `{admin_id, quiz_item_id, lesson_id, question_type, difficulty, internal: true}` | ✓ | (6.0) |
 | `admin_quiz_item_retired` | BE `quiz_item_admin_service.retire_quiz_item` (direct retire OR cascade from substantive lesson edit OR substantive quiz_item PATCH). Only on NULL → non-NULL transition. | `{admin_id, quiz_item_id, lesson_id, superseded_by_id: str \| null, prior_version: int, retire_reason: 'direct' \| 'lesson_substantive_cascade' \| 'quiz_item_substantive_replace', internal: true}` | ✓ | (6.0) |
+| `admin_deck_persona_narrowed` | BE `deck_admin_service.update_deck` — fires only on the narrowing branch (one or more personas removed from `decks.persona_visibility`). Per D-19. | `{admin_id, deck_id, removed_personas: list[str], before_count: int, after_count: int, internal: true}` | ✓ | (6.0) |
 
 > **Cascade-retire idempotency.** When a substantive lesson edit
 > retires N quiz_items, the cascade fires N
@@ -950,10 +951,11 @@ events set `internal: true` in properties per
 > existing `/admin/cards` GET (no `admin_cards_listed` event). Audit-
 > log row covers it.
 
-Catalog update: `.agent/skills/analytics.md` gains 10 new admin event
-rows in slice 6.4b. Slice 6.4a touches no analytics (shell refactor is
-no-op at the catalog level — `/admin/cards` keeps emitting the same
-spec #17 events).
+Catalog update: `.agent/skills/analytics.md` gains 11 new admin event
+rows in slice 6.4b (10 lifecycle events + `admin_deck_persona_narrowed`
+per D-19). Slice 6.4a touches no analytics (shell refactor is no-op at
+the catalog level — `/admin/cards` keeps emitting the same spec #17
+events).
 
 ## 10. Test plan
 
@@ -1325,6 +1327,68 @@ The implementation slices (6.4a + 6.4b) must pass:
   The BE endpoint remains live and un-consumed. A future slice may
   build the FE consumer when product demand surfaces — file as a new
   BACKLOG row at that time. Drift logged in `SESSION-STATE.md`.
+- **D-15 (resolves OQ-2) — `lesson_service.py` body-swap queries use
+  `selectinload(Lesson.quiz_items)`.** Mirrors slice 6.2 precedent
+  (`app/services/quiz_item_study_service.py`). Avoids N+1 on
+  `getDeckLessons` / `getLesson` paths; cost is one extra SELECT per
+  relationship per request, negligible at expected request volume.
+  Cross-ref §4.2.
+- **D-16 (resolves OQ-3) — Admin-LIST `?status=` query param
+  vocabulary: `'active'` | `'drafts'` | `'published'` | `'archived'` |
+  `'all'`.** Default `'active'`. `'active'` includes drafts AND
+  published; excludes archived (so the authoring queue is not
+  fragmented). Vocabulary applies to all three admin-LIST endpoints
+  (decks, lessons, quiz_items) per §5. Drafts surfaced via
+  `?status=drafts` using `ix_lessons_review_queue` from slice 6.1
+  §4.2. Cross-ref §5.4.
+- **D-17 (resolves OQ-4) — Substantive-edit confirm modal preview
+  computes classification FE-side via new `src/utils/lessonEdit.ts`.**
+  Module exports `classifyEdit(before, after) -> 'minor' |
+  'substantive'` mirroring the BE rule (>15% char-delta on
+  `concept_md` / `production_md` / `examples_md`). BE re-validates on
+  PATCH per §7.1; FE classification is advisory-only for
+  confirm-modal UX (no extra round trip). Both sides import from the
+  same threshold constant `SUBSTANTIVE_EDIT_THRESHOLD = 0.15` —
+  declared FE-side in `lessonEdit.ts`, BE-side in
+  `app/services/admin_errors.py` constants block (per D-11). Drift
+  case is handled by `EditClassificationConflictError` per §7.1.
+  Cross-ref §7.1, §7.2.
+- **D-18 (resolves OQ-5) — Quiz_item version cascade rules differ by
+  edit path.**
+  - **Lesson-level substantive PATCH** → cascade-retires all active
+    `quiz_items` for that lesson in the same DB transaction (per
+    D-8). Sets `quiz_items.retired_at = now()`. Does NOT auto-create
+    replacements — admin authors new quiz_items manually after
+    lesson edit. Rationale: a lesson body change does not necessarily
+    invalidate every question; auto-replacement would be a wrong
+    assumption about admin intent.
+  - **Quiz_item-level substantive PATCH** → retire-and-replace:
+    insert a new `quiz_item` row with `version = old.version + 1`,
+    set `old.superseded_by_id = new.id`, set
+    `old.retired_at = now()`. Preserves FSRS history continuity via
+    the `superseded_by_id` foreign key chain (downstream
+    FSRS-history follow-up out of scope this slice).
+
+  Cross-ref §7.3, §5 quiz_item PATCH endpoint.
+- **D-19 (resolves OQ-6) — `decks.persona_visibility` is admin-
+  editable post-creation, with FE narrowing-confirm modal.**
+  Narrowing edits (removing one or more personas from the array)
+  trigger a `ConfirmPersonaNarrowingModal` on the FE before PATCH
+  submit. Modal copy: "Narrowing persona visibility will hide this
+  deck from N learners currently in personas X, Y. Their existing
+  FSRS progress on quiz_items in this deck is preserved but they
+  will no longer see the deck in /learn surfaces. Continue?" BE
+  PATCH validates the change but does not gate it (service layer
+  simply persists; FE owns the warning). New event
+  `admin_deck_persona_narrowed {deck_id, removed_personas,
+  before_count, after_count}` added to §9 events table. Cross-ref
+  §6.2.
+
+  **Open follow-up flagged for slice 6.7 / 6.8:** narrowing does not
+  retire in-flight `quiz_item_progress` rows for users now in
+  excluded personas — those rows linger but become unreachable via
+  /learn surfaces. If FSRS-history orphan cleanup is desired, file a
+  separate B-row at slice 6.7 (persona Learn) impl time.
 
 ## 13. Out of scope (explicit list)
 
