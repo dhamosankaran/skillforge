@@ -76,7 +76,7 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 - `01-foundation-schema.md` — slice 6.1, four foundation tables. ✅ shipped (`a989539` / `f621248`, closes B-061).
 - `02-fsrs-quiz-item-binding.md` — slice 6.2, FSRS service + routes against `quiz_item_progress`. ✅ shipped (`7b654fb` / `a02639c`, closes B-062).
 - `03-lesson-ux.md` — slice 6.3, lesson-card UX (FE-first, fixture-data, BE read-only routes). ✅ shipped (`ba00331`, closes B-063).
-- `04-admin-authoring.md` — slice 6.4, admin authoring (heaviest Phase 6 slice — multi-route admin shell + deck/lesson/quiz_item CRUD + lesson_service DB swap + fixture retirement). 🔴 **spec only** (`309f6c4` / `<PENDING-SHA-BACKFILL>`); impl split per spec §12 D-1 — files **B-064** (slice 6.4a — admin shell refactor, FE-only) + **B-065** (slice 6.4b — admin CRUD + lesson_service body swap + fixture retirement, BE+FE). Single-slice fallback documented in spec §12 D-1.
+- `04-admin-authoring.md` — slice 6.4, admin authoring (heaviest Phase 6 slice — multi-route admin shell + deck/lesson/quiz_item CRUD + lesson_service DB swap + fixture retirement). 🔴 **spec only** (`309f6c4` / `bdc70c7`); impl split per spec §12 D-1 — files **B-064** (slice 6.4a — admin shell refactor, FE-only) + **B-065** (slice 6.4b — admin CRUD + lesson_service body swap + fixture retirement, BE+FE). Single-slice fallback documented in spec §12 D-1.
 
 **Phase plan:** see playbook §[Phase 6] (TBD — chat-Claude will draft playbook update separately).
 
@@ -135,7 +135,7 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 **Two commits:**
 1. `309f6c4` — spec author + B-064/B-065 filing in `BACKLOG.md`.
-2. `<PENDING-SHA-BACKFILL>` — SHA-backfill commit: this `SESSION-STATE.md` entry + Phase 6 spec table row for `04-admin-authoring.md` + Phase 6 header status line bump (`309f6c4` registered).
+2. `bdc70c7` — SHA-backfill commit: this `SESSION-STATE.md` entry + Phase 6 spec table row for `04-admin-authoring.md` + Phase 6 header status line bump (`309f6c4` registered).
 
 **Drift surfaced (R19 candidate, no STOP):**
 - BE pre-flight test count showed 10 pre-existing failures unrelated to this docs slice. Most look like ENV-default-related (per slice 6.3's "production-default env vars" note for `FREE_DAILY_REVIEW_LIMIT=10` etc.) — verify before next implementation slice runs `pytest` defaults. Not blocking the spec slice (SOP-3 docs slice rule).
