@@ -60,7 +60,7 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 ## Phase 6 (Curriculum Platform) — locked decisions
 
-**Status:** spec-drafting in progress; slice 6.1 (foundation schema) spec landed at `docs/specs/phase-6/01-foundation-schema.md`.
+**Status:** slices 6.1 + 6.2 shipped; slice 6.3 spec drafted (`docs/specs/phase-6/03-lesson-ux.md`), awaiting impl.
 
 **Slice count:** 18 (after merge of original 6.7 + 6.12 into a single Learn-page composition slice per audit slice-by-slice review).
 
@@ -74,7 +74,7 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 **Phase 6 specs on disk (chronological):**
 - `01-foundation-schema.md` — slice 6.1, four foundation tables. ✅ shipped (`a989539` / `f621248`, closes B-061).
-- `02-fsrs-quiz-item-binding.md` — slice 6.2, FSRS service + routes against `quiz_item_progress`. 🔴 spec-only, awaiting impl.
+- `02-fsrs-quiz-item-binding.md` — slice 6.2, FSRS service + routes against `quiz_item_progress`. ✅ shipped (`7b654fb` / `a02639c`, closes B-062).
 - `03-lesson-ux.md` — slice 6.3, lesson-card UX (FE-first, fixture-data, BE read-only routes). 🔴 spec-only, awaiting impl.
 
 **Phase plan:** see playbook §[Phase 6] (TBD — chat-Claude will draft playbook update separately).
