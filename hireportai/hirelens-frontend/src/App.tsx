@@ -20,6 +20,7 @@ import StudyDashboard from '@/pages/StudyDashboard'
 import CategoryDetail from '@/pages/CategoryDetail'
 import CardViewer from '@/pages/CardViewer'
 import DailyReview from '@/pages/DailyReview'
+import Lesson from '@/pages/Lesson'
 import Onboarding from '@/pages/Onboarding'
 import HomeDashboard from '@/pages/HomeDashboard'
 
@@ -87,6 +88,7 @@ export default function App() {
           <Route path="/learn/daily"        element={<ProtectedRoute><DailyReview /></ProtectedRoute>} />
           <Route path="/learn/category/:id" element={<ProtectedRoute><CategoryDetail /></ProtectedRoute>} />
           <Route path="/learn/card/:id"     element={<ProtectedRoute><CardViewer /></ProtectedRoute>} />
+          <Route path="/learn/lesson/:id"   element={<ProtectedRoute><Lesson /></ProtectedRoute>} />
           <Route path="/learn/mission"      element={<ProtectedRoute><MissionMode /></ProtectedRoute>} />
 
           {/* /prep/* — interview prep */}

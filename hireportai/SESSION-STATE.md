@@ -60,7 +60,7 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 ## Phase 6 (Curriculum Platform) — locked decisions
 
-**Status:** slices 6.1 + 6.2 shipped; slice 6.3 spec drafted (`docs/specs/phase-6/03-lesson-ux.md`), awaiting impl.
+**Status:** slices 6.1 + 6.2 + 6.3 shipped; slice 6.4 (admin authoring) is the next planned slice.
 
 **Slice count:** 18 (after merge of original 6.7 + 6.12 into a single Learn-page composition slice per audit slice-by-slice review).
 
@@ -75,7 +75,7 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 **Phase 6 specs on disk (chronological):**
 - `01-foundation-schema.md` — slice 6.1, four foundation tables. ✅ shipped (`a989539` / `f621248`, closes B-061).
 - `02-fsrs-quiz-item-binding.md` — slice 6.2, FSRS service + routes against `quiz_item_progress`. ✅ shipped (`7b654fb` / `a02639c`, closes B-062).
-- `03-lesson-ux.md` — slice 6.3, lesson-card UX (FE-first, fixture-data, BE read-only routes). 🔴 spec-only, awaiting impl.
+- `03-lesson-ux.md` — slice 6.3, lesson-card UX (FE-first, fixture-data, BE read-only routes). ✅ shipped (`<this-slice>`, closes B-063).
 
 **Phase plan:** see playbook §[Phase 6] (TBD — chat-Claude will draft playbook update separately).
 
@@ -91,6 +91,56 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 ---
 
 ## Last Completed Slice
+
+**2026-04-27 — Phase 6 slice 6.3 implementation (lesson-card UX, FE-first; closes B-063).** Three-commit pattern: Step 0 SESSION-STATE bookkeeping fixup + impl + SHA backfill. R14 default — implements authored spec `docs/specs/phase-6/03-lesson-ux.md`. Mode 2 (implement-to-spec). HEAD at slice start: `ffb6f73` (slice 6.3 spec commit). SOP-8 clean (no commits since prompt drafting). SOP-9 honored (single CC session on this tree).
+
+**Step 0 bookkeeping fixup (`9f3bdb5`):** Phase 6 spec table in SESSION-STATE.md had drifted — slice 6.2 row read 🔴 spec-only despite shipping at `7b654fb`/`a02639c`. Flipped slice 6.2 row to ✅ shipped; refreshed Phase 6 header status line. Single docs-only commit, no code, no tests, no BACKLOG closure.
+
+**Impl shipped (BE — 7 files):**
+- `hirelens-backend/app/data/__init__.py` (new, empty marker so `app/data/` is a package).
+- `hirelens-backend/app/data/lesson_fixtures.py` (new — D-2 / D-9 per-instance Pydantic at module import; 2 decks, 3 lessons, 6 quiz_items spanning all three `question_type` values; module docstring records slice-6.4 retirement plan).
+- `hirelens-backend/app/services/lesson_service.py` (new — D-4 thin wrapper over `lesson_fixtures`; `db: AsyncSession` parameter is forward-compat affordance ignored in 6.3, used in 6.4).
+- `hirelens-backend/app/api/v1/routes/lessons.py` + `decks.py` (new — three read-only routes per spec §5; auth via `Depends(get_current_user)`, 404 on unknown id, no ownership check).
+- `hirelens-backend/app/main.py` (additive — imports + `include_router` for `v1_lessons` + `v1_decks` after `v1_quiz_items`).
+- `hirelens-backend/app/schemas/lesson.py` (additive — `LessonWithQuizzesResponse`).
+- `hirelens-backend/app/schemas/deck.py` (additive — `DeckLessonsResponse`).
+- `hirelens-backend/tests/test_lesson_fixtures_routes.py` (new — 7 tests per spec §10.1).
+
+**Impl shipped (FE — 9 files):**
+- `hirelens-frontend/package.json` + `package-lock.json` — `remark-gfm@^4.0.1` net-new dep (singular per D-3 — `react-markdown@^10.1.0` already present, consumed by `ResumeEditor.tsx`).
+- `hirelens-frontend/src/types/index.ts` — additive: `Lesson` / `Deck` / `QuizItem` / `LessonWithQuizzes` / `DeckWithLessons` interfaces, `QuizReviewRequest` / `QuizReviewResponse` (re-declared on FE side; field-for-field mirror of slice 6.2's BE Pydantic), and 5 union aliases (`PersonaVisibility`, `DeckTier`, `LessonVersionType`, `QuestionType`, `QuizDifficulty`).
+- `hirelens-frontend/src/services/api.ts` — additive: `fetchLesson` / `fetchDeck` / `fetchDeckLessons` / `submitQuizReview` (latter posts to slice 6.2's `/api/v1/quiz-items/review` per D-5 — no new BE submit path).
+- `hirelens-frontend/src/hooks/useLesson.ts` (new — fetches with cancellation guard; 404 → `error: 'not_found'`).
+- `hirelens-frontend/src/pages/Lesson.tsx` (new — eager-loaded inside `<ProtectedRoute>` per D-10; fires `lesson_viewed` once via `useRef` idempotency mirror of `home_dashboard_viewed`; 404 → "Lesson not found" + Back-to-Learn link per OQ-6).
+- `hirelens-frontend/src/components/lesson/LessonRenderer.tsx` (new — four-section layout; mobile concept-expanded-by-default with collapse toggle that fires `lesson_section_expanded`; desktop renders all sections via `hidden md:block` so section toggle is mobile-only per OQ-3).
+- `hirelens-frontend/src/components/lesson/QuizItemPanel.tsx` (new — D-7 net-new file, NOT a rename; idle → revealed → submitting → done state machine; mcq renders `answer + distractors` as 4 radios; 409 / 403 surface inline error without crashing per OQ-4).
+- `hirelens-frontend/src/App.tsx` — additive: `import Lesson` + `<Route path="/learn/lesson/:id" element={<ProtectedRoute><Lesson /></ProtectedRoute>} />` inside `/learn/*` block after `/learn/card/:id`.
+- `hirelens-frontend/tests/pages/Lesson.test.tsx` + `tests/components/QuizItemPanel.test.tsx` (new — 5+5 tests per spec §10.2 + §10.3).
+
+**OQ resolutions locked at impl (per prompt):**
+- OQ-1 — `react-markdown` default sanitization sufficient; no `rehype-sanitize` (revisit at slice 6.4 admin-authored content).
+- OQ-2 — code-fence syntax highlighting deferred; plain `<pre><code>` only.
+- OQ-3 — mobile-first; concept expanded by default, production / examples / quiz collapsed; toggle fires `lesson_section_expanded`.
+- OQ-4 — quiz scoring inline below question; reveal-then-rate FSRS scale; 409 / 403 surface inline error copy.
+- OQ-5 — no inter-lesson navigation chrome; users return via `AppShell` TopNav.
+- OQ-6 — minimal "Lesson not found" + Back-to-Learn link; `'network'` branch shows distinct "We couldn't load this lesson" copy.
+
+**Tests:** BE **513 → 520 passed** (+7) under `pytest -m "not integration"` with production-default env vars (`FREE_DAILY_REVIEW_LIMIT=10 FREE_LIFETIME_SCAN_LIMIT=1 FREE_MONTHLY_INTERVIEW_LIMIT=3`). 7 new tests in `tests/test_lesson_fixtures_routes.py`. Without env vars set, the same 10 pre-existing tests fail (per slice 6.1 `.env`-interaction note) — none touched by this slice. FE **328 → 338 passed** (+10) — 5 in `tests/pages/Lesson.test.tsx` + 5 in `tests/components/QuizItemPanel.test.tsx`. Full vitest run green at 56 files / 338 tests. `npx tsc --noEmit` clean.
+
+**Judgment calls (in flight):**
+1. **Spec §10.2 had 5 tests, prompt scoping target ~10 FE tests.** Shipped 5+5 = 10 FE tests; collapsed the persona-gated-route test from spec §10.2 since the persona-gating envelope is already validated by `tests/PersonaGate.test.tsx` and the spec test would have reproduced that coverage. Net delta within R19 tolerance.
+2. **`useUsage()` returns non-null `usage`.** `Lesson.tsx` references `usage.plan` directly (not `usage?.plan`) — matches the live `UsageContextValue` contract (`UsageContext.tsx:33` — `usage: UsageState`).
+3. **Mobile section collapse pattern.** Used `hidden md:block` so desktop ignores the mobile collapse state without requiring a viewport hook; trade-off is that DOM holds both expanded and collapsed states under the hood, but this matches `AppShell.tsx`'s established responsive pattern.
+
+**Pre-existing dirty files unstaged (C2 compliance):** `../.DS_Store` (above hireportai/), `Enhancements.txt`, `hirelens-backend/scripts/wipe_local_user_data.py`. Long-running untracked set (stripe-* skills, `.gitattributes`, `docs/audits/SKILLS-SPECS-ALIGNMENT-2026-04-21.md`, `docs/status/E2E-READINESS-2026-04-21.md`, `skills-lock.json`) — all untouched. C1 compliance: explicit-path staging only; never `git add -A`.
+
+**No new BACKLOG row beyond B-063.** No new drift flags.
+
+**CODE-REALITY regen:** deferred to a separate slice (this slice does NOT regen; per prompt's recommendation a full §3/§4 regen folded into this slice was optional). Targeted regen recommended next: §3 +`GET /api/v1/lessons/{id}`, +`GET /api/v1/decks/{id}`, +`GET /api/v1/decks/{id}/lessons`, +`GET /api/v1/quiz-items/daily`, +`POST /api/v1/quiz-items/review`, +`GET /api/v1/quiz-items/progress` (slice 6.2 still missing); §4 +`app/services/lesson_service.py`, +`app/services/quiz_item_study_service.py`, +`app/data/lesson_fixtures.py`; §7 component graph +`components/lesson/LessonRenderer`, +`components/lesson/QuizItemPanel`, +`pages/Lesson`. Header SHA bump.
+
+CODEX review applies per Rule 11.
+
+---
 
 **2026-04-26 — D-025 bookkeeping slice (close-out of slice 6.1 drift dispositions; ID-collision fix).** Single commit. Docs-only; no code; no tests; no BACKLOG closure. R14 exception (a) bookkeeping. CODEX review applies per Rule 11.
 

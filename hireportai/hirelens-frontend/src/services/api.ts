@@ -12,16 +12,21 @@ import type {
   CategoriesResponse,
   CoverLetterResponse,
   DailyQueueResponse,
+  Deck,
+  DeckWithLessons,
   EmailPreference,
   EmailPreferenceUpdate,
   GamificationStats,
   InterviewPrepResponse,
+  LessonWithQuizzes,
   MissionCreateRequest,
   MissionDailyResponse,
   MissionDayCompleteResponse,
   MissionDetailResponse,
   MissionResponse,
   OnboardingRecommendationsResponse,
+  QuizReviewRequest,
+  QuizReviewResponse,
   ReviewRequest,
   ReviewResponse,
   RewriteResponse,
@@ -336,6 +341,28 @@ export async function fetchCardsByCategory(
 
 export async function submitReview(req: ReviewRequest): Promise<ReviewResponse> {
   const response = await api.post<ReviewResponse>('/api/v1/study/review', req)
+  return response.data
+}
+
+// ─── Phase 6 — Lessons / Decks (slice 6.3) ───────────────────────────────────
+
+export async function fetchLesson(lessonId: string): Promise<LessonWithQuizzes> {
+  const response = await api.get<LessonWithQuizzes>(`/api/v1/lessons/${lessonId}`)
+  return response.data
+}
+
+export async function fetchDeck(deckId: string): Promise<Deck> {
+  const response = await api.get<Deck>(`/api/v1/decks/${deckId}`)
+  return response.data
+}
+
+export async function fetchDeckLessons(deckId: string): Promise<DeckWithLessons> {
+  const response = await api.get<DeckWithLessons>(`/api/v1/decks/${deckId}/lessons`)
+  return response.data
+}
+
+export async function submitQuizReview(req: QuizReviewRequest): Promise<QuizReviewResponse> {
+  const response = await api.post<QuizReviewResponse>('/api/v1/quiz-items/review', req)
   return response.data
 }
 

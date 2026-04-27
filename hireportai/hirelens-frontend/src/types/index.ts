@@ -408,3 +408,99 @@ export type AnalysisAction =
   | { type: 'SET_JD'; payload: string }
   | { type: 'RESET' }
 
+// ─── Phase 6 — Lessons / Decks / QuizItems (slice 6.3) ───────────────────────
+// Field-for-field mirrors of the BE Pydantic schemas in
+// app/schemas/{deck,lesson,quiz_item}.py.
+
+export type PersonaVisibility = 'climber' | 'interview_prepper' | 'both'
+export type DeckTier = 'foundation' | 'premium'
+export type LessonVersionType = 'initial' | 'minor_edit' | 'substantive_edit'
+export type QuestionType = 'mcq' | 'free_text' | 'code_completion'
+export type QuizDifficulty = 'easy' | 'medium' | 'hard'
+
+export interface Deck {
+  id: string
+  slug: string
+  title: string
+  description: string
+  display_order: number
+  icon: string | null
+  persona_visibility: PersonaVisibility
+  tier: DeckTier
+  created_at: string
+  updated_at: string
+  archived_at: string | null
+}
+
+export interface Lesson {
+  id: string
+  deck_id: string
+  slug: string
+  title: string
+  concept_md: string
+  production_md: string
+  examples_md: string
+  display_order: number
+  version: number
+  version_type: LessonVersionType
+  published_at: string | null
+  generated_by_model: string | null
+  source_content_id: string | null
+  quality_score: number | null
+  created_at: string
+  updated_at: string
+  archived_at: string | null
+}
+
+export interface QuizItem {
+  id: string
+  lesson_id: string
+  question: string
+  answer: string
+  question_type: QuestionType
+  distractors: string[] | null
+  difficulty: QuizDifficulty
+  display_order: number
+  version: number
+  superseded_by_id: string | null
+  retired_at: string | null
+  generated_by_model: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface LessonWithQuizzes {
+  lesson: Lesson
+  quiz_items: QuizItem[]
+  deck_id: string
+  deck_slug: string
+  deck_title: string
+}
+
+export interface DeckWithLessons {
+  deck: Deck
+  lessons: Lesson[]
+}
+
+// Mirrors app/schemas/quiz_item.py::QuizReviewRequest (slice 6.2).
+// Re-declared here so the FE consumer in slice 6.3 doesn't reach into
+// study-engine types. Rating: Again=1, Hard=2, Good=3, Easy=4.
+export interface QuizReviewRequest {
+  quiz_item_id: string
+  rating: 1 | 2 | 3 | 4
+  session_id: string
+  time_spent_ms?: number
+}
+
+// Mirrors app/schemas/quiz_item.py::QuizReviewResponse (slice 6.2).
+export interface QuizReviewResponse {
+  quiz_item_id: string
+  fsrs_state: 'learning' | 'review' | 'relearning'
+  stability: number
+  difficulty: number
+  due_date: string
+  reps: number
+  lapses: number
+  scheduled_days: number
+}
+
