@@ -2,17 +2,20 @@
 
 Spec: docs/specs/phase-6/01-foundation-schema.md §4.3 (slice 6.1) +
 docs/specs/phase-6/02-fsrs-quiz-item-binding.md §6 (slice 6.2 — adds
-the FSRS daily-review + review-submit + progress wire shapes).
+the FSRS daily-review + review-submit + progress wire shapes) +
+docs/specs/phase-6/04-admin-authoring.md §6.7 + §6.8 (slice 6.4b —
+admin write schemas).
 """
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.schemas.study import DailyStatus  # re-imported per spec §6.2
 
 QuizQuestionType = Literal["mcq", "free_text", "code_completion"]
 QuizDifficulty = Literal["easy", "medium", "hard"]
+AdminQuizItemStatusFilter = Literal["active", "retired", "all"]
 
 
 class QuizItemResponse(BaseModel):
@@ -106,3 +109,55 @@ class QuizProgressResponse(BaseModel):
     by_state: dict[str, int]  # {"new": n, "learning": n, "review": n, "relearning": n}
     total_reps: int
     total_lapses: int
+
+
+# ── Slice 6.4b — admin write schemas (spec §6.7 + §6.8) ─────────────────────
+
+
+class QuizItemCreateRequest(BaseModel):
+    """Admin payload for `POST /api/v1/admin/lessons/{lesson_id}/quiz-items` (§6.7).
+
+    `lesson_id` is read from the URL path. `distractors` is required for
+    `question_type='mcq'` and forbidden otherwise.
+    """
+
+    question: str = Field(..., min_length=1)
+    answer: str = Field(..., min_length=1)
+    question_type: QuizQuestionType = "free_text"
+    distractors: Optional[list[str]] = None
+    difficulty: QuizDifficulty = "medium"
+    display_order: int = Field(default=0, ge=0)
+
+    @model_validator(mode="after")
+    def _validate_distractors(self) -> "QuizItemCreateRequest":
+        if self.question_type == "mcq":
+            if not self.distractors:
+                raise ValueError("distractors required when question_type='mcq'")
+        else:
+            if self.distractors:
+                raise ValueError("distractors only allowed when question_type='mcq'")
+        return self
+
+
+class QuizItemUpdateRequest(BaseModel):
+    """Admin payload for `PATCH /api/v1/admin/quiz-items/{quiz_item_id}` (§6.8).
+
+    All fields Optional except `edit_classification`. Substantive edits
+    route through `retire_quiz_item` internally + create a replacement
+    row (version+1) per §5.10.
+
+    `edit_classification` is `Literal["minor", "substantive"]`. The
+    canonical alias lives in `app.schemas.lesson` as `EditClassification`
+    per D-10; written inline here because importing it would create a
+    cycle (`lesson.py` already imports `QuizItemResponse` from this
+    module). Both Literals are structurally identical and tests pin the
+    wire shape, so drift is caught at the test boundary.
+    """
+
+    edit_classification: Literal["minor", "substantive"]
+    question: Optional[str] = Field(default=None, min_length=1)
+    answer: Optional[str] = Field(default=None, min_length=1)
+    question_type: Optional[QuizQuestionType] = None
+    distractors: Optional[list[str]] = None
+    difficulty: Optional[QuizDifficulty] = None
+    display_order: Optional[int] = Field(default=None, ge=0)

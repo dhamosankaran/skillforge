@@ -23,6 +23,9 @@ from app.api.routes import (
 from app.api.v1.routes import (
     admin as v1_admin,
     admin_analytics as v1_admin_analytics,
+    admin_decks as v1_admin_decks,
+    admin_lessons as v1_admin_lessons,
+    admin_quiz_items as v1_admin_quiz_items,
     analyze as v1_analyze,
     auth as v1_auth,
     cards as v1_cards,
@@ -132,6 +135,13 @@ def create_app() -> FastAPI:
     app.include_router(v1_admin.router, prefix="/api/v1", tags=["v1 Admin"])
     app.include_router(
         v1_admin_analytics.router, prefix="/api/v1", tags=["v1 Admin Analytics"]
+    )
+    app.include_router(v1_admin_decks.router, prefix="/api/v1", tags=["v1 Admin Decks"])
+    app.include_router(
+        v1_admin_lessons.router, prefix="/api/v1", tags=["v1 Admin Lessons"]
+    )
+    app.include_router(
+        v1_admin_quiz_items.router, prefix="/api/v1", tags=["v1 Admin Quiz Items"]
     )
     app.include_router(v1_analyze.router, prefix="/api/v1", tags=["v1 Analysis"])
     app.include_router(v1_rewrite.router, prefix="/api/v1", tags=["v1 Rewrite"])
