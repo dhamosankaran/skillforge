@@ -504,3 +504,85 @@ export interface QuizReviewResponse {
   scheduled_days: number
 }
 
+// ─── Phase 6 slice 6.4b — Admin authoring write shapes ───────────────────────
+// Field-for-field mirrors of the BE Pydantic write schemas in
+// app/schemas/{deck,lesson,quiz_item}.py shipped at commit d6bda3b.
+
+export type EditClassification = 'minor' | 'substantive'
+
+export type AdminDeckStatusFilter = 'active' | 'archived' | 'all'
+export type AdminLessonStatusFilter =
+  | 'active'
+  | 'drafts'
+  | 'published'
+  | 'archived'
+  | 'all'
+export type AdminQuizItemStatusFilter = 'active' | 'retired' | 'all'
+
+export interface DeckCreateRequest {
+  slug: string
+  title: string
+  description: string
+  display_order?: number
+  icon?: string | null
+  persona_visibility?: PersonaVisibility
+  tier?: DeckTier
+}
+
+export interface DeckUpdateRequest {
+  slug?: string
+  title?: string
+  description?: string
+  display_order?: number
+  icon?: string | null
+  persona_visibility?: PersonaVisibility
+  tier?: DeckTier
+}
+
+export interface LessonCreateRequest {
+  slug: string
+  title: string
+  concept_md: string
+  production_md: string
+  examples_md: string
+  display_order?: number
+}
+
+export interface LessonUpdateRequest {
+  edit_classification: EditClassification
+  slug?: string
+  title?: string
+  concept_md?: string
+  production_md?: string
+  examples_md?: string
+  display_order?: number
+}
+
+// Mirrors app/schemas/lesson.py::LessonUpdateResponse — extends Lesson read
+// shape with cascade-outcome fields surfaced for FE confirm-modal results.
+export interface LessonUpdateResponse {
+  lesson: Lesson
+  version_type_applied: EditClassification
+  quiz_items_retired_count: number
+  quiz_items_retired_ids: string[]
+}
+
+export interface QuizItemCreateRequest {
+  question: string
+  answer: string
+  question_type?: QuestionType
+  distractors?: string[] | null
+  difficulty?: QuizDifficulty
+  display_order?: number
+}
+
+export interface QuizItemUpdateRequest {
+  edit_classification: EditClassification
+  question?: string
+  answer?: string
+  question_type?: QuestionType
+  distractors?: string[] | null
+  difficulty?: QuizDifficulty
+  display_order?: number
+}
+

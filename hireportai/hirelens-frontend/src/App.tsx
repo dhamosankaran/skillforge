@@ -30,7 +30,10 @@ const MissionMode = lazy(() => import('@/pages/MissionMode'))
 const AdminLayout = lazy(() => import('@/components/admin/AdminLayout'))
 const AdminCards = lazy(() => import('@/pages/admin/AdminCards'))
 const AdminDecks = lazy(() => import('@/pages/admin/AdminDecks'))
+const AdminDeckDetail = lazy(() => import('@/pages/admin/AdminDeckDetail'))
 const AdminLessons = lazy(() => import('@/pages/admin/AdminLessons'))
+const AdminLessonEditor = lazy(() => import('@/pages/admin/AdminLessonEditor'))
+const AdminQuizItems = lazy(() => import('@/pages/admin/AdminQuizItems'))
 const AdminAnalytics = lazy(() => import('@/pages/AdminAnalytics'))
 
 function LazyFallback() {
@@ -105,13 +108,17 @@ export default function App() {
           {/* Profile */}
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
-          {/* Admin — multi-route shell (Phase 6 slice 6.4a). /admin redirects to /admin/cards. */}
+          {/* Admin — multi-route shell (Phase 6 slice 6.4a). /admin redirects to /admin/cards.
+              Slice 6.4b adds editor routes for decks/lessons/quiz_items. */}
           <Route path="/admin" element={<ProtectedRoute><AdminGate><AdminLayout /></AdminGate></ProtectedRoute>}>
-            <Route index              element={<Navigate to="/admin/cards" replace />} />
-            <Route path="cards"       element={<AdminCards />} />
-            <Route path="decks"       element={<AdminDecks />} />
-            <Route path="lessons"     element={<AdminLessons />} />
-            <Route path="analytics"   element={<AdminAnalytics />} />
+            <Route index                                  element={<Navigate to="/admin/cards" replace />} />
+            <Route path="cards"                           element={<AdminCards />} />
+            <Route path="decks"                           element={<AdminDecks />} />
+            <Route path="decks/:deckId"                   element={<AdminDeckDetail />} />
+            <Route path="lessons"                         element={<AdminLessons />} />
+            <Route path="lessons/:lessonId"               element={<AdminLessonEditor />} />
+            <Route path="lessons/:lessonId/quiz-items"    element={<AdminQuizItems />} />
+            <Route path="analytics"                       element={<AdminAnalytics />} />
           </Route>
 
           {/* Transitional redirects — drop in Phase 6 once the old paths stop receiving hits. */}

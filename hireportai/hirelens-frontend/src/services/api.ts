@@ -5,6 +5,9 @@ import type {
   AdminCardCreateRequest,
   AdminCardListResponse,
   AdminCardUpdateRequest,
+  AdminDeckStatusFilter,
+  AdminLessonStatusFilter,
+  AdminQuizItemStatusFilter,
   AnalysisResponse,
   Card,
   CardDraft,
@@ -13,11 +16,17 @@ import type {
   CoverLetterResponse,
   DailyQueueResponse,
   Deck,
+  DeckCreateRequest,
+  DeckUpdateRequest,
   DeckWithLessons,
   EmailPreference,
   EmailPreferenceUpdate,
   GamificationStats,
   InterviewPrepResponse,
+  Lesson,
+  LessonCreateRequest,
+  LessonUpdateRequest,
+  LessonUpdateResponse,
   LessonWithQuizzes,
   MissionCreateRequest,
   MissionDailyResponse,
@@ -25,6 +34,9 @@ import type {
   MissionDetailResponse,
   MissionResponse,
   OnboardingRecommendationsResponse,
+  QuizItem,
+  QuizItemCreateRequest,
+  QuizItemUpdateRequest,
   QuizReviewRequest,
   QuizReviewResponse,
   ReviewRequest,
@@ -771,6 +783,132 @@ export async function fetchAdminAnalyticsPerformance(
   const response = await api.get<AdminAnalyticsPerformanceResponse>(
     '/api/v1/admin/analytics/performance',
     { params },
+  )
+  return response.data
+}
+
+// ─── Admin Authoring CRUD (Phase 6 slice 6.4b — B-065) ──────────────────────
+// 13 helpers mirror the BE write routes shipped at d6bda3b. Each goes through
+// the shared axios instance for Bearer-token injection + 401 silent-refresh.
+
+export async function adminCreateDeck(data: DeckCreateRequest): Promise<Deck> {
+  const response = await api.post<Deck>('/api/v1/admin/decks', data)
+  return response.data
+}
+
+export async function adminUpdateDeck(
+  deckId: string,
+  data: DeckUpdateRequest,
+): Promise<Deck> {
+  const response = await api.patch<Deck>(`/api/v1/admin/decks/${deckId}`, data)
+  return response.data
+}
+
+export async function adminArchiveDeck(deckId: string): Promise<Deck> {
+  const response = await api.post<Deck>(`/api/v1/admin/decks/${deckId}/archive`)
+  return response.data
+}
+
+export async function adminListDecks(
+  status: AdminDeckStatusFilter = 'active',
+): Promise<Deck[]> {
+  const response = await api.get<Deck[]>('/api/v1/admin/decks', {
+    params: { status },
+  })
+  return response.data
+}
+
+export async function adminCreateLesson(
+  deckId: string,
+  data: LessonCreateRequest,
+): Promise<Lesson> {
+  const response = await api.post<Lesson>(
+    `/api/v1/admin/decks/${deckId}/lessons`,
+    data,
+  )
+  return response.data
+}
+
+// `updateLesson` 409 envelope (EditClassificationConflictError) is surfaced
+// to callers via the structured `error.response.data.detail` payload — the
+// AdminLessonEditor reads it to fire the post-hoc cascade modal. We do NOT
+// wrap or rebrand the 409 here; callers handle it at the catch site.
+export async function adminUpdateLesson(
+  lessonId: string,
+  data: LessonUpdateRequest,
+): Promise<LessonUpdateResponse> {
+  const response = await api.patch<LessonUpdateResponse>(
+    `/api/v1/admin/lessons/${lessonId}`,
+    data,
+  )
+  return response.data
+}
+
+export async function adminPublishLesson(lessonId: string): Promise<Lesson> {
+  const response = await api.post<Lesson>(
+    `/api/v1/admin/lessons/${lessonId}/publish`,
+  )
+  return response.data
+}
+
+export async function adminArchiveLesson(lessonId: string): Promise<Lesson> {
+  const response = await api.post<Lesson>(
+    `/api/v1/admin/lessons/${lessonId}/archive`,
+  )
+  return response.data
+}
+
+export async function adminListLessons(
+  deckId: string,
+  status: AdminLessonStatusFilter = 'active',
+): Promise<Lesson[]> {
+  const response = await api.get<Lesson[]>(
+    `/api/v1/admin/decks/${deckId}/lessons`,
+    { params: { status } },
+  )
+  return response.data
+}
+
+export async function adminCreateQuizItem(
+  lessonId: string,
+  data: QuizItemCreateRequest,
+): Promise<QuizItem> {
+  const response = await api.post<QuizItem>(
+    `/api/v1/admin/lessons/${lessonId}/quiz-items`,
+    data,
+  )
+  return response.data
+}
+
+export async function adminUpdateQuizItem(
+  quizItemId: string,
+  data: QuizItemUpdateRequest,
+): Promise<QuizItem> {
+  const response = await api.patch<QuizItem>(
+    `/api/v1/admin/quiz-items/${quizItemId}`,
+    data,
+  )
+  return response.data
+}
+
+export async function adminRetireQuizItem(
+  quizItemId: string,
+  supersededById: string | null = null,
+): Promise<QuizItem> {
+  const response = await api.post<QuizItem>(
+    `/api/v1/admin/quiz-items/${quizItemId}/retire`,
+    { superseded_by_id: supersededById },
+  )
+  return response.data
+}
+
+export async function adminListQuizItems(
+  lessonId: string,
+  status: AdminQuizItemStatusFilter = 'active',
+): Promise<QuizItem[]> {
+  const response = await api.get<QuizItem[]>(
+    `/api/v1/admin/lessons/${lessonId}/quiz-items`,
+    { params: { status } },
   )
   return response.data
 }
