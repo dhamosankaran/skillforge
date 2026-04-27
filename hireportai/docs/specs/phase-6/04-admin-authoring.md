@@ -1212,7 +1212,7 @@ The implementation slices (6.4a + 6.4b) must pass:
   routes, §4 +3 admin services + lesson_service body-swap note, §6
   fixture-file deletion note, §7 component graph +6 admin pages /
   components, §13 spec #04 status flip per CR §11 drift item 18
-  (`## Status:`). Header SHA bump. **— SUPERSEDED `<this-slice>`:**
+  (`## Status:`). Header SHA bump. **— SUPERSEDED `de1e9a9`:**
   CR regen tracked at B-067 per B-066 precedent (slice 6.4a CR regen
   as its own slice); not in slice 6.4b-1 / 6.4b-2 scope. Original
   AC-19 text retained for audit.
@@ -1336,7 +1336,7 @@ The implementation slices (6.4a + 6.4b) must pass:
   `getDeckLessons` / `getLesson` paths; cost is one extra SELECT per
   relationship per request, negligible at expected request volume.
   Cross-ref §4.2.
-- **D-16 (resolves OQ-3, amended `<this-slice>` per slice 6.4b
+- **D-16 (resolves OQ-3, amended `de1e9a9` per slice 6.4b
   Step 1 audit) — Admin-LIST `?status=` query param vocabulary is
   per-entity:**
   - **lessons-LIST:** `'active'` | `'drafts'` | `'published'` |
@@ -1382,7 +1382,7 @@ The implementation slices (6.4a + 6.4b) must pass:
     FSRS-history follow-up out of scope this slice).
 
   Cross-ref §7.3, §5 quiz_item PATCH endpoint.
-- **D-19 (resolves OQ-6, amended `<this-slice>` per slice 6.4b
+- **D-19 (resolves OQ-6, amended `de1e9a9` per slice 6.4b
   Step 1 audit — N count dropped to honor §4.1.1's BE-warning-free
   service layer) — `decks.persona_visibility` is admin-editable
   post-creation, with FE narrowing-confirm modal.** Narrowing edits

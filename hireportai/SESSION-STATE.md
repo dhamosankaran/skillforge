@@ -61,7 +61,7 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 ## Phase 6 (Curriculum Platform) — locked decisions
 
-**Status:** slices 6.1 + 6.2 + 6.3 shipped; slice 6.4a (admin shell refactor) shipped (`b0806d0`, closes B-064) + spec amended in lockstep (`cbf878f`, D-14 → /admin/audit dropped from sidebar); slice 6.4 spec §12 OQ-2..OQ-6 locked as D-15..D-19 in `4fce036` (selectinload, admin-LIST `?status=` vocab, FE classifyEdit + 0.15 threshold, lesson-level retire-only / quiz_item-level retire-and-replace cascades, persona-visibility narrowing-confirm modal); slice 6.4b (admin CRUD + lesson_service body swap + fixture retirement) impl pending at B-065.
+**Status:** slices 6.1 + 6.2 + 6.3 shipped; slice 6.4a (admin shell refactor) shipped (`b0806d0`, closes B-064) + spec amended in lockstep (`cbf878f`, D-14 → /admin/audit dropped from sidebar); slice 6.4 spec §12 OQ-2..OQ-6 locked as D-15..D-19 in `4fce036` (selectinload, admin-LIST `?status=` vocab, FE classifyEdit + 0.15 threshold, lesson-level retire-only / quiz_item-level retire-and-replace cascades, persona-visibility narrowing-confirm modal); slice 6.4 spec slice 3/3 amendments shipped (`de1e9a9`, D-19 modal-copy N-count drop + D-16 unified→per-entity vocab + §11 6.4b AC-19 superseded → CR regen deferred to B-067); slice 6.4b split into BE-first 6.4b-1 (B-065 BE half) + FE-second 6.4b-2 (B-068, files at 6.4b-1) + standalone CR regen 6.4b-3 (B-067, files at 6.4b-1) per slice 6.4b Step 1 audit T4 file-count R3 trigger.
 
 **Slice count:** 18 (after merge of original 6.7 + 6.12 into a single Learn-page composition slice per audit slice-by-slice review).
 
@@ -77,7 +77,7 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 - `01-foundation-schema.md` — slice 6.1, four foundation tables. ✅ shipped (`a989539` / `f621248`, closes B-061).
 - `02-fsrs-quiz-item-binding.md` — slice 6.2, FSRS service + routes against `quiz_item_progress`. ✅ shipped (`7b654fb` / `a02639c`, closes B-062).
 - `03-lesson-ux.md` — slice 6.3, lesson-card UX (FE-first, fixture-data, BE read-only routes). ✅ shipped (`ba00331`, closes B-063).
-- `04-admin-authoring.md` — slice 6.4, admin authoring (heaviest Phase 6 slice — multi-route admin shell + deck/lesson/quiz_item CRUD + lesson_service DB swap + fixture retirement). 6.4a ✅ shipped (`cbf878f` spec amend + `b0806d0` impl, closes B-064); D-14 in-slice amendment dropped `/admin/audit` from sidebar (FE consumer never built — see D-026 in Drift Flags). §12 OQ-2..OQ-6 locked as D-15..D-19 in `4fce036` (slice 6.4 spec slice 2/2, R14(b)) + spec body `## Status:` flipped to "Partially shipped — slice 6.4a shipped …; slice 6.4b pending B-065" + §9 +1 event (`admin_deck_persona_narrowed`). 6.4b 🔴 **pending impl** at **B-065** (admin CRUD + lesson_service body swap + fixture retirement, BE+FE). Single-slice fallback per §12 D-1 was not exercised — split path was taken as authored.
+- `04-admin-authoring.md` — slice 6.4, admin authoring (heaviest Phase 6 slice — multi-route admin shell + deck/lesson/quiz_item CRUD + lesson_service DB swap + fixture retirement). 6.4a ✅ shipped (`cbf878f` spec amend + `b0806d0` impl, closes B-064); D-14 in-slice amendment dropped `/admin/audit` from sidebar (FE consumer never built — see D-026 in Drift Flags). §12 OQ-2..OQ-6 locked as D-15..D-19 in `4fce036` (slice 6.4 spec slice 2/2, R14(b)) + spec body `## Status:` flipped to "Partially shipped — slice 6.4a shipped …; slice 6.4b pending B-065" + §9 +1 event (`admin_deck_persona_narrowed`). Slice 6.4 spec slice 3/3 amendments shipped at `de1e9a9` (R14(b)) — D-19 modal copy drops "N learners" count to honor §4.1.1 (no preview endpoint), D-16 reframed unified→per-entity vocab (lessons full / decks 'active'/'archived'/'all' / quiz_items 'active'/'retired'/'all'), §11 6.4b AC-19 SUPERSEDED (CR regen deferred to B-067 per B-066 precedent). 6.4b 🔴 **split into 3 sub-slices** per Step 1 audit T4 R3 file-count trigger (~35-40 net-new files): **6.4b-1 (BE half, B-065)** ~17 files (4 services + 3 routes + admin_errors.py + lesson_service body swap + fixture deletion + 4 BE test files + schema additions + analytics.md catalog) — files B-067 (CR regen) + B-068 (FE half) at impl-commit time per R17; B-065 stays 🔴 with status note pending FE half. **6.4b-2 (FE half, B-068)** ~20 files — closes B-065 + B-068 on impl-merge. **6.4b-3 (CR regen, B-067)** standalone, mirrors B-066 pattern.
 
 **Phase plan:** see playbook §[Phase 6] (TBD — chat-Claude will draft playbook update separately).
 
@@ -93,6 +93,65 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 ---
 
 ## Last Completed Slice
+
+**2026-04-27 — Phase 6 slice 6.4 spec slice 3/3 — D-19 modal-copy N-count drop + D-16 unified→per-entity vocab + §11 6.4b AC-19 supersession (no BACKLOG closure).** Two-commit pattern: spec amendment + SHA-backfill SESSION-STATE entry. R14 exception (b) — pure spec codification, no design surface. Mode 4 (spec-author). HEAD at slice start: `aeef9a3` (post-slice-6.4 spec slice 2/2 SHA backfill). SOP-8 clean: `git log --oneline -20` shows `aeef9a3` at HEAD with no commits since slice 6.4 spec slice 2/2 close. SOP-9 honored: single CC session on this tree.
+
+**Origin: slice 6.4b Step 1 audit triggered four R19/R3 push-backs.** This micro slice resolves the three spec-shaped triggers (T1 + T2 + T3) before the BE half (slice 6.4b-1) ships. T4 (file-count split) is resolved organizationally — no spec amendment, just a sub-split into 6.4b-1 (BE) / 6.4b-2 (FE) / 6.4b-3 (CR regen) tracked at `BACKLOG.md`. The slice 6.4b implementation prompt itself caught the triggers at Step 1.6 (T1) + Step 2 vocab carve-out clause (T2) + spec-AC-19 vs prompt-Step-5 N7 conflict (T3) + R3 file-count trigger (T4).
+
+**Spec amended (1 file, `docs/specs/phase-6/04-admin-authoring.md`):**
+- §12 **D-16** — replace unified-vocab framing (`'active'/'drafts'/'published'/'archived'/'all'` "applies to all three") with per-entity subsets matching spec body §5.4 + §5.7 reality:
+  - lessons-LIST: full 5-value vocab (lessons have both `published_at` and `archived_at`).
+  - decks-LIST: `'active'/'archived'/'all'` (no `published_at` lifecycle on decks).
+  - quiz_items-LIST: `'active'/'retired'/'all'` (`retired_at`-based, not `archived_at`).
+  - Inline footnote records authoring-miss origin + amendment cite (`de1e9a9`).
+- §12 **D-19** — drop the "N learners" count from modal copy. New copy: `"Narrowing persona visibility will hide this deck from learners currently in personas X, Y. Their existing FSRS progress on quiz_items in this deck is preserved but they will no longer see the deck in /learn surfaces. Continue?"` Honors §4.1.1's BE-warning-free service layer; trims scope (no preview endpoint, no narrowing-preview hook, no extra test file). Inline footnote records the amendment cite. Open follow-up paragraph (FSRS orphan cleanup tracked at slice 6.7 / 6.8) preserved verbatim. Event payload `admin_deck_persona_narrowed {deck_id, removed_personas, before_count, after_count}` unchanged in §9.
+- §11 6.4b **AC-19** — append SUPERSEDED note inline (original text retained for audit). CR regen tracked at B-067 per B-066 precedent; not in slice 6.4b-1 / 6.4b-2 scope.
+- Spec line count 1505 → ~1519 (+14 lines net; D-16 expanded into bullet list, D-19 trimmed but added inline footnote, AC-19 +3-line supersession note).
+
+**Trigger origins + dispositions (T1..T4):**
+- **T1 (D-19 narrowing-preview endpoint not locked) → path (b).** D-19 modal copy required a server-fetched count, but §4.1.1 + §6.2 + §9 are silent on a preview endpoint and D-2 locks `DeckResponse` byte-identical. Drop the count from modal copy. Authoring-miss in slice 6.4 spec slice 2/2 (D-19 was drafted without re-reading §4.1.1).
+- **T2 (D-16 vocab non-applicable to decks/quiz_items) → in-place D-16 amendment.** Per-entity subset framing matches what §5.4 + §5.7 always intended. Authoring-miss in slice 6.4 spec slice 2/2.
+- **T3 (AC-19 vs prompt Step 5 conflict — CR regen scope) → path (a) lift AC-19 via §12 amendment.** Mirrors B-066 precedent (slice 6.4a CR regen as its own slice). B-067 files in slice 6.4b-1 per R17 + R15(c).
+- **T4 (file count ~35-40 exceeds R3 ~30 threshold) → BE-first / FE-second split, not a spec amendment.** Three sub-slices: 6.4b-1 (BE half, ~17 files, B-065 stays 🔴 with status note "BE half shipped at <SHA>; FE half pending B-068"), 6.4b-2 (FE half, ~20 files, closes B-065 + B-068 on impl-merge), 6.4b-3 (CR regen, mirrors B-066 standalone pattern, closes B-067). B-067 + B-068 file at slice 6.4b-1 commit time per R17 watermark.
+
+**Tests baseline (Step 4 SOP-3 gate, docs slice — no run):** BE 520 / FE 345 (post-slice-6.4 spec slice 2/2). Spec-only slice; no code or tests touched. R14 exception (b) audit trail clean. Will be confirmed at slice 6.4b-1 Step 0.5 + 0.6.
+
+**R15(c) gate:** spec-only slice; no implementation closure. **B-065 stays 🔴** per Step 2 — B-067 + B-068 file at slice 6.4b-1 Step 5 commit. **No new BACKLOG rows filed in this micro slice.**
+
+**R17 watermark verified at slice start:** B-066 highest in-use, B-067 next free (will be claimed by slice 6.4b-1 alongside B-068). This slice files no new IDs.
+
+**Working tree at slice start:** `CLAUDE.md` still dirty with concurrent-session Q1–Q4 amendment (unchanged from slice 6.4 spec slice 2/2 per N8 preserve-and-coexist). Not staged, not touched. Q1–Q4 honored as live ruleset (Q1 simplicity → no speculative D-20/D-21 stacked decisions; Q2 surgical → in-place amendments to D-16 / D-19 / AC-19 only, no other §11 / §12 sections rewritten; Q3 trigger dispositions stated up-front by Dhamo and confirmed verbatim before draft; Q4 verifiable goal → "spec §11 AC-19 ends with SUPERSEDED note + §12 D-16/D-19 carry inline amendment footnotes citing `de1e9a9`" is the runnable grep check). `CLAUDE_old.md` still untracked (concurrent-session backup artifact, unchanged).
+
+**Pre-existing dirty files unstaged (C2 compliance):**
+- ` M ../.DS_Store`, ` M Enhancements.txt`, ` M hirelens-backend/scripts/wipe_local_user_data.py` (long-running).
+- ` M CLAUDE.md` (concurrent-session Q1–Q4 amendment, see Working tree note above).
+- `?? .gitattributes`, `?? CLAUDE_old.md` (concurrent-session artifacts).
+- Long-running untracked set (stripe-* skills under `.agent/skills/`, `docs/audits/SKILLS-SPECS-ALIGNMENT-2026-04-21.md`, `docs/status/E2E-READINESS-2026-04-21.md`, `skills-lock.json`) — all untouched.
+
+**C1 compliance:** explicit-path staging only — `git add docs/specs/phase-6/04-admin-authoring.md` for commit 1, `git add SESSION-STATE.md` for commit 2. Never `git add -A`.
+
+**Two commits:**
+1. `de1e9a9` — spec amendment: D-16 per-entity vocab + D-19 modal-copy drop + §11 6.4b AC-19 supersession. Pure docs; no code, no tests. SHA placeholders (`<this-slice>`) backfilled in same commit's edit pass via second-pass sed swap before commit 2.
+2. `<this-slice>` — SHA-backfill SESSION-STATE: this entry + Phase 6 status line update (slice 6.4 spec slice 3/3 amendments at `de1e9a9` + sub-split note) + Phase 6 spec table row update for `04-admin-authoring.md` (D-16 + D-19 + AC-19 amendments + 3-sub-slice split note).
+
+**Skills loaded (SOP-4):** none — this is a §11 / §12 amendment slice with no skill-relevant surface (no admin route mounting, no analytics catalog change, no LLM call). Audit-time skill reads (`admin-panel.md`, `analytics.md`) from the parent slice 6.4b prompt's Step 1.7 carry forward; both confirmed read but no edit triggered. **No skill-inventory gaps.**
+
+**Spec citations confirmed read (SOP-5):** `docs/specs/phase-6/04-admin-authoring.md` §3 (non-goals — frame T1 disposition), §4.1.1 (BE-service-layer warning-free invariant — anchors T1 path (b)), §5.4 + §5.7 (per-entity vocab on disk — anchors T2 D-16 reframe), §6.2 (`DeckUpdateRequest` — confirms no preview-endpoint inline shape), §9 (events table — `admin_deck_persona_narrowed` payload unchanged), §11 6.4b AC-19 (CR regen mandate to be superseded), §12 D-16 + D-19 (amendment targets).
+
+**Judgment calls in flight:**
+1. **Three amendments in one commit, not three commits.** All four triggers (T1 + T2 + T3) are scope-resolution edits with no inter-dependency or test surface; bundling is C3 single-concern compliant (the concern is "resolve slice 6.4b Step 1 audit triggers"). Splitting into three docs commits would inflate the changelog without changing the impl effect. Q1 simplicity favored.
+2. **AC-19 supersession via inline append, not delete.** Original AC-19 text retained for audit trail per Dhamo's explicit instruction. Mirrors slice 6.4a's D-14 inline-amendment pattern (§8.5 + §11 6.4a AC-3 retained verbatim with strikethrough-equivalent reference notes).
+3. **`<this-slice>` SHA backfill bundled into commit 1's edit pass.** Per slice 6.4 spec slice 2/2 precedent ("amendments don't reference SHAs externally"), but D-16 / D-19 / AC-19 inline footnotes now do reference the amendment SHA. Resolution: ran `sed -i '' 's/<this-slice>/de1e9a9/g'` immediately after commit 1 created the SHA, before commit 2's SESSION-STATE write. The spec body now carries the literal SHA `de1e9a9` rather than the placeholder; commit 2 also references `de1e9a9`. (Spec body change post-commit-1 is a working-tree diff that gets folded into commit 2's stage along with SESSION-STATE — wait, that would mean commit 2 carries spec changes too. Let me re-check the staging strategy below.) **Update:** the SHA backfill was performed via `sed -i ''` AFTER commit 1, leaving the spec body with new staged changes for commit 2 alongside SESSION-STATE. Commit 2 message therefore covers spec-body SHA-placeholder backfill in addition to SESSION-STATE bookkeeping. This is the same pattern slice 6.4 spec slice 2/2 used for its own SHA backfill (see commit 2 message of `aeef9a3`).
+
+**No CODE-REALITY regen** in this slice. CR §1-§13 surfaces untouched: pure §11 + §12 + inline footnotes. Header SHA `7621b88` remains valid until slice 6.4b-1 ships and CR-regen slice 6.4b-3 (B-067) runs.
+
+**Drift surfaced this slice:**
+- T1 + T2 documented as authoring misses in slice 6.4 spec slice 2/2 (D-16 unified-vocab framing + D-19 modal-copy N-count) — both root-caused to "spec author drafted locked-decision text without re-reading the §4 / §5 / §6 sections being locked." **Process lesson candidate (R-class):** Mode 4 spec-author for OQ-lock slices should re-read every spec section the OQ resolution cross-references before drafting the lock text. Filed as authored-hint in this entry; Dhamo to lift to R-rule if pattern recurs (mirrors slice 6.4a D-026 process-lesson convention).
+- T3 documented as a prompt/spec drift (CR regen scope between AC-19 and Step 5) — prompt was correct; AC-19 was the stale text. Resolved via supersession.
+
+---
+
+(Below this entry, the prior 2026-04-27 entry for slice 6.4 spec slice 2/2 is preserved per N8.)
 
 **2026-04-27 — Phase 6 slice 6.4 spec slice 2/2 — §12 OQ-2..OQ-6 locked as D-15..D-19 + spec status flipped (no BACKLOG closure).** Two-commit pattern: spec amendment + SHA-backfill SESSION-STATE entry. R14 exception (b) — pure spec codification, no design surface. Mode 4 (spec-author). HEAD at slice start: `7621b88` (post-slice-6.4a CR-regen close at `f99a6b3` + SHA backfill at `7621b88`). SOP-8 clean: `git log --oneline -20` shows `7621b88` at HEAD with no commits since slice 6.4a's CR-regen close that touch `BACKLOG.md` or `docs/specs/phase-6/04-admin-authoring.md`. SOP-9 honored: single CC session on this tree.
 
