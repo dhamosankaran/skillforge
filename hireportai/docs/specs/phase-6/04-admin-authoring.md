@@ -885,16 +885,18 @@ hook / api / types files from §8.2.
   6.3) — **untouched**.
 - `src/components/study/QuizPanel.tsx` (legacy card flow) —
   **untouched**.
-- `src/pages/AdminAnalytics.tsx` + `src/pages/AdminAudit.tsx`
-  (Phase 5) — **untouched**. They keep their existing `/admin/analytics`
-  + `/admin/audit` mount paths inside the new `AdminLayout`. Slice 6.4a
-  may move their route definitions inside the `AdminLayout` `<Outlet />`
-  block in `App.tsx`; the page components themselves do not change.
+- `src/pages/AdminAnalytics.tsx` (Phase 5) — **untouched**. Keeps its
+  existing `/admin/analytics` mount path inside the new `AdminLayout`'s
+  `<Outlet />`. Slice 6.4a may move its route definition inside the
+  `AdminLayout` `<Outlet />` block in `App.tsx`; the page component
+  itself does not change.
 - `src/pages/AdminPanel.tsx` — **gets renamed/repurposed** in slice
   6.4a per audit R-4: either deleted (logic extracted to
   `pages/admin/AdminCards.tsx`) or repurposed as an alias re-export.
   Impl prompt picks. Recommendation: delete + extract — minimizes drift
   surface.
+
+> **AdminAudit FE consumer deferred per §12 D-14.**
 
 ### 8.6 Wire-shape contract — single source of truth
 
@@ -970,8 +972,9 @@ verified by the existing suite staying green.
 - `test_admin_layout_redirects_root_to_cards` — visiting `/admin`
   with admin role → renders cards page (verifies `<Navigate replace
   to="/admin/cards" />` works).
-- `test_admin_layout_renders_sidebar_with_5_links` — Cards / Decks /
-  Lessons / Audit / Analytics.
+- `test_admin_layout_renders_sidebar_with_4_links` — 4 nav links:
+  Cards / Decks / Lessons / Analytics. (`/admin/audit` is intentionally
+  omitted per §12 D-14.)
 - `test_admin_layout_unauthenticated_redirects` — non-admin role →
   AdminGate redirect (existing behavior preserved).
 - `test_admin_cards_byte_identical_behavior` — cards CRUD smoke
@@ -1125,10 +1128,13 @@ The implementation slices (6.4a + 6.4b) must pass:
   draft + bulk-import surface byte-identically. Existing
   `tests/AdminPanel.test.tsx` (or its successor) stays green at
   `/admin/cards`.
-- **AC-3** — Admin sidebar navigates to `/admin/cards`,
-  `/admin/decks`, `/admin/lessons`, `/admin/audit`, `/admin/analytics`.
-  Admin sub-route `/admin/lessons` mounts a placeholder ("Pick a deck
-  to author lessons") in 6.4a.
+- **AC-3** — `AdminLayout` sidebar renders 4 nav links
+  (Cards / Decks / Lessons / Analytics) wrapped in `<AdminGate>`,
+  navigating to `/admin/cards`, `/admin/decks`, `/admin/lessons`,
+  `/admin/analytics`. Admin sub-route `/admin/lessons` mounts a
+  placeholder ("Pick a deck to author lessons") in 6.4a. The
+  `/admin/audit` link is intentionally omitted per §12 D-14 — the
+  FE consumer was never built.
 - **AC-4** — `<AdminGate>` continues to wrap all `/admin/*` routes;
   non-admin → AdminGate redirect (existing behavior).
 - **AC-5** — `tsc --noEmit` clean. FE test suite green; +4 to +8
@@ -1310,6 +1316,15 @@ The implementation slices (6.4a + 6.4b) must pass:
   etc.) are out of scope (§3 non-goal). Rationale: don't pay the
   retrofit cost in this slice; let `react-hook-form` adoption spread
   organically across future form-rich slices.
+- **D-14 — `AdminAudit.tsx` FE consumer never shipped despite the BE
+  `/api/v1/admin/audit` endpoint landing in E-018a (`3b43772`,
+  2026-04-23).** Spec author (slice 6.4 spec-author at `309f6c4`)
+  referenced an `AdminAudit.tsx` page in §8.5 + §11 6.4a AC-3 + §10.1
+  that does not exist on disk; this slice (6.4a impl) drops
+  `/admin/audit` from the sidebar entirely rather than ship dead UI.
+  The BE endpoint remains live and un-consumed. A future slice may
+  build the FE consumer when product demand surfaces — file as a new
+  BACKLOG row at that time. Drift logged in `SESSION-STATE.md`.
 
 ## 13. Out of scope (explicit list)
 
