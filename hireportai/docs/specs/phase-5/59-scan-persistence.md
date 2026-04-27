@@ -9,7 +9,7 @@ amends: none (net-new)
 
 # SPEC: Scan persistence + Results page hydration from URL `scan_id`
 
-## Status: Drafted, not shipped.
+## Status: Shipped (spec + impl) — closes B-035. Impl `0b35440` on 2026-04-24.
 
 ## 1. Problem
 

@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.1: Foundation Schema (decks / lessons / quiz_items / quiz_item_progress)
 
-## Status: Drafted, not shipped
+## Status: Shipped (spec + impl) — closes B-061. Impl `a989539` on 2026-04-26.
 
 | Field | Value |
 |-------|-------|

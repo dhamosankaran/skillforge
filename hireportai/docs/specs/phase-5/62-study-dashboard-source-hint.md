@@ -1,6 +1,6 @@
 # P5-S62 — StudyDashboard `?source=last_scan` Hero Hint Consumer
 
-**Status:** Drafted, not shipped.
+**Status:** Shipped (spec + impl) — closes B-052 + B-053. Impl `df035e1` on 2026-04-26.
 **Owner:** Dhamo
 **Created:** 2026-04-26
 **Phase:** 5D (persona-aware surface — composition follow-up)

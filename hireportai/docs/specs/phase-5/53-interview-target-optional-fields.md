@@ -1,6 +1,6 @@
 # Spec #53 — Interview Target: Optional Fields + Date-Picker Reconciliation
 
-**Status:** Draft — authored 2026-04-22, awaiting CODEX review
+**Status:** Shipped (spec + impl) — closes B-018. Impl `724e5cd` on 2026-04-22.
 **Owner:** Dhamo
 **Phase:** 5
 **Closes (on implementation):** BACKLOG B-NNN (finding #6), B-NNN+1 (finding #7) — filed by the implementation slice, not this spec.

@@ -10,7 +10,7 @@ unblocks: P5-S61-impl (B-045)
 
 # SPEC #60 — `/prep/analyze` Pre-Flight Gate for Free-Tier Scan Exhaustion
 
-**Status:** Draft
+**Status:** Shipped (spec + impl) — closes B-045. Impl `3c962d8` on 2026-04-25.
 **Owner:** Dhamo
 **Created:** 2026-04-25
 **Phase:** 5

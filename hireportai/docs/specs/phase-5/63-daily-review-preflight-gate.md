@@ -9,7 +9,7 @@ related: spec #50 (wall mechanic — submit-time 402), spec #60 / B-045 (Analyze
 
 # SPEC: Pre-flight Daily-Review Wall Gate on `/learn/daily`
 
-## Status: Draft
+## Status: Shipped (spec + impl) — closes B-059. Impl `20562ea` on 2026-04-26.
 
 > **Authoring note (2026-04-26 R19 audit):** chat-Claude's slice prompt cited the
 > queue endpoint as `GET /api/v1/study/daily-queue` and the response schema as

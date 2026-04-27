@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.3: Lesson-Card UX (FE-first, fixture-driven, BE read-only)
 
-## Status: Drafted, not shipped
+## Status: Shipped (spec + impl) — closes B-063. Impl `ba00331` on 2026-04-27.
 
 | Field | Value |
 |-------|-------|

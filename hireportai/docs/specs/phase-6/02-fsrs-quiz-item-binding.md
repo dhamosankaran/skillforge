@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.2: FSRS Quiz-Item Binding (service + routes)
 
-## Status: Drafted, not shipped
+## Status: Shipped (spec + impl) — closes B-062. Impl `7b654fb` on 2026-04-27.
 
 | Field | Value |
 |-------|-------|

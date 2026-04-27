@@ -1,6 +1,6 @@
 # P5-S61 — HomeDashboard Composition Rules + Free-tier Study Surface
 
-**Status:** Drafted, not shipped.
+**Status:** Shipped (spec + impl) — closes B-051. Impl `ecef895` on 2026-04-26.
 **Owner:** Dhamo
 **Created:** 2026-04-26
 **Phase:** 5D (persona-aware surface)
