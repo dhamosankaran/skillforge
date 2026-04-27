@@ -23,7 +23,7 @@ vi.mock('@/pages/LoginPage',                () => ({ default: () => <div data-te
 vi.mock('@/pages/Pricing',                  () => ({ default: () => <div data-testid="page-pricing" /> }))
 vi.mock('@/pages/Onboarding',               () => ({ default: () => <div data-testid="page-onboarding" /> }))
 vi.mock('@/pages/Profile',                  () => ({ default: () => <div data-testid="page-profile" /> }))
-vi.mock('@/pages/AdminPanel',               () => ({ default: () => <div data-testid="page-admin" /> }))
+vi.mock('@/components/admin/AdminLayout',   () => ({ default: () => <div data-testid="page-admin" /> }))
 
 // Navbar is presentational; skip it so we don't need UsageContext / auth UI.
 vi.mock('@/components/layout/Navbar', () => ({ Navbar: () => null }))

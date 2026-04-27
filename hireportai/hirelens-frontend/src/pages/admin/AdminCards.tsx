@@ -1,13 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Navigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Pencil, Trash2, Upload, Sparkles, X, Search, ChevronLeft,
   ChevronRight, Loader2, FileText, Check, AlertTriangle,
 } from 'lucide-react'
-import { PageWrapper } from '@/components/layout/PageWrapper'
 import { GlowButton } from '@/components/ui/GlowButton'
-import { useAuth } from '@/context/AuthContext'
 import {
   fetchAdminCards,
   fetchCategories,
@@ -26,6 +23,12 @@ import type {
   Category,
 } from '@/types'
 
+// Phase 6 slice 6.4a — extracted from `pages/AdminPanel.tsx` per spec
+// §12 D-12. Cards CRUD + AI draft + CSV import surface; behavior at
+// `/admin/cards` is byte-identical to the prior `/admin` page (AC-2).
+// Auth gating is handled by `<AdminGate>` wrapping `<AdminLayout>`;
+// no per-page check needed here.
+
 type Tab = 'cards' | 'create' | 'import' | 'generate'
 
 const DIFF_COLORS = {
@@ -38,16 +41,7 @@ const INPUT =
   'w-full px-3 py-2.5 bg-bg-elevated border border-contrast/[0.06] rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-primary/30 transition-colors'
 const LABEL = 'block text-xs text-text-muted mb-1.5'
 
-export default function AdminPanel() {
-  const { user, isLoading: authLoading } = useAuth()
-
-  if (authLoading) return null
-  if (!user || user.role !== 'admin') return <Navigate to="/prep/analyze" replace />
-
-  return <AdminDashboard />
-}
-
-function AdminDashboard() {
+export default function AdminCards() {
   const [tab, setTab] = useState<Tab>('cards')
   const [categories, setCategories] = useState<Category[]>([])
   const [refreshKey, setRefreshKey] = useState(0)
@@ -68,65 +62,47 @@ function AdminDashboard() {
   ]
 
   return (
-    <PageWrapper className="min-h-screen bg-bg-base">
-      <div className="max-w-7xl mx-auto px-4 py-10">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="font-display text-3xl font-bold text-text-primary">
-            Admin <span className="text-accent-primary">Panel</span>
-          </h1>
-          <p className="text-text-secondary text-sm mt-1">
-            Manage flashcards — create, edit, delete, generate with AI, or bulk import.
-          </p>
-        </motion.div>
-
-        {/* Tab bar */}
-        <div className="flex gap-1 mb-6 p-1 bg-bg-surface/60 border border-contrast/[0.06] rounded-xl w-fit">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                tab === t.key
-                  ? 'bg-accent-primary text-bg-base'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-contrast/[0.04]'
-              }`}
-            >
-              {t.icon}
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab content */}
-        <AnimatePresence mode="wait">
-          {tab === 'cards' && (
-            <motion.div key="cards" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-              <CardTable categories={categories} refreshKey={refreshKey} onRefresh={refresh} />
-            </motion.div>
-          )}
-          {tab === 'create' && (
-            <motion.div key="create" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-              <CreateCardForm categories={categories} onCreated={() => { refresh(); setTab('cards') }} />
-            </motion.div>
-          )}
-          {tab === 'generate' && (
-            <motion.div key="generate" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-              <AIGeneratePanel categories={categories} onCreated={() => { refresh(); setTab('cards') }} />
-            </motion.div>
-          )}
-          {tab === 'import' && (
-            <motion.div key="import" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-              <CSVImportPanel onImported={refresh} />
-            </motion.div>
-          )}
-        </AnimatePresence>
+    <div data-testid="admin-cards-page">
+      <div className="flex gap-1 mb-6 p-1 bg-bg-surface/60 border border-contrast/[0.06] rounded-xl w-fit">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              tab === t.key
+                ? 'bg-accent-primary text-bg-base'
+                : 'text-text-secondary hover:text-text-primary hover:bg-contrast/[0.04]'
+            }`}
+          >
+            {t.icon}
+            {t.label}
+          </button>
+        ))}
       </div>
-    </PageWrapper>
+
+      <AnimatePresence mode="wait">
+        {tab === 'cards' && (
+          <motion.div key="cards" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+            <CardTable categories={categories} refreshKey={refreshKey} onRefresh={refresh} />
+          </motion.div>
+        )}
+        {tab === 'create' && (
+          <motion.div key="create" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+            <CreateCardForm categories={categories} onCreated={() => { refresh(); setTab('cards') }} />
+          </motion.div>
+        )}
+        {tab === 'generate' && (
+          <motion.div key="generate" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+            <AIGeneratePanel categories={categories} onCreated={() => { refresh(); setTab('cards') }} />
+          </motion.div>
+        )}
+        {tab === 'import' && (
+          <motion.div key="import" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+            <CSVImportPanel onImported={refresh} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   )
 }
 

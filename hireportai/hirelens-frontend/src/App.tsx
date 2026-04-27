@@ -27,7 +27,10 @@ import HomeDashboard from '@/pages/HomeDashboard'
 // Lazy-loaded pages — not on the critical path (Spec #25)
 const Profile = lazy(() => import('@/pages/Profile'))
 const MissionMode = lazy(() => import('@/pages/MissionMode'))
-const AdminPanel = lazy(() => import('@/pages/AdminPanel'))
+const AdminLayout = lazy(() => import('@/components/admin/AdminLayout'))
+const AdminCards = lazy(() => import('@/pages/admin/AdminCards'))
+const AdminDecks = lazy(() => import('@/pages/admin/AdminDecks'))
+const AdminLessons = lazy(() => import('@/pages/admin/AdminLessons'))
 const AdminAnalytics = lazy(() => import('@/pages/AdminAnalytics'))
 
 function LazyFallback() {
@@ -99,10 +102,17 @@ export default function App() {
           <Route path="/prep/interview" element={<ProtectedRoute><Interview /></ProtectedRoute>} />
           <Route path="/prep/tracker"   element={<ProtectedRoute><Tracker /></ProtectedRoute>} />
 
-          {/* Profile + admin — unchanged */}
+          {/* Profile */}
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          <Route path="/admin"           element={<ProtectedRoute><AdminGate><AdminPanel /></AdminGate></ProtectedRoute>} />
-          <Route path="/admin/analytics" element={<ProtectedRoute><AdminGate><AdminAnalytics /></AdminGate></ProtectedRoute>} />
+
+          {/* Admin — multi-route shell (Phase 6 slice 6.4a). /admin redirects to /admin/cards. */}
+          <Route path="/admin" element={<ProtectedRoute><AdminGate><AdminLayout /></AdminGate></ProtectedRoute>}>
+            <Route index              element={<Navigate to="/admin/cards" replace />} />
+            <Route path="cards"       element={<AdminCards />} />
+            <Route path="decks"       element={<AdminDecks />} />
+            <Route path="lessons"     element={<AdminLessons />} />
+            <Route path="analytics"   element={<AdminAnalytics />} />
+          </Route>
 
           {/* Transitional redirects — drop in Phase 6 once the old paths stop receiving hits. */}
           <Route path="/analyze"            element={<Navigate to="/prep/analyze" replace />} />
