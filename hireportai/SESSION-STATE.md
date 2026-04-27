@@ -61,7 +61,7 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 ## Phase 6 (Curriculum Platform) — locked decisions
 
-**Status:** slices 6.1 + 6.2 + 6.3 shipped; slice 6.4a (admin shell refactor) shipped (`b0806d0`, closes B-064) + spec amended in lockstep (`cbf878f`, D-14 → /admin/audit dropped from sidebar); slice 6.4b (admin CRUD + lesson_service body swap + fixture retirement) impl pending at B-065.
+**Status:** slices 6.1 + 6.2 + 6.3 shipped; slice 6.4a (admin shell refactor) shipped (`b0806d0`, closes B-064) + spec amended in lockstep (`cbf878f`, D-14 → /admin/audit dropped from sidebar); slice 6.4 spec §12 OQ-2..OQ-6 locked as D-15..D-19 in `4fce036` (selectinload, admin-LIST `?status=` vocab, FE classifyEdit + 0.15 threshold, lesson-level retire-only / quiz_item-level retire-and-replace cascades, persona-visibility narrowing-confirm modal); slice 6.4b (admin CRUD + lesson_service body swap + fixture retirement) impl pending at B-065.
 
 **Slice count:** 18 (after merge of original 6.7 + 6.12 into a single Learn-page composition slice per audit slice-by-slice review).
 
@@ -77,7 +77,7 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 - `01-foundation-schema.md` — slice 6.1, four foundation tables. ✅ shipped (`a989539` / `f621248`, closes B-061).
 - `02-fsrs-quiz-item-binding.md` — slice 6.2, FSRS service + routes against `quiz_item_progress`. ✅ shipped (`7b654fb` / `a02639c`, closes B-062).
 - `03-lesson-ux.md` — slice 6.3, lesson-card UX (FE-first, fixture-data, BE read-only routes). ✅ shipped (`ba00331`, closes B-063).
-- `04-admin-authoring.md` — slice 6.4, admin authoring (heaviest Phase 6 slice — multi-route admin shell + deck/lesson/quiz_item CRUD + lesson_service DB swap + fixture retirement). 6.4a ✅ shipped (`cbf878f` spec amend + `b0806d0` impl, closes B-064); D-14 in-slice amendment dropped `/admin/audit` from sidebar (FE consumer never built — see D-026 in Drift Flags). 6.4b 🔴 **pending impl** at **B-065** (admin CRUD + lesson_service body swap + fixture retirement, BE+FE). Single-slice fallback per §12 D-1 was not exercised — split path was taken as authored.
+- `04-admin-authoring.md` — slice 6.4, admin authoring (heaviest Phase 6 slice — multi-route admin shell + deck/lesson/quiz_item CRUD + lesson_service DB swap + fixture retirement). 6.4a ✅ shipped (`cbf878f` spec amend + `b0806d0` impl, closes B-064); D-14 in-slice amendment dropped `/admin/audit` from sidebar (FE consumer never built — see D-026 in Drift Flags). §12 OQ-2..OQ-6 locked as D-15..D-19 in `4fce036` (slice 6.4 spec slice 2/2, R14(b)) + spec body `## Status:` flipped to "Partially shipped — slice 6.4a shipped …; slice 6.4b pending B-065" + §9 +1 event (`admin_deck_persona_narrowed`). 6.4b 🔴 **pending impl** at **B-065** (admin CRUD + lesson_service body swap + fixture retirement, BE+FE). Single-slice fallback per §12 D-1 was not exercised — split path was taken as authored.
 
 **Phase plan:** see playbook §[Phase 6] (TBD — chat-Claude will draft playbook update separately).
 
@@ -93,6 +93,70 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 ---
 
 ## Last Completed Slice
+
+**2026-04-27 — Phase 6 slice 6.4 spec slice 2/2 — §12 OQ-2..OQ-6 locked as D-15..D-19 + spec status flipped (no BACKLOG closure).** Two-commit pattern: spec amendment + SHA-backfill SESSION-STATE entry. R14 exception (b) — pure spec codification, no design surface. Mode 4 (spec-author). HEAD at slice start: `7621b88` (post-slice-6.4a CR-regen close at `f99a6b3` + SHA backfill at `7621b88`). SOP-8 clean: `git log --oneline -20` shows `7621b88` at HEAD with no commits since slice 6.4a's CR-regen close that touch `BACKLOG.md` or `docs/specs/phase-6/04-admin-authoring.md`. SOP-9 honored: single CC session on this tree.
+
+**Spec amended (1 file, `docs/specs/phase-6/04-admin-authoring.md`):**
+- `## Status:` heading-2 line flipped: `Drafted, not shipped` → `Partially shipped — slice 6.4a shipped (closes B-064 by b0806d0); slice 6.4b pending B-065` (CR §11 #19 status-format standardization recommendation honored).
+- §12 +5 locked decisions (D-15..D-19) appended after D-14, mirroring D-1..D-14 bullet format with `(resolves OQ-N)` cross-ref + cited spec section.
+- §9 events table +1 row (`admin_deck_persona_narrowed`) per D-19, with properties `{admin_id, deck_id, removed_personas, before_count, after_count, internal: true}`.
+- §9 catalog-update count adjusted 10 → 11 to reflect the new event.
+- Spec line count 1441 → 1505 (+64 lines).
+
+**§12 OQ → D mapping (all five locks):**
+- **D-15 (resolves OQ-2):** `lesson_service.py` body-swap queries use `selectinload(Lesson.quiz_items)` per slice 6.2 precedent (`app/services/quiz_item_study_service.py`). Cross-ref §4.2.
+- **D-16 (resolves OQ-3):** admin-LIST `?status=` vocabulary `'active' | 'drafts' | 'published' | 'archived' | 'all'`, default `'active'` (includes drafts + published; excludes archived). Applies to all three admin-LIST endpoints (decks, lessons, quiz_items) per §5. Cross-ref §5.4. Drafts surfaced via `?status=drafts` using `ix_lessons_review_queue` from slice 6.1 §4.2.
+- **D-17 (resolves OQ-4):** FE-side preview classification via new `src/utils/lessonEdit.ts` (`classifyEdit(before, after) -> 'minor' | 'substantive'`) mirroring BE >15% char-delta rule on `concept_md` / `production_md` / `examples_md`; BE re-validates per §7.1; advisory-only for confirm-modal UX. Shared `SUBSTANTIVE_EDIT_THRESHOLD = 0.15` constant — declared FE-side in `lessonEdit.ts`, BE-side in `app/services/admin_errors.py` constants block (per D-11). Drift case → `EditClassificationConflictError`. Cross-ref §7.1, §7.2.
+- **D-18 (resolves OQ-5):** cascade rules differ by edit path:
+  - Lesson-level substantive PATCH → cascade-retires all active `quiz_items` for that lesson in same DB transaction (per D-8). Sets `quiz_items.retired_at = now()`. NO auto-create — admin authors new quiz_items manually.
+  - Quiz_item-level substantive PATCH → retire-and-replace: insert new row with `version = old.version + 1`, set `old.superseded_by_id = new.id`, set `old.retired_at = now()`. Preserves FSRS history continuity (downstream FSRS-history follow-up out of scope this slice).
+  - Cross-ref §7.3, §5 quiz_item PATCH endpoint.
+- **D-19 (resolves OQ-6):** `decks.persona_visibility` admin-editable post-creation; narrowing edits trigger `ConfirmPersonaNarrowingModal` on FE before PATCH submit (BE validates but does not gate). Modal copy: "Narrowing persona visibility will hide this deck from N learners currently in personas X, Y. Their existing FSRS progress on quiz_items in this deck is preserved but they will no longer see the deck in /learn surfaces. Continue?" New event `admin_deck_persona_narrowed` added to §9. Open follow-up flagged for slice 6.7 / 6.8: narrowing does not retire in-flight `quiz_item_progress` rows for users now in excluded personas — orphan cleanup deferred. Cross-ref §6.2.
+
+**Tests baseline at slice start (Step 7 SOP-3 gate, docs slice — report only, no fix):**
+- BE: `pytest -m "not integration"` with production-default env vars (`FREE_DAILY_REVIEW_LIMIT=10 FREE_LIFETIME_SCAN_LIMIT=1 FREE_MONTHLY_INTERVIEW_LIMIT=3`) — **520 passed / 1 skipped / 7 deselected** in 52.16s. Matches expected 520-baseline post-slice-6.3 close + CR §11 #20 env-var note. Without env vars, 10 pre-existing failures appear (per slice 6.4a entry's drift call-out); not investigated this slice.
+- FE: `npx vitest run` — **345 passed (58 files)** in 12.90s. Matches expected 345-baseline post-slice-6.4a.
+
+**Tests after slice:** unchanged (BE 520, FE 345). Spec-only slice; no code or tests touched. R14 exception (b) audit trail clean.
+
+**R15(c) gate:** spec-only slice; no implementation closure. **B-065 stays 🔴** per prompt Step 5; impl is the next slice's responsibility. **No new BACKLOG rows filed** (this is a §12 amendment, not new scope).
+
+**R17 watermark verified at slice start:** B-066 highest in-use, B-067 next free. This slice files no new IDs.
+
+**Working tree at slice start:** `CLAUDE.md` still dirty with concurrent-session Q1–Q4 "Code Quality" + "This file is working if" amendment (unchanged from slice 6.4a per its closeout entry's N8 application). Not staged, not touched. Q1–Q4 honored as the live ruleset for this slice's authoring (Q1 simplicity → no speculative D-15..D-19 elaboration beyond the locked text; Q2 surgical → §12 append only, no other spec sections rewritten; Q3 OQ resolutions stated up-front in prompt and confirmed at Step 1 before draft; Q4 verifiable goal → "spec §12 ends at D-19 post-slice" is the runnable grep check). `CLAUDE_old.md` still untracked (concurrent-session backup artifact, unchanged).
+
+**Pre-existing dirty files unstaged (C2 compliance):**
+- ` M ../.DS_Store` (above hireportai/, long-running).
+- ` M CLAUDE.md` (concurrent-session Q1–Q4 amendment, see Working tree note above).
+- ` M Enhancements.txt`, ` M hirelens-backend/scripts/wipe_local_user_data.py` (long-running).
+- `?? .gitattributes` (empty), `?? CLAUDE_old.md` (concurrent-session backup artifact).
+- Long-running untracked set (stripe-* skills under `.agent/skills/`, `docs/audits/SKILLS-SPECS-ALIGNMENT-2026-04-21.md`, `docs/status/E2E-READINESS-2026-04-21.md`, `skills-lock.json`) — all untouched.
+
+**C1 compliance:** explicit-path staging only — `git add docs/specs/phase-6/04-admin-authoring.md` for commit 1, `git add SESSION-STATE.md` for commit 2. Never `git add -A` from above hireportai/.
+
+**Two commits:**
+1. `4fce036` — spec amendment: `## Status:` flip + §12 D-15..D-19 lock + §9 +1 event row + catalog count 10 → 11. Pure docs; no code, no tests.
+2. `<this-slice>` — SHA-backfill SESSION-STATE entry: this entry + Phase 6 status line update (slice 6.4 §12 OQ-locks at `4fce036`) + Phase 6 spec table row update for `04-admin-authoring.md` (D-15..D-19 + §9 +1 event noted).
+
+**Skills loaded (SOP-4):** `admin-panel.md` (audit chain `audit_admin_request → require_admin` reaffirmed for D-7 cross-ref; not modified). No other skills applicable to a §12-only spec amendment slice. **No skill-inventory gaps.**
+
+**Spec citations confirmed read (SOP-5):** `docs/specs/phase-6/04-admin-authoring.md` §12 (D-1..D-14 to verify the numbering anchor), §14 (OQ-2..OQ-6 hint text to N7-check against the prompt's locked-resolution text before drafting), §9 (events table for the D-19 +1 row insertion point), §4.2 / §5.4 / §6.2 / §7.1 / §7.2 / §7.3 (cross-ref targets in D-15..D-19 bullet text).
+
+**Judgment calls in flight:**
+1. **OQ-6 modal copy materially refined vs authored hint (Q3-style up-front disclosure, not N7 STOP).** §14 OQ-6 hint copy was `"This change will hide deck {title} from {N} active reviewers (last-reviewed within 7 days). Continue?"` with an open question on whether N is computed via a separate `GET /api/v1/admin/decks/:id/active-reviewers-count` endpoint OR inlined in the GET deck response. Prompt's locked D-19 copy drops the 7-day window, restates as `"… N learners currently in personas X, Y. Their existing FSRS progress on quiz_items in this deck is preserved …"` (more accurate FSRS messaging), and adds a new event `admin_deck_persona_narrowed`. The N-computation method is unspecified in D-19 — impl prompt picks (the spec body §6.2 still notes both options as authored hints; D-19 supersedes only on the warning-modal copy). Core position (admin-editable + warning modal on narrowing + service layer permits) preserved. §14 explicitly authorizes hint→lock refinement ("Recommendations are AUTHORED HINTS, not locked decisions; the impl prompt may lift any of them to LD-N"). Logged here per Q3.
+2. **§5.4 / §5.7 vocab vs D-16 reconciliation deferred to slice 6.4b impl.** Spec body §5.4 (deck-LIST) currently says `status: 'active' | 'archived' | 'all'`; §5.7 (quiz_item-LIST) says `status: 'active' | 'retired' | 'all'`. D-16 locks the unified vocabulary `'active' | 'drafts' | 'published' | 'archived' | 'all'` across all three admin-LIST endpoints. The spec body sections will need touch-up at impl time (slice 6.4b) to align with D-16; this slice's amendment is §12-only per prompt scope. Not a STOP — D-16 supersedes via §12 locked-decisions priority; impl slice reconciles.
+3. **R15(b) constraint honored on B-065 row in BACKLOG.md.** B-065's row text still names "10 new admin PostHog events declared per spec §9" — D-19 brings the count to 11, but row-text scope edits are not Status updates per R15(b). Left untouched; impl slice (6.4b) updates the count when it actually files the new event registrations.
+
+**No CODE-REALITY regen** in this slice. CR §1-§13 surfaces untouched: no new routes, no new models, no top-level type changes, no `App.tsx` mod, no layout touch — pure §12 spec amendment + §9 +1 event row text. Header SHA `7621b88` remains valid until next code change.
+
+**Drift surfaced this slice:**
+- D-19 + §5.4/§5.7 vocab gap (Judgment call #2) — impl-time reconciliation deferred. Not a new D-row in Drift Flags table; will be picked up by slice 6.4b R16 audit.
+- Pre-existing 10 BE failures without env vars (unchanged from slice 6.4a baseline). Not touched.
+- Pre-existing dirty `CLAUDE.md` (concurrent-session Q1–Q4 amendment). N8 preserve-and-coexist applied (unchanged from slice 6.4a).
+
+---
+
+(Below this entry, the prior 2026-04-27 entry for slice 6.4a implementation is preserved per N8.)
 
 **2026-04-27 — Phase 6 slice 6.4a implementation (admin shell refactor; closes B-064).** Three-commit pattern: in-slice spec amendment (R19 push-back resolution) + impl + SHA backfill. R14 default — implements an authored spec (as amended by this slice's own spec edit). Mode 2 (implement-to-spec). HEAD at slice start: `db676f4` (post-slice-6.4 spec-author bookkeeping). SOP-8 clean (no commits since prompt drafting). SOP-9 honored (single CC session on this tree).
 
