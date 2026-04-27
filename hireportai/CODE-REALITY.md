@@ -9,7 +9,7 @@
 
 | Field | Value |
 |-------|-------|
-| Commit sha (short) | `17bf188` (HEAD after §3 + §4 regen commit). **This regen: §1 metadata + §2 models + §5 alembic + this header SHA only** — §3 routes + §4 services were refreshed in `17bf188` and remain authoritative; §6+ carried forward verified-stale and need a follow-up sweep. With this regen all of §1, §2, §3, §4, §5 are consistent at HEAD. The §1 + §2 + §5 deltas closed by this regen are: §1 model count `19 → 23` (+4 Phase 6 ORM models), service count `31+3=34 → 33+3=36` (+2 services), router count `18+6=24 → 21+6=27` (+3 v1 routers), endpoint count `64 → 73` (+9 mount-point appearances; flat-table convention from §3 — see endpoint row note for the reconciliation against decorator-source count of 67), alembic head `30bf39fa04f8 → 57951e9f4cdc` (+1 migration); §2 +4 model sections (decks / lessons / quiz_items / quiz_item_progress); §5 footer refreshed to reflect +1 revision since `8a0402e` baseline. **Prior regen lineage preserved for context:** `cacf238` (B-063 SHA backfill, prior to §3 + §4 regen) → `8a0402e` (full regen at B-059 SHA backfill, all 13 sections) → `ce60ea6` (referenced by prior CR before that). |
+| Commit sha (short) | `7109542` (HEAD after §1 + §2 + §5 regen commit). **This regen: §6 + §7 + §8 + §9 + §10 + §11 + §12 + §13 + this header SHA**. With this regen all 13 sections are consistent at HEAD `7109542` for the first time since `8a0402e`. The §6+ deltas closed: §6 +1 FE route (`/learn/lesson/:id`), component graph 67 → 69 (+2: `lesson/LessonRenderer`, `lesson/QuizItemPanel`); §7 +1 page (`Lesson.tsx`); §8 +12 type entries (5 union aliases + 7 interfaces — Phase 6 slice 6.3 wire shapes mirroring BE Pydantic); §9 carry-forward verified (Navbar / GuidedTour / ResumePDFTemplate / ai_service / services/llm/ all still orphan or flagged-deferred; no new dead code surfaced); §10 carry-forward (3 untracked stripe-* dirs unchanged; no new tracked skills from slices 6.1 / 6.2 / 6.3); §11 +1 drift entry (#18 phase-6 spec body Status lines stuck at `Drafted, not shipped` despite ship); §12 carry-forward verbatim (Q1–Q9 unchanged); §13 +3 phase-6 spec entries (full new subsection), per-phase table 80 → 83 across 7 phases (was 6). **Three-pass regen lineage closing the 14-commit gap from `8a0402e`:** `17bf188` (§3 + §4 regen) → `7109542` (§1 + §2 + §5 regen) → THIS commit (§6+). |
 | Branch | `main` (52 commits ahead of `origin/main`; not yet pushed) |
 | Generated | 2026-04-26 (full regen, all 13 sections). LD-1 from B-049: full regen, not targeted. LD-2: counts via filesystem enumeration (`find` / `wc`, not estimation). LD-3: ambiguous fields flagged "unknown — flag for next regen" rather than guessed. LD-5: section content replaced, not appended. |
 | Backend model files | 23 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models`) — **+4 since prior regen**: `deck.py`, `lesson.py`, `quiz_item.py`, `quiz_item_progress.py` (all from Phase 6 slice 6.1, `a989539`). Verified via `find hirelens-backend/app/models -maxdepth 1 -name "*.py" -not -name "__init__.py" -not -name "request_models.py" -not -name "response_models.py" \| wc -l`. |
@@ -675,7 +675,7 @@ Configured in `src/App.tsx`. Top-level wrappers: `<AppShell>` (always), `<Protec
 | `/learn/daily` | `DailyReview` | AppShell | ProtectedRoute → PersonaGate | — |
 | `/learn/category/:id` | `CategoryDetail` | AppShell | ProtectedRoute → PersonaGate | — |
 | `/learn/card/:id` | `CardViewer` | AppShell | ProtectedRoute → PersonaGate | — |
-| `/learn/mission` | `MissionMode` (lazy) | AppShell | ProtectedRoute → PersonaGate | — |
+| `/learn/lesson/:id` | `Lesson` | AppShell | ProtectedRoute → PersonaGate | NEW — Phase 6 slice 6.3 (`ba00331`). Eager-loaded inside `/learn/*` block (D-10). Fires `lesson_viewed` once per mount. 404 → "Lesson not found" + Back-to-Learn link (OQ-6). |
 | `/prep` → `/prep/analyze` | `<Navigate replace>` | AppShell | ProtectedRoute | B-034 fix |
 | `/prep/analyze` | `Analyze` | AppShell | ProtectedRoute → PersonaGate | spec #60 / B-045 — pre-flight scan-exhausted gate |
 | `/prep/results` | `Results` | AppShell | ProtectedRoute → PersonaGate | B-035 / spec #59 — `?scan_id=` URL hydration |
@@ -705,7 +705,7 @@ Nav chrome rendered by `AppShell` (`TopNav` desktop, `MobileNav` mobile). Chrome
 
 **Wall-aware components (spec #50 + spec #63):** `src/components/study/QuizPanel.tsx` is the single submit chokepoint for `POST /api/v1/study/review` — consumed by `DailyReview`, `CardViewer`, `MissionMode`. On a 402 with `detail.trigger === 'daily_review'`, opens `PaywallModal trigger="daily_review"` and fires `daily_card_wall_hit { surface: "daily_review_submit" }`. **Pre-flight (B-059, `20562ea`):** `src/components/study/DailyReviewWalledView.tsx` renders full-page upsell on `/learn/daily` mount when `plan==='free' && !isAdmin && daily_status.can_review===false`; fires `daily_card_wall_hit { surface: "daily_review_page_load" }` once per mount via `useRef` guard. `formatResetsAt` / `hoursUntil` lifted from private `QuizPanel.tsx` to `src/utils/wallCountdown.ts` for reuse.
 
-### Component graph (67 components, organized by directory)
+### Component graph (69 components, organized by directory)
 
 | Directory | Components |
 |-----------|-----------|
@@ -714,6 +714,7 @@ Nav chrome rendered by `AppShell` (`TopNav` desktop, `MobileNav` mobile). Chrome
 | `home/` | DashboardWidget, InterviewDateModal *(B-037 — inline date editor)*, StateAwareWidgets *(B-051 — switched from internal `useHomeState` call to prop-driven, accepts `{persona, data, isLoading, error}` so HomeDashboard's single hook call feeds both this component and §3 composition-suppression flags)* |
 | `home/widgets/` (15 widgets) | CountdownWidget *(B-051: gained `suppressedByMissionState` prop — suppressed when state slot fires AND `context.mission_target_date === user.interview_target_date`, per-mission carve-out per spec #61 §3.1)*, FirstSessionDoneWidget, InactiveReturnerWidget, InterviewPrepperChecklist, InterviewTargetWidget *(B-051: `suppressedByMissionState` prop — broader rule, suppressed whenever Mission state slot renders per LD-3)*, LastScanWidget *(B-051: `suppressed` prop — suppressed when StudyGapsPromptWidget eligibility resolves true; scan content rolled into the prompt body, audit #3)*, MissionActiveWidget *(B-051: gained Pro stale-scan footer per spec #61 §6)*, MissionOverdueWidget, ResumeStaleWidget *(B-051: free users now route to `setShowUpgradeModal` / PaywallModal instead of inline upgrade copy)*, StreakAtRiskWidget, StreakWidget, **StudyGapsPromptWidget** *(NEW — B-051, `ecef895`. Renders for `plan==='free' && !isAdmin && has_recent_scan && !has_active_mission`. Primary CTA `/learn?source=last_scan` (LD-1 LOCKED), secondary upgrade CTA opens PaywallModal `trigger='skill_gap_study'`. Fires `home_study_gaps_prompt_shown` on mount + `home_study_gaps_clicked {cta: 'primary'\|'secondary_upgrade'}` on click. Closes audit #3, #4, #5)*, TeamComingSoonWidget, TodaysReviewWidget, WeeklyProgressWidget |
 | `layout/` | AppShell *(B-057: added `useAuth` import + `pathname === '/pricing' && user === null` guest-only carve-out alongside `CHROMELESS_PATHS = {'/', '/login', '/onboarding/persona', '/first-action'}`)*, MobileNav *(B-057: same one-line carve-out + `useAuth` import; `HIDDEN_PATHS = {'/', '/login'}`; the duplicated set is tracked at §11 drift item B-058)*, **Navbar** *(orphan; see §9)*, PageWrapper, TopNav, UserMenu |
+| `lesson/` | **LessonRenderer** *(NEW — Phase 6 slice 6.3, `ba00331`. Four-section lesson card: concept_md / production_md / examples_md / quiz panel. `react-markdown` + `remark-gfm` (D-3) — no `dangerouslySetInnerHTML`. Mobile-first concept-expanded-by-default with collapse toggle that fires `lesson_section_expanded`; desktop renders all sections via `hidden md:block` per OQ-3.)*, **QuizItemPanel** *(NEW — Phase 6 slice 6.3, `ba00331`. Quiz-submit panel scoped to a single `quiz_item`. State machine: idle → revealed → submitting → done/error. Posts to `POST /api/v1/quiz-items/review` (slice 6.2 endpoint, D-5). mcq renders answer + distractors as 4 radios. 409 / 403 surface inline error per OQ-4. NOT a rename of `study/QuizPanel.tsx` — both coexist until slice 6.15 retires the legacy card flow per D-7.)* |
 | `mission/` | Countdown, DailyTarget, MissionDateGate, MissionSetup |
 | `onboarding/` | **GuidedTour** *(orphan; see §9)* |
 | `profile/` | StreakBadge, XPBar |
@@ -742,6 +743,7 @@ Nav chrome rendered by `AppShell` (`TopNav` desktop, `MobileNav` mobile). Chrome
 | HomeDashboard.tsx | HomeDashboard | useAuth, useUsage, useHomeState *(single call, B-051; was internal to StateAwareWidgets)* | markHomeFirstVisit *(B-016)*, fetchActiveMission, fetchUserApplications | home_dashboard_viewed. Greeting fork: `isFirstVisit` snapshotted on mount via `useState(() => user.home_first_visit_seen_at == null)` (B-027). **Composition refactor (B-051, `ecef895`, spec #61 §3):** single `useHomeState()` call resolves at the page level; derives `topState` + `missionStateActive` + `missionTargetMatchesUser`; passes three suppression flags down to `InterviewPrepperMode` (`countdownSuppressedByMissionState`, `interviewTargetSuppressedByMissionState`, `lastScanSuppressed`). State-slot data flows to `StateAwareWidgets` as a prop (no double-fetch). Free-tier `StudyGapsPromptWidget` mounts on `plan==='free' && !isAdmin` branches; its eligibility predicate (`has_recent_scan && !has_active_mission`) feeds back into `lastScanSuppressed`. CareerClimber + TeamLead modes preserved verbatim. |
 | Interview.tsx | Interview | useAnalysisContext, useUsage, useInterview | generateInterviewPrep | interview_questions_regenerated, interview_questions_cached_served |
 | LandingPage.tsx | LandingPage | useAuth, usePricing | — | landing_page_viewed, cta_clicked |
+| Lesson.tsx | LessonPage | useLesson, useAuth, useUsage | fetchLesson *(via `useLesson`)* | lesson_viewed *(NEW — Phase 6 slice 6.3, `ba00331`. Fires once per mount via `useRef` idempotency guard. Payload: `{lesson_id, deck_id, deck_slug, version, persona, plan}`. Mirrors `home_dashboard_viewed` precedent. NOTE: lesson_section_expanded is fired by the child `LessonRenderer` component, not the page; quiz_item_progress_initialized + quiz_item_reviewed fire from BE service-layer on submit per spec 6.3 §9 — no FE-side duplicate.)* |
 | LoginPage.tsx | LoginPage | useAuth | signIn | — |
 | MissionMode.tsx | MissionMode | useMission, useGamification | — | mission_created, mission_day_completed, mission_completed |
 | Onboarding.tsx | Onboarding | useAnalysisContext | fetchOnboardingRecommendations | onboarding_started, onboarding_completed, gap_card_clicked |
@@ -757,7 +759,7 @@ Nav chrome rendered by `AppShell` (`TopNav` desktop, `MobileNav` mobile). Chrome
 
 ## Section 8 — Frontend shared types
 
-`src/types/index.ts` (391 lines, authoritative for API DTOs) + `src/types/homeState.ts` (28 lines, home dashboard only).
+`src/types/index.ts` (506 lines, authoritative for API DTOs) + `src/types/homeState.ts` (28 lines, home dashboard only).
 
 | Type | Shape (compact) | Import count |
 |------|-----------------|--------------|
@@ -808,6 +810,18 @@ Nav chrome rendered by `AppShell` (`TopNav` desktop, `MobileNav` mobile). Chrome
 | `CardImportResponse` | `{ created_count, skipped_count, errors[] }` | — |
 | `AnalysisState` | `{ isLoading, error, result, resumeFile, jobDescription }` | — |
 | `AnalysisAction` | discriminated union (6 action types) | — |
+| `PersonaVisibility` *(NEW — Phase 6 slice 6.3)* | `'climber' \| 'interview_prepper' \| 'both'` — mirrors `app/schemas/deck.py::PersonaVisibility` Literal. | 1 |
+| `DeckTier` *(NEW — Phase 6 slice 6.3)* | `'foundation' \| 'premium'` — mirrors `app/schemas/deck.py::DeckTier`. Drives free-vs-Pro deck filtering in slice 6.7. | 1 |
+| `LessonVersionType` *(NEW — Phase 6 slice 6.3)* | `'initial' \| 'minor_edit' \| 'substantive_edit'` — mirrors `app/schemas/lesson.py::LessonVersionType`. Substantive edits retire quiz_items. | 1 |
+| `QuestionType` *(NEW — Phase 6 slice 6.3)* | `'mcq' \| 'free_text' \| 'code_completion'` — mirrors `app/schemas/quiz_item.py::QuizQuestionType`. `mcq` is the only variant that uses `distractors`. | 1 |
+| `QuizDifficulty` *(NEW — Phase 6 slice 6.3)* | `'easy' \| 'medium' \| 'hard'` — mirrors `app/schemas/quiz_item.py::QuizDifficulty` (authored hint, NOT FSRS-managed difficulty — that lives on `quiz_item_progress.difficulty_fsrs`). | 1 |
+| `Deck` *(NEW — Phase 6 slice 6.3)* | `{ id, slug, title, description, display_order: number, icon: string\|null, persona_visibility: PersonaVisibility, tier: DeckTier, created_at, updated_at, archived_at: string\|null }` — field-for-field mirror of `app/schemas/deck.py::DeckResponse`. | 1 |
+| `Lesson` *(NEW — Phase 6 slice 6.3)* | `{ id, deck_id, slug, title, concept_md, production_md, examples_md, display_order, version: number, version_type: LessonVersionType, published_at: string\|null, generated_by_model: string\|null, source_content_id: string\|null, quality_score: number\|null, created_at, updated_at, archived_at: string\|null }` — field-for-field mirror of `app/schemas/lesson.py::LessonResponse`. `quality_score` is `number\|null` on FE; BE Pydantic ships as `Decimal` and serializes to JSON number. | 2 |
+| `QuizItem` *(NEW — Phase 6 slice 6.3)* | `{ id, lesson_id, question, answer, question_type: QuestionType, distractors: string[]\|null, difficulty: QuizDifficulty, display_order, version: number, superseded_by_id: string\|null, retired_at: string\|null, generated_by_model: string\|null, created_at, updated_at }` — field-for-field mirror of `app/schemas/quiz_item.py::QuizItemResponse`. | 2 |
+| `LessonWithQuizzes` *(NEW — Phase 6 slice 6.3)* | `{ lesson: Lesson, quiz_items: QuizItem[], deck_id, deck_slug, deck_title }` — top-level deck fields lifted for FE breadcrumb / back-link without a second round-trip. Returned by `GET /api/v1/lessons/{id}`. Mirror of `app/schemas/lesson.py::LessonWithQuizzesResponse`. | 2 |
+| `DeckWithLessons` *(NEW — Phase 6 slice 6.3)* | `{ deck: Deck, lessons: Lesson[] }` — returned by `GET /api/v1/decks/{id}/lessons`. Mirror of `app/schemas/deck.py::DeckLessonsResponse`. | 1 |
+| `QuizReviewRequest` *(NEW — Phase 6 slice 6.3, FE-side mirror of slice 6.2 BE)* | `{ quiz_item_id, rating: 1\|2\|3\|4, session_id: string, time_spent_ms? }` — mirrors `app/schemas/quiz_item.py::QuizReviewRequest` (slice 6.2). FE re-declares the type rather than reaching into study-engine types per spec 6.3 §8.1. | 2 |
+| `QuizReviewResponse` *(NEW — Phase 6 slice 6.3, FE-side mirror of slice 6.2 BE)* | `{ quiz_item_id, fsrs_state: 'learning'\|'review'\|'relearning', stability, difficulty, due_date: string, reps, lapses, scheduled_days: number }` — mirrors `app/schemas/quiz_item.py::QuizReviewResponse`. All values reflect post-review state; `scheduled_days` is fractional days from now to `due_date`. | 2 |
 
 ### Persona / auth types (defined in `src/context/AuthContext.tsx` — not in `types/`)
 
@@ -869,25 +883,27 @@ No components found behind a `{false && …}` guard or dormant feature flag. Ver
 | study-engine.md | **(frontmatter has no `description:` field — see §11 drift #8; tracked at B-039 audit doc `docs/audits/SKILLS-SPECS-ALIGNMENT-2026-04-21.md`)** |
 | testing.md | Test patterns, fixtures, mocks for SkillForge |
 
-### Untracked skill surfaces (NEW — surfaced this regen via filesystem audit)
+### Untracked skill surfaces (carried forward — unchanged this regen)
 
-Three directory-style skills are **on disk but not tracked in git** (each shows as `??` in `git status`). Source/intent unknown — appeared 2026-04-21 per filesystem mtime, not authored via any documented slice. All three contain a `SKILL.md` file and (in one case) a `references/` subdirectory:
+Three directory-style skills are **on disk but not tracked in git** (each shows as `??` in `git status`). Source/intent unknown — appeared 2026-04-21 per filesystem mtime, not authored via any documented slice. The set is **unchanged since the prior regen at `8a0402e`**: same 3 directories, same filenames, no slice has touched them. Disk-vs-tracked file delta = 8 (`find .agent/skills -name "*.md" \| wc -l = 28`; `git ls-files .agent/skills \| wc -l = 20`). The 8 untracked files are:
 
 | Path | Files | Status |
 |------|-------|--------|
-| `.agent/skills/stripe-best-practices/SKILL.md` | + `references/` (6 entries) | UNTRACKED — not in git |
+| `.agent/skills/stripe-best-practices/SKILL.md` | + `references/` (5 entries: billing.md, connect.md, payments.md, security.md, treasury.md) | UNTRACKED — not in git |
 | `.agent/skills/stripe-projects/SKILL.md` | (single file) | UNTRACKED — not in git |
 | `.agent/skills/upgrade-stripe/SKILL.md` | (single file) | UNTRACKED — not in git |
 
-Action needed (see §12 NEW Q8): decide whether to (a) commit them as legitimate skills, (b) add to `.gitignore` as out-of-scope external resources, or (c) delete. The `SKILL.md` filename pattern (uppercase) is not the canonical SkillForge convention (lowercase slug) — suggests external provenance.
+Action needed (see §12 Q8): decide whether to (a) commit them as legitimate skills, (b) add to `.gitignore` as out-of-scope external resources, or (c) delete. The `SKILL.md` filename pattern (uppercase) is not the canonical SkillForge convention (lowercase slug) — suggests external provenance.
 
 Skill discovery tooling that walks `.agent/skills/*.md` will **miss** these (they're under sub-directories, not top-level `.md` files). So they are also non-discoverable via the documented Skill loader pattern.
+
+**No new tracked skill files added by slices 6.1 / 6.2 / 6.3** — all three Phase 6 slices shipped without authoring or extending a skill file. The relevant skill surface for slice 6.3 was `analytics.md` (already tracked); no edit was required because the new `lesson_viewed` / `lesson_section_expanded` events follow the same pattern as `home_dashboard_viewed`.
 
 ---
 
 ## Section 11 — Drift flags (AGENTS.md / master-doc vs code)
 
-High-signal output — all verified against HEAD `8a0402e`. **Reconciled against post-B-048 SOP state:** R3 = "Never skip auth" (auth only); R19 = push-back; R18 retired (merged into R15(c)); SOP-8 = concurrent-session detection (codified `2504d6b`); SOP-9 = no concurrent CC sessions on one tree (added by B-048, `e2714b4`); H1–H4 = chat-Claude ↔ CC handoff section (added by B-048).
+High-signal output — re-verified against HEAD `7109542` this regen (carry-forward of 17 prior items + 1 new entry surfaced this pass). **Reconciled against post-B-048 SOP state:** R3 = "Never skip auth" (auth only); R19 = push-back; R18 retired (merged into R15(c)); SOP-8 = concurrent-session detection (codified `2504d6b`); SOP-9 = no concurrent CC sessions on one tree (added by B-048, `e2714b4`); H1–H4 = chat-Claude ↔ CC handoff section (added by B-048).
 
 1. **AGENTS.md legacy routers table says `/api/cover_letter` (underscore).** `app/api/routes/cover_letter.py:11` decorates `@router.post("/cover-letter", …)` (hyphen). Effective path is `/api/cover-letter`. Same drift: `/api/interview` vs actual `/api/interview-prep`. **Status: still drifted.**
 
@@ -923,6 +939,8 @@ High-signal output — all verified against HEAD `8a0402e`. **Reconciled against
 
 17. **NEW (`d19103c` + `b8d0c8c`) — three free-tier paywall env vars not yet reflected in AGENTS.md env-vars table.** `d19103c` plumbed: `Settings.free_daily_review_limit` (env `FREE_DAILY_REVIEW_LIMIT`), `Settings.free_lifetime_scan_limit` (default `1`, env `FREE_LIFETIME_SCAN_LIMIT`), `Settings.free_monthly_interview_limit` (default `3`, env `FREE_MONTHLY_INTERVIEW_LIMIT`). `b8d0c8c` (LD-001 cap tightening, Slice B) flipped `free_daily_review_limit` default from `15` → `10` so the in-code default now matches LD-001's amended cap. Flipping any of the three env vars locally hits the corresponding paywall in seconds without burning real quota. `payments.md` skill records the three under "Free Tier Limits" but `AGENTS.md` env-vars table (canonical source per its own header) does not. **Status: NEW — drift only on the AGENTS.md doc surface; no code drift.**
 
+18. **NEW (slices 6.1 / 6.2 / 6.3) — phase-6 spec body Status lines stuck at `Drafted, not shipped` despite impl ship.** All three on-disk phase-6 specs (`docs/specs/phase-6/01-foundation-schema.md`, `02-fsrs-quiz-item-binding.md`, `03-lesson-ux.md`) declare `## Status: Drafted, not shipped` at line 3. On disk: B-061 closed by `a989539` (slice 6.1 schema), B-062 closed by `7b654fb` (slice 6.2 FSRS routes), B-063 closed by `ba00331` (slice 6.3 lesson UX) — all three slices shipped per BACKLOG.md. The spec body Status field was not flipped on impl-merge for any of the three. Same pattern observed at §13 for shipped phase-5 specs that never got their Status line updated (#51, #52, #53, #57, #59, #60, #61, #62, #63). **Status: NEW — surfaced this regen via per-spec `grep -nE "^## Status\|^\\*\\*Status:"` walk. Tracked at the §13 phase-5 hygiene gap discussion; phase-6 inherits the same problem at its first three specs. Recommend the same one-slice doc sweep extend to flip phase-6 spec statuses to `Shipped (spec + impl) — closes B-0##` to match the only spec on disk that already uses the canonical post-ship form (#58).**
+
 ---
 
 ## Section 12 — Open questions for Dhamo
@@ -937,13 +955,13 @@ High-signal output — all verified against HEAD `8a0402e`. **Reconciled against
 8. **NEW** — Three untracked skill directories appeared on 2026-04-21 (`stripe-best-practices/`, `stripe-projects/`, `upgrade-stripe/`). Source/intent unknown. (a) Commit and treat as legit skills, (b) `.gitignore` as external resources, or (c) delete? Their `SKILL.md` (uppercase) filename does not match SkillForge convention (lowercase slug `name.md`).
 9. **NEW** — E-042 deprecates `users.interview_target_company` and `users.interview_target_date` in favor of `tracker_applications_v2.interview_date` (BE shipped 2026-04-23 per `9543aa466524`/`eb59d4fc1f7e`). FE consumers (CountdownWidget, MissionDateGate) still read the user-level fields. Phase-6 cleanup intent confirmed, or accelerate to the next slice?
 
-No status changes from prior regen besides the carry-forward of Q4 ✅. Nothing else flipped to resolved.
+No status changes this regen — Q1–Q9 carry forward verbatim from `8a0402e`. Q4 stays ✅ RESOLVED (one more regen window before drop). No new OQs surfaced this regen — the four Phase 6 product decisions chat sometimes refers to (cron arch G2, file storage H1, events sink I1, `card_quality_signals` J2) live in **SESSION-STATE Phase 6 locked-decisions block**, not here, and are already locked / pending re-confirm at slice 6.5 spec time.
 
 ---
 
 ## Section 13 — Specs inventory
 
-Walked `docs/specs/**/*.md` — **80 spec files across 6 phases** (+4 since prior regen content; all four in phase-5: #27 #61 #62 #63). Status field = `^## Status` line OR `^**Status:**` bolded line at the top of the spec body — both styles are observed on disk; tooling that grepped only `^## Status` would undercount by 3 (specs #61, #62 use the `**Status:**` bolded form). Specs without either form are flagged "no status".
+Walked `docs/specs/**/*.md` — **83 spec files across 7 phases** (+3 since prior regen; all three are net-new phase-6 specs). Status field = `^## Status` line OR `^**Status:**` bolded line at the top of the spec body — both styles are observed on disk; tooling that grepped only `^## Status` would undercount by 2 (specs #61, #62 use the `**Status:**` bolded form). Specs without either form are flagged "no status".
 
 ### Per-phase counts
 | Phase | Files | With explicit Status line | No status field |
@@ -954,9 +972,10 @@ Walked `docs/specs/**/*.md` — **80 spec files across 6 phases** (+4 since prio
 | phase-3 | 11 | 8 | 3 |
 | phase-4 | 6 | 6 | 0 |
 | phase-5 | 36 | 14 | 22 |
-| **Total** | **80** | **47** | **33** |
+| phase-6 | 3 | 3 | 0 |
+| **Total** | **83** | **50** | **33** |
 
-**Phase-5 delta since prior regen**: +4 files (#27, #61, #62, #63), +3 with-status (#61 `**Status:**`, #62 `**Status:**`, #63 `## Status:`), +1 no-status (#27 — newly authored, no status header). Hygiene gap unchanged in phase-5: 22/36 specs lack a status line, mostly historical pre-spec-template files (status hygiene was not retroactively applied).
+**Delta since prior regen at `8a0402e`**: +3 phase-6 files (`01-foundation-schema.md`, `02-fsrs-quiz-item-binding.md`, `03-lesson-ux.md` — all three with `## Status:` heading-2 form). All three currently declare `Drafted, not shipped` despite shipping (slice 6.1 = `a989539`, slice 6.2 = `7b654fb`, slice 6.3 = `ba00331`); see §11 drift item 18. Phase-5 unchanged at 36 / 14 / 22 (no new phase-5 specs since `8a0402e`). Hygiene gap unchanged in phase-5: 22/36 specs lack a status line, mostly historical pre-spec-template files (status hygiene was not retroactively applied).
 
 ### Status legend (canonical strings observed on disk)
 `Done` · `Complete` · `Implemented — Spec Backfill Pending (P5-S###)` · `Draft` · `Drafted, not shipped` · `Shipped (spec + impl)` · `Done — Shipped in <sha>` · `Partially Done` · `Planned — Known-Broken` · `Deferred` · `Complete — Spec Backfill Pending`
@@ -1065,15 +1084,22 @@ Walked `docs/specs/**/*.md` — **80 spec files across 6 phases** (+4 since prio
 | 62-study-dashboard-source-hint.md | **Status:** Drafted, not shipped *(NEW — B-052 spec half `ffd66f7`. Impl shipped `df035e1` 2026-04-26 closing B-052 + B-053 per spec §10 OQ-5 dual-tracking — spec status line not flipped on impl-merge.)* |
 | 63-daily-review-preflight-gate.md | Draft *(NEW — B-059 spec half `42a236b`. Impl shipped `20562ea` 2026-04-26 closing B-059 — spec status line not flipped on impl-merge. Authoring note records the chat-Claude vs disk-reality drift on endpoint name (`/study/daily-queue` cited but disk is `/study/daily`) and `formatResetsAt` reuse claim (cited as importable but was private to QuizPanel — impl had to lift to `wallCountdown.ts`); R19 audit notes preserved in spec body.)* |
 
+### phase-6 (Curriculum Platform — NEW since prior regen)
+| File | Status |
+|------|--------|
+| 01-foundation-schema.md | Drafted, not shipped *(SHIPPED — closes B-061 by `a989539` (impl) + `f621248` (SHA backfill) on 2026-04-26. Adds 4 tables `decks` / `lessons` / `quiz_items` / `quiz_item_progress` via single Alembic migration `57951e9f4cdc`. Spec body Status line not flipped on impl-merge — see §11 drift item 18.)* |
+| 02-fsrs-quiz-item-binding.md | Drafted, not shipped *(SHIPPED — closes B-062 by `7b654fb` (impl) + `a02639c` (SHA backfill) on 2026-04-27. First FSRS consumer of slice 6.1's `quiz_item_progress` table; new service `quiz_item_study_service.py` + new router `quiz_items.py` mounted at `/api/v1/quiz-items` with 3 endpoints (`GET /daily`, `POST /review`, `GET /progress`). Service ports `study_service` byte-for-byte modulo D-1 / D-4 / D-7. Spec body Status line not flipped on impl-merge — see §11 drift item 18.)* |
+| 03-lesson-ux.md | Drafted, not shipped *(SHIPPED — closes B-063 by `ba00331` (impl) + `cacf238` (SHA backfill) on 2026-04-27. FE-first slice — page `pages/Lesson.tsx` at `/learn/lesson/:id` + `components/lesson/{LessonRenderer,QuizItemPanel}.tsx` + 3 new BE read-only routes returning fixture data from `app/data/lesson_fixtures.py` (slice 6.4 swaps loader → DB query). `remark-gfm` net-new dep (singular per D-3). Spec body Status line not flipped on impl-merge — see §11 drift item 18.)* |
+
 ### Numbering anomalies / duplicates / gaps
 
 - **phase-3 spec numbering:** `20-onboarding-polish.md`, `20b-design-system-themes.md`, `20c-resume-cover-letter-fix.md` — three specs sharing the `20*` slot via letter suffixes. Convention is consistent with phase-1 `11a/b/c/d`.
 - **phase-4 numbering:** `22-error-monitoring.md` and `23-error-monitoring.md` — two specs with the SAME title "error-monitoring" at adjacent numbers. One marked Done, one Complete. Likely supersession or duplicate authoring; needs clarification.
 - **phase-5 numbering gaps:** `01`, then `09–12`, then `21–22`, then `27`, then `34–63` (with remaining gaps at 23–26, 28–33, 37, 39). Many gaps suggest reserved-but-not-authored slots; only worth investigating if a citation references a missing number.
 - **phase-5 number `1` reuse:** `01-admin-analytics-early-draft.md` (Done) is superseded by `38-admin-analytics.md` (Draft) per the same OKR surface. Consider archiving #01 or marking it `Superseded`.
-- **Total spec status hygiene gap:** 33 of 80 specs (41%) have no Status line. Concentration in phase-1 (7), phase-3 (3), phase-5 (22). Recommend a one-slice sweep adding status lines to the phase-5 specs that have shipped (#51, #52, #53, #57, #59, #60, #61, #62, #63 are all known-shipped per BACKLOG yet 6 of those 9 have no/unflipped Status line), dropping the bookkeeping burden of stale Drafts.
+- **Total spec status hygiene gap:** 33 of 83 specs (40%) have no Status line. Concentration in phase-1 (7), phase-3 (3), phase-5 (22). Recommend a one-slice sweep adding status lines to the phase-5 specs that have shipped (#51, #52, #53, #57, #59, #60, #61, #62, #63 are all known-shipped per BACKLOG yet 6 of those 9 have no/unflipped Status line), AND flipping the three phase-6 spec Status lines from `Drafted, not shipped` to `Shipped (spec + impl) — closes B-0##` (the canonical post-ship form #58 already uses). Dropping the bookkeeping burden of stale Drafts.
 - **Spec-body Status format inconsistency:** `## Status:` (heading-2) vs `**Status:**` (bolded paragraph) appear interchangeably; tooling that greps only one form will miscount. Standardize on the heading-2 form to align with template (spec #50, #63 use it; #61, #62 use the bolded form).
 
 ---
 
-*End of snapshot. Generated 2026-04-26 at HEAD `8a0402e` — full regen escalated from a targeted-regen attempt that R19-stopped on prompt-side staleness misreading (chat-Claude treated `ce60ea6` as the regen-commit baseline; on disk it is the SHA the regen content **referenced**, with the regen commit itself one parent later at `3f43927`, so 28 commits had landed since). Next regen recommended after E-042 FE ships (will move tracker columns to authoritative read source) or after the next batch of phase-5 specs flip Done.*
+*End of snapshot. Generated 2026-04-27 at HEAD `7109542` — final pass of a three-pass regen closing the 14-commit gap from `8a0402e`: pass 1 = `17bf188` (§3 + §4), pass 2 = `7109542` (§1 + §2 + §5), pass 3 = THIS commit (§6 + §7 + §8 + §9 + §10 + §11 + §12 + §13). All 13 sections now consistent at HEAD. Next regen recommended after slice 6.4 (admin authoring UI) ships — will add `/admin/decks` + `/admin/lessons` routes, switch `lesson_service` from fixture loader to DB query, and remove `app/data/lesson_fixtures.py` per its module-docstring retirement plan; that slice will touch §3 + §4 + §6 + §7 + §13.*
