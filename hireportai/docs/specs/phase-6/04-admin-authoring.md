@@ -1212,7 +1212,10 @@ The implementation slices (6.4a + 6.4b) must pass:
   routes, §4 +3 admin services + lesson_service body-swap note, §6
   fixture-file deletion note, §7 component graph +6 admin pages /
   components, §13 spec #04 status flip per CR §11 drift item 18
-  (`## Status:`). Header SHA bump.
+  (`## Status:`). Header SHA bump. **— SUPERSEDED `<this-slice>`:**
+  CR regen tracked at B-067 per B-066 precedent (slice 6.4a CR regen
+  as its own slice); not in slice 6.4b-1 / 6.4b-2 scope. Original
+  AC-19 text retained for audit.
 
 ## 12. Decisions
 
@@ -1333,14 +1336,23 @@ The implementation slices (6.4a + 6.4b) must pass:
   `getDeckLessons` / `getLesson` paths; cost is one extra SELECT per
   relationship per request, negligible at expected request volume.
   Cross-ref §4.2.
-- **D-16 (resolves OQ-3) — Admin-LIST `?status=` query param
-  vocabulary: `'active'` | `'drafts'` | `'published'` | `'archived'` |
-  `'all'`.** Default `'active'`. `'active'` includes drafts AND
-  published; excludes archived (so the authoring queue is not
-  fragmented). Vocabulary applies to all three admin-LIST endpoints
-  (decks, lessons, quiz_items) per §5. Drafts surfaced via
-  `?status=drafts` using `ix_lessons_review_queue` from slice 6.1
-  §4.2. Cross-ref §5.4.
+- **D-16 (resolves OQ-3, amended `<this-slice>` per slice 6.4b
+  Step 1 audit) — Admin-LIST `?status=` query param vocabulary is
+  per-entity:**
+  - **lessons-LIST:** `'active'` | `'drafts'` | `'published'` |
+    `'archived'` | `'all'`. Default `'active'`. `'active'` includes
+    drafts + published; excludes archived (so the authoring queue is
+    not fragmented). Drafts surfaced via `?status=drafts` using
+    `ix_lessons_review_queue` from slice 6.1 §4.2.
+  - **decks-LIST:** `'active'` | `'archived'` | `'all'`. Default
+    `'active'`. Matches §5.4. Decks have no `published_at` lifecycle.
+  - **quiz_items-LIST:** `'active'` | `'retired'` | `'all'`. Default
+    `'active'`. Matches §5.7. Quiz_items use `retired_at`, not
+    `archived_at`.
+
+  Cross-ref §5.4, §5.7. Original unified-vocab framing (amended) was
+  an authoring miss in slice 6.4 spec slice 2/2 — per-entity subsets
+  are what spec body §5 always intended.
 - **D-17 (resolves OQ-4) — Substantive-edit confirm modal preview
   computes classification FE-side via new `src/utils/lessonEdit.ts`.**
   Module exports `classifyEdit(before, after) -> 'minor' |
@@ -1370,16 +1382,18 @@ The implementation slices (6.4a + 6.4b) must pass:
     FSRS-history follow-up out of scope this slice).
 
   Cross-ref §7.3, §5 quiz_item PATCH endpoint.
-- **D-19 (resolves OQ-6) — `decks.persona_visibility` is admin-
-  editable post-creation, with FE narrowing-confirm modal.**
-  Narrowing edits (removing one or more personas from the array)
-  trigger a `ConfirmPersonaNarrowingModal` on the FE before PATCH
-  submit. Modal copy: "Narrowing persona visibility will hide this
-  deck from N learners currently in personas X, Y. Their existing
-  FSRS progress on quiz_items in this deck is preserved but they
-  will no longer see the deck in /learn surfaces. Continue?" BE
-  PATCH validates the change but does not gate it (service layer
-  simply persists; FE owns the warning). New event
+- **D-19 (resolves OQ-6, amended `<this-slice>` per slice 6.4b
+  Step 1 audit — N count dropped to honor §4.1.1's BE-warning-free
+  service layer) — `decks.persona_visibility` is admin-editable
+  post-creation, with FE narrowing-confirm modal.** Narrowing edits
+  (removing one or more personas from the array) trigger a
+  `ConfirmPersonaNarrowingModal` on the FE before PATCH submit.
+  Modal copy: "Narrowing persona visibility will hide this deck
+  from learners currently in personas X, Y. Their existing FSRS
+  progress on quiz_items in this deck is preserved but they will no
+  longer see the deck in /learn surfaces. Continue?" BE PATCH
+  validates the change but does not gate it (service layer simply
+  persists; FE owns the warning). New event
   `admin_deck_persona_narrowed {deck_id, removed_personas,
   before_count, after_count}` added to §9 events table. Cross-ref
   §6.2.
