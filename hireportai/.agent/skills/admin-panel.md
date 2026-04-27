@@ -21,10 +21,16 @@ Surfaces shipped:
 ## Key Files
 
 ### Backend
-- `app/api/v1/routes/admin.py` — all admin router
-- `app/core/deps.py` — `require_admin` dependency (line 87)
+- `app/api/v1/routes/admin.py` — cards CRUD + AI draft + bulk import + registration logs + audit log
+- `app/api/v1/routes/admin_analytics.py` — analytics dashboard endpoints (Phase 5)
+- `app/api/v1/routes/admin_decks.py` — deck CRUD + archive + admin-LIST (Phase 6 slice 6.4b)
+- `app/api/v1/routes/admin_lessons.py` — lesson CRUD + publish + archive + per-deck list (Phase 6 slice 6.4b)
+- `app/api/v1/routes/admin_quiz_items.py` — quiz_item CRUD + retire + per-lesson list (Phase 6 slice 6.4b)
+- `app/core/deps.py` — `require_admin` + `audit_admin_request` chain
 - `app/services/card_admin_service.py` — card CRUD + CSV import
 - `app/services/ai_card_service.py` — Gemini draft generation
+- `app/services/deck_admin_service.py` / `lesson_admin_service.py` / `quiz_item_admin_service.py` — Phase 6 admin authoring services (slice 6.4b)
+- `app/services/admin_errors.py` — shared admin error classes + `SUBSTANTIVE_EDIT_THRESHOLD = 0.15`
 - `app/models/registration_log.py` — signup audit
 - `app/models/admin_audit_log.py` — admin request audit (Phase 5)
 
@@ -123,6 +129,14 @@ can be excluded from user-facing funnels:
   `admin_cards_imported` (backend, per spec #17)
 - `admin_analytics_viewed`, `admin_analytics_section_drilled`,
   `admin_analytics_export_clicked` (frontend, Phase 5)
+- `admin_deck_created`, `admin_deck_updated`, `admin_deck_archived`,
+  `admin_deck_persona_narrowed` (backend, Phase 6 slice 6.4b)
+- `admin_lesson_created`, `admin_lesson_updated_minor`,
+  `admin_lesson_substantively_edited`, `admin_lesson_published`,
+  `admin_lesson_archived` (backend, Phase 6 slice 6.4b)
+- `admin_quiz_item_created`, `admin_quiz_item_retired` (backend, Phase
+  6 slice 6.4b — `retire_reason` discriminates direct / cascade /
+  retire-and-replace)
 
 ## Security Considerations
 
