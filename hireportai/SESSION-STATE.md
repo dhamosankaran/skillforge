@@ -75,6 +75,7 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 **Phase 6 specs on disk (chronological):**
 - `01-foundation-schema.md` — slice 6.1, four foundation tables. ✅ shipped (`a989539` / `f621248`, closes B-061).
 - `02-fsrs-quiz-item-binding.md` — slice 6.2, FSRS service + routes against `quiz_item_progress`. 🔴 spec-only, awaiting impl.
+- `03-lesson-ux.md` — slice 6.3, lesson-card UX (FE-first, fixture-data, BE read-only routes). 🔴 spec-only, awaiting impl.
 
 **Phase plan:** see playbook §[Phase 6] (TBD — chat-Claude will draft playbook update separately).
 
