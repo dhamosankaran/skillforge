@@ -9,14 +9,14 @@
 
 | Field | Value |
 |-------|-------|
-| Commit sha (short) | `cacf238` (HEAD after B-063 SHA backfill — Phase 6 slice 6.3 lesson-card UX). **This regen: §3 (routes) + §4 (services) + this header SHA only** — §1 metadata, §2 models, §5+ all carried forward verified-stale (drift surfaced at end of §11; recommended next regen is full §1 / §2 / §5 to absorb slices 6.1 + 6.2 + 6.3 schema + alembic + counts). 14 commits since prior `8a0402e` regen (`git log 8a0402e..HEAD --oneline \| wc -l = 14`): slices 6.1 / 6.2 / 6.3 spec + impl + SHA-backfill triples (B-061 `a989539`, B-062 `7b654fb`, B-063 `ba00331`) + 5 bookkeeping/audit commits. **Prior regen header preserved for context:** previous full regen at `8a0402e` was itself escalated from a targeted attempt that R19-stopped on prompt-side staleness misreading (chat-Claude treated `ce60ea6` as the regen-commit baseline; on disk it is the SHA the prior regen content **referenced**, with the regen commit itself one parent later at `3f43927`, so 28 commits had landed since). |
+| Commit sha (short) | `17bf188` (HEAD after §3 + §4 regen commit). **This regen: §1 metadata + §2 models + §5 alembic + this header SHA only** — §3 routes + §4 services were refreshed in `17bf188` and remain authoritative; §6+ carried forward verified-stale and need a follow-up sweep. With this regen all of §1, §2, §3, §4, §5 are consistent at HEAD. The §1 + §2 + §5 deltas closed by this regen are: §1 model count `19 → 23` (+4 Phase 6 ORM models), service count `31+3=34 → 33+3=36` (+2 services), router count `18+6=24 → 21+6=27` (+3 v1 routers), endpoint count `64 → 73` (+9 mount-point appearances; flat-table convention from §3 — see endpoint row note for the reconciliation against decorator-source count of 67), alembic head `30bf39fa04f8 → 57951e9f4cdc` (+1 migration); §2 +4 model sections (decks / lessons / quiz_items / quiz_item_progress); §5 footer refreshed to reflect +1 revision since `8a0402e` baseline. **Prior regen lineage preserved for context:** `cacf238` (B-063 SHA backfill, prior to §3 + §4 regen) → `8a0402e` (full regen at B-059 SHA backfill, all 13 sections) → `ce60ea6` (referenced by prior CR before that). |
 | Branch | `main` (52 commits ahead of `origin/main`; not yet pushed) |
 | Generated | 2026-04-26 (full regen, all 13 sections). LD-1 from B-049: full regen, not targeted. LD-2: counts via filesystem enumeration (`find` / `wc`, not estimation). LD-3: ambiguous fields flagged "unknown — flag for next regen" rather than guessed. LD-5: section content replaced, not appended. |
-| Backend model files | 19 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models`) — **unchanged since prior regen** (verified zero delta `git log ce60ea6..HEAD --stat -- hirelens-backend/app/models hirelens-backend/alembic`) |
-| Backend service files | 31 functional top-level (in `app/services/`, excl. `__init__.py`) + 3 under `services/llm/` = 34 — **unchanged since prior regen** (B-051/B-059 modified existing files; no new service file added) |
-| Backend router files | 18 v1 + 6 legacy = 24 — **unchanged since prior regen** |
-| Backend endpoints (total) | 64 — **unchanged since prior regen**. B-059 (`20562ea`) extended `GET /api/v1/study/daily` response shape (added `daily_status: DailyStatus` field) but did NOT add a new route; spec #63 LD-A locked the read-side mirror onto the existing endpoint. (5 legacy `/api/*` paths each appear at both `/api/*` and `/api/v1/*` mount; the v1 mounts for `analyze`, `cover_letter`, `interview`, `rewrite` are **re-exports** of the legacy router objects.) |
-| Alembic revisions | 25 (Head = `30bf39fa04f8`) — **unchanged since prior regen**. No new migrations in the 28-commit gap (B-051/B-052/B-053/B-055/B-057/B-059 are all FE/services/specs; only `d19103c` touched BE config and it has no DDL). |
+| Backend model files | 23 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models`) — **+4 since prior regen**: `deck.py`, `lesson.py`, `quiz_item.py`, `quiz_item_progress.py` (all from Phase 6 slice 6.1, `a989539`). Verified via `find hirelens-backend/app/models -maxdepth 1 -name "*.py" -not -name "__init__.py" -not -name "request_models.py" -not -name "response_models.py" \| wc -l`. |
+| Backend service files | 33 functional top-level (in `app/services/`, excl. `__init__.py`) + 3 under `services/llm/` = 36 — **+2 since prior regen**: `lesson_service.py` (Phase 6 slice 6.3, `ba00331`), `quiz_item_study_service.py` (Phase 6 slice 6.2, `7b654fb`). Verified via `find hirelens-backend/app/services -maxdepth 1 -name "*.py" -not -name "__init__.py" \| wc -l = 33`. |
+| Backend router files | 21 v1 + 6 legacy = 27 — **+3 since prior regen** (all v1): `decks.py` + `lessons.py` (Phase 6 slice 6.3, `ba00331`), `quiz_items.py` (Phase 6 slice 6.2, `7b654fb`). Verified via `find hirelens-backend/app/api/v1/routes -name "*.py" -not -name "__init__.py" \| wc -l = 21`. |
+| Backend endpoints (total) | **73 mount-point appearances** in §3 flat endpoint table — **+9 since prior regen** (+6 from new routes: 3 quiz-items + 1 lessons + 2 decks; +3 reconciliation between prior CR's stated "64" and the on-disk truth — even at `8a0402e` baseline, §3 flat-table had 67 rows, so prior "64" was already opaque). Two valid count conventions in this codebase: **(a) mount-point count = 73** (each row in §3 flat table, counts re-export double-mounts: `/api/analyze` + `/api/v1/analyze` count as 2); **(b) decorator-source count = 67** (`grep -rcE '^@router\.(get\|post\|put\|patch\|delete)'` over `hirelens-backend/app/api/`, counts unique decorator definitions; the 4 v1 re-export router files at `app/api/v1/routes/{analyze,cover_letter,interview,rewrite}.py` contribute 0 because they `from app.api.routes.X import router`). The flat-table convention (mount-point) is what users see at runtime, so this row tracks (a). The 4 re-export shims double-mount 6 paths (analyze 2 + cover_letter 1 + interview 1 + rewrite 2 = 6 paths × 2 mounts = 12 mount points; net delta from re-exports = +6 mount points beyond the decorator-source count). |
+| Alembic revisions | 26 (Head = `57951e9f4cdc`) — **+1 since prior regen**: `57951e9f4cdc_phase6_foundation_schema.py` (Phase 6 slice 6.1, `a989539` — adds `decks` / `lessons` / `quiz_items` / `quiz_item_progress` tables; down_revision `30bf39fa04f8`). Verified via `alembic heads → 57951e9f4cdc (head)` and `find hirelens-backend/alembic/versions -name "*.py" \| wc -l = 26`. |
 | Frontend pages | 20 — **unchanged since prior regen** (no new page files; HomeDashboard / StudyDashboard / DailyReview / Results modified in-place per B-051 / B-052+B-053 / B-059 / B-055) |
 | Frontend components | 67 (excl. `__tests__/*`) — **+2 since prior regen**: `home/widgets/StudyGapsPromptWidget.tsx` (B-051, `ecef895`), `study/DailyReviewWalledView.tsx` (B-059, `20562ea`). `find hirelens-frontend/src/components -name "*.tsx" -not -path "*/__tests__/*" \| wc -l` = 67. |
 | Frontend utils (NEW) | `src/utils/wallCountdown.ts` (B-059, `20562ea`) — exports `formatResetsAt(resetsAtIso) → string` + `hoursUntil(resetsAtIso) → number`. Lifted from private `QuizPanel.tsx` so `DailyReviewWalledView` can render the same `Resets in Xh Ym` / `Resets at H:MM AM/PM` copy. Code-org move only; behavior byte-identical. |
@@ -120,6 +120,27 @@ Purpose: append-only audit trail for every admin-scoped HTTP request. Written vi
 
 **Relationships:** `cards → list[Card]` (back_populates `category`).
 
+### `deck.py`
+**Class:** `Deck`  **Table:** `decks`  *(NEW — Phase 6 slice 6.1, `a989539`. Top-level curriculum bucket; replaces the role of `categories` for Phase 6 content. Spec: `docs/specs/phase-6/01-foundation-schema.md` §4.1.)*
+
+| Column | Type | Nullable / Default |
+|--------|------|--------------------|
+| id | UUID (PK) | — |
+| slug | String(100) unique | NOT NULL |
+| title | String(200) | NOT NULL |
+| description | Text | NOT NULL |
+| display_order | Integer | NOT NULL, default `0`, server default `"0"` |
+| icon | String(10) | nullable |
+| persona_visibility | String(20) | NOT NULL, default `"both"`, server default `"both"` *(ENUM-as-String per D-3: `'climber' \| 'interview_prepper' \| 'both'`)* |
+| tier | String(20) | NOT NULL, default `"premium"`, server default `"premium"` *(ENUM-as-String per D-3: `'foundation' \| 'premium'`)* |
+| created_at | DateTime(timezone=True) | NOT NULL, server default `now()` |
+| updated_at | DateTime(timezone=True) | NOT NULL, server default `now()`, on update `now()` |
+| archived_at | DateTime(timezone=True) | nullable *(soft-delete)* |
+
+**Indexes:** `ix_decks_persona_display_active` on `(persona_visibility, display_order)` `WHERE archived_at IS NULL` — partial index for the Learn-page primary query (visible decks for a persona in display order).
+
+**Relationships:** `lessons → list[Lesson]` (back_populates `deck`, lazy=`select`).
+
 ### `email_preference.py`
 **Class:** `EmailPreference`  **Table:** `email_preferences`
 
@@ -186,6 +207,35 @@ Three models in one module.
 
 **Unique:** `(user_id, jd_hash)`.
 
+### `lesson.py`
+**Class:** `Lesson`  **Table:** `lessons`  *(NEW — Phase 6 slice 6.1, `a989539`. Unit of teaching content; one lesson = one card on the Learn page (concept + production + examples + quiz panel). Spec: `docs/specs/phase-6/01-foundation-schema.md` §4.2.)*
+
+| Column | Type | Nullable / Default |
+|--------|------|--------------------|
+| id | UUID (PK) | — |
+| deck_id | String(36) (FK `decks.id` ON DELETE RESTRICT, indexed) | NOT NULL |
+| slug | String(100) | NOT NULL |
+| title | String(200) | NOT NULL |
+| concept_md | Text | NOT NULL |
+| production_md | Text | NOT NULL |
+| examples_md | Text | NOT NULL |
+| display_order | Integer | NOT NULL, default `0`, server default `"0"` |
+| version | Integer | NOT NULL, default `1`, server default `"1"` |
+| version_type | String(20) | NOT NULL, default `"initial"`, server default `"initial"` *(ENUM-as-String per D-3: `'initial' \| 'minor_edit' \| 'substantive_edit'`)* |
+| published_at | DateTime(timezone=True) | nullable *(NULL = draft)* |
+| generated_by_model | String(64) | nullable |
+| source_content_id | String(36) | nullable, **NO FK constraint** *(D-2: target table `source_content` is created in slice 6.9; the FK is added in 6.9's migration once the target exists)* |
+| quality_score | Numeric(3,2) | nullable *(D-4: deterministic rounding for product analytics)* |
+| created_at | DateTime(timezone=True) | NOT NULL, server default `now()` |
+| updated_at | DateTime(timezone=True) | NOT NULL, server default `now()`, on update `now()` |
+| archived_at | DateTime(timezone=True) | nullable *(soft-delete)* |
+
+**Unique:** `(deck_id, slug)` named `uq_lessons_deck_slug`.
+
+**Indexes:** `ix_lessons_deck_display_active` on `(deck_id, display_order)` `WHERE archived_at IS NULL` (deck-detail primary query); `ix_lessons_review_queue` on `(published_at)` `WHERE published_at IS NULL` (admin review queue); `ix_lessons_deck_archived` on `(deck_id, archived_at)`; `ix_lessons_source_content` on `(source_content_id)` (slice 6.9 forward-link queries).
+
+**Relationships:** `deck → Deck` (back_populates `lessons`, lazy=`select`); `quiz_items → list[QuizItem]` (back_populates `lesson`, lazy=`select`).
+
 ### `mission.py`
 Two models + one secondary table (`mission_categories`).
 
@@ -245,6 +295,56 @@ Two models + one secondary table (`mission_categories`).
 **Relationships:** none (no back_populates — `User` does not expose a `dismissals` collection; the table is read/written exclusively through `paywall_service`).
 
 Purpose: append-only log of user paywall dismissals. Consumed by `paywall_service` (see §4) to drive the per-trigger 3-attempt grace window. Win-back consumption is deferred (BACKLOG E-031). Spec: `docs/specs/phase-5/42-paywall-dismissal.md`.
+
+### `quiz_item.py`
+**Class:** `QuizItem`  **Table:** `quiz_items`  *(NEW — Phase 6 slice 6.1, `a989539`. Atomic FSRS-reviewable recall unit; a lesson has 1+ quiz_items. Substantive edits retire the row (set `retired_at`, link `superseded_by_id` to the new row) — keeps FSRS state on the OLD row queryable for analytics while preventing new progress rows. The "no new quiz_item_progress rows against retired quiz_items" invariant is enforced at the service layer (slice 6.5 / shipped early in 6.2's `quiz_item_study_service`), NOT via DB constraint. Spec: `docs/specs/phase-6/01-foundation-schema.md` §4.3.)*
+
+| Column | Type | Nullable / Default |
+|--------|------|--------------------|
+| id | UUID (PK) | — |
+| lesson_id | String(36) (FK `lessons.id` ON DELETE CASCADE, indexed) | NOT NULL |
+| question | Text | NOT NULL |
+| answer | Text | NOT NULL |
+| question_type | String(20) | NOT NULL, default `"free_text"`, server default `"free_text"` *(ENUM-as-String per D-3: `'mcq' \| 'free_text' \| 'code_completion'`)* |
+| distractors | JSONB | nullable |
+| difficulty | String(10) | NOT NULL, default `"medium"`, server default `"medium"` *(ENUM-as-String per D-3: `'easy' \| 'medium' \| 'hard'` — authored hint, not FSRS-managed difficulty)* |
+| display_order | Integer | NOT NULL, default `0`, server default `"0"` |
+| version | Integer | NOT NULL, default `1`, server default `"1"` |
+| superseded_by_id | String(36) (self-ref FK `quiz_items.id` ON DELETE SET NULL) | nullable *(AC-4: old row → new row when a substantive edit fires)* |
+| retired_at | DateTime(timezone=True) | nullable *(soft-retire)* |
+| generated_by_model | String(64) | nullable |
+| created_at | DateTime(timezone=True) | NOT NULL, server default `now()` |
+| updated_at | DateTime(timezone=True) | NOT NULL, server default `now()`, on update `now()` |
+
+**Indexes:** `ix_quiz_items_lesson_active_order` on `(lesson_id, display_order)` `WHERE retired_at IS NULL` (active-quiz lookup primary query); `ix_quiz_items_superseded_by` on `(superseded_by_id)` (forward-linkage queries).
+
+**Relationships:** `lesson → Lesson` (back_populates `quiz_items`, lazy=`select`).
+
+### `quiz_item_progress.py`
+**Class:** `QuizItemProgress`  **Table:** `quiz_item_progress`  *(NEW — Phase 6 slice 6.1, `a989539`. Per-user FSRS scheduling state for each quiz_item. Direct analog of `card_progress` with the FK retargeted from `cards` to `quiz_items` — column shape is **byte-identical** to `card_progress` modulo the FK swap (D-1 + AC-6, verified by `tests/test_phase6_schema.py::test_quiz_item_progress_mirrors_card_progress`). This intentional symmetry lets `quiz_item_study_service` (slice 6.2) port `study_service`'s FSRS reconstruction logic verbatim. Spec: `docs/specs/phase-6/01-foundation-schema.md` §4.4.)*
+
+| Column | Type | Nullable / Default |
+|--------|------|--------------------|
+| id | UUID (PK) | — |
+| user_id | String(36) (FK `users.id` ON DELETE CASCADE, indexed) | NOT NULL |
+| quiz_item_id | String(36) (FK `quiz_items.id` ON DELETE CASCADE, indexed) | NOT NULL |
+| state | String(20) | NOT NULL, default `"new"`, server default `"new"` *(`new \| learning \| review \| relearning`)* |
+| stability | Float | NOT NULL, default `0.0`, server default `"0.0"` |
+| difficulty_fsrs | Float | NOT NULL, default `0.0`, server default `"0.0"` |
+| elapsed_days | Float | NOT NULL, default `0.0`, server default `"0.0"` |
+| scheduled_days | Float | NOT NULL, default `0.0`, server default `"0.0"` |
+| reps | Integer | NOT NULL, default `0`, server default `"0"` |
+| lapses | Integer | NOT NULL, default `0`, server default `"0"` |
+| fsrs_step | Integer | nullable *(py-fsrs v6 learning/relearning step index; None when in Review state)* |
+| last_reviewed | DateTime(timezone=True) | nullable |
+| due_date | DateTime(timezone=True) | NOT NULL, server default `now()` *(D-1: NOT NULL with `server_default=now()` mirrors `card_progress.due_date` so the daily-review WHERE clause `due_date <= now` needs no null branch)* |
+| created_at / updated_at | DateTime(timezone=True) | NOT NULL |
+
+**Unique:** `(user_id, quiz_item_id)` named `uq_quiz_item_progress_user_quiz` (mirrors `uq_card_progress_user_card`).
+
+**Indexes:** `ix_quiz_item_progress_user_due` on `(user_id, due_date)` (daily-review primary query, mirrors `card_progress` index pattern); `ix_quiz_item_progress_quiz_item` on `(quiz_item_id)` (per-quiz reviewer / analytics lookups).
+
+**Relationships:** `user → User` (lazy=`select`); `quiz_item → QuizItem` (lazy=`select`). No back_populates collection on `User` or `QuizItem` — service-layer access only.
 
 ### `registration_log.py`
 **Class:** `RegistrationLog`  **Table:** `registration_logs`
@@ -554,7 +654,7 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | 25 | 30bf39fa04f8 | add analysis_payload (JSONB, deferred) to tracker_applications_v2 — B-035 / spec #59 | eb59d4fc1f7e |
 | 26 | 57951e9f4cdc | phase6 foundation schema — decks, lessons, quiz_items, quiz_item_progress (B-061 / Phase 6 slice 6.1) | 30bf39fa04f8 |
 
-Head = `57951e9f4cdc`. **Delta since prior regen: +4 revisions** (rows 23-26). §5 targeted regen at slice-6.1-impl per R19 (gap << 10 commits).
+Head = `57951e9f4cdc`. **Delta since `8a0402e` baseline: +1 revision** (row 26 — `57951e9f4cdc` Phase 6 foundation schema). Row 26 was added to §5 in-place at the slice-6.1 impl commit (`a989539`) per R19 targeted regen; this regen merely refreshes the footer copy to be accurate as of HEAD `17bf188`.
 
 ---
 
