@@ -57,6 +57,24 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 ---
 
+## Phase 6 (Curriculum Platform) — locked decisions
+
+**Status:** spec-drafting in progress; slice 6.1 (foundation schema) spec landed at `docs/specs/phase-6/01-foundation-schema.md`.
+
+**Slice count:** 18 (after merge of original 6.7 + 6.12 into a single Learn-page composition slice per audit slice-by-slice review).
+
+**Locked decisions:**
+- **G2** — Background jobs: RQ on Redis for ingestion (slice 6.10); Railway cron for daily Pro digest (slice 6.14).
+- **H1** — Object storage: Cloudflare R2 for ingestion artifacts (slice 6.10); `hirelens-backend/app/data/decks/seed_lessons/*.md` for the 12 locked-deck seeds (slice 6.4.5).
+- **I1** — Events: dual-write. PostHog for funnels/retention; Postgres `quiz_review_events` + `lesson_view_events` for the content-quality / retention dashboards (spec #38 banned HogQL in `/admin/analytics`). Tables built in slice 6.0; FK targets must exist first, which is why slice 6.1 precedes 6.0.
+- **J2** — Quality signals: `card_quality_signals` keyed on `(id, lesson_id, quiz_item_id NULLABLE, signal_source, dimension)`. Built in slice 6.13.5.
+
+**Audit:** `docs/audits/phase-6-scout.md` (commit `5b0aa23`) — foundation document for Phase 6 spec authoring.
+
+**Phase plan:** see playbook §[Phase 6] (TBD — chat-Claude will draft playbook update separately).
+
+---
+
 ## Active Prompt Files
 
 - `claude-code-prompts-all-phases-v2.md` (v2.1) — base of Phase 5
