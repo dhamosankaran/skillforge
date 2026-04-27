@@ -541,8 +541,9 @@ Both `/api/*` (legacy) and `/api/v1/*` (authoritative) are mounted in `app/main.
 | 23 | 9543aa466524 | add interview_date to tracker_applications_v2 + partial index — E-042-impl-BE | 538fe233b639 |
 | 24 | eb59d4fc1f7e | backfill tracker.interview_date from users.interview_target_date | 9543aa466524 |
 | 25 | 30bf39fa04f8 | add analysis_payload (JSONB, deferred) to tracker_applications_v2 — B-035 / spec #59 | eb59d4fc1f7e |
+| 26 | 57951e9f4cdc | phase6 foundation schema — decks, lessons, quiz_items, quiz_item_progress (B-061 / Phase 6 slice 6.1) | 30bf39fa04f8 |
 
-Head = `30bf39fa04f8`. **Delta since prior regen: +3 revisions** (rows 23-25).
+Head = `57951e9f4cdc`. **Delta since prior regen: +4 revisions** (rows 23-26). §5 targeted regen at slice-6.1-impl per R19 (gap << 10 commits).
 
 ---
 

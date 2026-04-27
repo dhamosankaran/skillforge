@@ -15,3 +15,7 @@ from app.models.card_feedback import CardFeedback  # noqa: F401
 from app.models.interview_question_set import InterviewQuestionSet  # noqa: F401
 from app.models.paywall_dismissal import PaywallDismissal  # noqa: F401
 from app.models.admin_audit_log import AdminAuditLog  # noqa: F401
+from app.models.deck import Deck  # noqa: F401
+from app.models.lesson import Lesson  # noqa: F401
+from app.models.quiz_item import QuizItem  # noqa: F401
+from app.models.quiz_item_progress import QuizItemProgress  # noqa: F401
