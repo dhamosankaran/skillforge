@@ -60,7 +60,7 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 
 ## Phase 6 (Curriculum Platform) — locked decisions
 
-**Status:** slices 6.1 + 6.2 + 6.3 shipped; slice 6.4 (admin authoring) is the next planned slice.
+**Status:** slices 6.1 + 6.2 + 6.3 shipped; slice 6.4 (admin authoring) **spec authored** at `309f6c4` (2026-04-27); impl pending B-064 (slice 6.4a — admin shell refactor) + B-065 (slice 6.4b — admin CRUD + lesson_service body swap + fixture retirement).
 
 **Slice count:** 18 (after merge of original 6.7 + 6.12 into a single Learn-page composition slice per audit slice-by-slice review).
 
@@ -76,6 +76,7 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 - `01-foundation-schema.md` — slice 6.1, four foundation tables. ✅ shipped (`a989539` / `f621248`, closes B-061).
 - `02-fsrs-quiz-item-binding.md` — slice 6.2, FSRS service + routes against `quiz_item_progress`. ✅ shipped (`7b654fb` / `a02639c`, closes B-062).
 - `03-lesson-ux.md` — slice 6.3, lesson-card UX (FE-first, fixture-data, BE read-only routes). ✅ shipped (`ba00331`, closes B-063).
+- `04-admin-authoring.md` — slice 6.4, admin authoring (heaviest Phase 6 slice — multi-route admin shell + deck/lesson/quiz_item CRUD + lesson_service DB swap + fixture retirement). 🔴 **spec only** (`309f6c4` / `<PENDING-SHA-BACKFILL>`); impl split per spec §12 D-1 — files **B-064** (slice 6.4a — admin shell refactor, FE-only) + **B-065** (slice 6.4b — admin CRUD + lesson_service body swap + fixture retirement, BE+FE). Single-slice fallback documented in spec §12 D-1.
 
 **Phase plan:** see playbook §[Phase 6] (TBD — chat-Claude will draft playbook update separately).
 
@@ -91,6 +92,59 @@ Phases 0–4 are complete. Phase 5 absorbs the ad-hoc enhancement work plus the 
 ---
 
 ## Last Completed Slice
+
+**2026-04-27 — Phase 6 slice 6.4 spec authoring (admin authoring; files B-064 + B-065).** Two-commit pattern: spec author + SHA backfill. Phase 6 spec table was fresh post-`95bb3c5` sweep, so no Step 0 bookkeeping fixup needed (per prompt §SOP-8 + slice 6.3's three-commit-was-due-to-drift note). R14 exception (b) — pure spec codification. Mode 4 (spec-author). HEAD at slice start: `95bb3c5` (post-spec-status flip + post-CR §6+ regen). SOP-8 clean (no commits since prompt drafting). SOP-9 honored (single CC session on this tree).
+
+**Spec authored (1 file):**
+- `hirelens/docs/specs/phase-6/04-admin-authoring.md` (new — 1426 lines per `wc -l`; `## Status:` heading-2 form per CR §11 drift item 18; mirrors slice 6.3 / slice 6.2 / slice 6.1 spec template ordering).
+
+**BACKLOG rows filed (2):**
+- **B-064** — slice 6.4a (admin shell refactor, FE-only, P1 🔴). Audit R-4 cash-in: splits 868-line `pages/AdminPanel.tsx` into multi-route `AdminLayout.tsx` + `AdminCards.tsx` extraction. Existing `/admin/cards` mount preserved byte-identical; new placeholder routes at `/admin/decks`, `/admin/lessons` until 6.4b fills them. No BE work in 6.4a.
+- **B-065** — slice 6.4b (admin CRUD + lesson_service body swap + fixture retirement, BE+FE, P1 🔴). 13 admin write routes across 3 new route files + 3 new service files + shared `admin_errors.py`; substantive-edit cascade-retires quiz_items in same DB transaction (G2 sync); `lesson_service.py` four function bodies swap fixture-loader → DB query with `selectinload` (D-4 cash-in from slice 6.3); `app/data/lesson_fixtures.py` + `app/data/__init__.py` deleted in same commit; FE 4 editor pages + Markdown editor + confirm modal + 4 hooks + 13 api helpers; `react-hook-form` adopted in 6.4b editors only.
+
+**Spec scope decisions (locked in spec §12):**
+- D-1 (recommended split): file count audit projects ~35-40 files — well over the ~25 single-slice threshold per OQ-1 + audit R-4 — split into 6.4a (B-064) + 6.4b (B-065). Single-slice fallback documented in §12 D-1; impl prompt may collapse if shell-first feels like dead code.
+- D-2: slice 6.3 §5 routes + read shapes byte-identical post-swap (FE consumers don't redeploy).
+- D-3: synchronous admin writes (G2 — no RQ).
+- D-4: admin authors direct to Postgres Text columns (H1 — no R2).
+- D-5: admin events PostHog-only at impl time (I1 — slice 6.0 events tables come later).
+- D-6: `lessons.quality_score` stays NULL on admin-authored content (J2 — slice 6.13.5 owns quality signals).
+- D-7: audit chain `audit_admin_request → require_admin` reused per spec #38 + admin-panel skill.
+- D-8: substantive lesson edits cascade-retire quiz_items in same DB transaction; FE confirm modal fires BEFORE PATCH per OQ-4.
+- D-9: three admin route + service files (no monolithic `admin_curriculum.py`).
+- D-10: `EditClassification` `Literal` alias in `lesson.py` (shared by lesson + quiz_item PATCH paths).
+- D-11: `app/services/admin_errors.py` consolidates admin-side errors.
+- D-12: `AdminPanel.tsx` deleted (extract path) in 6.4a; not re-exported.
+- D-13: `react-hook-form` adopted in 6.4b editor pages only — existing forms NOT retrofitted (§3 non-goal).
+
+**Open questions surfaced with authored hints (not locked):**
+- OQ-1: split shell-first / CRUD-second per file-count audit. (Authored hint = SPLIT per §12 D-1.)
+- OQ-2: `selectinload` strategy on lesson_service body-swap queries. (Authored hint = `selectinload` mirrors slice 6.2 precedent.)
+- OQ-3: admin-LIST `?status=` query param vocabulary. (Authored hint = `'active'` / `'drafts'` / `'published'` / `'archived'` / `'all'`; default `'active'`.)
+- OQ-4: substantive-edit confirm modal preview computation FE-side or via BE dry-run endpoint. (Authored hint = FE-side via shared `src/utils/lessonEdit.ts`; BE re-validates per §7.1.)
+- OQ-5: quiz_item version cascade on substantive lesson edit retire-only or retire-and-replace. (Authored hint = retire-only on lesson cascade; retire-and-replace only on quiz_item-level substantive PATCH.)
+- OQ-6: `persona_visibility` editing on decks set-once or admin-editable. (Authored hint = admin-editable + warning modal on narrowing edit.)
+
+**Tests baseline at slice start:**
+- BE: `pytest -m "not integration"` shows 510 passed / 10 failed / 1 skipped / 7 deselected. The 10 failures are pre-existing in `test_study_api.py::TestDailyStatusPreflight::test_redis_outage_fails_open` + `test_usage_limits.py` (`test_free_user_limited_to_3_interview_generations`, `test_usage_resets_monthly`, `test_monthly_window_default_unchanged`, etc.) — none touched by this docs slice. **Reported per SOP-3 docs-slice rule (mismatch on read-only/docs slices = report and continue).** New drift candidate, see Drift Flags.
+- FE: 338 passed (56 files). Unchanged.
+
+**No code or test files touched.** R14 exception (b) audit trail clean. R15(c) gate: spec-only slice; no implementation closure happens here.
+
+**Pre-existing dirty files unstaged (C2 compliance):** `../.DS_Store` (above hireportai/), `Enhancements.txt`, `hirelens-backend/scripts/wipe_local_user_data.py`. Long-running untracked set (stripe-* skills, `.gitattributes`, `docs/audits/SKILLS-SPECS-ALIGNMENT-2026-04-21.md`, `docs/status/E2E-READINESS-2026-04-21.md`, `skills-lock.json`) — all untouched. **C1 compliance:** explicit-path staging only; never `git add -A`.
+
+**Two commits:**
+1. `309f6c4` — spec author + B-064/B-065 filing in `BACKLOG.md`.
+2. `<PENDING-SHA-BACKFILL>` — SHA-backfill commit: this `SESSION-STATE.md` entry + Phase 6 spec table row for `04-admin-authoring.md` + Phase 6 header status line bump (`309f6c4` registered).
+
+**Drift surfaced (R19 candidate, no STOP):**
+- BE pre-flight test count showed 10 pre-existing failures unrelated to this docs slice. Most look like ENV-default-related (per slice 6.3's "production-default env vars" note for `FREE_DAILY_REVIEW_LIMIT=10` etc.) — verify before next implementation slice runs `pytest` defaults. Not blocking the spec slice (SOP-3 docs slice rule).
+
+**No CODE-REALITY regen** in this slice — spec-only changes don't touch CR §1-§13 surfaces (no new routes, no new models, no top-level type changes, no `App.tsx` mod, no layout touch). CR §13 will absorb the new spec at next CR regen post-impl.
+
+---
+
+(Below this entry, the prior 2026-04-27 entry for slice 6.3 implementation is preserved per N8.)
 
 **2026-04-27 — Phase 6 slice 6.3 implementation (lesson-card UX, FE-first; closes B-063).** Three-commit pattern: Step 0 SESSION-STATE bookkeeping fixup + impl + SHA backfill. R14 default — implements authored spec `docs/specs/phase-6/03-lesson-ux.md`. Mode 2 (implement-to-spec). HEAD at slice start: `ffb6f73` (slice 6.3 spec commit). SOP-8 clean (no commits since prompt drafting). SOP-9 honored (single CC session on this tree).
 
