@@ -35,10 +35,20 @@ Surfaces shipped:
 - `app/models/admin_audit_log.py` — admin request audit (Phase 5)
 
 ### Frontend
-- `src/pages/AdminPanel.tsx` — cards tab shell
+- `src/components/admin/AdminLayout.tsx` — multi-route admin shell (sidebar + `<Outlet />`; Phase 6 slice 6.4a)
+- `src/pages/admin/AdminCards.tsx` — card CRUD + AI draft + bulk-import (extracted from old `AdminPanel.tsx` per spec #04 §12 D-12; Phase 6 slice 6.4a)
+- `src/pages/admin/AdminDecks.tsx` — deck list editor (Phase 6 slice 6.4b)
+- `src/pages/admin/AdminDeckDetail.tsx` — deck-detail editor with persona-narrowing modal (Phase 6 slice 6.4b)
+- `src/pages/admin/AdminLessonEditor.tsx` — lesson editor with substantive-edit cascade modal (Phase 6 slice 6.4b)
+- `src/pages/admin/AdminQuizItems.tsx` — quiz-item editor with retire-and-replace flow (Phase 6 slice 6.4b)
 - `src/pages/AdminAnalytics.tsx` — analytics dashboard (Phase 5)
-- `src/pages/AdminAudit.tsx` — audit log viewer (Phase 5)
+- `src/components/admin/MarkdownEditor.tsx` — edit/preview-tab markdown editor (Phase 6 slice 6.4b)
+- `src/components/admin/ConfirmCascadeModal.tsx` — pre-PATCH cascade warning + post-PATCH results-view (Phase 6 slice 6.4b)
+- `src/components/admin/ConfirmPersonaNarrowingModal.tsx` — D-19 amended persona-narrowing copy (Phase 6 slice 6.4b)
+- `src/utils/lessonEdit.ts` — FE-side substantive-edit classifier mirroring BE `_is_substantive_change` (Phase 6 slice 6.4b)
 - `src/context/AuthContext.tsx` — `user.role` source of truth
+
+> **Removed slice 6.4a + 6.4b:** `src/pages/AdminPanel.tsx` (deleted per spec #04 §12 D-12 — extract path; replaced by `<AdminLayout>` + `pages/admin/AdminCards.tsx`); `src/pages/AdminAudit.tsx` (never shipped per spec #04 §12 D-14 — `/admin/audit` link dropped from sidebar; BE endpoint `GET /api/v1/admin/audit` is live and un-consumed; future FE consumer = file new BACKLOG row when product demand surfaces).
 
 ## Access Control
 
@@ -50,9 +60,11 @@ Every admin route **must** declare `Depends(require_admin)`. This dep:
   Consequence: demotion takes effect immediately without requiring a new
   token. Promotion does too.
 
-Frontend mirror: pages check `user.role === 'admin'` and redirect
-otherwise (see `AdminPanel.tsx:45`). Never rely on frontend-only gating —
-it is UX sugar; the backend dep is the actual boundary.
+Frontend mirror: `<AdminGate>` (`src/components/auth/AdminGate.tsx`)
+wraps `<AdminLayout>` in `App.tsx` and renders a 403 view when
+`user.role !== 'admin'` — chunks for nested admin routes are not
+downloaded for non-admins. Never rely on frontend-only gating — it is
+UX sugar; the backend dep is the actual boundary.
 
 ## Admin Promotion
 
