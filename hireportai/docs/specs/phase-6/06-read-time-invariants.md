@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.5: Read-Time Service-Layer Invariants (FSRS-progress writes + lesson/quiz_item lifecycle filters)
 
-## Status: Shipped — §12 amended at `acba7ed` locking D-1..D-9 from §14 OQ-1..OQ-9; + D-10 inline-amended at impl commit `<slice-6.5-impl>`; closes B-072 ✅
+## Status: Shipped — §12 amended at `acba7ed` locking D-1..D-9 from §14 OQ-1..OQ-9; + D-10 inline-amended at impl commit `930a6a2`; closes B-072 ✅
 
 | Field | Value |
 |-------|-------|
