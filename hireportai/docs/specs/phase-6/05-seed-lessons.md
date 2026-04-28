@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.4.5: Reference Seed Lessons + Bootstrap Loader
 
-## Status: Drafted, not shipped — §12 amended at `<this-slice>` locking D-1..D-10 from §14 OQ-1..OQ-10; impl row filed at `B-071` 🔴
+## Status: Drafted, not shipped — §12 amended at `df58eaf` locking D-1..D-10 from §14 OQ-1..OQ-10; impl row filed at `B-071` 🔴
 
 | Field | Value |
 |-------|-------|
@@ -18,7 +18,7 @@
 
 > Recorded in front-matter so spec readers see the locks without
 > chasing SESSION-STATE. Rationale lives in §12 (Decisions) — D-1..D-10
-> locked at §12 amendment `<this-slice>` from §14 OQ-1..OQ-10.
+> locked at §12 amendment `df58eaf` from §14 OQ-1..OQ-10.
 
 | ID | Decision |
 |----|----------|
@@ -754,7 +754,7 @@ The implementation slice (one-step follow-up) must pass:
 
 ## 12. Decisions
 
-> §14 OQ-1..OQ-10 all RESOLVED at spec amendment `<this-slice>` —
+> §14 OQ-1..OQ-10 all RESOLVED at spec amendment `df58eaf` —
 > locked into §12 as D-1..D-10 below, mirroring slice 6.0 §12
 > amendment (`e8eecdd`) + slice 6.4 spec slice 2/2 / 3/3
 > (`4fce036` / `de1e9a9`) precedent. Locks honor the §14 author
@@ -953,7 +953,7 @@ Explicit list:
 
 ## 14. Open questions
 
-> **OQ-1..OQ-10 all RESOLVED at spec amendment `<this-slice>`** —
+> **OQ-1..OQ-10 all RESOLVED at spec amendment `df58eaf`** —
 > locked into §12 as D-1..D-10 respectively. OQ headings + question
 > text retained verbatim below for forward-readability; the
 > resolution line cites the §12 D-N decision that closes each one.
@@ -968,7 +968,7 @@ LD H1 phrasing: "12 locked-deck seeds (slice 6.4.5)." Scout body
 12 decks is the canonical number — both LD and scout agree. The
 open question was **lessons-per-deck count + corpus density**.
 
-**RESOLVED** — see §12 **D-1** (`<this-slice>`): 12 decks × 2
+**RESOLVED** — see §12 **D-1** (`df58eaf`): 12 decks × 2
 reference lessons each = 24 reference lessons total. Author hint
 (b) selected per the AC-8 enum-coverage-vs-authoring-effort balance
 discussed in the original OQ.
@@ -980,7 +980,7 @@ per-deck frontmatter file under each `<deck_slug>/` directory,
 (b) `_deck.md` rename of same shape, or (c) top-level `decks.yaml`
 listing all 12 decks in one file.
 
-**RESOLVED** — see §12 **D-2** (`<this-slice>`): `_meta.md` per-deck
+**RESOLVED** — see §12 **D-2** (`df58eaf`): `_meta.md` per-deck
 under `app/data/decks/seed_lessons/<deck_slug>/_meta.md`. Author
 hint (a) selected — keeps deck description authorable in its own
 slot, allows multi-line descriptions via YAML literal-block scalar
@@ -995,7 +995,7 @@ markdown body H2 sections (`## Concept` / `## Production` /
 `## Examples`) parsed by the loader, or (b) frontmatter fields
 holding the body content as YAML literal-block scalars.
 
-**RESOLVED** — see §12 **D-3** (`<this-slice>`): markdown body H2
+**RESOLVED** — see §12 **D-3** (`df58eaf`): markdown body H2
 sections per §4.3.2. Author hint (a) selected — markdown is more
 readable in a text editor than YAML literal-blocks, H2 headers
 preview cleanly in GitHub web UI, and markdown linters / formatters
@@ -1008,7 +1008,7 @@ How does the loader run? Options were (a) script-only
 (`python -m app.scripts.seed_phase6`), (b) env-gated startup hook
 in the FastAPI lifespan (`SEED_PHASE6_ON_STARTUP=true`), or (c) both.
 
-**RESOLVED** — see §12 **D-4** (`<this-slice>`): script-only this
+**RESOLVED** — see §12 **D-4** (`df58eaf`): script-only this
 slice. Author hint (a) selected — lowest blast radius; adds zero
 startup-time cost; avoids the multi-redeploy-per-day scenario where
 every Railway redeploy fires a no-op load. Future startup hook
@@ -1023,7 +1023,7 @@ Options were (a) skip (leave the row alone), (b) resurrect (clear
 `archived_at` / `retired_at` and apply the seed payload), or (c)
 error (raise on first archived-row collision).
 
-**RESOLVED** — see §12 **D-5** (`<this-slice>`): skip. Author hint
+**RESOLVED** — see §12 **D-5** (`df58eaf`): skip. Author hint
 (a) selected — admin's archive/retire decision is authoritative;
 re-running the loader does NOT bounce admin-archived seeds back to
 active. Loader increments `SeedLoadReport.<entity>.skipped_archived`
@@ -1038,7 +1038,7 @@ slice 6.9 ships then delegate to its classifier, (b) always
 substantive-edit cascade), or (c) run slice 6.9's classifier and let
 substantive edits trigger retire-and-replace.
 
-**RESOLVED** — see §12 **D-6** (`<this-slice>`): loader-side opt-out
+**RESOLVED** — see §12 **D-6** (`df58eaf`): loader-side opt-out
 → always `'minor_edit'`. Author hint (b) selected — substantive-edit
 cascade is admin-UI semantics for human curation; corpus curation
 should never accidentally trigger it via re-load. Loader still bumps
@@ -1052,7 +1052,7 @@ PK + FSRS history; relax natural key with display_order fallback when
 hash-lookup fails), (b) DELETE-old + INSERT-new (loses FSRS history),
 or (c) retire-and-replace cascade per slice 6.4b §7.4.
 
-**RESOLVED** — see §12 **D-7** (`<this-slice>`): UPDATE in place via
+**RESOLVED** — see §12 **D-7** (`df58eaf`): UPDATE in place via
 natural-key fallback. Author hint (a) selected — hash-based lookup
 preferred, `(lesson_id, display_order)` fallback re-anchors when the
 question text was edited; both paths converge on UPDATE-in-place to
@@ -1067,7 +1067,7 @@ Options for the QuizItem natural key (§4.4) were (a)
 `quiz_items` table (out of scope per spec #01 AC-8 closure), or (c)
 `(lesson_id, display_order)` — brittle under reorder.
 
-**RESOLVED** — see §12 **D-8** (`<this-slice>`): hash-based composite
+**RESOLVED** — see §12 **D-8** (`df58eaf`): hash-based composite
 `(lesson_id, sha256(question.strip())[:16])` with `display_order`
 fallback per D-7. Author hint (a) selected — avoids slice-6.1 schema
 change; hash truncation length 16 hex chars (~64 bits collision
@@ -1083,7 +1083,7 @@ rows' initial `published_at` were (a) `func.now()` (pre-published),
 (b) NULL (ship as drafts; admin manually publishes each), or (c)
 optional frontmatter `published: true` per-lesson.
 
-**RESOLVED** — see §12 **D-9** (`<this-slice>`): pre-publish at
+**RESOLVED** — see §12 **D-9** (`df58eaf`): pre-publish at
 first INSERT. Author hint (a) selected — seeded corpus is admin-
 curated reference content, intended to be visible in `/learn`
 immediately on deploy. Admins can post-load archive any seeded
@@ -1096,7 +1096,7 @@ race-tolerant `IntegrityError` catch (relies on existing DB UNIQUE
 constraints to serialize concurrent loaders), or (b) Postgres
 advisory lock serializing the entire load.
 
-**RESOLVED** — see §12 **D-10** (`<this-slice>`): natural-key UPSERT
+**RESOLVED** — see §12 **D-10** (`df58eaf`): natural-key UPSERT
 semantics + `IntegrityError` catch. Author hint (a) selected — lowest
 blast radius; no new locking primitive; relies on the existing
 `uq_decks_slug` + `uq_lessons_deck_slug` constraints to converge
