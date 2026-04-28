@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.6: Lens-Ranked Deck/Lesson Ordering for Interview Prepper
 
-## Status: Drafted + §12 amended at `<this-slice>` locking D-1..D-16 from §14 OQ-1..OQ-11 + sub-OQs (OQ-1b / 1c / 3b / 4b / 9b)
+## Status: Drafted + §12 amended at `fb92396` locking D-1..D-16 from §14 OQ-1..OQ-11 + sub-OQs (OQ-1b / 1c / 3b / 4b / 9b)
 
 | Field | Value |
 |-------|-------|
@@ -665,7 +665,7 @@ call, no external service. Per R13, no integration marker.
 
 ## 12. Decisions
 
-> Locked at §12 amendment `<this-slice>` from §14 OQ-1..OQ-11 + sub-OQs
+> Locked at §12 amendment `fb92396` from §14 OQ-1..OQ-11 + sub-OQs
 > (mirrors slice 6.0 `e8eecdd` / slice 6.4.5 `df58eaf` / slice 6.5
 > `acba7ed` precedent). Each D-N below resolves the like-numbered §14
 > OQ; §14 retains the question + RESOLVED pointer back here for
@@ -835,7 +835,7 @@ unaffected (a missing row contributes zero gaps to the union).
 
 ## 14. Open questions
 
-> All OQs locked at §12 amendment `<this-slice>` (mirrors slice 6.0
+> All OQs locked at §12 amendment `fb92396` (mirrors slice 6.0
 > `e8eecdd` / slice 6.4.5 `df58eaf` / slice 6.5 `acba7ed` precedent).
 > Each OQ retains its question text + RESOLVED pointer to §12 D-N for
 > traceability; option bodies + author hints have been replaced.
@@ -843,87 +843,87 @@ unaffected (a missing row contributes zero gaps to the union).
 **OQ-1 — ranking signals subset for v1.** Scout §6 implies all four:
 gap-match + FSRS-due + quality + display_order. Should v1 ship all
 four, or start with a smaller subset?
-RESOLVED — see §12 **D-1** (`<this-slice>`): all four signals at
+RESOLVED — see §12 **D-1** (`fb92396`): all four signals at
 default weights `(0.55, 0.25, 0.10, 0.10)`.
 
 **OQ-1b — `lessons.quality_score` null-coercion.** Most rows will be
 NULL until slice 6.13.5 ships.
-RESOLVED — see §12 **D-2** (`<this-slice>`): null-coerce per-deck
+RESOLVED — see §12 **D-2** (`fb92396`): null-coerce per-deck
 average to neutral 0.5; no penalty for unscored content.
 
 **OQ-1c — FSRS-due score shape.** Linear / sigmoid / capped count?
-RESOLVED — see §12 **D-3** (`<this-slice>`): linear
+RESOLVED — see §12 **D-3** (`fb92396`): linear
 `min(due_count, total_quiz_items) / total_quiz_items`, empty-deck
 floor 0.
 
 **OQ-2 — persona scope for v1.** Interview Prepper only or all three
 personas?
-RESOLVED — see §12 **D-4** (`<this-slice>`): all three personas;
+RESOLVED — see §12 **D-4** (`fb92396`): all three personas;
 ranker is persona-agnostic, persona filtering enforced upstream by
 `_visible_persona_set`.
 
 **OQ-3 — output shape (decks vs lessons vs both).**
-RESOLVED — see §12 **D-5** (`<this-slice>`): decks-only;
+RESOLVED — see §12 **D-5** (`fb92396`): decks-only;
 `RankedDecksResponse.lessons` field stays unpopulated as a forward-
 compat affordance; v1 always returns `lessons=None`.
 
 **OQ-3b — slice 6.5 D-5 escape-hatch fire.** Extract
 `_visible_persona_set` / `_allowed_tiers_for_user` /
 `_persona_visible_to` to a shared module, or defer?
-RESOLVED — see §12 **D-6** (`<this-slice>`): extract NOW into
+RESOLVED — see §12 **D-6** (`fb92396`): extract NOW into
 `app/services/curriculum_visibility.py` in the impl commit; slice
 6.5 D-5 escape-hatch fires explicitly here.
 
 **OQ-4 — gap → deck matching strategy.**
-RESOLVED — see §12 **D-7** (`<this-slice>`): case-insensitive
+RESOLVED — see §12 **D-7** (`fb92396`): case-insensitive
 substring against `decks.slug.replace('-', ' ')` + `decks.title`;
 no schema work. Tags-column / embedding alternatives deferred to
 slice 6.6b.
 
 **OQ-4b — extend matching to `lessons.title`.**
-RESOLVED — see §12 **D-8** (`<this-slice>`): NO — v1 stays
+RESOLVED — see §12 **D-8** (`fb92396`): NO — v1 stays
 deck-shell-only (slug + title). Lesson-title matching is part of
 the OQ-3 (b) surface that D-5 deferred.
 
 **OQ-5 — route shape.**
-RESOLVED — see §12 **D-9** (`<this-slice>`): new endpoint
+RESOLVED — see §12 **D-9** (`fb92396`): new endpoint
 `GET /api/v1/learn/ranked-decks` mounted from new router file
 `app/api/v1/routes/ranker.py`.
 
 **OQ-6 — premium-deck visibility for free users.**
-RESOLVED — see §12 **D-10** (`<this-slice>`): premium decks
+RESOLVED — see §12 **D-10** (`fb92396`): premium decks
 filtered out for free users (slice 6.5 D-2 / D-10 tier-gating
 unchanged); no `locked_decks` field on `RankedDecksResponse`.
 
 **OQ-7 — analytics events.**
-RESOLVED — see §12 **D-11** (`<this-slice>`): zero new events.
+RESOLVED — see §12 **D-11** (`fb92396`): zero new events.
 Engagement events live with slice 6.7's FE consumer; cost / latency
 monitoring covered by Sentry + WARNING-level logging on the
 helper's malformed-payload path (D-16).
 
 **OQ-8 — caching strategy.**
-RESOLVED — see §12 **D-12** (`<this-slice>`): no caching layer.
+RESOLVED — see §12 **D-12** (`fb92396`): no caching layer.
 Re-compute on every request; revisit only if slow-query telemetry
 signal materialises.
 
 **OQ-9 — recent-skill-gaps helper shape (scout R-2 lock).**
-RESOLVED — see §12 **D-13** (`<this-slice>`): aggregated read of
+RESOLVED — see §12 **D-13** (`fb92396`): aggregated read of
 `tracker_applications_v2.analysis_payload` (scout R-2 default
 (A)); `undefer(...)` plumbing required at query time. No schema
 work, no migration, no backfill.
 
 **OQ-9b — `lookback_days` + `max_scans` defaults.**
-RESOLVED — see §12 **D-14** (`<this-slice>`): `lookback_days=30`,
+RESOLVED — see §12 **D-14** (`fb92396`): `lookback_days=30`,
 `max_scans=5`; route exposes both as optional `?lookback_days=N&max_scans=M`
 query params per §6.2.
 
 **OQ-10 — cold-start response copy.**
-RESOLVED — see §12 **D-15** (`<this-slice>`): BE returns
+RESOLVED — see §12 **D-15** (`fb92396`): BE returns
 `cold_start: true` only; no copy hint. Copy lives with slice 6.7
 FE consumer (i18n + persona-aware phrasing).
 
 **OQ-11 — error shape on partial failure.**
-RESOLVED — see §12 **D-16** (`<this-slice>`): skip + log at
+RESOLVED — see §12 **D-16** (`fb92396`): skip + log at
 WARNING with `tracker_application_id`; helper continues processing
 remaining rows. AC-11 dedup invariant unaffected by skips.
 
@@ -936,7 +936,7 @@ Implementation row: **B-074** 🔴 (filed by this slice).
 Forward dependencies before impl can start:
 
 1. **§12 amendment slice** locked D-1..D-16 from §14 OQ-1..OQ-11 +
-   sub-OQs at `<this-slice>` (mirrors slice 6.0 / 6.4.5 / 6.5
+   sub-OQs at `fb92396` (mirrors slice 6.0 / 6.4.5 / 6.5
    pattern at `e8eecdd` / `df58eaf` / `acba7ed`). ✅ shipped.
 2. Scout R-2 lock — defaults match scout R-2 (option (A) aggregated
    read) per §12 D-13; no pre-impl migration slice needed.
