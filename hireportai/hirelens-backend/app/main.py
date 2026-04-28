@@ -36,6 +36,7 @@ from app.api.v1.routes import (
     gamification as v1_gamification,
     home as v1_home,
     interview as v1_interview,
+    lesson_view_events as v1_lesson_view_events,
     lessons as v1_lessons,
     mission as v1_mission,
     progress as v1_progress,
@@ -153,6 +154,9 @@ def create_app() -> FastAPI:
     app.include_router(v1_study.router, prefix="/api/v1", tags=["v1 Study"])
     app.include_router(v1_quiz_items.router, prefix="/api/v1", tags=["v1 Quiz Items"])
     app.include_router(v1_lessons.router, prefix="/api/v1", tags=["v1 Lessons"])
+    app.include_router(
+        v1_lesson_view_events.router, prefix="/api/v1", tags=["v1 Lesson View Events"]
+    )
     app.include_router(v1_decks.router, prefix="/api/v1", tags=["v1 Decks"])
     app.include_router(v1_gamification.router, prefix="/api/v1", tags=["v1 Gamification"])
     app.include_router(v1_email_prefs.router, prefix="/api/v1", tags=["v1 Email Preferences"])

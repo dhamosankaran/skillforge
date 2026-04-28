@@ -164,6 +164,33 @@ Preserved for historical PostHog data cross-reference. Emission removed but rows
 
 > **`cover_letter_generated` (DEPRECATED spec #52 slice 2/2 — emission removed as part of the B-002 structured-response migration. Historical PostHog data preserved. Replaced by `cover_letter_succeeded` (success) and `cover_letter_failed` (error_code, 502) in the catalog above. Dashboards referencing this event name should be migrated in a separate dashboard-hygiene slice.)**
 
+## Postgres Event Tables (slice 6.0 — dual-write)
+
+Phase 6 ships two append-only Postgres event tables alongside PostHog. PostHog
+stays canonical for funnels / retention / product analytics; Postgres is
+canonical for SQL-queryable content-quality + FSRS-retention dashboards
+(slice 6.13 / 6.13.5 / 6.16). The split exists because spec #38 banned the
+PostHog Query API / HogQL inside `/admin/analytics`. Locked decision **I1**.
+
+| Table | Source | Mirrors PostHog event | Write entry point |
+|-------|--------|------------------------|--------------------|
+| `quiz_review_events` | `app/services/quiz_item_study_service.py:review_quiz_item` (BE dual-write hook at the existing `quiz_item_reviewed` emission site) | `quiz_item_reviewed` | `analytics_event_service.write_quiz_review_event` |
+| `lesson_view_events` | `POST /api/v1/lessons/:lesson_id/view-event` (FE caller `services/api.ts:recordLessonView`, fires from `pages/Lesson.tsx` `useEffect` alongside the existing FE `capture('lesson_viewed')`) | `lesson_viewed` | `analytics_event_service.write_lesson_view_event` |
+
+**Append-only invariant (§4.4 + AC-10).** `analytics_event_service` exposes
+only `write_*` functions. No UPDATE / DELETE / archive method exists; future
+retention ships in a dedicated slice.
+
+**D-7 dual-write failure semantics.** Both the service layer
+(`analytics_event_service.write_*`) and each calling site
+(`review_quiz_item` + lesson view-event route) wrap the write in
+`try/except` so analytics failure NEVER blocks the user request. PostHog
+emission shape is unchanged; the Postgres write fails open.
+
+**Cross-refs.** Spec `docs/specs/phase-6/00-analytics-tables.md` §1-§14;
+locked decisions §12 D-1..D-10; closes B-069. Spec #38 (HogQL ban) at
+`docs/specs/phase-5/38-admin-analytics.md`.
+
 ## Key Funnels (Phase 4 dashboards)
 1. **Acquisition:** `landing_page_viewed` → `cta_clicked` → sign-in →
    `ats_scanned` → `paywall_hit` → `checkout_started` →

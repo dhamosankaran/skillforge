@@ -363,6 +363,24 @@ export async function fetchLesson(lessonId: string): Promise<LessonWithQuizzes> 
   return response.data
 }
 
+// Slice 6.0 §6.4 — Postgres dual-write of `lesson_viewed`. Best-effort
+// fire-and-forget (D-7); errors are swallowed silently so analytics never
+// surfaces a UI error. PostHog `capture('lesson_viewed', ...)` continues to
+// fire from `pages/Lesson.tsx` alongside this call.
+export async function recordLessonView(
+  lessonId: string,
+  body: { deck_id: string; version: number; session_id: string },
+): Promise<void> {
+  try {
+    await api.post(
+      `/api/v1/lessons/${encodeURIComponent(lessonId)}/view-event`,
+      body,
+    )
+  } catch {
+    // best-effort: see spec §6.4 + D-7
+  }
+}
+
 export async function fetchDeck(deckId: string): Promise<Deck> {
   const response = await api.get<Deck>(`/api/v1/decks/${deckId}`)
   return response.data

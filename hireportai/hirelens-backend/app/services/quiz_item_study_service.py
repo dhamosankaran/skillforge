@@ -42,6 +42,7 @@ from app.models.lesson import Lesson
 from app.models.quiz_item import QuizItem
 from app.models.quiz_item_progress import QuizItemProgress
 from app.models.user import User
+from app.schemas.analytics_event import QuizReviewEventCreate
 from app.schemas.quiz_item import (
     DailyQuizItem,
     DailyQuizReviewResponse,
@@ -49,6 +50,7 @@ from app.schemas.quiz_item import (
     QuizReviewResponse,
 )
 from app.schemas.study import DailyStatus
+from app.services import analytics_event_service
 from app.utils.timezone import get_user_timezone
 
 logger = logging.getLogger(__name__)
@@ -428,27 +430,60 @@ async def review_quiz_item(
         "persona": persona,
     }
 
+    fsrs_state_before = "new" if is_first_review else _state_before(progress, fsrs_card)
+
     if is_first_review:
+        try:
+            analytics_track(
+                user_id=user_id,
+                event="quiz_item_progress_initialized",
+                properties=dict(analytics_props_common),
+            )
+        except Exception:
+            # D-7: analytics never blocks the user-blocking critical path.
+            logger.exception("analytics_track_failed for quiz_item_progress_initialized")
+
+    try:
         analytics_track(
             user_id=user_id,
-            event="quiz_item_progress_initialized",
-            properties=dict(analytics_props_common),
+            event="quiz_item_reviewed",
+            properties={
+                **analytics_props_common,
+                "rating": rating,
+                "fsrs_state_before": fsrs_state_before,
+                "fsrs_state_after": progress.state,
+                "reps": progress.reps,
+                "lapses": progress.lapses,
+                "time_spent_ms": time_spent_ms,
+                "session_id": session_id,
+            },
         )
+    except Exception:
+        logger.exception("analytics_track_failed for quiz_item_reviewed")
 
-    analytics_track(
-        user_id=user_id,
-        event="quiz_item_reviewed",
-        properties={
-            **analytics_props_common,
-            "rating": rating,
-            "fsrs_state_before": "new" if is_first_review else _state_before(progress, fsrs_card),
-            "fsrs_state_after": progress.state,
-            "reps": progress.reps,
-            "lapses": progress.lapses,
-            "time_spent_ms": time_spent_ms,
-            "session_id": session_id,
-        },
-    )
+    # Slice 6.0 §6.2 + I1 — Postgres dual-write. Wrapper guarantees that an
+    # analytics-write failure never blocks the user's review request (D-7).
+    try:
+        await analytics_event_service.write_quiz_review_event(
+            QuizReviewEventCreate(
+                user_id=user_id,
+                quiz_item_id=quiz_item_id,
+                lesson_id=lesson.id,
+                deck_id=deck.id,
+                rating=rating,
+                fsrs_state_before=fsrs_state_before,
+                fsrs_state_after=progress.state,
+                reps=progress.reps,
+                lapses=progress.lapses,
+                time_spent_ms=time_spent_ms,
+                session_id=session_id,
+                plan=plan,
+                persona=persona,
+            ),
+            db=db,
+        )
+    except Exception:
+        logger.exception("quiz_review_event_dual_write_failed")
 
     return QuizReviewResponse(
         quiz_item_id=quiz_item_id,

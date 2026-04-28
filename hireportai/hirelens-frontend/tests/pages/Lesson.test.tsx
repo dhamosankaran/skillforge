@@ -14,6 +14,16 @@ vi.mock('@/utils/posthog', () => ({
   default: {},
 }))
 
+const recordLessonView = vi.fn().mockResolvedValue(undefined)
+vi.mock('@/services/api', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/services/api')>('@/services/api')
+  return {
+    ...actual,
+    recordLessonView: (...args: unknown[]) => recordLessonView(...args),
+  }
+})
+
 const lessonFixture: LessonWithQuizzes = {
   lesson: {
     id: 'lesson-fixture-attention-mechanism',
@@ -149,6 +159,7 @@ function renderAt(path: string) {
 
 beforeEach(() => {
   capture.mockReset()
+  recordLessonView.mockClear()
   mockLesson = lessonFixture
   mockError = null
   mockLoading = false
@@ -198,5 +209,20 @@ describe('Lesson page — slice 6.3', () => {
       persona: 'career_climber',
       plan: 'free',
     })
+  })
+
+  // Slice 6.0 AC-11 — recordLessonView fires alongside the existing
+  // lesson_viewed PostHog capture on the same useEffect mount (D-10).
+  it('calls recordLessonView alongside lesson_viewed PostHog capture', () => {
+    renderAt('/learn/lesson/lesson-fixture-attention-mechanism')
+    expect(recordLessonView).toHaveBeenCalledTimes(1)
+    expect(recordLessonView).toHaveBeenCalledWith(
+      'lesson-fixture-attention-mechanism',
+      expect.objectContaining({
+        deck_id: 'deck-fixture-transformer-llm-internals',
+        version: 1,
+        session_id: expect.any(String),
+      }),
+    )
   })
 })
