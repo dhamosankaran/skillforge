@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.0: Analytics Tables Foundation (`quiz_review_events`, `lesson_view_events`)
 
-## Status: Drafted, not shipped
+## Status: Drafted, not shipped — §12 D-1..D-10 locked at amendment `<this-slice>` (OQ-1..OQ-4 closed; see §14 RESOLVED markers)
 
 | Field | Value |
 |-------|-------|
@@ -50,9 +50,9 @@ Two of these are BE-emitted (and trivially dual-writable from the same
 service-layer site); two are **FE-only** today. The FE-only emission
 path means slice 6.0's lesson view dual-write requires a new BE write
 route — `POST /api/v1/lessons/:id/view-event` — that the FE calls
-alongside its existing PostHog `capture()`. See §6 + §12 D-3 for the
-chosen pattern, and **§14 OQ-4** for why this is a real
-decision-surface, not a foregone conclusion.
+alongside its existing PostHog `capture()`. See §6 + §12 D-4 + §12 D-10
+for the locked pattern (path (a) — confirmed at amendment
+`<this-slice>`).
 
 This spec defines the two events tables (`quiz_review_events`,
 `lesson_view_events`) at column granularity, the new
@@ -691,6 +691,62 @@ The implementation slice (one-step follow-up) must pass:
   6.13/6.16 needs section-level engagement signals in SQL, that
   spec authors a `lesson_section_event` table; this slice does not
   pre-empt the design.
+- **D-7 (resolves OQ-1) — Dual-write failure semantics: best-effort
+  both writes.** Both `analytics_event_service.write_quiz_review_event`
+  and `analytics_event_service.write_lesson_view_event` wrap their
+  Postgres INSERT in `try/except SQLAlchemyError`, log via
+  `logger.exception(...)` with an event-type tag, and return `None`
+  on failure (no raise). The wrapper inside
+  `quiz_item_study_service.review_quiz_item` (lines 438-451 emission
+  site) wraps the `write_quiz_review_event` call in its own
+  `try/except Exception` so analytics failure NEVER blocks the
+  user's review request — the existing PostHog `analytics_track`
+  call retains its current shape verbatim. Same wrapper shape applies
+  to the new `POST /api/v1/lessons/:lesson_id/view-event` route's
+  `write_lesson_view_event` call. Both writes are analytical;
+  neither belongs in the user-blocking critical path. Cross-ref
+  §6.2, §6.3, §4.4.
+- **D-8 (resolves OQ-2) — Denormalization extent: lock the
+  author-hinted shape.** `quiz_review_events` carries denormalized
+  `lesson_id` + `deck_id` columns; `lesson_view_events` carries a
+  denormalized `deck_id` column. Stability lock derives from slice
+  6.4 D-17 (substantive lesson edits bump `lessons.version`, not
+  `lessons.id`); deck-FK stability follows from `lessons.deck_id`
+  being immutable on the `lessons` table. Indexes
+  `ix_quiz_review_events_lesson_reviewed_at`,
+  `ix_quiz_review_events_deck_reviewed_at`, and
+  `ix_lesson_view_events_deck_viewed_at` retained per §4.1 + §4.2.
+  Storage cost is bounded; JOIN-elimination on per-lesson /
+  per-deck rollups is the read-side win that justifies the columns.
+  Cross-ref §4.1, §4.2.
+- **D-9 (resolves OQ-3) — Retention/TTL: out of scope this slice.**
+  Append-only invariant per §4.4 + AC-10 is the only durability
+  constraint locked here. A future "Phase 6 6.x — analytics-table
+  retention" slice handles purge cadence + GDPR right-to-erasure
+  cascade beyond the existing `user_id ON DELETE SET NULL` shape.
+  Job-runner choice — **Railway cron preferred over RQ-on-Redis**
+  per LD G2 confirmation 2026-04-27 (cadence is fixed daily / weekly,
+  no fan-out, matches the daily-Pro-digest pattern slice 6.14 will
+  also use). Retention cutoff (90d / 365d / per-event-type) deferred
+  to that slice's own §12 lock. Cross-ref §4.4, §13 (Out of scope).
+- **D-10 (resolves OQ-4) — `lesson_view_events` emission path:
+  path (a) thin BE write route + FE caller alongside the existing
+  FE `capture('lesson_viewed')`.** New BE route
+  `POST /api/v1/lessons/:lesson_id/view-event` returning 204
+  No Content per §6.3 stays as authored. FE `pages/Lesson.tsx`
+  `useEffect` (currently lines 34-46) retains its
+  `capture('lesson_viewed', { lesson_id, ... })` call verbatim AND
+  adds a parallel `recordLessonView(lessonId, body).catch(() => {})`
+  call — both fire on the same `useEffect` mount. Postgres
+  `lesson_view_events` and PostHog `lesson_viewed` carry
+  identical-payload-shape guarantees from the FE side; payload
+  divergence (BE-only fields like server-resolved `persona`) is
+  allowed but FE-emitted fields must match between the PostHog
+  payload and the `LessonViewEventRequest` body. Path (b) (drop FE
+  `capture()`, BE forwards to PostHog post-write) explicitly
+  rejected — would require §6.3 / §6.4 rewrite, a new AC-11, and a
+  re-derived integration-test shape; marginal architectural purity
+  not worth scope expansion. Cross-ref §6.3, §6.4, §3.
 
 ## 13. Out of scope (deferred to other Phase-6 slices)
 
@@ -725,34 +781,25 @@ Explicit list:
 
 ## 14. Open questions
 
-> **OQ-1 / OQ-2 / OQ-3 are author-hinted but not pre-locked.** Dhamo
-> locks them either via a §12 amendment slice OR at impl-time as the
-> implementation slice's Step 1 audit decision-surface. **OQ-4 is
-> a real architectural call** flagged at spec authoring per R19
-> (FE-only `lesson_viewed` emission means the prompt's "service-layer
-> hook in lesson_service.py" framing has no on-disk emission site
-> to mirror — author had to choose a path; choice is recorded as D-4
-> + restated as OQ-4 for Dhamo confirmation).
+> **OQ-1 / OQ-2 / OQ-3 / OQ-4 all RESOLVED at spec amendment
+> `<this-slice>`** — locked into §12 as D-7 / D-8 / D-9 / D-10
+> respectively. OQ headings + question text retained verbatim below
+> for forward-readability; the resolution line cites the §12 D-N
+> decision that closes each one. Mirrors slice 6.4 §14 OQ-2..OQ-6
+> post-amendment shape (`4fce036` / `de1e9a9`).
 
 ### OQ-1 — Dual-write failure semantics
 
 If Postgres write succeeds but PostHog fails (or vice versa), what's
 the right behavior?
 
-- **(a) Best-effort both.** Log either failure. Never block user
-  request. Both writes are analytical, neither blocks user UX.
-- **(b) Postgres-first, PostHog best-effort.** If Postgres fails,
-  raise; if PostHog fails, log + continue. Treats Postgres as
-  source-of-truth.
-- **(c) PostHog-first, Postgres best-effort.** Treats PostHog as
-  source-of-truth; Postgres is "nice-to-have for SQL queries."
-
-**Author hint: (a)** is the safe default. Both writes are
-analytical, neither belongs in the user-blocking critical path. The
-choice matters because it determines the `try/except` shape inside
-`analytics_event_service.write_*` and inside
-`quiz_item_study_service.review_quiz_item`'s wrapper. Lock at impl
-time once Dhamo confirms; default to (a) absent direction.
+**RESOLVED** — see §12 **D-7** (`<this-slice>`): best-effort both
+writes. `analytics_event_service.write_*` wraps the Postgres INSERT
+in `try/except SQLAlchemyError` + `logger.exception(...)`; the
+calling site (`review_quiz_item` lines 438-451 + the new lesson
+view-event route) wraps in `try/except Exception` so analytics
+failure never blocks the user request. PostHog `analytics_track`
+shape unchanged.
 
 ### OQ-2 — Schema redundancy vs query speed (denormalization extent)
 
@@ -760,39 +807,24 @@ Should `quiz_review_events` denormalize fields like `lesson_id`
 (joinable via `quiz_item.lesson_id`) and `deck_id` (joinable via
 `lesson.deck_id`) for query speed, or stay strictly normalized?
 
-**Author hint:** denormalize `lesson_id` AND `deck_id` on
-`quiz_review_events`; denormalize `deck_id` on `lesson_view_events`.
-
-Rationale: storage is cheap; JOIN speed at scale matters. Lesson IDs
-are stable (substantive lesson edits bump version, not lesson_id —
-slice 6.4 D-17 cascade leaves the same `lessons.id`). Drift is a
-non-issue. The §4 schema is written assuming the hint locks; if
-Dhamo prefers strict normalization, drop `lesson_id` from
-`quiz_review_events` and drop `deck_id` from both tables (and
-remove the corresponding indexes).
-
-Confirm at impl-time.
+**RESOLVED** — see §12 **D-8** (`<this-slice>`): denormalize
+`lesson_id` + `deck_id` on `quiz_review_events`; denormalize
+`deck_id` on `lesson_view_events`. Stability lock derives from
+slice 6.4 D-17 (lesson IDs immutable on substantive edits — only
+version bumps); §4.1 / §4.2 indexes retained as authored.
 
 ### OQ-3 — Retention / TTL policy
 
 These tables grow unbounded. A power user reviewing 50 quiz_items/day
 generates ~18k rows/year per user. Do we lock retention now or defer?
 
-**Author hint: defer to a future slice.** Lock the *append-only*
-invariant in §4.4 + AC-10 but leave retention/TTL out of scope.
-
-A future slice (e.g. "Phase 6 6.x — analytics-table retention")
-adds a periodic DELETE job:
-
-- Cadence: daily? weekly?
-- Cutoff: 365d? 730d? per-event-type?
-- Job runner: RQ on Redis (G2; same worker as ingestion) or Railway
-  cron (G2; same scheduler as Pro digest). Either works.
-- Surface: admin-tunable env var or hardcoded constant.
-
-Filing as a §14 OQ rather than D-#: retention is a real product
-call (regulatory? data-science needs?) and shouldn't be defaulted
-without sign-off.
+**RESOLVED** — see §12 **D-9** (`<this-slice>`): out of scope this
+slice. Append-only invariant per §4.4 + AC-10 is the only durability
+constraint. A future "Phase 6 6.x — analytics-table retention"
+slice owns purge cadence + GDPR right-to-erasure cascade beyond
+the existing `user_id ON DELETE SET NULL` shape; job runner
+**Railway cron** per LD G2 confirmation 2026-04-27 (over RQ-on-Redis).
+Cutoff value deferred to that slice.
 
 ### OQ-4 — `lesson_view_events` emission path (FE-only `lesson_viewed` reality)
 
@@ -804,33 +836,16 @@ is no BE service-layer site to dual-write at. The prompt's framing
 on event emission alongside the existing PostHog calls") doesn't
 match disk — `lesson_service.py` does not emit `lesson_viewed`.
 
-Three paths considered:
-
-- **(a) Add a thin BE write route.** New `POST
-  /api/v1/lessons/:id/view-event` route, FE calls it alongside the
-  existing `capture('lesson_viewed')`. **Locked tentatively as D-4**
-  in this spec.
-- **(b) Move emission entirely to BE.** Drop FE `capture()`, have
-  the new BE route forward to PostHog after the Postgres write.
-  Single source of truth. Larger refactor; changes existing FE
-  telemetry; requires `analytics_track()` from a route handler.
-- **(c) Keep FE-only PostHog emission and accept that
-  `lesson_view_events` Postgres-side will be empty until a future
-  refactor.** Defeats the slice goal but is the lowest-effort
-  path; spec-out as a non-starter.
-
-**Author hint: (a).** Minimum blast radius. Preserves existing FE
-telemetry. Mirrors the `quiz_item_reviewed` BE-emit pattern from
-slice 6.2 — if Dhamo wants to converge on "all events emit BE-side"
-later, that's a separate Phase-6 slice with its own design surface.
-
-The §4 / §6 / §10 / §11 of this spec assume (a). If Dhamo locks
-(b), §6.3 changes (route adds `analytics_track()` call), §6.4
-deletes (FE drops `capture()`), AC-11 changes (FE no longer fires
-PostHog directly).
-
-Confirm at impl-time. **This OQ is a real architectural call, not
-a hint.**
+**RESOLVED** — see §12 **D-10** (`<this-slice>`): path (a) — thin
+BE write route (`POST /api/v1/lessons/:lesson_id/view-event` per
+§6.3) + FE caller (`recordLessonView()` per §6.4) alongside the
+existing FE `capture('lesson_viewed')`. Both fire on the same
+`useEffect` mount; FE-emitted fields must match between PostHog
+payload and `LessonViewEventRequest` body (BE-only fields like
+server-resolved `persona` are allowed). Path (b) (drop FE
+`capture()`, BE forwards to PostHog) explicitly rejected — marginal
+architectural purity not worth §6.3 / §6.4 rewrite + new AC. §4 /
+§6 / §10 / §11 stand as authored under path (a).
 
 ### OQ-5+ (placeholder)
 
