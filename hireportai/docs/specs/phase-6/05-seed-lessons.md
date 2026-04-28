@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.4.5: Reference Seed Lessons + Bootstrap Loader
 
-## Status: Drafted, not shipped — §12 empty pending OQ disposition; impl row filed at `B-071` 🔴
+## Status: Drafted, not shipped — §12 amended at `<this-slice>` locking D-1..D-10 from §14 OQ-1..OQ-10; impl row filed at `B-071` 🔴
 
 | Field | Value |
 |-------|-------|
@@ -17,8 +17,8 @@
 ### Phase 6 locked decisions referenced by this spec
 
 > Recorded in front-matter so spec readers see the locks without
-> chasing SESSION-STATE. Rationale lives in §12 (Decisions) once
-> §14 OQs are dispositioned via amendment slice.
+> chasing SESSION-STATE. Rationale lives in §12 (Decisions) — D-1..D-10
+> locked at §12 amendment `<this-slice>` from §14 OQ-1..OQ-10.
 
 | ID | Decision |
 |----|----------|
@@ -754,16 +754,12 @@ The implementation slice (one-step follow-up) must pass:
 
 ## 12. Decisions
 
-> Spec authored with §14 OQ-1..OQ-10 surfaced for Dhamo disposition
-> (some carry author hints, others are real architectural calls).
-> §12 will be filled in by a §12 amendment slice (mirrors slice 6.0
-> spec slice 2/2 / slice 6.4 spec slice 2/2 / 3/3 precedent) once
-> Dhamo locks the OQs into D-N decisions.
->
-> No D-N decisions locked at spec-author time. The author-hinted
-> options in §14 are **tentative** and may be overridden during the
-> §12 amendment slice or directly at the implementation slice's
-> Step 1 audit.
+> §14 OQ-1..OQ-10 all RESOLVED at spec amendment `<this-slice>` —
+> locked into §12 as D-1..D-10 below, mirroring slice 6.0 §12
+> amendment (`e8eecdd`) + slice 6.4 spec slice 2/2 / 3/3
+> (`4fce036` / `de1e9a9`) precedent. Locks honor the §14 author
+> hints verbatim where on-disk and prompt-side phrasings agree;
+> divergences resolved in favor of the on-disk hint per R3.
 
 ### Phase-level decision rationale
 
@@ -779,24 +775,145 @@ The implementation slice (one-step follow-up) must pass:
 
 ### Slice-local decisions
 
-*To be authored by the §12 amendment slice once §14 OQs are
-dispositioned. Placeholder bullets:*
-
-- **D-1 (resolves OQ-1) — Corpus size + structure.** TBD.
-- **D-2 (resolves OQ-2) — Deck-meta file shape.** TBD.
-- **D-3 (resolves OQ-3) — Body-section parsing strategy.** TBD.
-- **D-4 (resolves OQ-4) — Bootstrap-on-startup vs script-only.**
-  TBD.
-- **D-5 (resolves OQ-5) — Archived/retired-row resurrection
-  policy.** TBD.
-- **D-6 (resolves OQ-6) — Lesson-edit classification rule for the
-  loader.** TBD.
+- **D-1 (resolves OQ-1) — Corpus size: 12 decks × 2 reference
+  lessons each = 24 reference lessons total.** 12-deck count anchored
+  to scout body line 901 + Q8 line 1117 + LD H1; two-lessons-per-deck
+  balances AC-8 enum coverage (3 personas × 2 tiers × 3 question_types
+  × 3 difficulties — exercised across the 24 lessons + ~50-100
+  quiz_items rather than artificially stretched to fit a single
+  lesson per deck) against authoring effort (~10-20 hours of
+  curriculum authoring at the impl slice). Future authoring slices
+  may add additional lessons per deck via slice 6.4b admin authoring;
+  the seed corpus is a floor, not a ceiling. Cross-ref §3 G-4, §4,
+  AC-1, AC-8.
+- **D-2 (resolves OQ-2) — Deck-meta file shape: `_meta.md` per-deck
+  under `app/data/decks/seed_lessons/<deck_slug>/_meta.md` with YAML
+  frontmatter mirroring `DeckCreateRequest` field-for-field.**
+  Rejected alternatives: top-level `decks.yaml` (no per-deck
+  description-authoring slot, harder to author multi-line `description`
+  via YAML literal-block scalar `|`) and `_deck.md` (rename of same
+  shape — no semantic gain). `_meta.md` mirrors the lesson file
+  convention (one markdown file per entity), keeps the filesystem
+  layout self-documenting (one directory = one deck = one bundle),
+  and allows multi-line descriptions via YAML literal-block syntax.
+  Markdown body of `_meta.md` is ignored by the loader. Cross-ref
+  §4.1, §4.2.
+- **D-3 (resolves OQ-3) — Lesson body text-field allocation: H2
+  section parsing.** `concept_md` = body content **before** the
+  first H2 (or under `## Concept` H2 if present); `production_md` =
+  body under `## Production` H2; `examples_md` = body under
+  `## Examples` H2. Empty section → empty string in DB (the slice
+  6.1 schema has `NOT NULL` on all three columns). Frontmatter holds
+  non-body lesson fields only (`slug`, `title`, `display_order`,
+  nested `quiz_items[]`). Author ergonomics win: markdown is more
+  readable in a text editor than YAML literal-block scalars, H2
+  headers preview cleanly in GitHub web UI, markdown linters /
+  formatters work on body sections but not on YAML strings. Trade-off
+  accepted: parser is slightly more complex than "just read frontmatter
+  dict" (~15-20 LoC for H2 splitter), but the author-side ergonomics
+  win is non-trivial and frontmatter literal-blocks lose `prettier` /
+  `markdownlint` coverage. Cross-ref §4.3, §4.3.2.
+- **D-4 (resolves OQ-4) — Bootstrap path: script-only via
+  `python -m app.scripts.seed_phase6 [--dry-run]`. NO startup-event
+  hook this slice.** Lowest blast radius; adds zero startup-time
+  cost; avoids the multi-redeploy-per-day scenario where every
+  Railway redeploy fires a no-op load (each costing a transaction +
+  a log entry + a few seconds of startup latency). Ops invokes the
+  script deliberately when ready. CI may run `--dry-run` on PRs
+  touching `app/data/decks/seed_lessons/` and fail the PR if
+  validation breaks; that integration is out of scope for this slice
+  but unblocked. Future "auto-seed on Railway redeploy" startup hook
+  can ship as its own slice gated on `SEED_PHASE6_ON_STARTUP=true`
+  if ops needs it (~5-line FastAPI lifespan hook). Cross-ref §6.2,
+  §6.4, §13 (Out of scope).
+- **D-5 (resolves OQ-5) — Archived/retired-row resurrection policy:
+  skip.** Loader skips rows where `archived_at IS NOT NULL` (decks,
+  lessons) or `retired_at IS NOT NULL` (quiz_items); increments
+  `SeedLoadReport.<entity>.skipped_archived` counter; does NOT mutate
+  `archived_at` / `retired_at`. Admin's archive/retire decision is
+  authoritative — re-running the loader does NOT bounce admin-archived
+  seeds back to active. Rejected alternatives: resurrect (clearing
+  `archived_at` would silently undo admin curation — hard-to-debug
+  surprise) and error-on-collision (forces operator manual cleanup
+  for routine re-loads — wrong granularity). Escape hatch for
+  archive-by-mistake is a future slice 6.4b admin un-archive PATCH
+  path (does not exist today; production archives should be rare).
+  Cross-ref §6.1.2, §6.1.4, §10 AC-9, §10 AC-10.
+- **D-6 (resolves OQ-6) — Lesson-edit classification on re-load:
+  loader-side opt-out → always `version_type='minor_edit'` on
+  lesson updates.** When on-disk diff exists between seed file and
+  active DB row, loader bumps `lesson.version` per the existing
+  slice 6.4b minor-edit path and stamps `version_type='minor_edit'`
+  unconditionally. Substantive-edit cascade (per slice 6.4 D-8 / D-15)
+  + slice 6.9 `classify_lesson_edit` rule are admin-UI semantics for
+  human curation; loader-driven re-loads must NOT trigger quiz_item
+  retirement cascades because the seed corpus is authored as a single
+  source-of-truth tree (admin retires happen *after* seed load in the
+  lifecycle). Treats seed-file evolution as authoring polish, not
+  curriculum-substantive change. Cross-ref §6.1.2, §3 (Non-goals
+  "No retire-and-replace handling on re-load").
 - **D-7 (resolves OQ-7) — Quiz_item question-text-change handling
-  on re-load.** TBD.
-- **D-8 (resolves OQ-8) — QuizItem natural-key shape.** TBD.
-- **D-9 (resolves OQ-9) — Seed-row `published_at` initialization.**
-  TBD.
-- **D-10 (resolves OQ-10) — Concurrency-safety strategy.** TBD.
+  on re-load: UPDATE in place via natural-key fallback.** Loader
+  natural-key lookup is `(lesson_id, sha256(question.strip())[:16])`
+  per D-8; if hash-based lookup misses (question text edited on
+  disk), loader falls back to `(lesson_id, display_order)` to
+  re-anchor the existing row, then UPDATEs that row in place
+  (preserves PK + preserves FSRS history on the existing
+  `quiz_item_progress` rows). Hash preferred, display_order is the
+  fallback. Reasoning: seed-file question polish (typo fix,
+  clarification) should NOT reset user retention — it's a content-edit,
+  not a content-replacement. Authors who genuinely want retire-and-
+  replace cascade go through slice 6.4b admin PATCH `…/retire`
+  (the substantive-edit path). Within-lesson `display_order` clashes
+  on re-load (two seed rows targeting the same `display_order`)
+  resolve by honoring the disk value and bumping the existing DB row's
+  `display_order` to next-free integer. Cross-ref §4.4, §6.1.2,
+  §3 (Non-goals "No retire-and-replace handling on re-load").
+- **D-8 (resolves OQ-8) — QuizItem natural-key shape: hash-based
+  composite `(quiz_items.lesson_id, sha256(quiz_items.question.strip())[:16])`
+  with display_order fallback per D-7.** Avoids reopening slice 6.1
+  schema (would otherwise require a new `quiz_items.slug` column +
+  Alembic migration; slice 6.1 schema additions were closed at AC-8
+  of spec #01). Hash truncation length 16 hex chars = 64 bits ≈
+  1.8e19 collision space — acceptable for a seed corpus of ~24
+  reference quiz_items per D-1 + N future authored quiz_items via
+  slice 6.4b. Hash is computed in-memory at lookup time (loader
+  reads question text from seed file, hashes the trimmed value,
+  searches DB for matching row); not persisted as a DB column.
+  Brittleness on question-edit is mitigated by D-7's display_order
+  fallback. If hash-based lookups prove brittle in practice, slug-per-
+  quiz_item (option (b) at OQ-8) becomes a slice 6.13.5+
+  schema-evolution candidate. Cross-ref §4.4, §6.1.2, §10 AC-3.
+- **D-9 (resolves OQ-9) — Seed-row `published_at` initialization:
+  pre-publish at first INSERT.** All seeded lessons set
+  `published_at = func.now()` at initial INSERT (NOT NULL / draft).
+  Rationale: the seeded corpus is admin-curated reference content,
+  intended to be visible in `/learn` immediately on deploy — that's
+  the whole point of having a seed corpus. Rejected alternatives:
+  ship-as-draft (would require admin to manually publish each seed
+  through slice 6.4b POST `…/publish` — defeats the purpose of an
+  automated loader) and per-lesson frontmatter `published: bool`
+  (premature configurability per Q1; default-published covers the
+  canonical case, and admins can post-load archive any seeded lesson
+  via slice 6.4b PATCH which the loader respects per D-5 thereafter).
+  Cross-ref §6.1.2, §10 AC-1.
+- **D-10 (resolves OQ-10) — Concurrency-safety strategy: natural-key
+  UPSERT semantics + race-tolerant `IntegrityError` catch.** Loader
+  performs lookup-by-natural-key → diff-or-insert; on the
+  multi-row INSERT race (two concurrent loaders both miss the lookup
+  and both try to INSERT the same `decks.slug` /
+  `(lessons.deck_id, lessons.slug)` row), the database's existing
+  UNIQUE constraints (`uq_decks_slug`, `uq_lessons_deck_slug`) catch
+  the collision; the loser's `IntegrityError` is caught and re-routed
+  through the same lookup path, treated as an "already exists" hit
+  (no-op or unchanged-count branch). Concurrent loader invocations
+  (e.g. two ops engineers running the script simultaneously, or — if
+  the future startup hook lands — two pods racing on cold start)
+  safely converge to the same final state. Postgres advisory lock
+  (`pg_advisory_lock(<seed-loader-namespace-id>)`) is the **deferred
+  escape-hatch** path (b) — to be picked up if the natural-key path
+  proves brittle in practice (e.g. high contention or recurring
+  IntegrityError loops). Cross-ref §6.1.4, §10 AC-11.
 
 ## 13. Out of scope (deferred to other Phase-6 slices)
 
@@ -836,227 +953,157 @@ Explicit list:
 
 ## 14. Open questions
 
-> All §14 OQs are explicit Dhamo decision points. **Author hints**
-> below are tentative and become D-N locks when the §12 amendment
-> slice fires. Hints lean toward minimum blast radius + slice-6.0 /
-> slice-6.4 precedent shape.
+> **OQ-1..OQ-10 all RESOLVED at spec amendment `<this-slice>`** —
+> locked into §12 as D-1..D-10 respectively. OQ headings + question
+> text retained verbatim below for forward-readability; the
+> resolution line cites the §12 D-N decision that closes each one.
+> Mirrors slice 6.0 §14 OQ-1..OQ-4 + slice 6.4 §14 OQ-2..OQ-6
+> post-amendment shape (`e8eecdd` / `4fce036` / `de1e9a9`).
 
 ### OQ-1 — Corpus size + structure
 
 LD H1 phrasing: "12 locked-deck seeds (slice 6.4.5)." Scout body
 (line 901) confirms: "The 12 locked decks become seed data via either
 …". Scout Q8 (line 1117): "Seed data for the 12 locked decks…".
+12 decks is the canonical number — both LD and scout agree. The
+open question was **lessons-per-deck count + corpus density**.
 
-**12 decks is the canonical number** — both LD and scout agree. The
-open question is **lessons-per-deck count + corpus density**.
-Options:
-
-- **(a)** 12 decks × 1 reference lesson each = 12 lessons total
-  (minimum corpus for AC-8 enum coverage; fastest to author; thin on
-  end-to-end realism for downstream slice testing).
-- **(b)** 12 decks × 2-3 reference lessons each = ~24-36 lessons
-  total (richer end-to-end realism; more author work; still tractable
-  hand-authoring).
-- **(c)** 12 decks × 1 lesson + a separate "exemplar deck" with
-  5-10 lessons demonstrating the full quiz_type cross-product = ~17-22
-  lessons (mixes coverage with realism; one deck pulls double duty
-  as the enum-coverage exemplar, avoiding artificial per-deck
-  inflation).
-
-**Author hint:** **(b)** — 12 decks × 2 lessons each = 24 lessons.
-Roughly mirrors a "minimum viable curriculum" feel; AC-8 enum coverage
-naturally lands across the 24 lessons + 50-100 quiz_items without
-forcing artificial single-lesson-per-deck stretching. Scope estimate:
-~24 lesson markdown files + 12 `_meta.md` files = ~36 seed files
-total, ~10-20 hours of curriculum authoring (not in this slice's
-scope — implementation slice owns content authoring).
+**RESOLVED** — see §12 **D-1** (`<this-slice>`): 12 decks × 2
+reference lessons each = 24 reference lessons total. Author hint
+(b) selected per the AC-8 enum-coverage-vs-authoring-effort balance
+discussed in the original OQ.
 
 ### OQ-2 — Deck-meta file shape
 
-Three options for where deck-level metadata lives:
+Where does deck-level metadata live? Options were (a) `_meta.md`
+per-deck frontmatter file under each `<deck_slug>/` directory,
+(b) `_deck.md` rename of same shape, or (c) top-level `decks.yaml`
+listing all 12 decks in one file.
 
-- **(a)** `<deck_slug>/_meta.md` per-deck frontmatter file (this
-  spec's §4 default). Description body becomes
-  `decks.description` if author writes it as a YAML literal-block;
-  alternative interpretation: description body == markdown body, used
-  for richer authoring.
-- **(b)** `<deck_slug>/_deck.md` same shape, different filename
-  convention.
-- **(c)** Top-level `decks.yaml` listing all 12 decks in one file;
-  per-deck subdirectories then only contain lesson files.
-
-**Author hint:** **(a)** `_meta.md` per-deck — keeps deck description
-authorable in its own slot, allows YAML literal-block `\|` syntax for
-multi-line descriptions, mirrors the lesson file convention (one
-markdown file per entity), keeps the filesystem layout
-self-documenting (one directory = one deck = one bundle).
+**RESOLVED** — see §12 **D-2** (`<this-slice>`): `_meta.md` per-deck
+under `app/data/decks/seed_lessons/<deck_slug>/_meta.md`. Author
+hint (a) selected — keeps deck description authorable in its own
+slot, allows multi-line descriptions via YAML literal-block scalar
+`|`, mirrors the lesson file convention (one markdown file per
+entity), and keeps the filesystem layout self-documenting (one
+directory = one deck = one bundle).
 
 ### OQ-3 — `concept_md` / `production_md` / `examples_md` location
 
-Two options for where the three lesson body slots come from:
+Where do the three lesson body slots come from? Options were (a)
+markdown body H2 sections (`## Concept` / `## Production` /
+`## Examples`) parsed by the loader, or (b) frontmatter fields
+holding the body content as YAML literal-block scalars.
 
-- **(a)** Markdown body H2 sections (this spec's §4.3.2 default):
-  `concept_md = body before first H2 (or under ## Concept)`,
-  `production_md = body under ## Production`, `examples_md = body
-  under ## Examples`.
-- **(b)** Frontmatter fields: `concept_md: \|`, `production_md: \|`,
-  `examples_md: \|` as YAML literal-blocks.
-
-**Author hint:** **(a)** body H2 sections — markdown is more readable
-in a text editor than YAML literal-blocks; H2 headers preview cleanly
-in GitHub web UI; markdown linters / formatters work on body sections
-but not on YAML strings. Trade-off: parser is slightly more complex
-than "just read frontmatter dict", but the author-side ergonomics
-win.
+**RESOLVED** — see §12 **D-3** (`<this-slice>`): markdown body H2
+sections per §4.3.2. Author hint (a) selected — markdown is more
+readable in a text editor than YAML literal-blocks, H2 headers
+preview cleanly in GitHub web UI, and markdown linters / formatters
+work on body sections but not on YAML strings. Parser complexity
+trade-off (~15-20 LoC) accepted.
 
 ### OQ-4 — Bootstrap-on-startup vs script-only
 
-Three options for *how* the loader runs:
+How does the loader run? Options were (a) script-only
+(`python -m app.scripts.seed_phase6`), (b) env-gated startup hook
+in the FastAPI lifespan (`SEED_PHASE6_ON_STARTUP=true`), or (c) both.
 
-- **(a)** Script-only (this spec's §6.4 default). `python -m
-  app.scripts.seed_phase6` is the only entry point; ops decides when
-  to run it. CI may run `--dry-run` on PRs touching `app/data/`.
-- **(b)** Env-gated startup hook — `if SEED_PHASE6_ON_STARTUP:
-  await load_seed_corpus(db)` in the FastAPI lifespan. Defaults to
-  False in prod; True in dev/CI. Catches developer "forgot to seed"
-  state.
-- **(c)** Both — script for explicit runs, startup hook for
-  dev/CI convenience.
-
-**Author hint:** **(a)** script-only this slice. Lowest blast radius;
-adds zero startup-time cost; avoids the multi-redeploy-per-day
-scenario described in §6.4. If ops or DX needs the hook later, a
-follow-up adds it in 5 lines. Reasoning: "default to surprise-free."
+**RESOLVED** — see §12 **D-4** (`<this-slice>`): script-only this
+slice. Author hint (a) selected — lowest blast radius; adds zero
+startup-time cost; avoids the multi-redeploy-per-day scenario where
+every Railway redeploy fires a no-op load. Future startup hook
+deferred to its own follow-up slice gated on
+`SEED_PHASE6_ON_STARTUP=true` if ops needs it.
 
 ### OQ-5 — Archived/retired-row resurrection policy
 
 What does the loader do when a row exists with `archived_at IS NOT
 NULL` (decks/lessons) or `retired_at IS NOT NULL` (quiz_items)?
+Options were (a) skip (leave the row alone), (b) resurrect (clear
+`archived_at` / `retired_at` and apply the seed payload), or (c)
+error (raise on first archived-row collision).
 
-- **(a)** **Skip** — leave the row alone; increment
-  `skipped_archived` counter; do NOT mutate `archived_at` /
-  `retired_at`. Admin's archive decision is authoritative.
-- **(b)** **Resurrect** — clear `archived_at` / `retired_at` and
-  apply the seed file's payload as if active. Useful if a deck was
-  archived by mistake and you want a re-deploy to undo it.
-- **(c)** **Error** — raise on first archived-row collision, force
-  the operator to either delete the seed file or un-archive the row
-  manually before re-loading.
-
-**Author hint:** **(a)** skip. Admins archive for a reason; a re-load
-"forcing" the row back is a hard-to-debug surprise. The escape hatch
-for "I archived this by mistake" is the slice 6.4b admin un-archive
-PATCH path (which doesn't exist today — that's a separate row to
-file if needed, but archived rows in production should be rare).
+**RESOLVED** — see §12 **D-5** (`<this-slice>`): skip. Author hint
+(a) selected — admin's archive/retire decision is authoritative;
+re-running the loader does NOT bounce admin-archived seeds back to
+active. Loader increments `SeedLoadReport.<entity>.skipped_archived`
+without mutating `archived_at` / `retired_at`.
 
 ### OQ-6 — Lesson-edit classification rule for the loader
 
-When a lesson's seed file changes between loads, what
-`version_type` does the loader stamp?
+When a lesson's seed file changes between loads, what `version_type`
+does the loader stamp? Options were (a) always `'minor_edit'` until
+slice 6.9 ships then delegate to its classifier, (b) always
+`'minor_edit'` regardless of slice 6.9 (loader-side opt-out from
+substantive-edit cascade), or (c) run slice 6.9's classifier and let
+substantive edits trigger retire-and-replace.
 
-- **(a)** Always `'minor_edit'` until slice 6.9
-  (`classify_lesson_edit` rule) ships. After slice 6.9, the loader
-  delegates to that classifier.
-- **(b)** Always `'minor_edit'` regardless of slice 6.9 — loader-side
-  opt-out from substantive-edit cascade because seed re-loads should
-  never trigger quiz_item retirement. Substantive-edit cascade is an
-  admin-UI concern, not a corpus-curation concern.
-- **(c)** Run slice 6.9's classifier (when it ships) and let
-  substantive edits trigger the retire-and-replace cascade. Risky:
-  a seed-file polish (e.g. fixing a typo in `concept_md` that
-  crosses the >15% char-delta threshold) would silently retire all
-  the lesson's quiz_items.
-
-**Author hint:** **(b)** loader-side opt-out → always `'minor_edit'`.
-Substantive-edit cascade is admin-UI semantics; corpus curation
-should never accidentally trigger it. The loader is a content-author's
-tool, not a curriculum-evolution event source.
+**RESOLVED** — see §12 **D-6** (`<this-slice>`): loader-side opt-out
+→ always `'minor_edit'`. Author hint (b) selected — substantive-edit
+cascade is admin-UI semantics for human curation; corpus curation
+should never accidentally trigger it via re-load. Loader still bumps
+`lesson.version` per slice 6.4b minor-edit path.
 
 ### OQ-7 — Quiz_item question-text-change handling on re-load
 
 When a `quiz_items[]` entry's `question` text changes between loads,
-what does the loader do?
+what does the loader do? Options were (a) UPDATE in place (preserve
+PK + FSRS history; relax natural key with display_order fallback when
+hash-lookup fails), (b) DELETE-old + INSERT-new (loses FSRS history),
+or (c) retire-and-replace cascade per slice 6.4b §7.4.
 
-- **(a)** UPDATE in place (preserve PK, preserve FSRS history on the
-  existing `quiz_item_progress` rows). Question hash changes; the
-  natural-key lookup may fail to match, but a fallback lookup by
-  `display_order` within the lesson can re-anchor.
-- **(b)** Treat as DELETE-old + INSERT-new (loses FSRS history; bad
-  default).
-- **(c)** Treat as retire-and-replace cascade per slice 6.4b §7.4
-  (mirrors the admin substantive-edit path; preserves FSRS history
-  on the *old* row but starts fresh on the *new* row — which means
-  user retention metrics get reset for that quiz_item).
-
-**Author hint:** **(a)** UPDATE in place + fallback by
-`(lesson_id, display_order)` if question-hash lookup fails.
-Reasoning: seed-file question polish (typo fix, clarification) should
-not reset retention; it's content-edit, not content-replacement.
-Authors who genuinely want retire-and-replace go through slice 6.4b
-admin PATCH. **Caveat:** §4.4 frames the natural-key as
-`(lesson_id, question_hash)` — if author hint (a) lands, the natural
-key relaxes to `(lesson_id, question_hash) OR (lesson_id,
-display_order)` with hash preferred and display_order fallback.
+**RESOLVED** — see §12 **D-7** (`<this-slice>`): UPDATE in place via
+natural-key fallback. Author hint (a) selected — hash-based lookup
+preferred, `(lesson_id, display_order)` fallback re-anchors when the
+question text was edited; both paths converge on UPDATE-in-place to
+preserve FSRS history continuity. Authors who want retire-and-replace
+go through slice 6.4b admin PATCH `…/retire`.
 
 ### OQ-8 — QuizItem natural-key shape
 
-Three options for the QuizItem natural key (§4.4):
+Options for the QuizItem natural key (§4.4) were (a)
+`(lesson_id, sha256(question)[:16])` — hash of question text, (b)
+`(lesson_id, slug)` — requires adding a `slug` column to slice 6.1's
+`quiz_items` table (out of scope per spec #01 AC-8 closure), or (c)
+`(lesson_id, display_order)` — brittle under reorder.
 
-- **(a)** `(lesson_id, sha256(question)[:16])` — hash of question
-  text. Stable across loader runs as long as the question text
-  doesn't change. Breaks under question-text edit (relies on OQ-7's
-  fallback).
-- **(b)** `(lesson_id, slug)` — add a `slug` field to
-  `QuizItemCreateRequest` + slice 6.1's `quiz_items` table. Slug is
-  author-supplied + immutable. Cleanest natural key but is a slice-6.1
-  schema change → out of scope for this slice (slice 6.1 schema
-  changes were closed at AC-8 of spec #01).
-- **(c)** `(lesson_id, display_order)` — only stable as long as
-  authors don't reorder. Brittle.
-
-**Author hint:** **(a)** hash-based with display_order fallback per
-OQ-7. Avoids slice-6.1 schema change. The fallback covers the
-question-edit case. If hash-based lookups prove brittle in practice,
-(b) becomes a slice 6.13.5+ schema-evolution candidate.
+**RESOLVED** — see §12 **D-8** (`<this-slice>`): hash-based composite
+`(lesson_id, sha256(question.strip())[:16])` with `display_order`
+fallback per D-7. Author hint (a) selected — avoids slice-6.1 schema
+change; hash truncation length 16 hex chars (~64 bits collision
+space) is sufficient for reference + future-authored quiz_items.
+Slug-per-quiz_item (option (b)) becomes a slice 6.13.5+ schema-
+evolution candidate if hash-based lookups prove brittle.
 
 ### OQ-9 — Seed-row `published_at` initialization
 
-`lessons.published_at` is `Optional[datetime]` per slice 6.1 §4.2.
-Lessons with `published_at IS NULL` are treated as "drafts" and
-hidden from user-facing read routes (`lesson_service.py:46`).
+`lessons.published_at` is `Optional[datetime]` per slice 6.1 §4.2;
+NULL = "draft" hidden from user-facing read routes. Options for seed
+rows' initial `published_at` were (a) `func.now()` (pre-published),
+(b) NULL (ship as drafts; admin manually publishes each), or (c)
+optional frontmatter `published: true` per-lesson.
 
-For seed rows, what's the initial `published_at`?
-
-- **(a)** `func.now()` at first INSERT — seed rows are
-  pre-published.
-- **(b)** NULL — seed rows ship as drafts; admin must manually
-  publish each one through the slice 6.4b admin POST `…/publish`
-  route.
-- **(c)** Optional frontmatter field `published: true` (default true)
-  controls per-lesson.
-
-**Author hint:** **(a)** pre-publish. Seeds are the canonical curated
-corpus; the whole point is they're available out of the box. If a
-specific seed lesson should ship as a draft, the curriculum author
-flips frontmatter (option (c) extension) — but the default is
-published.
+**RESOLVED** — see §12 **D-9** (`<this-slice>`): pre-publish at
+first INSERT. Author hint (a) selected — seeded corpus is admin-
+curated reference content, intended to be visible in `/learn`
+immediately on deploy. Admins can post-load archive any seeded
+lesson via slice 6.4b PATCH; loader respects D-5 thereafter.
 
 ### OQ-10 — Concurrency-safety strategy
 
-§6.1.4 documents two paths:
+§6.1.4 documented two paths: (a) natural-key UPSERT semantics +
+race-tolerant `IntegrityError` catch (relies on existing DB UNIQUE
+constraints to serialize concurrent loaders), or (b) Postgres
+advisory lock serializing the entire load.
 
-- **(a)** Natural-key UPSERT semantics + race-tolerant `IntegrityError`
-  catch — relies on database UNIQUE constraints to serialize concurrent
-  loaders. Lowest blast radius; no new locking primitive.
-- **(b)** Postgres advisory lock (`pg_advisory_lock(<deterministic_id>)`)
-  serializing the entire load. Strong correctness guarantee; requires
-  a new locking primitive but is well-trod Postgres territory.
-
-**Author hint:** **(a)** start with natural-key path; if
-multi-pod concurrent-load races prove brittle (e.g. on Railway when
-two ops engineers run the script simultaneously, or if the future
-startup hook lands and two pods race on cold start), fall back to
-(b).
+**RESOLVED** — see §12 **D-10** (`<this-slice>`): natural-key UPSERT
+semantics + `IntegrityError` catch. Author hint (a) selected — lowest
+blast radius; no new locking primitive; relies on the existing
+`uq_decks_slug` + `uq_lessons_deck_slug` constraints to converge
+concurrent-loader races to the same final state. Postgres advisory
+lock is the deferred escape-hatch path (b) if the natural-key path
+proves brittle in practice (e.g. high contention or recurring
+IntegrityError loops).
 
 ### OQ-11+ (placeholder)
 
