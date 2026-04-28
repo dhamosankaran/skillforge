@@ -67,8 +67,12 @@ async def submit_quiz_review(
 
     Error responses:
       400 — rating outside [1, 4] or time_spent_ms outside [0, 300_000]
-      403 — quiz_item is in an archived lesson or deck
-      404 — no quiz_item with the given quiz_item_id
+      403 — quiz_item is in an archived lesson or deck OR the parent
+            deck is premium-tier and the caller is on the free plan
+            (slice 6.5 §12 D-2)
+      404 — no quiz_item with the given quiz_item_id, OR the parent
+            deck is not visible to the caller's persona (slice 6.5
+            §12 D-7)
       409 — quiz_item is retired and no existing progress row (new
             reviews blocked; updates to existing rows pass through)
     """
@@ -83,6 +87,11 @@ async def submit_quiz_review(
             user=user,
         )
     except quiz_item_study_service.QuizItemNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        )
+    except quiz_item_study_service.QuizItemNotVisibleError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),

@@ -150,13 +150,25 @@ class QuizItemNotFoundError(Exception):
 
 
 class QuizItemForbiddenError(Exception):
-    """Raised when the quiz_item's lesson or deck is archived."""
+    """Raised when the requesting user is forbidden from acting on the quiz_item.
 
-    def __init__(self, quiz_item_id: str) -> None:
+    Slice 6.2 originally covered the archive-guard (lesson/deck archived);
+    slice 6.5 §12 D-2 reuses it for the tier-mismatch path (free user on
+    a premium deck) — `reason='premium_deck'` makes the message accurate
+    without changing the route's existing 403 mapping.
+    """
+
+    def __init__(self, quiz_item_id: str, *, reason: str = "archived") -> None:
         self.quiz_item_id = quiz_item_id
-        super().__init__(
-            f"Quiz item {quiz_item_id!r} is in an archived lesson or deck"
-        )
+        self.reason = reason
+        if reason == "premium_deck":
+            message = (
+                f"Quiz item {quiz_item_id!r} is in a premium deck; "
+                f"upgrade required"
+            )
+        else:
+            message = f"Quiz item {quiz_item_id!r} is in an archived lesson or deck"
+        super().__init__(message)
 
 
 class QuizItemRetiredError(Exception):
@@ -172,6 +184,60 @@ class QuizItemRetiredError(Exception):
         super().__init__(
             f"Quiz item {quiz_item_id!r} is retired; no new reviews accepted"
         )
+
+
+class QuizItemNotVisibleError(Exception):
+    """Raised when the requesting user's persona excludes the quiz_item's deck.
+
+    Slice 6.5 §12 D-7: 404 across all read paths for persona-visibility
+    mismatch (information-leakage minimization). Route maps to 404.
+    """
+
+    def __init__(self, quiz_item_id: str) -> None:
+        self.quiz_item_id = quiz_item_id
+        super().__init__(
+            f"Quiz item {quiz_item_id!r} is not visible to the requesting user"
+        )
+
+
+# ── Read-time visibility helpers (slice 6.5 §6.3 / D-5 — duplicated to
+# `lesson_service.py`) ────────────────────────────────────────────────────────
+
+
+def _persona_visible_to(deck_persona: str, user_persona: Optional[str]) -> bool:
+    """True iff a user with ``user_persona`` may see a deck with
+    ``persona_visibility == deck_persona``. Mirrors deck_admin_service
+    semantics: ``'both'`` is visible to everyone; the named persona is
+    visible only to a user with that persona.
+    """
+    if deck_persona == "both":
+        return True
+    if user_persona is None:
+        return False
+    return deck_persona == user_persona
+
+
+def _visible_persona_set(user: Optional[User]) -> tuple[str, ...]:
+    """``Deck.persona_visibility`` values the user is allowed to see.
+
+    Persona-null users see only ``'both'``; persona-set users see
+    ``'both'`` + their persona.
+    """
+    if user is None or user.persona is None:
+        return ("both",)
+    return ("both", user.persona)
+
+
+def _allowed_tiers_for_user(user: Optional[User]) -> tuple[str, ...]:
+    """``Deck.tier`` values the user can access given their plan (D-2).
+
+    Free users (and persona-null / unloaded-subscription) see only
+    ``'foundation'``; paid plans see ``'foundation'`` + ``'premium'``.
+    """
+    plan = _resolve_plan(user)
+    if plan and plan != "free":
+        return ("foundation", "premium")
+    return ("foundation",)
 
 
 # ── Daily-status read (spec 6.2 §4.4 / §7 — sentinel only per D-4) ──────────
@@ -217,6 +283,13 @@ async def get_daily_quiz_items(
     now = _utcnow()
     session_id = str(uuid.uuid4())
 
+    # Slice 6.5 §6.1.1 — persona-visibility (D-3) + tier (D-2) filters block
+    # premium / persona-narrowed decks at queue inclusion. Free-user-on-
+    # premium-deck quiz_items never surface in the queue; if the user holds
+    # a stored quiz_item_id, R-2 raises 403 post-load.
+    visible_personas = _visible_persona_set(user)
+    allowed_tiers = _allowed_tiers_for_user(user)
+
     # ── Pass 1: overdue progress rows ────────────────────────────────────────
     overdue_stmt = (
         select(QuizItemProgress, QuizItem, Lesson, Deck)
@@ -229,6 +302,8 @@ async def get_daily_quiz_items(
         .where(QuizItem.retired_at.is_(None))
         .where(Lesson.archived_at.is_(None))
         .where(Deck.archived_at.is_(None))
+        .where(Deck.persona_visibility.in_(visible_personas))
+        .where(Deck.tier.in_(allowed_tiers))
         .order_by(QuizItemProgress.due_date.asc())
         .limit(_DAILY_GOAL)
     )
@@ -278,6 +353,8 @@ async def get_daily_quiz_items(
             .where(QuizItem.retired_at.is_(None))
             .where(Lesson.archived_at.is_(None))
             .where(Deck.archived_at.is_(None))
+            .where(Deck.persona_visibility.in_(visible_personas))
+            .where(Deck.tier.in_(allowed_tiers))
             .order_by(QuizItem.created_at.asc())
             .limit(remaining)
         )
@@ -363,6 +440,18 @@ async def review_quiz_item(
 
     if lesson.archived_at is not None or deck.archived_at is not None:
         raise QuizItemForbiddenError(quiz_item_id)
+
+    # Slice 6.5 §6.1.2 — persona-visibility check (D-3 / D-7). 404 across all
+    # read paths for persona mismatch (information-leakage minimization).
+    user_persona = user.persona if user is not None else None
+    if not _persona_visible_to(deck.persona_visibility, user_persona):
+        raise QuizItemNotVisibleError(quiz_item_id)
+
+    # Slice 6.5 §6.1.2 — tier check (D-2). Premium deck + free user → 403.
+    # The deck exists and the user can access it post-upgrade, so 403 is
+    # semantically distinct from the 404-on-persona path above.
+    if deck.tier not in _allowed_tiers_for_user(user):
+        raise QuizItemForbiddenError(quiz_item_id, reason="premium_deck")
 
     # ── Load existing progress row (if any) ──────────────────────────────────
     progress = (

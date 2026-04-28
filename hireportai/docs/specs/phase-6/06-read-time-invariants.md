@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.5: Read-Time Service-Layer Invariants (FSRS-progress writes + lesson/quiz_item lifecycle filters)
 
-## Status: Drafted, not shipped — §12 amended at `acba7ed` locking D-1..D-9 from §14 OQ-1..OQ-9; impl row filed at `B-072` 🔴
+## Status: Shipped — §12 amended at `acba7ed` locking D-1..D-9 from §14 OQ-1..OQ-9; + D-10 inline-amended at impl commit `<slice-6.5-impl>`; closes B-072 ✅
 
 | Field | Value |
 |-------|-------|
@@ -813,14 +813,14 @@ The implementation slice (one-step follow-up) must pass:
 - **AC-13** — Test suite stays green (BE 577 → 577 + N where N is
   the §10 delta). New tests run under default `not integration`
   selector (no LLM keys required).
-- **AC-14** — Per §12 **D-2** lock (slice 6.5 owns server-side
-  tier guarantee): a free user calling a premium-deck read path
+- **AC-14** — Per §12 **D-2** + **D-10** lock (slice 6.5 owns server-
+  side tier guarantee): a free user calling a premium-deck read path
   on `quiz_item_study_service` (R-1 / R-2) receives 403; on
-  `lesson_service` (R-4 / R-5 / R-6 / R-7) receives 403 (or
-  `None` → 404 per impl-slice judgment, with the default leaning
-  toward 403 since tier mismatch is fundamentally different from
-  archive/persona-mismatch — the deck exists and the user can
-  access it post-upgrade).
+  `lesson_service` (R-4 / R-5 / R-6 / R-7) receives 403 unconditionally
+  per the **D-10** lock (the impl-slice judgment between 403 vs
+  `None` → 404 was resolved at impl time in favor of 403, since tier
+  mismatch is fundamentally different from archive/persona-mismatch
+  — the deck exists and the user can access it post-upgrade).
 
 ## 12. Decisions
 
@@ -995,6 +995,39 @@ unchanged), and no quality-signal coupling (J2).
   D-9 locks it; the prompt-side table-format question is moot
   (the on-disk spec already chose inline §4 format). Logged as
   JC in the amendment's final report.
+
+- **D-10 (extends D-2) — `lesson_service` tier-mismatch surface
+  = `QuizItemForbiddenError` (reason='premium_deck') → 403.**
+  Inline-amended at the slice 6.5 implementation commit (R14(b)
+  pure codification of the impl-slice judgment foreshadowed in
+  §6.4 + §11 AC-14). The four `lesson_service` public reads
+  (R-4 / R-5 / R-6 / R-7) raise `QuizItemForbiddenError` (with
+  the new keyword-only `reason='premium_deck'` constructor field)
+  on free-user-on-premium-deck access, mirroring the
+  `quiz_item_study_service` shape locked at D-2. Routes
+  (`lessons.py`, `decks.py`) catch the exception and return 403,
+  identical to the existing `quiz_items.py` review-route
+  mapping. **Rationale:** tier mismatch is fundamentally
+  distinguishable from non-existence (the deck exists and the
+  user can access it post-upgrade); 404 would lose this
+  distinction and would block slice 6.7 from composing a
+  "deck exists, you need Pro" upsell surface. Reuse of the
+  existing `QuizItemForbiddenError` class — extended with the
+  `reason` kwarg (defaulting to `'archived'` so slice 6.2
+  call sites are unchanged) — is preferred over introducing a
+  new `DeckTierError` / `PremiumDeckRequiresUpgradeError` per the
+  impl-slice "ONE new error class is the locked exception (the
+  D-7 `QuizItemNotVisibleError`); do not introduce others"
+  constraint. The class name is mildly awkward when raised by
+  `lesson_service` (no `quiz_item_id` in scope; the constructor's
+  first positional arg carries `lesson_id` / `deck_id` for those
+  call sites) — accepted as the cost of holding §2 G-4 to ONE
+  net-new exception. Cross-ref D-2, §4.3 A-7 column, §5
+  exception-to-HTTP map (now reads "reuse `QuizItemForbiddenError`
+  with `reason='premium_deck'`"), §6.4 route-mapping note (the
+  "or new `QuizItemTierError` per impl-slice judgment"
+  alternative is rejected by D-10), §11 AC-14 (now unconditional
+  per D-10).
 
 ## 13. Out of scope (deferred to other Phase-6 slices)
 
