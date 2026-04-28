@@ -324,9 +324,15 @@ async def test_lesson_fixtures_module_deleted():
         f"lesson_fixtures.py still on disk at {fixtures_path}"
     )
 
+    # Slice 6.4.5 restored `app/data/__init__.py` as an empty package marker
+    # so `app.data` resolves for `pkg_resources` / `importlib.resources`
+    # discovery in `seed_lessons_service.py` (spec phase-6/05 §4.5).
     init_path = os.path.join(repo_app, "data", "__init__.py")
-    assert not os.path.exists(init_path), (
-        f"app/data/__init__.py still on disk at {init_path}"
+    assert os.path.exists(init_path), (
+        f"app/data/__init__.py expected (restored in slice 6.4.5) at {init_path}"
+    )
+    assert os.path.getsize(init_path) == 0, (
+        f"app/data/__init__.py expected to be empty per spec §4.5; got non-empty file"
     )
 
     # No remaining `lesson_fixtures` imports under app/.
