@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.5: Read-Time Service-Layer Invariants (FSRS-progress writes + lesson/quiz_item lifecycle filters)
 
-## Status: Drafted, not shipped — §12 amended at `<this-slice>` locking D-1..D-9 from §14 OQ-1..OQ-9; impl row filed at `B-072` 🔴
+## Status: Drafted, not shipped — §12 amended at `acba7ed` locking D-1..D-9 from §14 OQ-1..OQ-9; impl row filed at `B-072` 🔴
 
 | Field | Value |
 |-------|-------|
@@ -8,7 +8,7 @@
 | Slice | 6.5 — read-time service-layer invariants |
 | Mode | 4 (spec-author) |
 | Author HEAD | `688d178` (post-slice-6.4.5 implementation SHA backfill) |
-| Spec authored | 2026-04-28 (§12 amendment 2026-04-28 at `<this-slice>`) |
+| Spec authored | 2026-04-28 (§12 amendment 2026-04-28 at `acba7ed`) |
 | Implementation slice | TBD (one-step follow-up to this spec). Will file `B-072` close-line. |
 | BACKLOG row | `B-072` filed at status 🔴 by this spec slice for the future implementation slice (per R15(c) + R17). |
 | Audit dependency | `docs/audits/phase-6-scout.md` slice-by-slice 6.5 entry + cross-cutting #3 (slice 6.1 dependency) — anchored to the on-disk service shape at the time of the Step 0 audit (slice 6.2 `quiz_item_study_service` shipped, slice 6.4b-1 `lesson_service` body-swap shipped, slice 6.4b-1 `quiz_item_admin_service` shipped, slice 6.4 D-19 persona-narrowing punt). |
@@ -824,7 +824,7 @@ The implementation slice (one-step follow-up) must pass:
 
 ## 12. Decisions
 
-> §14 OQ-1..OQ-9 all RESOLVED at spec amendment `<this-slice>` —
+> §14 OQ-1..OQ-9 all RESOLVED at spec amendment `acba7ed` —
 > locked into §12 as D-1..D-9 below, mirroring slice 6.0 §12
 > amendment (`e8eecdd`) + slice 6.4.5 §12 amendment (`df58eaf`)
 > precedent. Locks honor the §14 author hints verbatim where on-
@@ -1031,7 +1031,7 @@ Explicit list:
 
 ## 14. Open questions
 
-> **OQ-1..OQ-9 all RESOLVED at spec amendment `<this-slice>`** —
+> **OQ-1..OQ-9 all RESOLVED at spec amendment `acba7ed`** —
 > locked into §12 as D-1..D-9 respectively. OQ headings + question
 > text retained verbatim below for forward-readability; the
 > resolution line cites the §12 D-N decision that closes each one.
@@ -1052,7 +1052,7 @@ already on disk; the question is whether the formal contract pins
 slice 6.2 §AC-5 ships 403 on the review path for archived-deck —
 amend or accept the asymmetry?
 
-**RESOLVED** — see §12 **D-1** (`<this-slice>`): accept the
+**RESOLVED** — see §12 **D-1** (`acba7ed`): accept the
 asymmetry. lesson_service paths return 404; review path R-2
 retains 403 per slice 6.2 §AC-5 (privileged: caller already
 holds `quiz_item_id`). On-disk hint (a) [404 lesson_service] +
@@ -1087,7 +1087,7 @@ Learn-page composition" per scout Track C; tier gating is naturally
 visible there (paywall modal copy on the Learn page). But slice
 6.5's invariant table is structurally incomplete without A-7.
 
-**RESOLVED** — see §12 **D-2** (`<this-slice>`): split. Slice 6.5
+**RESOLVED** — see §12 **D-2** (`acba7ed`): split. Slice 6.5
 owns the server-side guarantee (read service layer raises 403 for
 free-user-on-premium-deck reads); slice 6.7 owns the user-facing
 paywall UX (Learn-page composition, paywall modal copy). §4.3 A-7
@@ -1099,7 +1099,7 @@ is unconditional.
 A-6 needs to apply to all four lesson_service read paths PLUS
 the two quiz_item_study_service paths, OR only to the LIST paths?
 
-**RESOLVED** — see §12 **D-3** (`<this-slice>`): all six paths
+**RESOLVED** — see §12 **D-3** (`acba7ed`): all six paths
 (R-1, R-2, R-4, R-5, R-6, R-7). Bookmarked `/learn/decks/{id}`
 URLs and stored `quiz_item_id`s must also receive 404, not just
 the LIST surface. Author hint (a) selected.
@@ -1110,7 +1110,7 @@ Single `tests/test_phase6_read_time_invariants.py` covering all
 seven read paths, OR split per service (`test_quiz_item_study_service_invariants.py`
 + `test_lesson_service_invariants.py`)?
 
-**RESOLVED** — see §12 **D-4** (`<this-slice>`): split per service.
+**RESOLVED** — see §12 **D-4** (`acba7ed`): split per service.
 Co-located with existing per-service test files; easier per-service
 regression triage. Author hint (b) selected.
 
@@ -1123,7 +1123,7 @@ private duplicate, (b) new shared `app/services/curriculum_visibility.py`,
 has a private `_PERSONA_EXPANSION` dict (lines 28-33) — possible
 third on-disk consumer.
 
-**RESOLVED** — see §12 **D-5** (`<this-slice>`): private duplicate
+**RESOLVED** — see §12 **D-5** (`acba7ed`): private duplicate
 in `lesson_service.py` + duplicated into `quiz_item_study_service.py`,
 with an **escape hatch** for the impl prompt to lift to a shared
 `app/services/curriculum_visibility.py` if the third on-disk
@@ -1140,7 +1140,7 @@ retire-and-replace. Both paths set `retired_at IS NOT NULL` + may
 set `superseded_by_id`. Does slice 6.5 read-time treatment depend
 on which retire path produced the row?
 
-**RESOLVED** — see §12 **D-6** (`<this-slice>`): identical. Both
+**RESOLVED** — see §12 **D-6** (`acba7ed`): identical. Both
 paths set `retired_at`; `superseded_by_id` is admin-authoring
 metadata, not a read-path discriminator. The
 `QuizItem.retired_at.is_(None)` filter applies uniformly. Author
@@ -1154,7 +1154,7 @@ discriminator (asymmetric across read paths), or (b) introduce a
 new `QuizItemNotVisibleError` (404) for the review path
 specifically (symmetric: 404 across all read paths).
 
-**RESOLVED** — see §12 **D-7** (`<this-slice>`): 404 across all
+**RESOLVED** — see §12 **D-7** (`acba7ed`): 404 across all
 read paths via a new `QuizItemNotVisibleError` exception class on
 the review path; lesson_service paths continue returning `None` →
 404. Author hint (b) selected. Slightly violates §2 G-4 ("zero
@@ -1166,7 +1166,7 @@ Should slice 6.5 emit a `paywall_blocked_at_read` (or similar)
 event when a free user hits a premium deck read, or when a
 persona-narrowed user hits a now-excluded deck?
 
-**RESOLVED** — see §12 **D-8** (`<this-slice>`): NO new PostHog
+**RESOLVED** — see §12 **D-8** (`acba7ed`): NO new PostHog
 event this slice. Slice 6.7 owns paywall telemetry; rejection
 paths emit stdlib `logger.info("read_time_invariant_violation",
 …)` for ops observability only. Author hint (b) selected.
@@ -1179,7 +1179,7 @@ the aggregate. Should slice 6.5 codify this as a positive
 invariant ("aggregation is filter-free") with a regression test,
 or leave it as a §3 non-goal only?
 
-**RESOLVED** — see §12 **D-9** (`<this-slice>`): codify as a
+**RESOLVED** — see §12 **D-9** (`acba7ed`): codify as a
 positive invariant. The impl slice ships one anti-regression test
 asserting orphan progress rows ARE counted in `total_reps` /
 `total_lapses` / `by_state`. Future slice 6.16 retention dashboard
@@ -1197,7 +1197,7 @@ invariant.
 ---
 
 *End of slice 6.5 spec. Authored 2026-04-28 at HEAD `688d178`.
-§12 amended 2026-04-28 at `<this-slice>` locking D-1..D-9 from
+§12 amended 2026-04-28 at `acba7ed` locking D-1..D-9 from
 §14 OQ-1..OQ-9. Audit basis: live `app/services/{quiz_item_study_service,
 lesson_service,quiz_item_admin_service,deck_admin_service,
 lesson_admin_service}.py` shapes at HEAD; spec basis
