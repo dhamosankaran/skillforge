@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.0: Analytics Tables Foundation (`quiz_review_events`, `lesson_view_events`)
 
-## Status: Drafted, not shipped — §12 D-1..D-10 locked at amendment `<this-slice>` (OQ-1..OQ-4 closed; see §14 RESOLVED markers)
+## Status: Drafted, not shipped — §12 D-1..D-10 locked at amendment `e8eecdd` (OQ-1..OQ-4 closed; see §14 RESOLVED markers)
 
 | Field | Value |
 |-------|-------|
@@ -52,7 +52,7 @@ path means slice 6.0's lesson view dual-write requires a new BE write
 route — `POST /api/v1/lessons/:id/view-event` — that the FE calls
 alongside its existing PostHog `capture()`. See §6 + §12 D-4 + §12 D-10
 for the locked pattern (path (a) — confirmed at amendment
-`<this-slice>`).
+`e8eecdd`).
 
 This spec defines the two events tables (`quiz_review_events`,
 `lesson_view_events`) at column granularity, the new
@@ -782,7 +782,7 @@ Explicit list:
 ## 14. Open questions
 
 > **OQ-1 / OQ-2 / OQ-3 / OQ-4 all RESOLVED at spec amendment
-> `<this-slice>`** — locked into §12 as D-7 / D-8 / D-9 / D-10
+> `e8eecdd`** — locked into §12 as D-7 / D-8 / D-9 / D-10
 > respectively. OQ headings + question text retained verbatim below
 > for forward-readability; the resolution line cites the §12 D-N
 > decision that closes each one. Mirrors slice 6.4 §14 OQ-2..OQ-6
@@ -793,7 +793,7 @@ Explicit list:
 If Postgres write succeeds but PostHog fails (or vice versa), what's
 the right behavior?
 
-**RESOLVED** — see §12 **D-7** (`<this-slice>`): best-effort both
+**RESOLVED** — see §12 **D-7** (`e8eecdd`): best-effort both
 writes. `analytics_event_service.write_*` wraps the Postgres INSERT
 in `try/except SQLAlchemyError` + `logger.exception(...)`; the
 calling site (`review_quiz_item` lines 438-451 + the new lesson
@@ -807,7 +807,7 @@ Should `quiz_review_events` denormalize fields like `lesson_id`
 (joinable via `quiz_item.lesson_id`) and `deck_id` (joinable via
 `lesson.deck_id`) for query speed, or stay strictly normalized?
 
-**RESOLVED** — see §12 **D-8** (`<this-slice>`): denormalize
+**RESOLVED** — see §12 **D-8** (`e8eecdd`): denormalize
 `lesson_id` + `deck_id` on `quiz_review_events`; denormalize
 `deck_id` on `lesson_view_events`. Stability lock derives from
 slice 6.4 D-17 (lesson IDs immutable on substantive edits — only
@@ -818,7 +818,7 @@ version bumps); §4.1 / §4.2 indexes retained as authored.
 These tables grow unbounded. A power user reviewing 50 quiz_items/day
 generates ~18k rows/year per user. Do we lock retention now or defer?
 
-**RESOLVED** — see §12 **D-9** (`<this-slice>`): out of scope this
+**RESOLVED** — see §12 **D-9** (`e8eecdd`): out of scope this
 slice. Append-only invariant per §4.4 + AC-10 is the only durability
 constraint. A future "Phase 6 6.x — analytics-table retention"
 slice owns purge cadence + GDPR right-to-erasure cascade beyond
@@ -836,7 +836,7 @@ is no BE service-layer site to dual-write at. The prompt's framing
 on event emission alongside the existing PostHog calls") doesn't
 match disk — `lesson_service.py` does not emit `lesson_viewed`.
 
-**RESOLVED** — see §12 **D-10** (`<this-slice>`): path (a) — thin
+**RESOLVED** — see §12 **D-10** (`e8eecdd`): path (a) — thin
 BE write route (`POST /api/v1/lessons/:lesson_id/view-event` per
 §6.3) + FE caller (`recordLessonView()` per §6.4) alongside the
 existing FE `capture('lesson_viewed')`. Both fire on the same
