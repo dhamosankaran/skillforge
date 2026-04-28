@@ -435,7 +435,7 @@ source-of-truth.
   drift-archive cut rule (30-row threshold, append-only
   `docs/drift-archive.md`). R14 exception (b) — pure SOP codification,
   no design surface, no tests run. Reference: B-073 cohort item 2
-  (closed by `<this-slice>`).
+  (closed by `b468025`).
 - 2026-04-26: R18 (filed by B-039 on 2026-04-25) merged into R15(c).
   R3 "Push-back rule" renamed to R19 to resolve ID collision with R3
   "Never skip auth". Added Chat-Claude ↔ CC Handoff section (H1–H4)
