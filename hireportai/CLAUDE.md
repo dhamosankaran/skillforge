@@ -38,6 +38,31 @@ skill clearly applies, note as a skill-inventory gap in your output. This
 step is NOT exempted by slice weight — bookkeeping and docs slices run it
 too.
 
+*Skill-gap close-loop* (added 2026-04-28 for B-073 cohort item 2): if your
+final-report draft is going to mention a skill-inventory gap (a missing
+skill that would have shortened audit time), check whether the same gap
+has been flagged before:
+
+- `rg -l "skill-inventory gap" SESSION-STATE.md` → read the matching
+  Recently Completed entries from the last 5 (newest-first).
+- If the same skill name appears as a gap-flag in any of those entries,
+  this is flag #2+. Auto-file a BACKLOG row at status 🟦 in the same
+  commit as the slice's other BACKLOG operations (R15 close-line, etc.).
+  Use the next-free ID per R17 watermark.
+- If the skill name is NOT in the last-5 entries, this is flag #1. Note
+  in final report only. No row file.
+
+The 🟦 status means parked, not blocking. Chat-Claude triages activation
+per existing cohort discipline.
+
+Why: per B-073 origin, `backend.md` was flagged 5 times before resolution
+(slices 6.0 / 6.4.5 / B-070 regen / B-072 prompt-draft / B-072 impl). Five
+flags is four too many. The auto-file at flag #2 caps unresolved gap-life
+at one slice cycle. False negatives (gap flagged 6+ slices ago) are
+acceptable — the search bound is "last 5", not "all history", to keep
+SOP-4 cheap. False positives (re-surfacing a stale gap) are bounded by
+🟦 status — non-blocking, chat-Claude can decline to activate.
+
 **SOP-5 Spec reads.** Read every spec the prompt cites by number. If the
 prompt cites a spec without giving the file path, find it via
 `ls docs/specs/phase-*/ | grep ^NN-`. Spec citation without a spec read is
@@ -170,6 +195,30 @@ with status 🔴 and any gating notes. Pre-amend SHAs are acceptable
 (findable via `git log --all`). Closure happens in the implementation
 commit, not a separate slice. If any ID can't be confirmed, STOP and
 ask. Non-optional. (Formerly R18; merged into R15(c) on 2026-04-26.)
+
+(d) BACKLOG row note budget (added 2026-04-28 for B-073 cohort item 2):
+`BACKLOG.md` rows are an index, not a slice log. Row notes follow this
+shape:
+
+- *Closed rows*: `Closed <date> by <sha>. <one-line why this matters>.`
+  Examples that hold this shape: B-061, B-062, B-063.
+- *Forward-filed rows* ("scope when picked up"): bullet what +
+  dependencies + `see spec <path>` if the spec exists. DO NOT inline
+  scope detail that belongs in the spec body.
+
+Backstops (soft, R19-trigger if exceeded):
+
+- Closed row notes: ~200 words.
+- Forward-filed row notes: ~300 words.
+
+Slice details (file inventory, JCs, drift surfacing, R-rule fires, audit
+findings, working-tree state, SOP gates) live in `SESSION-STATE.md`
+Recently Completed, NOT in the BACKLOG row. The BACKLOG row points at
+the slice's commit SHA; SESSION-STATE owns the narrative.
+
+This rule applies to NEW rows from this slice forward. Pre-existing
+sprawling rows are NOT retroactively edited (would churn git history for
+zero functional gain). They stay as-is until naturally touched.
 
 **R16 Audit-scoped step 1**: Every implementation prompt's step 1 must be
 an audit calibrated to the blast radius of the change. Minimum scope by
@@ -318,6 +367,34 @@ does not need to write to `SESSION-STATE.md`, leave it untouched and
 surface the concurrent edit as a drift flag in the final report.
 Reference: D-019, D-022 class incidents.
 
+## Long-lived file maintenance
+
+**Drift-archive cut rule** (added 2026-04-28 for B-073 cohort item 2):
+`SESSION-STATE.md` `## Drift flags` table cuts ✅ RESOLVED rows to
+`docs/drift-archive.md` when the active table reaches 30 rows.
+
+Mechanism:
+
+- At end of any slice, count rows in `SESSION-STATE.md` `## Drift flags`
+  table. If count ≥ 30, cut all ✅ RESOLVED rows (status starts with
+  `✅ RESOLVED`) to `docs/drift-archive.md`, appending under a new
+  dated heading `## Cut <YYYY-MM-DD> from <slice-SHA>`.
+- Active rows (🟡 PARTIAL / 🟡 PENDING / 🟡 OPEN) stay in
+  `SESSION-STATE.md`.
+- The cut runs as part of the closing slice's commit (NOT a separate
+  slice).
+
+Archive file shape:
+
+- Top of file: one-paragraph header explaining what it is.
+- Each cut: `## Cut <date> from <SHA>` heading + the rows verbatim
+  (preserve table format).
+- Append-only. No re-shaping, no de-duplication, no re-ordering.
+
+False positives (cut a row that turned out to be relevant): re-fetch
+from git history. Archive is a denormalization for scannability, not a
+source-of-truth.
+
 ## How to Add a Feature
 1. Check spec exists in `docs/specs/`
 2. Create/update backend models in `app/models/`
@@ -351,6 +428,14 @@ Reference: D-019, D-022 class incidents.
 - DB URL: `postgresql+asyncpg://hireport:dev_password@localhost:5432/hireport`
 
 ## Revision history
+- 2026-04-28: Added R15(d) BACKLOG row note budget (close/forward-filed
+  shape + ~200/~300-word backstops). Appended SOP-4 skill-gap
+  close-loop (auto-file 🟦 on flag #2 within last-5 Recently Completed
+  entries). Added "Long-lived file maintenance" section with the
+  drift-archive cut rule (30-row threshold, append-only
+  `docs/drift-archive.md`). R14 exception (b) — pure SOP codification,
+  no design surface, no tests run. Reference: B-073 cohort item 2
+  (closed by `<this-slice>`).
 - 2026-04-26: R18 (filed by B-039 on 2026-04-25) merged into R15(c).
   R3 "Push-back rule" renamed to R19 to resolve ID collision with R3
   "Never skip auth". Added Chat-Claude ↔ CC Handoff section (H1–H4)
