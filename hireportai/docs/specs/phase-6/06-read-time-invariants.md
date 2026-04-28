@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.5: Read-Time Service-Layer Invariants (FSRS-progress writes + lesson/quiz_item lifecycle filters)
 
-## Status: Drafted, not shipped — impl row filed at `B-072` 🔴
+## Status: Drafted, not shipped — §12 amended at `<this-slice>` locking D-1..D-9 from §14 OQ-1..OQ-9; impl row filed at `B-072` 🔴
 
 | Field | Value |
 |-------|-------|
@@ -8,7 +8,7 @@
 | Slice | 6.5 — read-time service-layer invariants |
 | Mode | 4 (spec-author) |
 | Author HEAD | `688d178` (post-slice-6.4.5 implementation SHA backfill) |
-| Spec authored | 2026-04-28 |
+| Spec authored | 2026-04-28 (§12 amendment 2026-04-28 at `<this-slice>`) |
 | Implementation slice | TBD (one-step follow-up to this spec). Will file `B-072` close-line. |
 | BACKLOG row | `B-072` filed at status 🔴 by this spec slice for the future implementation slice (per R15(c) + R17). |
 | Audit dependency | `docs/audits/phase-6-scout.md` slice-by-slice 6.5 entry + cross-cutting #3 (slice 6.1 dependency) — anchored to the on-disk service shape at the time of the Step 0 audit (slice 6.2 `quiz_item_study_service` shipped, slice 6.4b-1 `lesson_service` body-swap shipped, slice 6.4b-1 `quiz_item_admin_service` shipped, slice 6.4 D-19 persona-narrowing punt). |
@@ -98,8 +98,8 @@ they can no longer see.
 
 The tier-vs-paywall axis (`Deck.tier='premium'` AND user plan free
 → 403 / paywall surface) is the seam between slice 6.5 (server-side
-guarantee) and slice 6.7 (visible UX paywall composition); see §14
-OQ-2.
+guarantee) and slice 6.7 (visible UX paywall composition); locked
+at §12 **D-2**.
 
 Without slice 6.5, the invariants live in code comments, individual
 slice-spec footnotes, and the `quiz_item_admin_service` module
@@ -120,9 +120,9 @@ This slice ships that source of truth.
    in-depth gap); (b) every read path lacks persona-visibility
    filtering (closes slice 6.4 D-19 read-side punt); (c) tier-vs-
    plan filtering is missing across the lesson_service surface
-   (slice 6.7 vs 6.5 ownership — surfaced as §14 OQ-2). Goals (a)
-   and (b) are in scope unconditionally; (c) is in scope iff §14
-   OQ-2 disposes "slice 6.5 owns the server-side guarantee."
+   (slice 6.7 vs 6.5 ownership — locked at §12 **D-2**: slice 6.5
+   owns the server-side guarantee). Goals (a), (b), and (c) are
+   all in scope unconditionally per D-2 disposition.
 3. **Regression tests for every §4 row** — one (positive, negative)
    pair per invariant cell; estimated +15 to +25 BE tests per §10.
 4. **Zero new domain errors / zero new HTTP status codes.** Reuse
@@ -132,8 +132,8 @@ This slice ships that source of truth.
    filter-violation paths surface via existing error classes.
 5. **Zero new endpoints, zero schema changes, zero migrations.**
    Service-layer hardening only; route surface is unchanged. (This
-   slice MAY add a private query helper to `lesson_service` per
-   §14 OQ-5; that is a service-internal refactor, not a route or
+   slice adds a private query helper to `lesson_service` per
+   §12 **D-5**; that is a service-internal refactor, not a route or
    schema addition.)
 
 ## 3. Non-goals
@@ -150,25 +150,25 @@ This slice ships that source of truth.
   is intentionally counter-of-rows (per §1 audit). Rows whose
   `quiz_item.retired_at IS NOT NULL` or whose `lesson.archived_at IS
   NOT NULL` are still counted in the user's `total_reps` / `lapses`
-  — preserving the per-user FSRS-history retention surface. See §14
-  OQ-9 if this read-side aggregate is later considered for an
-  invariant.
+  — preserving the per-user FSRS-history retention surface. Locked
+  as a positive invariant at §12 **D-9** with one anti-regression
+  test per §10.2.
 - **Tier-paywall UX surface.** Slice 6.7 owns the paywall modal
   copy + "upgrade to access" composition on the Learn page. Slice
-  6.5 owns at most the **server-side** 403 (free-user-on-premium-
-  deck → read service layer raises) per §14 OQ-2 disposition.
+  6.5 owns the **server-side** 403 (free-user-on-premium-deck →
+  read service layer raises) per §12 **D-2**.
 - **FSRS-history backfill on cascade-retired quiz_items.** Cascade-
   retired (slice 6.4 §7.3) and direct-retired (slice 6.4b-1
   `retire_quiz_item`) quiz_items both end up with `retired_at IS
   NOT NULL`; slice 6.5 enforces "FSRS state preserved on retired
   rows" but does NOT backfill historical reviews onto cascade
-  victims. (Per §14 OQ-6, both retirement paths get identical
+  victims. (Per §12 **D-6**, both retirement paths get identical
   read-time treatment.)
 - **Admin audit log of read-time invariant violations.** A free
   user who hits a 403 on a premium deck does not generate a row in
   `admin_audit_log`. Standard request logs (`logger.info`) are the
   surface; PostHog tracking of paywall-blocked-at-read is a slice
-  6.7 concern (see §14 OQ-8).
+  6.7 concern (locked at §12 **D-8**).
 - **Cross-deck invariants** ("user can't have progress on quiz_items
   from decks they've never been able to see"). Out of scope; this
   slice enforces per-request, per-path read-time invariants only.
@@ -192,9 +192,8 @@ This slice ships that source of truth.
   that handle today's archived-lesson 404).
 - **Telemetry on filter-violation rejection paths.** A `logger.info`
   on each rejection is acceptable and recommended for ops
-  observability, but no new PostHog events. (See §14 OQ-8 author
-  hint = NO new event this slice; slice 6.7 owns paywall
-  telemetry.)
+  observability, but no new PostHog events. (Locked at §12 **D-8**
+  — NO new event this slice; slice 6.7 owns paywall telemetry.)
 
 ## 4. Read-Time Invariant Table
 
@@ -226,19 +225,19 @@ does not apply" / "vacuously not applicable" for a given read path:
 
 | Axis | Predicate | Target outcome on violation |
 |------|-----------|------------------------------|
-| **A-1 deck archived** | `Deck.archived_at IS NOT NULL` | 404 (treat as nonexistent — see §14 OQ-1 author hint) |
+| **A-1 deck archived** | `Deck.archived_at IS NOT NULL` | 404 (treat as nonexistent — locked at §12 **D-1** for lesson_service paths; review path R-2 retains 403 per slice 6.2 §AC-5 — accepted asymmetry) |
 | **A-2 lesson archived** | `Lesson.archived_at IS NOT NULL` | 404 |
 | **A-3 lesson draft** | `Lesson.published_at IS NULL` | 404 (non-admin reader paths only; admin paths excluded per §3) |
 | **A-4 quiz_item retired (no existing progress)** | `QuizItem.retired_at IS NOT NULL AND no row in quiz_item_progress for (user, quiz_item)` | 409 (`QuizItemRetiredError` per slice 6.2 contract) |
 | **A-5 quiz_item retired (existing progress)** | `QuizItem.retired_at IS NOT NULL AND quiz_item_progress row exists for (user, quiz_item)` | **PERMITTED** — FSRS history preservation per slice 6.2 §4.6 D-4 |
-| **A-6 persona-visibility mismatch** | `Deck.persona_visibility ∉ user's persona expansion set` (mirrors `deck_admin_service._persona_set` semantics — `'both'` ⊇ `{'climber', 'interview_prepper'}`) | 404 — closes slice 6.4 D-19 read-side punt; per §14 OQ-3 / OQ-7 author hints |
-| **A-7 tier-vs-plan** | `Deck.tier == 'premium' AND user plan == 'free'` | 403 (server-side guarantee) — **conditional on §14 OQ-2 disposition** |
+| **A-6 persona-visibility mismatch** | `Deck.persona_visibility ∉ user's persona expansion set` (mirrors `deck_admin_service._persona_set` semantics — `'both'` ⊇ `{'climber', 'interview_prepper'}`) | 404 — closes slice 6.4 D-19 read-side punt; locked at §12 **D-3** + **D-7** |
+| **A-7 tier-vs-plan** | `Deck.tier == 'premium' AND user plan == 'free'` | 403 (server-side guarantee) — locked at §12 **D-2** |
 
 > **A-1 vs A-6 status-code rationale.** Both surface as 404 (not 403)
 > on the rationale that information leakage about deck existence is
 > the correct conservative default. A user in an excluded persona
 > should be indistinguishable from a user pointing at a nonexistent
-> deck ID. See §14 OQ-1 / OQ-7.
+> deck ID. Locked at §12 **D-1** + **D-7**.
 >
 > **A-7 status-code rationale.** Tier mismatch is fundamentally
 > different — the deck exists, the user *can* access it post-upgrade,
@@ -251,17 +250,19 @@ does not apply" / "vacuously not applicable" for a given read path:
 > **Legend.** `✓` = filter currently applies on disk (slice 6.2 /
 > 6.4b-1 already ships it); `✗` = filter is missing on disk and
 > slice 6.5 adds it; `n/a` = axis vacuously not applicable to this
-> read path; `OQ-2` = conditional on the §14 OQ-2 disposition.
+> read path. (`OQ-2`-conditional cells from the spec-author draft
+> are now unconditional `✗ → ADD` per §12 **D-2** lock; the table
+> below reflects the locked state.)
 
 | Path | A-1 deck archived | A-2 lesson archived | A-3 lesson draft | A-4 retired (no progress) | A-5 retired (with progress) | A-6 persona-visibility | A-7 tier-vs-plan |
 |------|-------------------|---------------------|------------------|----------------------------|------------------------------|--------------------------|------------------|
-| R-1 `get_daily_quiz_items` | ✓ (both passes) | ✓ (both passes) | n/a (queue-fill ignores `published_at`) ¹ | ✓ (excluded from fresh-fill) | n/a (queue does not surface progress rows the user owns at retired quiz_items — they are non-`new`-state and pass-1 filters retired) | ✗ → ADD | OQ-2 |
-| R-2 `review_quiz_item` | ✓ (raises 403 — see §14 OQ-1a JC) | ✓ (raises 403 — see §14 OQ-1a JC) | n/a (review path operates on a `quiz_item_id` regardless of lesson `published_at`) ² | ✓ (raises 409) | ✓ (PERMITTED — preserves FSRS history) | ✗ → ADD (raises 404) | OQ-2 (raises 403) |
-| R-3 `get_quiz_progress` | n/a (per §3 non-goal — analytics aggregate) | n/a (idem) | n/a | n/a | n/a (preserved for retention) | n/a (idem — see §14 OQ-9) | n/a |
-| R-4 `get_lesson_with_quizzes` | ✓ (post-load via `lesson.deck.archived_at`) | ✓ | ✓ (filters `published_at IS NOT NULL`) | n/a (selectinload filters retired quiz_items so they don't appear in the bundle's `quiz_items` list) | n/a (idem; the user's progress row is irrelevant to the read shape) | ✗ → ADD | OQ-2 |
-| R-5 `get_deck_with_meta` | ✓ | n/a (deck-only) | n/a (deck-only) | n/a (deck-only) | n/a (deck-only) | ✗ → ADD | OQ-2 |
-| R-6 `list_lessons_in_deck` | ✗ → ADD ³ | ✓ | ✓ | n/a (lessons-only) | n/a (lessons-only) | ✗ → ADD ⁴ | OQ-2 |
-| R-7 `get_deck_lessons_bundle` | ✓ (via `get_deck_with_meta`) | ✓ (via `list_lessons_in_deck`) | ✓ (via `list_lessons_in_deck`) | n/a | n/a | ✗ → ADD (via R-5 + R-6) | OQ-2 (via R-5 + R-6) |
+| R-1 `get_daily_quiz_items` | ✓ (both passes) | ✓ (both passes) | n/a (queue-fill ignores `published_at`) ¹ | ✓ (excluded from fresh-fill) | n/a (queue does not surface progress rows the user owns at retired quiz_items — they are non-`new`-state and pass-1 filters retired) | ✗ → ADD | ✗ → ADD (per D-2) |
+| R-2 `review_quiz_item` | ✓ (raises 403 — D-1 asymmetry) | ✓ (raises 403 — D-1 asymmetry) | n/a (review path operates on a `quiz_item_id` regardless of lesson `published_at`) ² | ✓ (raises 409) | ✓ (PERMITTED — preserves FSRS history) | ✗ → ADD (raises 404 via new `QuizItemNotVisibleError` per D-7) | ✗ → ADD (raises 403 per D-2) |
+| R-3 `get_quiz_progress` | n/a (per §3 non-goal — analytics aggregate; locked filter-free per D-9) | n/a (idem per D-9) | n/a | n/a | n/a (preserved for retention) | n/a (idem per D-9) | n/a |
+| R-4 `get_lesson_with_quizzes` | ✓ (post-load via `lesson.deck.archived_at`) | ✓ | ✓ (filters `published_at IS NOT NULL`) | n/a (selectinload filters retired quiz_items so they don't appear in the bundle's `quiz_items` list) | n/a (idem; the user's progress row is irrelevant to the read shape) | ✗ → ADD | ✗ → ADD (per D-2) |
+| R-5 `get_deck_with_meta` | ✓ | n/a (deck-only) | n/a (deck-only) | n/a (deck-only) | n/a (deck-only) | ✗ → ADD | ✗ → ADD (per D-2) |
+| R-6 `list_lessons_in_deck` | ✗ → ADD ³ | ✓ | ✓ | n/a (lessons-only) | n/a (lessons-only) | ✗ → ADD ⁴ | ✗ → ADD (per D-2) |
+| R-7 `get_deck_lessons_bundle` | ✓ (via `get_deck_with_meta`) | ✓ (via `list_lessons_in_deck`) | ✓ (via `list_lessons_in_deck`) | n/a | n/a | ✗ → ADD (via R-5 + R-6) | ✗ → ADD (via R-5 + R-6 per D-2) |
 
 **Notes.**
 
@@ -276,7 +277,8 @@ does not apply" / "vacuously not applicable" for a given read path:
   read-side filtering. Slice 6.5 may codify A-3 on R-1 if the impl
   prompt finds a path where a draft lesson's quiz_item could leak
   (e.g. a developer-only seed direct-INSERT) — surfaced as §14
-  OQ-1c JC.
+  the still-OPEN OQ-1c (deferred from this amendment — not in the
+  prompt's lock list).
 - **²** R-2 ignores `published_at` for the same reason as R-1.
   Locked by slice 6.2's review-path contract — the review service
   trusts `quiz_item_id` ownership and the admin-write-side has
@@ -304,7 +306,7 @@ predicate is non-trivial (the `_persona_set` expansion). The
 implementation slice adds:
 
 ```python
-# app/services/lesson_service.py (or new app/services/curriculum_visibility.py per OQ-5)
+# app/services/lesson_service.py (or new app/services/curriculum_visibility.py per §12 D-5 escape hatch)
 def _persona_visible_to(deck_persona: str, user_persona: Optional[str]) -> bool:
     """True iff a user with `user_persona` may see a deck with
     `persona_visibility == deck_persona`. Mirrors deck_admin_service
@@ -354,30 +356,21 @@ existing classes:
 | Quiz_item retired without progress (R-2) | `QuizItemRetiredError` | 409 | slice 6.2 (existing) |
 | Quiz_item retired with progress (R-2) | NOT raised — review proceeds | 200 | slice 6.2 (existing — preserved) |
 | Lesson or deck archived (R-2) | `QuizItemForbiddenError` | 403 | slice 6.2 (existing) |
-| Persona-visibility mismatch (R-1, R-2, R-4, R-5, R-6, R-7) | mapping returns `None` from lesson_service / `QuizItemForbiddenError` from quiz_item_study_service | 404 (lesson_service surfaces) / 403 (quiz_item_study_service surfaces — but see §14 OQ-7 JC; author hint = 404 across the board for information-leakage-minimization, which would require quiz_item_study_service to raise a different exception or for the route layer to map per detail) | reuse existing |
-| Tier-vs-plan mismatch (conditional on OQ-2) | reuse `QuizItemForbiddenError` (403 with `detail.trigger='premium_deck'`) — **OQ-2 conditional** | 403 | reuse existing |
+| Persona-visibility mismatch (R-1, R-2, R-4, R-5, R-6, R-7) | mapping returns `None` from lesson_service / new `QuizItemNotVisibleError` from quiz_item_study_service review path | 404 across the board (per §12 **D-7**) — symmetric for information-leakage minimization | new `QuizItemNotVisibleError` class added per D-7 |
+| Tier-vs-plan mismatch (locked at §12 **D-2**) | reuse `QuizItemForbiddenError` (403 with `detail.trigger='premium_deck'`) — slice 6.5 owns server-side guarantee | 403 | reuse existing |
 
-> **Persona-visibility mapping subtlety (§14 OQ-7).** lesson_service
-> returns `None` (route → 404) on archive/draft/persona-mismatch —
-> this is consistent across all four invariant axes that surface via
-> lesson_service. quiz_item_study_service raises
-> `QuizItemForbiddenError` (403) for archived-lesson / archived-deck
-> per slice 6.2 §AC-5; the persona-mismatch case is in tension with
-> the prompt's author-hint preference for 404 across the board. Two
-> shapes the impl slice can choose:
->
-> - (a) Add a sentinel detail to `QuizItemForbiddenError` and have
->   the route layer translate `forbidden_reason='persona_visibility'`
->   to 404 — fragile, breaks the existing 1:1 exception/code map.
-> - (b) Introduce a new `QuizItemNotVisibleError` (404) for the
->   persona-visibility case only — adds a class but keeps the
->   exception/code map clean. Violates §2 G-4 ("zero new domain
->   errors") slightly; the impl prompt may judge this acceptable
->   given the surface area.
->
-> Both options surface in §14 OQ-7. Author hint is (b) — judged
-> worth a single new exception to keep the read-path 404 default
-> consistent with information-leakage minimization.
+> **Persona-visibility mapping subtlety (locked at §12 D-7).**
+> lesson_service returns `None` (route → 404) on
+> archive/draft/persona-mismatch — consistent across all four
+> invariant axes that surface via lesson_service. The review path
+> R-2 introduces a new `QuizItemNotVisibleError` (route → 404) for
+> the persona-mismatch case only; existing `QuizItemForbiddenError`
+> (403) is retained for archived-lesson / archived-deck per slice
+> 6.2 §AC-5 (D-1 asymmetry). The 1:1 exception/HTTP-code map stays
+> clean: each exception maps to exactly one HTTP code, with no
+> route-layer detail-discrimination. Violates §2 G-4 ("zero new
+> domain errors") by exactly one class — accepted at D-7 to keep
+> the persona-mismatch axis 404-symmetric across all read paths.
 
 The internal helper introduced by this slice (§4.4
 `_persona_visible_to`) is **not** a Pydantic schema; it is a pure-
@@ -426,9 +419,10 @@ matching the slice 6.4 D-19 read-side guarantee. Note: the
 `Depends(get_current_user)`, so `user is None` arises only in
 service-layer test paths that bypass the route — defensive default.
 
-If §14 OQ-2 disposes "slice 6.5 owns the tier guarantee," add
-`Deck.tier.in_(allowed_tiers_for_user(user))` alongside; otherwise
-the tier filter is OUT OF SCOPE for slice 6.5.
+Per §12 **D-2** lock (slice 6.5 owns server-side tier guarantee),
+add `Deck.tier.in_(allowed_tiers_for_user(user))` alongside the
+persona-visibility filter — both passes of the daily queue exclude
+premium decks for free users.
 
 #### 6.1.2 `review_quiz_item` — add A-6 persona filter (post-load)
 
@@ -457,26 +451,27 @@ if lesson.archived_at is not None or deck.archived_at is not None:
 
 # ← new: persona-visibility check
 if not _persona_visible_to(deck.persona_visibility, user.persona if user else None):
-    raise QuizItemNotVisibleError(quiz_item_id)   # OR see OQ-7
+    raise QuizItemNotVisibleError(quiz_item_id)   # new exception class per §12 D-7
 
 # (existing retired-quiz / progress-row / FSRS path follows)
 ```
 
-Per §14 OQ-7 author hint, raise a new `QuizItemNotVisibleError` (404)
-to keep the route map's 1:1 exception/code shape clean. Implementation
-slice may instead reuse `QuizItemForbiddenError` (403) with a
-`detail.reason='persona_visibility'` discriminator if the impl prompt
-disposes the JC differently.
+Per §12 **D-7** lock, raise a new `QuizItemNotVisibleError` (404)
+to keep the route map's 1:1 exception/code shape clean. The
+alternative (reuse `QuizItemForbiddenError` with detail
+discrimination) is rejected.
 
-If §14 OQ-2 disposes "slice 6.5 owns tier guarantee," add a tier
-check after the persona check (raising a 403 path; tier is the only
-axis that legitimately *should* be 403, not 404).
+Per §12 **D-2** lock (slice 6.5 owns server-side tier guarantee),
+add a tier check after the persona check — raises 403 (the only
+axis that legitimately *should* be 403, not 404; the deck exists
+and the user can access it post-upgrade).
 
 #### 6.1.3 `get_quiz_progress` — UNCHANGED
 
 Per §3 non-goal. The aggregate-stats endpoint preserves the
 slice-6.2 contract: count rows by `state`, no archive/retired/
-persona/tier filtering. Surface as §14 OQ-9 only.
+persona/tier filtering. Locked filter-free at §12 **D-9** with
+one anti-regression test per §10.2.
 
 ### 6.2 `app/services/lesson_service.py` — additive filters
 
@@ -487,11 +482,13 @@ their named persona.
 
 The implementation slice introduces ONE shared helper (§4.4
 `_persona_visible_to` and the `_visible_persona_set(user)` set
-expansion), private to `lesson_service.py` per §14 OQ-5 author
-hint (a). The helper is duplicated into `quiz_item_study_service.py`
-or extracted into a new `app/services/curriculum_visibility.py`
-shared module per the impl-prompt judgment if the impl finds the
-double-import awkward — both options are flagged at OQ-5.
+expansion), private to `lesson_service.py` per §12 **D-5**. The
+helper is duplicated into `quiz_item_study_service.py`; if the
+impl prompt judges the third on-disk consumer
+(`deck_admin_service._PERSONA_EXPANSION` lines 28-33) tips past
+the rule-of-three threshold, **D-5 escape hatch** lifts both
+helpers to a new shared `app/services/curriculum_visibility.py`
+public module.
 
 #### 6.2.1 `get_lesson_with_quizzes(lesson_id, db, *, user)` — signature change ⚠
 
@@ -585,41 +582,38 @@ through.
 
 ### 6.3 Helper extraction — `_persona_visible_to` + `_visible_persona_set`
 
-Per §14 OQ-5 author hint (a) — keep both private to
-`lesson_service.py` initially; copy `_persona_visible_to` into
+Per §12 **D-5** lock — keep both private to `lesson_service.py`;
+copy `_persona_visible_to` + `_visible_persona_set` into
 `quiz_item_study_service.py` (small enough to duplicate; ~5 LOC).
-If the impl slice judges the duplication painful (e.g. the
-`_PERSONA_EXPANSION` dict in `deck_admin_service.py` has now drifted
-from a duplicate in either service), promote to a new
+**Escape hatch:** if the impl slice judges the third on-disk
+consumer (`deck_admin_service._PERSONA_EXPANSION` lines 28-33)
+tips past the rule-of-three threshold, promote to a new
 `app/services/curriculum_visibility.py` module with two public
-helpers and one shared `_PERSONA_EXPANSION` dict. Surfaced as a JC
-candidate.
+helpers and one shared `_PERSONA_EXPANSION` dict. Document the
+choice in the impl slice's final-report JC line.
 
 ### 6.4 Route layer — exception-to-HTTP mapping
 
 Existing routes at `app/api/v1/routes/lessons.py`,
 `app/api/v1/routes/quiz_items.py` already map slice-6.2 / slice-6.4b-1
 exceptions to HTTP codes via `HTTPException(status_code=…,
-detail=str(exc))`. Slice 6.5 ADDS one mapping at most (per §14 OQ-7
-disposition):
+detail=str(exc))`. Slice 6.5 ADDS exactly one mapping per §12
+**D-7**: the new `QuizItemNotVisibleError` → route maps to 404.
+The alternative (reuse `QuizItemForbiddenError` with detail
+discrimination) is rejected by D-7.
 
-- If a new `QuizItemNotVisibleError` is introduced (OQ-7 author hint
-  (b)) → route maps to 404.
-- If existing `QuizItemForbiddenError` is reused (OQ-7 alternative
-  (a)) → no route-layer change; the 403 surface is reused (with a
-  caveat that the route's HTTP code no longer matches the
-  information-leakage-minimization preference).
-
-If §14 OQ-2 disposes "slice 6.5 owns tier guarantee" → existing
-`QuizItemForbiddenError` (or a new `QuizItemTierError`) is mapped to
-403 with `detail.trigger='premium_deck'`. Surfaced as JC.
+Per §12 **D-2** lock: existing `QuizItemForbiddenError` (or a new
+`QuizItemTierError` per impl-slice judgment) is mapped to 403 with
+`detail.trigger='premium_deck'` for free-user-on-premium-deck reads.
+Implementation-slice JC: pick between exception-class reuse vs new
+`QuizItemTierError` for the tier rejection path.
 
 ### 6.5 No new HTTP routes, no new admin surface, no new schemas
 
 Service-layer hardening only. All existing route handler files
 (`lessons.py`, `quiz_items.py`, `decks.py`) require either no
 change (if no new exception is added) or a single mapping line
-(if `QuizItemNotVisibleError` lands per OQ-7).
+(`QuizItemNotVisibleError` lands per §12 **D-7**).
 
 ## 7. Migration
 
@@ -649,7 +643,7 @@ The seven service-layer reads surface through routes consumed by:
 After slice 6.5 ships, these consumers see **the same response
 shapes** as today; the only behavioral change is that some 200
 responses become 404 (persona/archive mismatch) or 403 (tier
-mismatch — conditional on OQ-2). Existing FE error-handling
+mismatch per §12 **D-2**). Existing FE error-handling
 patterns (which already handle `archived_lesson` 404 from slice
 6.4b-1 paths) absorb the new 404 paths transparently. The FE does
 NOT need a new error-class branch.
@@ -679,7 +673,7 @@ logger.info(
 )
 ```
 
-These are NOT PostHog events. Per §14 OQ-8 author hint (b), the
+These are NOT PostHog events. Per §12 **D-8** lock, the
 paywall-blocked-at-read PostHog event (if any) belongs to slice 6.7
 when the FE Learn-page composition surfaces the paywall.
 
@@ -691,8 +685,7 @@ when the FE Learn-page composition surfaces the paywall.
 > code is written in this spec slice. Test count delta target: **+15
 > to +25 BE, +0 FE** (FE has zero surface).
 
-Per §14 OQ-4 author hint (b), tests split per service across two
-files:
+Per §12 **D-4** lock, tests split per service across two files:
 
 ### 10.1 Backend — `tests/test_quiz_item_study_service_invariants.py` (~6-10 tests)
 
@@ -711,12 +704,11 @@ violation).
   same user; deck visibility `'both'`; assert included.
 - `test_get_daily_quiz_items_persona_null_user_sees_only_both` —
   `user.persona is None`; only `'both'` decks surface.
-- `test_review_quiz_item_persona_mismatch_raises_404_or_403` —
+- `test_review_quiz_item_persona_mismatch_raises_404` —
   user `persona='climber'`; quiz_item is in a deck with
-  `persona_visibility='interview_prepper'`. Assert raises
-  `QuizItemNotVisibleError` (per OQ-7 (b)) — or
-  `QuizItemForbiddenError` if (a) is chosen at impl. Test class is
-  parameterized at impl.
+  `persona_visibility='interview_prepper'`. Assert raises the new
+  `QuizItemNotVisibleError` (per §12 **D-7** lock — route maps to
+  404).
 - `test_review_quiz_item_persona_match_succeeds` — same shape but
   matching persona; 200.
 - `test_review_quiz_item_archived_deck_still_403` — regression on
@@ -726,9 +718,9 @@ violation).
 - `test_review_quiz_item_retired_with_progress_still_succeeds` —
   regression on slice 6.2 §AC-4 + §4.6 D-4; retired-with-existing-
   progress still permitted.
-- (Conditional on OQ-2 disposition) `test_review_quiz_item_premium_deck_free_user_403` —
-  `Deck.tier='premium'`, user plan free; raises 403. Skipped if
-  OQ-2 disposes "slice 6.7 owns."
+- (Per §12 **D-2** lock) `test_review_quiz_item_premium_deck_free_user_403` —
+  `Deck.tier='premium'`, user plan free; raises 403. Unconditional
+  per D-2.
 
 ### 10.2 Backend — `tests/test_lesson_service_invariants.py` (~9-15 tests)
 
@@ -758,11 +750,12 @@ explicit test even though it's not user-reachable today (slice
   composes via `get_deck_with_meta` rejection.
 - `test_get_deck_lessons_bundle_archived_deck_returns_none` —
   regression on slice 6.4b-1 deck-archive semantic via R-7.
-- (Conditional on OQ-2 disposition) `test_get_lesson_with_quizzes_premium_deck_free_user_returns_none_or_403` —
-  if 403, the route layer raises; if 404 / `None`, the same
-  information-leakage-minimization rationale as A-6 applies.
-  Test class is parameterized at impl.
-- (Conditional on OQ-9 — `get_quiz_progress` aggregation invariants)
+- (Per §12 **D-2** lock) `test_get_lesson_with_quizzes_premium_deck_free_user_returns_none_or_403` —
+  free user on a premium-tier deck; impl slice picks 403 raise vs
+  `None` → 404 per D-2 lesson_service surface judgment (default
+  leans toward 403 since tier is fundamentally distinguishable
+  from non-existence).
+- (Per §12 **D-9** lock — `get_quiz_progress` filter-free positive invariant)
   `test_get_quiz_progress_counts_progress_on_archived_lessons` —
   pre-seeds a user with progress on a now-archived lesson; assert
   the row IS counted (per §3 non-goal). Anti-regression test for
@@ -794,11 +787,10 @@ The implementation slice (one-step follow-up) must pass:
   quiz_items in persona-narrowed decks for the requesting user
   on BOTH the overdue pass and the fresh-fill pass (test 10.1
   case 1).
-- **AC-5** — `quiz_item_study_service.review_quiz_item` raises a
-  domain error (`QuizItemNotVisibleError` per OQ-7 (b) author
-  hint, OR existing `QuizItemForbiddenError` per OQ-7 (a)) on
-  persona mismatch BEFORE touching any FSRS state or progress
-  row (no side-effect on rejection path).
+- **AC-5** — `quiz_item_study_service.review_quiz_item` raises
+  the new `QuizItemNotVisibleError` (per §12 **D-7**) on persona
+  mismatch BEFORE touching any FSRS state or progress row (no
+  side-effect on rejection path).
 - **AC-6** — `lesson_service.get_lesson_with_quizzes` returns
   `None` (route → 404) on persona mismatch.
 - **AC-7** — `lesson_service.get_deck_with_meta` returns `None`
@@ -821,25 +813,188 @@ The implementation slice (one-step follow-up) must pass:
 - **AC-13** — Test suite stays green (BE 577 → 577 + N where N is
   the §10 delta). New tests run under default `not integration`
   selector (no LLM keys required).
-- **AC-14** — Conditional on §14 OQ-2 disposition: if "slice 6.5
-  owns server-side tier guarantee," then a free user calling a
-  premium-deck read path receives 403 / 404 per the disposed
-  shape. If "slice 6.7 owns," then no AC-14.
+- **AC-14** — Per §12 **D-2** lock (slice 6.5 owns server-side
+  tier guarantee): a free user calling a premium-deck read path
+  on `quiz_item_study_service` (R-1 / R-2) receives 403; on
+  `lesson_service` (R-4 / R-5 / R-6 / R-7) receives 403 (or
+  `None` → 404 per impl-slice judgment, with the default leaning
+  toward 403 since tier mismatch is fundamentally different from
+  archive/persona-mismatch — the deck exists and the user can
+  access it post-upgrade).
 
 ## 12. Decisions
 
-> §14 OQ-1..OQ-9 are **NOT pre-decided in this spec slice.** Locked
-> decisions get filled in via a §12 amendment slice (mirrors slice
-> 6.0 / 6.4.5 spec slice 2/2 precedent at `e8eecdd` / `df58eaf`)
-> once Dhamo dispositions the OQs.
+> §14 OQ-1..OQ-9 all RESOLVED at spec amendment `<this-slice>` —
+> locked into §12 as D-1..D-9 below, mirroring slice 6.0 §12
+> amendment (`e8eecdd`) + slice 6.4.5 §12 amendment (`df58eaf`)
+> precedent. Locks honor the §14 author hints verbatim where on-
+> disk and prompt-side phrasings agree; divergences resolved in
+> favor of the on-disk hint per R3 (the spec body authored the
+> hints, prompt is codifying them).
 >
 > Phase-level decisions (G2, H1, I1, J2) carry forward from slice
 > 6.1; cross-ref §front-matter table for each.
+>
+> §14 OQ-1c (implicit-via-admin-write A-3 invariant on R-1 / R-2)
+> is **NOT locked at this amendment** — the prompt that drafted this
+> amendment listed only OQ-1..OQ-9; OQ-1c remains open at author hint
+> "(a) leave implicit." A future spec amendment may lock it as
+> D-10 if the impl slice surfaces a need; otherwise OQ-1c stays as
+> a documented design note.
+
+### Phase-level decision rationale
+
+Phase-level locks (G2, H1, I1, J2) cited in front-matter; rationale
+inherits from slice 6.1 §11 + slice 6.0 §12 amendment. Slice 6.5
+consumes none of them at runtime — the read-time invariants are pure
+filter additions on existing tables, with no async fan-out (G2),
+no file I/O (H1), no events table writes (I1 carries forward
+unchanged), and no quality-signal coupling (J2).
 
 ### Slice-local decisions
 
-(Empty initially. The §12 amendment slice fills D-1..D-N from §14
-OQ-1..OQ-9 dispositions.)
+- **D-1 (resolves OQ-1) — Status code asymmetry on archived-deck
+  violations: ACCEPT.** lesson_service paths (R-4 / R-5 / R-6 /
+  R-7) return `None` → route maps to **404** (treat as nonexistent
+  — minimizes information leakage); the review path R-2
+  (`review_quiz_item`) retains the **403** (`QuizItemForbiddenError`)
+  contract from slice 6.2 §AC-5. Rationale: a user on the review
+  path already holds a `quiz_item_id`, so existence is not
+  concealable; 403 "you can no longer act on this" is the right
+  semantic. lesson_service callers don't yet have a handle, so
+  404 minimizes leakage. Slice 6.2 §AC-5 is **NOT amended**; the
+  asymmetry is a deliberate contract. On-disk OQ-1 hint (a) [404 on
+  lesson_service] + JC resolution (b) [accept asymmetry; review
+  path retains 403] both honored. Cross-ref §4.3 R-2 row, §6.1
+  (review path), §6.2 (lesson_service paths).
+
+- **D-2 (resolves OQ-2) — Tier paywall ownership: SPLIT.** Slice
+  6.5 owns the **server-side guarantee** — read service layer
+  raises 403 (`QuizItemForbiddenError` reused, OR a future
+  `QuizItemTierError` per impl-slice judgment) when a free user
+  attempts to read a `Deck.tier == 'premium'` deck or its
+  lessons/quiz_items. Slice 6.7 owns the **user-facing paywall UX**
+  — Learn-page composition, paywall modal copy, upsell composition.
+  The two layers ship in series: 6.5 ensures the API never returns
+  premium content to free users; 6.7 makes the rejection user-
+  friendly. lesson_service surface for premium-deck-on-free-user
+  returns 403 / `None` → route maps appropriately (per impl-slice
+  judgment between 403 vs 404 for the lesson_service surface; the
+  prompt-side condensation chose 403, the on-disk hint left both
+  options open — escape-hatch is the impl prompt). Cross-ref §4.3
+  A-7 column (now `✗ → ADD` across R-1, R-2, R-4, R-5, R-6, R-7),
+  §11 AC-14 (now unconditional), §13 Out of scope (UX surface
+  deferred to slice 6.7).
+
+- **D-3 (resolves OQ-3) — persona_visibility filter scope: ALL
+  SIX READ PATHS.** A-6 applies to all four `lesson_service` reads
+  (R-4 / R-5 / R-6 / R-7) AND both `quiz_item_study_service`
+  user-facing reads (R-1 / R-2). A user in a now-excluded persona
+  who has a bookmarked `/learn/decks/{id}` URL OR a stored
+  `quiz_item_id` from a prior session must receive 404 (not just
+  the LIST surface). Filter applies at the SERVICE layer; routes
+  inherit. Information-leakage-minimization rationale per §4.2
+  A-1 vs A-6 note. Cross-ref §4.3 A-6 column, §6.1 + §6.2 filter
+  additions.
+
+- **D-4 (resolves OQ-4) — Test-file structure: SPLIT PER
+  SERVICE.** Two new test files at impl: `tests/test_quiz_item_study_service_invariants.py`
+  (covers §4 rows R-1 / R-2 / R-3 — quiz-item paths) +
+  `tests/test_lesson_service_invariants.py` (covers §4 rows
+  R-4 / R-5 / R-6 / R-7 — lesson/deck paths). Co-located with
+  existing per-service test files; easier to find regressions;
+  matches slice 6.2 / 6.4b-1 test-file naming convention. Rejected
+  alternative: single `tests/test_phase6_read_time_invariants.py`
+  spanning both services — would force per-service regression
+  triage to grep across one file instead of opening the right one.
+  Cross-ref §10.
+
+- **D-5 (resolves OQ-5) — Helper extraction strategy: PRIVATE
+  DUPLICATE WITH ESCAPE HATCH.** `_persona_visible_to(deck_persona,
+  user_persona) -> bool` + `_visible_persona_set(user) -> set[str]`
+  ship as **private** helpers in `lesson_service.py`, duplicated
+  (~5 LOC) into `quiz_item_study_service.py`. Rationale: small
+  enough not to be a maintenance burden; slice 6.15 cleanup
+  (which retires `study_service.py`) is the natural moment to
+  consolidate visibility helpers. **Escape hatch:** if the impl
+  prompt judges the third on-disk consumer
+  (`deck_admin_service._PERSONA_EXPANSION` lines 28-33) raises
+  the duplicate count past the rule-of-three threshold, the
+  helpers MAY lift to a new shared `app/services/curriculum_visibility.py`
+  module (public, no leading underscore — the original on-disk
+  hint option (b) phrasing); document the decision in the impl
+  slice's final-report JC line. Both options are acceptable;
+  defer to impl-time judgment. Cross-ref §6.3.
+
+- **D-6 (resolves OQ-6) — Cascade-retired vs direct-retired
+  read-time treatment: IDENTICAL.** Both retirement paths set
+  `quiz_items.retired_at IS NOT NULL`; the `superseded_by_id`
+  discriminator is for admin authoring contexts (slice 6.4b retire-
+  and-replace audit trail + future FSRS-history forward-link
+  queries), NOT for read paths. Read service layer treats both
+  equivalently: the `QuizItem.retired_at.is_(None)` filter applies
+  uniformly; existing `quiz_item_progress` for the retired
+  quiz_item permits continued review per slice 6.2 §AC-4
+  (history preservation); no `quiz_item_progress` permits 409
+  per slice 6.2 §AC-4 (retired-no-progress block). Cross-ref §4.3
+  A-4 / A-5 columns, §6.1 review-path retired guard.
+
+- **D-7 (resolves OQ-7) — Persona-mismatch HTTP code + new
+  exception class: 404 + `QuizItemNotVisibleError`.** All read-
+  path persona-visibility violations surface as 404 (information-
+  leakage minimization — a user in a now-excluded persona is
+  indistinguishable from a user pointing at a nonexistent
+  resource). lesson_service paths (R-4 / R-5 / R-6 / R-7) return
+  `None` → route maps to 404 (existing convention). The review
+  path R-2 (`review_quiz_item`) introduces a **new exception class**
+  `QuizItemNotVisibleError` (route maps to 404) so the 1:1
+  exception/HTTP-code map stays clean and the persona-mismatch
+  axis is symmetric across all read paths. Slightly violates §2
+  G-4 ("zero new domain errors") — accepted: one new exception
+  class is judged worth it to keep the contract symmetric vs the
+  alternative of reusing `QuizItemForbiddenError` (403) with a
+  `detail.reason='persona_visibility'` discriminator (asymmetric
+  HTTP codes for the same logical violation). Existing
+  `quiz_item_progress` rows for orphaned-persona users stay
+  queryable for analytics per slice 6.4 D-19 (cleanup explicitly
+  deferred to slice 6.7 / 6.8). Cross-ref §4.3 A-6 column, §5
+  exception/HTTP map, §6.1.2 review path, §6.4 route mapping.
+
+- **D-8 (resolves OQ-8) — Paywall-blocked-at-read PostHog
+  telemetry: NONE this slice.** Zero new PostHog events in slice
+  6.5. Slice 6.7 owns paywall telemetry — will likely add
+  `paywall_shown` / `paywall_dismissed` / `paywall_upgrade_clicked`
+  per slice 6.7's persona Learn-page surface; adding a slice-6.5
+  event would create a duplicate that forces a deprecation when
+  6.7 lands. Filter-violation rejection paths emit stdlib
+  `logger.info("read_time_invariant_violation", extra={"axis":
+  "...", "user_id": "...", "deck_id": "..."})` for ops
+  observability only. `.agent/skills/analytics.md` requires no
+  edits. Cross-ref §9 (zero events confirmed), §13 Out of scope.
+
+- **D-9 (resolves OQ-9) — `get_quiz_progress` aggregation
+  invariants: CODIFY AS POSITIVE INVARIANT.** R-3
+  (`get_quiz_progress`) is **filter-free by design** — it
+  aggregates `quiz_item_progress` rows by `state` regardless of
+  whether the underlying quiz_item is retired, the lesson is
+  archived, or the deck is persona-narrowed away. This is locked
+  as a positive invariant ("aggregation is filter-free for
+  retention metrics"), not just a §3 non-goal. The impl slice
+  ships **one anti-regression test** asserting that orphan
+  progress rows (on archived lessons / retired quiz_items /
+  persona-narrowed decks) ARE counted in `total_reps` /
+  `total_lapses` / `by_state`. Rationale: a future slice (e.g.
+  slice 6.16 retention dashboard) may inadvertently add a filter
+  to `get_quiz_progress` and silently break the slice 6.5 design
+  intent; one test locks the contract. Cross-ref §3 non-goal,
+  §10.2 conditional case (now unconditional). **DIVERGENCE
+  FLAG:** the prompt that drafted this §12 amendment proposed a
+  different D-9 (table-format inline-vs-separate-file question);
+  that question was never authored as an on-disk OQ. Per R3,
+  on-disk OQ-9 (`get_quiz_progress` aggregation) is canonical and
+  D-9 locks it; the prompt-side table-format question is moot
+  (the on-disk spec already chose inline §4 format). Logged as
+  JC in the amendment's final report.
 
 ## 13. Out of scope (deferred to other Phase-6 slices)
 
@@ -876,9 +1031,16 @@ Explicit list:
 
 ## 14. Open questions
 
-> Surface as OQs, do NOT pre-decide. The §12 amendment slice locks
-> these into D-1..D-N before the implementation slice runs (mirrors
-> slice 6.0 / 6.4.5 spec-amendment precedent).
+> **OQ-1..OQ-9 all RESOLVED at spec amendment `<this-slice>`** —
+> locked into §12 as D-1..D-9 respectively. OQ headings + question
+> text retained verbatim below for forward-readability; the
+> resolution line cites the §12 D-N decision that closes each one.
+> Mirrors slice 6.0 §14 OQ-1..OQ-4 + slice 6.4.5 §14 OQ-1..OQ-10
+> post-amendment shape (`e8eecdd` / `df58eaf`).
+>
+> OQ-1c remains OPEN — the amendment prompt did not include it in
+> the OQ-1..OQ-9 lock list; revisited if the impl slice surfaces a
+> need.
 
 ### OQ-1 — `Deck.archived_at` violation status code
 
@@ -886,24 +1048,15 @@ A-1 surfaces as 404 (treat as nonexistent) or 403 (signaling
 existence-but-forbidden) on the lesson_service paths? Today's
 lesson_service surface returns `None` (route → 404), so 404 is
 already on disk; the question is whether the formal contract pins
-404 or leaves room for a future 403 escalation.
+404 or leaves room for a future 403 escalation. JC sub-question:
+slice 6.2 §AC-5 ships 403 on the review path for archived-deck —
+amend or accept the asymmetry?
 
-**Author hint:** (a) 404 — matches slice 6.4b-1 pattern + minimizes
-information leakage. The user cannot distinguish an archived deck
-from a never-existed deck, by design. Locking 404 also means the
-A-1 + A-6 + A-7 axes can share status codes (per their respective
-OQ dispositions), which simplifies the §4.3 status-code column.
-
-**JC candidate:** the `quiz_item_study_service.review_quiz_item`
-path raises `QuizItemForbiddenError` (403) for archived-deck (slice
-6.2 §AC-5). If the Phase-6 contract on A-1 is "always 404," that
-existing 403 is in tension. Two resolutions: (a) update slice 6.2's
-§AC-5 to 404 in the impl slice (breaks slice 6.2 lock); (b) accept
-the asymmetry — lesson_service returns None / 404, quiz_item_study_service
-raises 403. The impl prompt picks. **Author hint (b) — accept
-asymmetry: review path is privileged because the user already had a
-quiz_item_id to submit, indicating they had a deeper handle than
-"random read"; 403 is fine there.**
+**RESOLVED** — see §12 **D-1** (`<this-slice>`): accept the
+asymmetry. lesson_service paths return 404; review path R-2
+retains 403 per slice 6.2 §AC-5 (privileged: caller already
+holds `quiz_item_id`). On-disk hint (a) [404 lesson_service] +
+JC resolution (b) [accept asymmetry] both honored.
 
 ### OQ-1c — Implicit-via-admin-write A-3 invariant on R-1 / R-2
 
@@ -920,46 +1073,36 @@ invariant has held since slice 6.2 ship (`7b654fb`); no production
 incident has surfaced. If a future slice introduces a
 `quiz_items.lesson_id` write path that bypasses `publish_lesson`
 (e.g. an ingestion pipeline in slice 6.10), THAT slice owns the
-re-codification. Surfaced here for completeness.
+re-codification. **OQ-1c stays OPEN at this amendment** — not in
+the OQ-1..OQ-9 lock list per the amendment prompt's scope; the
+author hint stands as the working disposition until a future
+amendment locks it (likely as D-10 if/when a write-path bypass
+materializes).
 
 ### OQ-2 — Tier paywall enforcement ownership: slice 6.5 vs slice 6.7
 
 A-7 (free-user-on-premium-deck) is the only invariant axis that's
 in genuine tension between Phase-6 slices. Slice 6.7 is "persona
 Learn-page composition" per scout Track C; tier gating is naturally
-visible there (paywall modal copy on the Learn page).
+visible there (paywall modal copy on the Learn page). But slice
+6.5's invariant table is structurally incomplete without A-7.
 
-But slice 6.5's invariant table is structurally incomplete without
-A-7; if slice 6.5 omits the server-side guarantee, an FE bug in
-slice 6.7 could let free users review premium quiz_items
-unhindered.
-
-**Author hint:** **slice 6.7 owns the visible paywall UX** (modal,
-upgrade copy); **slice 6.5 owns the server-side guarantee** (read
-service layer raises 403 / returns None for free-user-on-premium-
-deck reads). This shape mirrors how slice 6.4 / 6.4b-1's filter
-surface (archive, retired, draft) is server-authoritative regardless
-of FE composition. Disposition picks the canonical seam.
-
-If disposed "slice 6.7 owns both" → slice 6.5 §4.3 A-7 column
-becomes "n/a (slice 6.7)" everywhere; AC-14 + the 10.1 / 10.2
-conditional tests are dropped.
-
-If disposed "slice 6.5 owns server-side, slice 6.7 owns FE
-composition" → A-7 column is `✗ → ADD` on R-1 / R-2 / R-4 / R-5 /
-R-6 / R-7; AC-14 + conditional tests run.
+**RESOLVED** — see §12 **D-2** (`<this-slice>`): split. Slice 6.5
+owns the server-side guarantee (read service layer raises 403 for
+free-user-on-premium-deck reads); slice 6.7 owns the user-facing
+paywall UX (Learn-page composition, paywall modal copy). §4.3 A-7
+column is `✗ → ADD` on R-1 / R-2 / R-4 / R-5 / R-6 / R-7; AC-14
+is unconditional.
 
 ### OQ-3 — Persona-visibility filter scope: deck-LIST only OR deck-LIST + deck-DETAIL
 
 A-6 needs to apply to all four lesson_service read paths PLUS
 the two quiz_item_study_service paths, OR only to the LIST paths?
 
-**Author hint:** (a) all six paths. A user in a now-excluded
-persona who has a bookmarked `/learn/decks/{id}` URL or a stored
-`quiz_item_id` from a prior session must also receive 404 / 403,
-not just the LIST surface. The information-leakage-minimization
-rationale (§4.2 A-1 vs A-6 note) demands the deck-DETAIL path
-apply the filter too.
+**RESOLVED** — see §12 **D-3** (`<this-slice>`): all six paths
+(R-1, R-2, R-4, R-5, R-6, R-7). Bookmarked `/learn/decks/{id}`
+URLs and stored `quiz_item_id`s must also receive 404, not just
+the LIST surface. Author hint (a) selected.
 
 ### OQ-4 — Test-file structure: single file vs split per service
 
@@ -967,37 +1110,26 @@ Single `tests/test_phase6_read_time_invariants.py` covering all
 seven read paths, OR split per service (`test_quiz_item_study_service_invariants.py`
 + `test_lesson_service_invariants.py`)?
 
-**Author hint:** (b) split per service — co-located with existing
-per-service test files; easier to find regressions; matches the
-slice 6.2 / 6.4b-1 test file naming pattern (existing
-`test_quiz_item_study_service.py` + `test_lesson_service.py`).
-The split ALSO keeps the per-file test-count delta moderate —
-one ~6-10-test file plus one ~9-15-test file is more reviewable
-than a single ~15-25-test file.
+**RESOLVED** — see §12 **D-4** (`<this-slice>`): split per service.
+Co-located with existing per-service test files; easier per-service
+regression triage. Author hint (b) selected.
 
 ### OQ-5 — Helper extraction location: private to lesson_service vs new module
 
 `_persona_visible_to` + `_visible_persona_set` are needed in BOTH
-`quiz_item_study_service` and `lesson_service`. Options: (a)
-private to `lesson_service.py`, duplicated into
-`quiz_item_study_service.py` (~5 LOC each); (b) new
-`app/services/curriculum_visibility.py` with public helpers + a
-single shared `_PERSONA_EXPANSION` dict; (c) private to
-`lesson_service.py` and imported via a defensive shim into
-`quiz_item_study_service.py` (analogous to slice 6.2 D-4's
-`_next_local_midnight` decision OQ-3).
+`quiz_item_study_service` and `lesson_service`. Options were (a)
+private duplicate, (b) new shared `app/services/curriculum_visibility.py`,
+(c) defensive shim. Complication: `deck_admin_service.py` already
+has a private `_PERSONA_EXPANSION` dict (lines 28-33) — possible
+third on-disk consumer.
 
-**Author hint:** (a) duplicate into both files until a third
-consumer surfaces. Extraction is a future-slice concern. The
-duplicate is small enough not to be a maintenance burden, and
-slice 6.15 cleanup (which retires `study_service.py`) is the
-natural moment to consolidate visibility helpers.
-
-A complication: `deck_admin_service.py` already has a private
-`_PERSONA_EXPANSION` dict (lines 28-33) that the read-side helpers
-duplicate. If the impl prompt judges three duplicates (two read
-+ one admin) is the threshold for extraction, (b) is the
-disposition. Surfaced as a JC candidate.
+**RESOLVED** — see §12 **D-5** (`<this-slice>`): private duplicate
+in `lesson_service.py` + duplicated into `quiz_item_study_service.py`,
+with an **escape hatch** for the impl prompt to lift to a shared
+`app/services/curriculum_visibility.py` if the third on-disk
+consumer (`deck_admin_service._PERSONA_EXPANSION`) tips past the
+rule-of-three threshold. Author hint (a) selected as default;
+(b) reserved as escape hatch.
 
 ### OQ-6 — Cascade-retired vs direct-retired quiz_items: identical read-time treatment?
 
@@ -1005,38 +1137,28 @@ Slice 6.4 §7.3 ships the substantive-edit cascade (lesson PATCH
 retires all active quiz_items in the lesson). Slice 6.4b-1
 `quiz_item_admin_service.update_quiz_item` ships the per-quiz_item
 retire-and-replace. Both paths set `retired_at IS NOT NULL` + may
-set `superseded_by_id`.
+set `superseded_by_id`. Does slice 6.5 read-time treatment depend
+on which retire path produced the row?
 
-Question: does slice 6.5 read-time treatment depend on which retire
-path produced the row?
-
-**Author hint:** (a) NO — both have `retired_at IS NOT NULL`; the
-`superseded_by_id` discriminator is for admin-authoring contexts
-(forward-link from old → new), not read paths. The read-time
-filter is `QuizItem.retired_at.is_(None)` everywhere; cascade-vs-
-direct is irrelevant.
+**RESOLVED** — see §12 **D-6** (`<this-slice>`): identical. Both
+paths set `retired_at`; `superseded_by_id` is admin-authoring
+metadata, not a read-path discriminator. The
+`QuizItem.retired_at.is_(None)` filter applies uniformly. Author
+hint (a) selected.
 
 ### OQ-7 — Persona mismatch HTTP code: 404 vs 403 — and the new exception class question
 
-Per §5 mapping subtlety. Two shapes:
+Per §5 mapping subtlety. Options were (a) reuse
+`QuizItemForbiddenError` (403) with a `detail.reason='persona_visibility'`
+discriminator (asymmetric across read paths), or (b) introduce a
+new `QuizItemNotVisibleError` (404) for the review path
+specifically (symmetric: 404 across all read paths).
 
-(a) Reuse `QuizItemForbiddenError` (403) on R-2 with a new
-    `detail.reason='persona_visibility'` discriminator; keep
-    lesson_service paths returning `None` → 404. Asymmetric: a
-    user in a now-excluded persona gets 404 from lesson detail
-    but 403 from the review path on a quiz_item from the same
-    deck.
-
-(b) Introduce a new `QuizItemNotVisibleError` (404) for the
-    persona-mismatch case on R-2 only; keep lesson_service paths
-    returning `None`/404. Symmetric across all read paths;
-    minimal new surface (one exception class).
-
-**Author hint:** (b) — judged worth a single new exception to keep
-the persona-mismatch axis 404 across the board for information-
-leakage minimization. Slightly violates §2 G-4 ("zero new domain
-errors"), but the alternative is asymmetric HTTP codes for the
-same logical violation, which would surprise a future reader.
+**RESOLVED** — see §12 **D-7** (`<this-slice>`): 404 across all
+read paths via a new `QuizItemNotVisibleError` exception class on
+the review path; lesson_service paths continue returning `None` →
+404. Author hint (b) selected. Slightly violates §2 G-4 ("zero
+new domain errors") — accepted to keep the contract symmetric.
 
 ### OQ-8 — PostHog telemetry on filter-violation rejection paths
 
@@ -1044,12 +1166,10 @@ Should slice 6.5 emit a `paywall_blocked_at_read` (or similar)
 event when a free user hits a premium deck read, or when a
 persona-narrowed user hits a now-excluded deck?
 
-**Author hint:** (b) NO new event this slice. Slice 6.7 owns
-paywall telemetry — adding a 6.5 event would create a duplicate
-with slice 6.7's eventual `paywall_modal_shown` analog, which
-forces a deprecation later. Stdlib `logger.info` is the only
-surface this slice. If slice 6.7 disposes "no FE-side paywall
-event needed" then a future slice may revisit.
+**RESOLVED** — see §12 **D-8** (`<this-slice>`): NO new PostHog
+event this slice. Slice 6.7 owns paywall telemetry; rejection
+paths emit stdlib `logger.info("read_time_invariant_violation",
+…)` for ops observability only. Author hint (b) selected.
 
 ### OQ-9 — `get_quiz_progress` aggregation invariants
 
@@ -1059,27 +1179,30 @@ the aggregate. Should slice 6.5 codify this as a positive
 invariant ("aggregation is filter-free") with a regression test,
 or leave it as a §3 non-goal only?
 
-**Author hint:** (a) codify as a positive invariant with one
-anti-regression test (per §10.2 conditional case). The anti-
-regression value is real — a future slice (e.g. slice 6.16
-retention dashboard) may inadvertently add a filter to
-`get_quiz_progress` and silently break the slice 6.5 design
-intent. One test locks the contract.
+**RESOLVED** — see §12 **D-9** (`<this-slice>`): codify as a
+positive invariant. The impl slice ships one anti-regression test
+asserting orphan progress rows ARE counted in `total_reps` /
+`total_lapses` / `by_state`. Future slice 6.16 retention dashboard
+must NOT silently add a filter to `get_quiz_progress`. Author hint
+(a) selected.
 
 ### OQ-10+ (placeholder)
 
 If chat-Claude or impl-time CC surfaces additional product OQs at
 spec-amendment time, file them as OQ-10 / OQ-11 / etc. below.
+OQ-1c remains a candidate for OQ-10 / D-10 if the impl slice
+surfaces a write-path bypass that breaks the implicit A-3
+invariant.
 
 ---
 
 *End of slice 6.5 spec. Authored 2026-04-28 at HEAD `688d178`.
-Audit basis: live `app/services/{quiz_item_study_service,
+§12 amended 2026-04-28 at `<this-slice>` locking D-1..D-9 from
+§14 OQ-1..OQ-9. Audit basis: live `app/services/{quiz_item_study_service,
 lesson_service,quiz_item_admin_service,deck_admin_service,
 lesson_admin_service}.py` shapes at HEAD; spec basis
 `docs/specs/phase-6/01-foundation-schema.md` §4.1/§4.2/§4.3 +
 `02-fsrs-quiz-item-binding.md` §4.5/§4.6 + `04-admin-authoring.md`
 §7 + §12 D-15/D-18/D-19 + `05-seed-lessons.md` §6.1.2 + D-5.
-Next step: §12 amendment slice locks D-1..D-N from §14 OQ-1..OQ-9
-dispositions; then Mode 1 implementation slice executes against
-this spec — files B-072 close-line at execution time per R17.*
+Next step: Mode 1 implementation slice executes against this spec
+— files B-072 close-line at execution time per R17.*
