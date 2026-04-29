@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.8: User-Self FSRS Dashboard (Read-Only Phase-6 Progress Surface)
 
-## Status: Drafted + §12 amended at `<this-slice>` locking D-1..D-14 from §14 OQ-1..OQ-13 (incl. sub-OQ-5b)
+## Status: Drafted + §12 amended at `ab07168` locking D-1..D-14 from §14 OQ-1..OQ-13 (incl. sub-OQ-5b)
 
 | Field | Value |
 |-------|-------|
@@ -857,7 +857,7 @@ external service, no integration marker.
 
 ## 12. Decisions
 
-> Locked at §12 amendment `<this-slice>` (2026-04-29) from §14
+> Locked at §12 amendment `ab07168` (2026-04-29) from §14
 > OQ-1..OQ-13 + sub-OQ-5b (mirrors slice 6.0 `e8eecdd` / slice
 > 6.4.5 `df58eaf` / slice 6.5 `acba7ed` / slice 6.6 `fb92396` /
 > slice 6.7 `0c21223` precedent). Each D-N below resolves a §14
@@ -1040,7 +1040,7 @@ ge=1, le=365), ...)` per §6.2.
 
 ## 14. Open questions
 
-> All OQs locked at §12 amendment `<this-slice>` (mirrors slice 6.0
+> All OQs locked at §12 amendment `ab07168` (mirrors slice 6.0
 > `e8eecdd` / 6.4.5 `df58eaf` / 6.5 `acba7ed` / 6.6 `fb92396` /
 > 6.7 `0c21223` precedent). Each OQ retains its question text +
 > RESOLVED pointer to §12 D-N for traceability; option bodies +
@@ -1049,81 +1049,81 @@ ge=1, le=365), ...)` per §6.2.
 **OQ-1 — Mount path for the dashboard.** Where does the new page
 mount inside the `/learn/*` namespace, at top level, or under
 Profile?
-RESOLVED — see §12 **D-1** (`<this-slice>`): `/learn/dashboard`;
+RESOLVED — see §12 **D-1** (`ab07168`): `/learn/dashboard`;
 no TopNav link this slice (wait until proven via D-11 telemetry).
 
 **OQ-2 — Persona scope and per-persona composition.** Universal
 section composition or three render modes mirroring slice 6.7?
-RESOLVED — see §12 **D-2** (`<this-slice>`): universal
+RESOLVED — see §12 **D-2** (`ab07168`): universal
 composition; BE response stays persona-agnostic regardless.
 
 **OQ-3 — Endpoint surface (single envelope vs split per-section).**
 One `/learn/dashboard` returning the full envelope vs five
 section endpoints?
-RESOLVED — see §12 **D-3** (`<this-slice>`): single envelope
+RESOLVED — see §12 **D-3** (`ab07168`): single envelope
 per §6.4 perf budget; future split is non-breaking.
 
 **OQ-4 — Charting library for `RetentionCurveSection`.**
 Hand-rolled SVG, `recharts`, or numeric-only tile?
-RESOLVED — see §12 **D-4** (`<this-slice>`): hand-rolled SVG;
+RESOLVED — see §12 **D-4** (`ab07168`): hand-rolled SVG;
 no new dep; replaceable with `recharts` when the admin retention
 dashboard slice forces the lib decision.
 
 **OQ-5 — Recall-rate definition.** Which py-fsrs ratings count as
 recall in `overall_recall_rate`?
-RESOLVED — see §12 **D-5** (`<this-slice>`): `rating IN (3, 4)`
+RESOLVED — see §12 **D-5** (`ab07168`): `rating IN (3, 4)`
 (Good + Easy) only; `overall_lapse_rate` covers `rating == 1`
 on the same shape.
 
 **OQ-5b — Date bucketing for the daily-retention curve.** UTC
 date or user-local via `email_preferences.timezone`?
-RESOLVED — see §12 **D-6** (`<this-slice>`): user-local date;
+RESOLVED — see §12 **D-6** (`ab07168`): user-local date;
 matches gamification streak day-rollover semantics.
 
 **OQ-6 — Default `retention_window_days` and toggle-in-v1.** 30d
 no toggle / 7d no toggle / 30d with 7d-30d-90d toggle UI?
-RESOLVED — see §12 **D-7** (`<this-slice>`): 30 days, no toggle
+RESOLVED — see §12 **D-7** (`ab07168`): 30 days, no toggle
 in v1; toggle defers unless D-11 telemetry surfaces demand.
 
 **OQ-7 — Mastery threshold definition.** `state == 'review' AND
 reps >= 3` / `state == 'review'` alone / FSRS stability-based?
-RESOLVED — see §12 **D-8** (`<this-slice>`): `state == 'review'
+RESOLVED — see §12 **D-8** (`ab07168`): `state == 'review'
 AND reps >= 3`; `MASTERY_REPS_THRESHOLD = 3` lives at module
 scope per §6.1.
 
 **OQ-8 — Review-history shape and cap.** Cap value + window
 coupling?
-RESOLVED — see §12 **D-9** (`<this-slice>`): `MAX_RECENT_REVIEWS
+RESOLVED — see §12 **D-9** (`ab07168`): `MAX_RECENT_REVIEWS
 = 20`, same window as retention; row click navigates to
 `/learn/lesson/<lesson_id>`; no inline drawer in v1.
 
 **OQ-9 — Tier-gating of the dashboard surface.** Free-allowed /
 Pro-gated / free-allowed-with-premium-row-hidden?
-RESOLVED — see §12 **D-10** (`<this-slice>`): page free-allowed
+RESOLVED — see §12 **D-10** (`ab07168`): page free-allowed
 (no PaywallTrigger) + premium-deck mastery rows already filtered
 by `curriculum_visibility` helpers (compound (a)+(c)).
 
 **OQ-10 — Analytics events.** Single `dashboard_viewed`, two
 events incl. `dashboard_section_clicked`, or zero events?
-RESOLVED — see §12 **D-11** (`<this-slice>`): one event
+RESOLVED — see §12 **D-11** (`ab07168`): one event
 `dashboard_viewed` once-per-mount via `useRef`; payload
 `{persona, plan, is_cold_start, retention_window_days}`.
 
 **OQ-11 — Profile.tsx coexistence vs migration.** Coexist v1
 unchanged / coexist + file follow-up retirement B-### / inline
 deprecation now?
-RESOLVED — see §12 **D-12** (`<this-slice>`): coexist v1
+RESOLVED — see §12 **D-12** (`ab07168`): coexist v1
 unchanged. Follow-up B-### filed at slice 6.15 (cleanup) when
 Phase-5 data sources retire.
 
 **OQ-12 — Cold-start CTA copy variants.** Per-section / page-level
 banner / both?
-RESOLVED — see §12 **D-13** (`<this-slice>`): per-section copy
+RESOLVED — see §12 **D-13** (`ab07168`): per-section copy
 locked per the §10.4 component-test table; no page-level banner.
 
 **OQ-13 — Session/window query param shape.** Single window
 param / every constant exposed / no params at all?
-RESOLVED — see §12 **D-14** (`<this-slice>`): `?retention_window_days=N`
+RESOLVED — see §12 **D-14** (`ab07168`): `?retention_window_days=N`
 only; `MAX_RECENT_REVIEWS` + `DEFAULT_REVIEW_HISTORY_WINDOW_DAYS`
 stay hardcoded constants per §6.1.
 
@@ -1136,7 +1136,7 @@ Implementation row: **B-080** 🔴 (filed by this slice).
 Forward dependencies before impl can start:
 
 1. **§12 amendment slice** locked D-1..D-14 from §14 OQ-1..OQ-13
-   (incl. sub-OQ-5b) at `<this-slice>` (mirrors slice 6.0 / 6.4.5
+   (incl. sub-OQ-5b) at `ab07168` (mirrors slice 6.0 / 6.4.5
    / 6.5 / 6.6 / 6.7 §12 amendment pattern at `e8eecdd` /
    `df58eaf` / `acba7ed` / `fb92396` / `0c21223`). ✅ shipped.
 2. No BE primitive prerequisite — every data source is on disk:
