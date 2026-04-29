@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.7: Persona-Aware Learn Page (FE Consumer of Slice 6.6 Ranker)
 
-## Status: Drafted — §12 awaits amendment slice locking D-1..D-N from §14 OQ-1..OQ-N
+## Status: Drafted + §12 amended at `<this-slice>` locking D-1..D-8 from §14 OQ-1..OQ-8
 
 | Field | Value |
 |-------|-------|
@@ -141,7 +141,7 @@ the consistency gap with HomeDashboard's persona-mode IA.
 
 | # | Goal |
 |---|------|
-| G-1 | **Three-mode persona-conditional rendering on `/learn`.** `LearnInterviewMode` / `LearnHabitMode` / `LearnTeamMode` branched by `user.persona`, mirroring the on-disk HomeDashboard inline-function pattern (NOT separate component files — see §5 + §14 OQ-5). G-1 is the foundational architectural lock; the architecture itself is NOT a §14 OQ. |
+| G-1 | **Three-mode persona-conditional rendering on `/learn`.** `LearnInterviewMode` / `LearnHabitMode` / `LearnTeamMode` branched by `user.persona`, mirroring the on-disk HomeDashboard inline-function pattern (NOT separate component files — see §5 + §12 D-5). G-1 is the foundational architectural lock; the architecture itself is NOT a §14 OQ. |
 | G-2 | **Ranked decks consumed in `LearnInterviewMode`** (and `LearnTeamMode` v1 stub which inherits IP behaviour). New `useRankedDecks` hook calls `GET /api/v1/learn/ranked-decks`; new `RankedDeckList` renders the response. |
 | G-3 | **Spec #61 widgets preserved verbatim.** `StudyGapsPromptWidget` / `TodaysReviewWidget` / `LastScanWidget` and their composition rules (spec #61 §3-§6) survive within the appropriate Learn render mode without copy or behaviour changes. |
 | G-4 | **Legacy category grid retires from the `LearnInterviewMode` landing.** The `?category=<id>` filter surface (spec #09) survives where it appears — `LearnHabitMode` keeps a "Browse categories" section at the bottom for the free-form-explore use case; `LearnInterviewMode` drops it entirely (Interview-Preppers don't browse categories). Deep links into `/learn/category/:id` keep working unchanged. |
@@ -209,7 +209,7 @@ analogue for Learn.
 | `StudyGapsPromptWidget` | Suppressed — prompt's purpose (push the user into the study engine) is moot when the user IS already on the study engine | Suppressed — same reason | Suppressed |
 | Cold-start CTA card (§6) | **Renders** when `RankedDecksResponse.cold_start: true` | Suppressed — no ranker dependency | Renders (inherits IP) |
 | Mission countdown (read-only) | **Renders** above the ranked deck list when an active Mission exists for `user.interview_target_date` | Suppressed | Suppressed |
-| `RankedDeckList` (the new spine of IP) | **Renders** — the spine of the page; deck cards from the slice 6.6 response | Renders below TodaysReview as a "Curriculum suggestions" secondary section (collapsed-vs-expanded TBD §14 OQ-4) | Renders inheriting IP behaviour |
+| `RankedDeckList` (the new spine of IP) | **Renders** — the spine of the page; deck cards from the slice 6.6 response | Renders below TodaysReview as a "Curriculum suggestions" secondary section (expanded-by-default per §12 D-4) | Renders inheriting IP behaviour |
 | `TodaysReviewWidget` | Renders inline below the ranked decks (secondary spot — IP's primary action is "study a ranked deck", not "do today's review") | **Renders** at the top — the spine of habit-mode | Renders (same component) |
 | `LastScanWidget` | Suppressed when ranker has cold_start=false (the matched-gap chips on each ranked deck card already convey the scan-context); otherwise renders inside the cold-start CTA | Renders | Renders |
 | Browse-categories grid (legacy `?category` filter consumer) | Suppressed | **Renders** at the bottom — habit-mode's free-form-explore surface keeps the legacy categories grid for the user who wants to wander | Suppressed in v1 (the "Browse all decks" affordance lives inside the ranked-deck section header) |
@@ -247,7 +247,7 @@ parent `Learn.tsx` level (mirroring HomeDashboard's
   `StudyDashboard.tsx` as the `/learn` mount per §7.1. Mirrors
   `HomeDashboard.tsx`'s structure: three persona render-modes as
   **inline functions inside the page file** (NOT extracted to
-  separate component files — see §14 OQ-5 + JC #1 in the
+  separate component files per §12 D-5 + JC #1 in the
   spec-author final report). Inline functions:
   `LearnInterviewMode`, `LearnHabitMode`, `LearnTeamMode`. Plus a
   small `useLearnPageEligibility` hook (parallel to
@@ -257,8 +257,8 @@ parent `Learn.tsx` level (mirroring HomeDashboard's
   `src/components/home/widgets/`; no copies, no re-exports.
 - `hirelens-frontend/src/components/learn/RankedDeckList.tsx` —
   **new**. Consumes `RankedDecksResponse.decks`. Renders the deck
-  cards (visual treatment is §14 OQ-1 — compact list vs card grid).
-  Empty state and cold-start branch are §14 OQ-2 / §6.
+  cards (visual treatment locked at §12 D-1 — card grid).
+  Empty state locked at §12 D-2; cold-start branch is §6.
 - `hirelens-frontend/src/hooks/useRankedDecks.ts` — **new**.
   React Query (or `useEffect`-backed — match the existing
   convention used by `useStudyDashboard.ts`) wrapper around the
@@ -283,10 +283,9 @@ parent `Learn.tsx` level (mirroring HomeDashboard's
   `/learn/mission`) stay unchanged. The transitional `/study →
   /learn` redirects (lines 130-134) stay unchanged.
 - `hirelens-frontend/src/pages/StudyDashboard.tsx` — **disposition
-  decided in §14 OQ-3** (delete vs keep-as-shell-export). Author
-  hint (a) DELETE — `Learn.tsx` absorbs all its content via the
-  habit-mode section. The page has no other importers
-  (App.tsx is the only mount).
+  locked at §12 D-3 — DELETE.** `Learn.tsx` absorbs all its
+  content via the habit-mode section. The page has no other
+  importers (App.tsx is the only mount).
 
 ### 5.3 Reused widgets — explicit import map
 
@@ -352,8 +351,10 @@ behaves as follows per render mode:
 - **`LearnTeamMode`:** inherits `LearnInterviewMode` behaviour
   for v1.
 
-The cold-start CTA copy is locked at §14 OQ-7 (one of three copy
-variants); the routing target `/prep/analyze` is locked here. The
+The cold-start CTA copy is locked at §12 D-7 (verbose variant
+"Take a scan to personalize your learning path. We'll rank the
+lessons that close your skill gaps."); the routing target
+`/prep/analyze` is locked here. The
 `fetchRankedDecks` call ALWAYS fires for IP/Team (cold-start is a
 response-shape branch, not a fetch-skip branch).
 
@@ -380,12 +381,12 @@ and pick up the new mount automatically.
 
 | Param | Owned by | Routed to | Behaviour |
 |-------|----------|-----------|-----------|
-| `?source=last_scan` | `Learn.tsx` parent (mirrors `StudyDashboard.tsx:78-111`) | All three modes (banner is mode-agnostic) | Spec #62 verbatim — component-state dismissal, idempotent `study_dashboard_source_hint_shown` event with `copy_variant: '6A'` (existing event NAME preserved for dashboard continuity per spec #62 §7.4 — see §9 + §14 OQ-8) |
+| `?source=last_scan` | `Learn.tsx` parent (mirrors `StudyDashboard.tsx:78-111`) | All three modes (banner is mode-agnostic) | Spec #62 verbatim — component-state dismissal, idempotent `study_dashboard_source_hint_shown` event with `copy_variant: '6A'` (existing event NAME preserved for dashboard continuity per spec #62 §7.4 + §12 D-8 — see §9) |
 | `?category` | `Learn.tsx` parent | Routed only to `LearnHabitMode` for the legacy categories grid | Spec #09 verbatim. Other two modes silently ignore. |
 
 ### 7.3 Legacy `StudyDashboard.tsx` disposition
 
-§14 OQ-3, author hint (a) DELETE. Rationale: `Learn.tsx` absorbs
+§12 D-3, DELETE. Rationale: `Learn.tsx` absorbs
 the legacy categories-grid behaviour into `LearnHabitMode`'s
 "Browse categories" section; both `?source=last_scan` and
 `?category` consumers are re-implemented at the `Learn.tsx` parent
@@ -423,8 +424,9 @@ render mode") + spec #61 §3.4's "implementation hint
 
 The on-disk HomeDashboard precedent is **inline mode functions in
 the page file**, not separate `components/home/{Mode}.tsx` files.
-This slice mirrors that. See §14 OQ-5 if a future refactor wants
-to extract them — non-blocking for v1.
+This slice mirrors that per §12 D-5. A future refactor that
+extracts both pages' modes together is a separate cleanup slice
+applied to both pages — non-blocking for v1.
 
 ---
 
@@ -438,7 +440,7 @@ catalogued in `.agent/skills/analytics.md`.
 |-------|--------|------------|-------|
 | `learn_page_viewed` | `src/pages/Learn.tsx` | `{persona: 'interview_prepper'\|'career_climber'\|'team_lead', plan: 'free'\|'pro'\|'enterprise', mode: 'interview'\|'habit'\|'team', has_ranked_decks: boolean, cold_start: boolean}` — `has_ranked_decks` is `true` iff the ranker call returned ≥1 deck (false when `cold_start` AND `decks.length === 0`); `cold_start` mirrors `RankedDecksResponse.cold_start` (false for HabitMode which doesn't call the ranker) | Once per Learn mount via `useRef` idempotency (matches `home_dashboard_viewed` / `study_dashboard_viewed` convention). Fires AFTER the ranker call resolves (or immediately for HabitMode where the call doesn't fire). |
 | `learn_deck_clicked` | `src/components/learn/RankedDeckList.tsx` | `{deck_slug: string, deck_position: int (1-indexed `rank` from RankedDeck), persona, plan, score: float, matched_gap_count: int, is_cold_start: boolean}` | On every deck-card click before the `/learn/lesson/:lesson_id` navigation. (Deck-card click routes to the deck's first lesson; lesson-id selection logic is impl-time — author hint: first published, non-archived lesson by `display_order ASC`.) |
-| `learn_mode_rendered` | `src/pages/Learn.tsx` (inside each mode's render branch) | `{mode: 'interview'\|'habit'\|'team', persona}` | §14 OQ-6 — once-per-mount default vs once-per-session. Author hint (a) once-per-mount via `useRef` (matches the rest of the family). |
+| `learn_mode_rendered` | `src/pages/Learn.tsx` (inside each mode's render branch) | `{mode: 'interview'\|'habit'\|'team', persona}` | Once per mount via `useRef` per §12 D-6 (matches the rest of the `home_*` / `study_dashboard_*` family). |
 
 ### 9.1 Event-volume sanity check
 
@@ -521,7 +523,7 @@ Estimated **~5-7 tests**:
 | 3 | `mounts legacy categories browse grid at bottom` | §4.1 — habit-mode keeps the explore surface. |
 | 4 | `?category=<id> filter pill renders inside habit-mode browse grid` | Spec #09 regression in habit-mode scope. |
 | 5 | `does NOT call useRankedDecks (career_climber spine has no ranker dependency)` | §4.2 cross-cutting rule. |
-| 6 | `mounts ranked-decks "Curriculum suggestions" section if §14 OQ-4 author hint (b) expanded-by-default` | OQ-4 placeholder; impl-time decision. |
+| 6 | `mounts ranked-decks "Curriculum suggestions" section expanded by default per §12 D-4` | §12 D-4 lock. |
 | 7 | `does NOT mount StudyGapsPromptWidget` | §4.1 suppression. |
 
 ### 10.4 `tests/components/learn/RankedDeckList.test.tsx` — deck list
@@ -537,7 +539,7 @@ Estimated **~6-8 tests**:
 | 5 | `does NOT render any deck with deck.tier === 'premium' for free user` | Defensive — slice 6.6 D-10 already filters at BE; FE re-asserts (no leak). |
 | 6 | `deck-card click fires learn_deck_clicked with rank, deck_slug, persona, plan` | Event regression. |
 | 7 | `deck-card click navigates to /learn/lesson/<first_lesson_id>` | Navigation behaviour. |
-| 8 | `empty list (decks=[] AND cold_start=false) renders empty-state copy from §14 OQ-2` | OQ-2 placeholder; impl-time copy. |
+| 8 | `empty list (decks=[] AND cold_start=false) renders empty-state copy "No decks match your profile yet — scan your resume to get personalized recommendations." per §12 D-2` | §12 D-2 lock. |
 
 ### 10.5 Regression set must stay green
 
@@ -585,13 +587,66 @@ None. The slice 6.6 BE is already covered by
 
 ## 12. Decisions
 
-> Empty at spec-author. Locked via §12 amendment slice mirroring
-> slice 6.0 / 6.4.5 / 6.5 / 6.6 precedent (`e8eecdd` / `df58eaf` /
-> `acba7ed` / `fb92396`). Each D-N below resolves the like-numbered
-> §14 OQ; §14 retains the question + RESOLVED pointer back here for
-> traceability.
->
-> *(filled at amendment SHA `<amendment-sha>`)*
+> Locked at §12 amendment `<this-slice>` from §14 OQ-1..OQ-8
+> (mirrors slice 6.0 `e8eecdd` / slice 6.4.5 `df58eaf` / slice 6.5
+> `acba7ed` / slice 6.6 `fb92396` precedent). Each D-N below resolves
+> the like-numbered §14 OQ; §14 retains the question + RESOLVED
+> pointer back here for traceability.
+
+**D-1 (resolves OQ-1) — deck-card visual treatment = card grid** per
+author hint (b). 2-col on desktop, ~160px tall, larger matched-gap
+chips + score breakdown. Visual-weight parity with HomeDashboard
+widgets and the spec #61 `StudyGapsPromptWidget` body framing. The
+12-deck universe is small enough that scrolling isn't punishing.
+
+**D-2 (resolves OQ-2) — `RankedDeckList` empty-state copy =
+"No decks match your profile yet — scan your resume to get
+personalized recommendations."** per author hint (a) shape
+(actionable variant). Points at the user's lever (scan); avoids
+the "we have a bug" reading. Defensive — slice 6.6 §3 non-goal #6
+means this state should not normally surface, but the copy is
+locked for BE-regression resilience.
+
+**D-3 (resolves OQ-3) — legacy `StudyDashboard.tsx` file = DELETE**
+per author hint (a). `Learn.tsx` absorbs the legacy categories-grid
+behaviour into `LearnHabitMode`'s "Browse categories" section; both
+`?source=last_scan` and `?category` consumers re-implement at the
+`Learn.tsx` parent level. No other importer (`rg` confirmed in §7.3);
+shell-export is dead-code prevention theatre.
+
+**D-4 (resolves OQ-4) — `LearnHabitMode` "Curriculum suggestions"
+section default = expanded** per author hint (b).
+Collapsed-by-default would under-surface the slice 6.6 ranker for
+the career_climber persona (~half the user base per PRD §1.3
+split). The toggle adds a click that gates value with no clear win.
+
+**D-5 (resolves OQ-5) — persona modes = inline functions inside
+`Learn.tsx`** per author hint (a). Mirrors the on-disk HomeDashboard
+pattern (`src/pages/HomeDashboard.tsx:32/65/79`) per JC #1 surfaced
+at spec-author. Future refactor that extracts both pages' modes
+together is a separate cleanup slice — not a per-slice judgment
+call.
+
+**D-6 (resolves OQ-6) — `learn_mode_rendered` cadence = once per
+mount via `useRef`** per author hint (a). Matches the
+`home_dashboard_viewed` / `lesson_viewed` / `study_dashboard_viewed`
+family convention. sessionStorage would add a new pattern for
+marginal deduplication value.
+
+**D-7 (resolves OQ-7) — cold-start CTA copy = variant (a)
+"Take a scan to personalize your learning path. We'll rank the
+lessons that close your skill gaps."** per author hint (a).
+Verbose-most-specific. Ties "learning path" to the page's spine
+framing without requiring the user to know what a JD is. Variants
+(b)/(c) lose framing or rely on unclear jargon ("JD").
+
+**D-8 (resolves OQ-8) — `study_dashboard_source_hint_shown` event
+name = preserve verbatim** per author hint (a). Spec #62 §7.4
+explicitly notes this event is dashboard-coupled; renaming breaks
+PostHog funnels for zero gain. The event source-file column in
+`.agent/skills/analytics.md` updates from `StudyDashboard.tsx` →
+`Learn.tsx` at impl time; payload + `useRef` idempotency +
+`copy_variant: '6A'` stay unchanged.
 
 ---
 
@@ -618,132 +673,74 @@ None. The slice 6.6 BE is already covered by
 - **Admin tunable weights for the ranker.** Constants live in
   `app/services/deck_ranker_service.py`; admin UI is out of scope
   per slice 6.6 §3.
-- **Ranked-deck pagination.** §14 OQ-6 documents the question;
-  author hint (a) renders all (the 12-deck universe is small
-  per slice 6.6 §1.1).
+- **Ranked-deck pagination.** Not in scope; the 12-deck universe
+  per slice 6.6 §1.1 is small enough to render in full.
 - **Cross-deck lesson ranking.** Slice 6.6 D-5 deferred this to
   the hypothetical 6.6b; no FE consumer here.
 - **A/B test infrastructure for cold-start copy.** Spec locks
-  one variant via §14 OQ-7 selection; no rollout-tooling
-  scope.
+  one variant per §12 D-7; no rollout-tooling scope.
 
 ---
 
 ## 14. Open questions
 
-> Surface-level OQs only. Architecture (G-1 three-mode persona
-> rendering; HomeDashboard-inline-function pattern reuse; spec #61
-> widgets preserved verbatim; PaywallTrigger reuse) is locked in
-> §1-§5 and is NOT a §14 OQ. Each OQ carries an author hint to
-> minimize §12 amendment-slice churn.
+> All OQs locked at §12 amendment `<this-slice>` (mirrors slice 6.0
+> `e8eecdd` / slice 6.4.5 `df58eaf` / slice 6.5 `acba7ed` / slice 6.6
+> `fb92396` precedent). Each OQ retains its question text + RESOLVED
+> pointer to §12 D-N for traceability; option bodies + author hints
+> have been replaced.
 
 **OQ-1 — Deck-card visual treatment (compact list vs card grid).**
-The slice 6.6 response carries up to 12 decks per response. A
-compact list (one row per deck, ~64px tall, dense matched-gap
-chips inline) keeps more decks above the fold; a card grid
-(2-col on desktop, ~160px tall, larger matched-gap chips +
-score breakdown) gives more visual weight per deck.
+The slice 6.6 response carries up to 12 decks per response;
+compact list vs card grid trades scan-density for visual weight.
+RESOLVED — see §12 **D-1** (`<this-slice>`): card grid (2-col
+desktop, ~160px tall, larger matched-gap chips + score breakdown).
 
-(a) Compact list — denser, scan-friendly.
-(b) Card grid — visual-weight parity with HomeDashboard widgets.
+**OQ-2 — `RankedDeckList` empty-state copy.** When ranker returns
+`decks=[]` AND `cold_start=false` (defensive — slice 6.6 §3
+non-goal #6 means this should not normally happen).
+RESOLVED — see §12 **D-2** (`<this-slice>`): "No decks match
+your profile yet — scan your resume to get personalized
+recommendations." (actionable variant).
 
-Author hint: **(b) card grid** — matches the existing visual
-language of HomeDashboard widgets and the
-spec #61 `StudyGapsPromptWidget` body framing. The 12-deck
-universe is small enough that scrolling isn't punishing.
-
-**OQ-2 — `RankedDeckList` empty-state copy.** When ranker
-returns `decks=[]` AND `cold_start=false` (a corner case that
-should not happen given slice 6.6 §3 non-goal #6 "decks scoring
-0 still appear at the bottom" — but defensive copy is required
-in case of BE regression).
-
-(a) "No decks match your scan yet — try re-scanning a different JD."
-(b) "No curriculum decks available right now — check back soon."
-
-Author hint: **(a)** — actionable, points at the user's lever
-(re-scan), avoids the "we have a bug" reading of (b).
-
-**OQ-3 — Legacy `StudyDashboard.tsx` file disposition.**
-
-(a) DELETE — `Learn.tsx` absorbs all behaviour;
-    `StudyDashboard.tsx` has no other importer.
-(b) Keep as a shell that re-exports `Learn` for backwards
-    compatibility against any unimported test file or future
-    spec that references it by name.
-
-Author hint: **(a) delete** — no other importer (`rg` confirmed
-in §7.3); shell-export is dead-code prevention theatre.
+**OQ-3 — Legacy `StudyDashboard.tsx` file disposition.** Delete
+or keep-as-shell-export?
+RESOLVED — see §12 **D-3** (`<this-slice>`): DELETE; `Learn.tsx`
+absorbs all behaviour, no other importer (`rg` confirmed §7.3).
 
 **OQ-4 — `LearnHabitMode` ranked-deck section default state.**
-The "Curriculum suggestions" section in HabitMode (per §4.1) is
-secondary to TodaysReview. Render expanded by default or
-collapsed-with-toggle?
-
-(a) Collapsed-by-default with "Show curriculum suggestions" toggle.
-(b) Expanded-by-default.
-
-Author hint: **(b) expanded** — collapsed-by-default would
-under-surface the slice 6.6 ranker for the career_climber
-persona (which is half the user base per the PRD §1.3 split).
-The toggle adds a click that gates value with no clear win.
+Expanded-by-default vs collapsed-with-toggle?
+RESOLVED — see §12 **D-4** (`<this-slice>`): expanded-by-default.
+Collapsed would under-surface the ranker for the career_climber
+persona (~half the user base per PRD §1.3 split).
 
 **OQ-5 — Mode files: inline functions vs separate component
-files.** The on-disk HomeDashboard pattern is inline functions
-(per §1.1 finding #3 + §5.1). Should `Learn.tsx` mirror that
-exactly, or extract `LearnInterviewMode` / `LearnHabitMode` /
-`LearnTeamMode` to `src/components/learn/{LearnInterviewMode,…}.tsx`?
+files.** Mirror HomeDashboard's on-disk inline-function pattern,
+or extract to `src/components/learn/{LearnInterviewMode,…}.tsx`?
+RESOLVED — see §12 **D-5** (`<this-slice>`): inline functions
+inside `Learn.tsx` mirroring HomeDashboard
+(`src/pages/HomeDashboard.tsx:32/65/79`).
 
-(a) Inline functions in `Learn.tsx` (mirror HomeDashboard
-    on-disk precedent).
-(b) Extract to separate files in `src/components/learn/`.
-
-Author hint: **(a) inline** — matches established on-disk
-pattern. If a future refactor extracts both pages' modes
-together (consistency win), it's a separate cleanup slice
-applied to both pages — not a per-slice judgment call.
-
-**OQ-6 — `learn_mode_rendered` event firing cadence.**
-
-(a) Once per mount via `useRef` (matches family convention).
-(b) Once per session via sessionStorage flag.
-
-Author hint: **(a) once-per-mount** — every other event in the
-`home_*` / `study_dashboard_*` family uses `useRef`-mount
-idempotency; sessionStorage adds a new pattern for marginal
-deduplication value.
+**OQ-6 — `learn_mode_rendered` event firing cadence.** Once per
+mount via `useRef`, or once per session via sessionStorage?
+RESOLVED — see §12 **D-6** (`<this-slice>`): once per mount via
+`useRef` (matches `home_dashboard_viewed` / `lesson_viewed` /
+`study_dashboard_viewed` family convention).
 
 **OQ-7 — Cold-start CTA copy variant.** Three proposals (each
-zero PII, design-token only):
-
-(a) "Take a scan to personalize your learning path. We'll rank
-    the lessons that close your skill gaps."
-(b) "Scan a resume to see which decks close your gaps fastest."
-(c) "Personalize this list — scan a JD and we'll rank the most
-    impactful decks first."
-
-Author hint: **(a)** — verbose but most specific; ties
-"learning path" to the page's spine framing without requiring
-the user to know what a JD is. (b) is shortest but loses the
-learning-path framing. (c) leans on "JD" which non-technical
-readers may not recognize.
+zero PII, design-token only).
+RESOLVED — see §12 **D-7** (`<this-slice>`): variant (a)
+"Take a scan to personalize your learning path. We'll rank the
+lessons that close your skill gaps." (verbose-most-specific).
 
 **OQ-8 — `study_dashboard_source_hint_shown` event rename or
-preserve.** When `StudyDashboard.tsx` deletes and the consumer
-moves to `Learn.tsx`, the event source file changes but the
-contract (idempotent `useRef`, payload `{source, persona,
-copy_variant}`) is unchanged.
-
-(a) Preserve event name; just update the source-file column in
-    `analytics.md`.
-(b) Deprecate `study_dashboard_source_hint_shown` and add
-    `learn_source_hint_shown` with identical payload.
-
-Author hint: **(a) preserve** — spec #62 §7.4 explicitly notes
-this event is dashboard-coupled; renaming breaks PostHog
-funnels for zero gain (per `analytics.md` §Conventions
-"deprecate, don't rename" rule, applied here as "don't
-rename when contract is identical").
+preserve.** Source file moves from `StudyDashboard.tsx` to
+`Learn.tsx` but the contract (idempotent `useRef`, payload
+`{source, persona, copy_variant}`) is unchanged.
+RESOLVED — see §12 **D-8** (`<this-slice>`): preserve verbatim
+per spec #62 §7.4. Source-file column in `analytics.md` updates
+at impl time; payload + idempotency + `copy_variant: '6A'` stay
+unchanged.
 
 ---
 
@@ -753,10 +750,10 @@ Implementation row: **B-077** 🔴 (filed by this slice).
 
 Forward dependencies before impl can start:
 
-1. **§12 amendment slice** locking D-1..D-N from §14 OQ-1..OQ-8
-   (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 pattern at
-   `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396`). Spec body
-   `<amendment-sha>` placeholder fills at amendment commit.
+1. **§12 amendment slice** locked D-1..D-8 from §14 OQ-1..OQ-8
+   at `<this-slice>` (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6
+   pattern at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396`).
+   ✅ shipped.
 2. No BE prerequisite — slice 6.6 (B-074, `5011518`) shipped the
    ranker. Slice 6.5 (B-072, `930a6a2`) shipped the read-time
    invariants the ranker re-orders.
@@ -774,7 +771,7 @@ Impl slice expected scope:
   literals (~30 lines added).
 - `src/App.tsx` modification: `/learn` mount swap
   `StudyDashboard` → `Learn` (1 line change + 1 import update).
-- `src/pages/StudyDashboard.tsx` deletion (per §14 OQ-3 (a)).
+- `src/pages/StudyDashboard.tsx` deletion (per §12 D-3).
 - 4 new test files per §10.1-§10.4.
 - `.agent/skills/analytics.md` update: 3 new event rows + 4
   moved-source rows + `study_dashboard_viewed` deprecation tag.
