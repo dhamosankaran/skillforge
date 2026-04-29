@@ -40,6 +40,7 @@ import type {
   QuizReviewRequest,
   QuizReviewResponse,
   RankedDecksResponse,
+  DashboardResponse,
   ReviewRequest,
   ReviewResponse,
   RewriteResponse,
@@ -338,6 +339,21 @@ export async function fetchRankedDecks(
 ): Promise<RankedDecksResponse> {
   const response = await api.get<RankedDecksResponse>(
     '/api/v1/learn/ranked-decks',
+    { params: opts },
+  )
+  return response.data
+}
+
+// Phase 6 slice 6.8 — User-self FSRS dashboard consumer (spec #09 §6.2 + §12 D-3 / D-14).
+export interface FetchFsrsDashboardOptions {
+  retention_window_days?: number
+}
+
+export async function fetchFsrsDashboard(
+  opts: FetchFsrsDashboardOptions = {},
+): Promise<DashboardResponse> {
+  const response = await api.get<DashboardResponse>(
+    '/api/v1/learn/dashboard',
     { params: opts },
   )
   return response.data

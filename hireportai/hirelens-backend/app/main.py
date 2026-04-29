@@ -30,6 +30,7 @@ from app.api.v1.routes import (
     auth as v1_auth,
     cards as v1_cards,
     cover_letter as v1_cover_letter,
+    dashboard as v1_dashboard,
     decks as v1_decks,
     email_prefs as v1_email_prefs,
     feedback as v1_feedback,
@@ -160,6 +161,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(v1_decks.router, prefix="/api/v1", tags=["v1 Decks"])
     app.include_router(v1_ranker.router, prefix="/api/v1", tags=["v1 Ranker"])
+    app.include_router(v1_dashboard.router, prefix="/api/v1", tags=["v1 Dashboard"])
     app.include_router(v1_gamification.router, prefix="/api/v1", tags=["v1 Gamification"])
     app.include_router(v1_email_prefs.router, prefix="/api/v1", tags=["v1 Email Preferences"])
     app.include_router(v1_home.router, prefix="/api/v1", tags=["v1 Home"])

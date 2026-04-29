@@ -17,6 +17,7 @@ import Tracker from '@/pages/Tracker'
 import Pricing from '@/pages/Pricing'
 import Interview from '@/pages/Interview'
 import Learn from '@/pages/Learn'
+import Dashboard from '@/pages/Dashboard'
 import CategoryDetail from '@/pages/CategoryDetail'
 import CardViewer from '@/pages/CardViewer'
 import DailyReview from '@/pages/DailyReview'
@@ -91,6 +92,7 @@ export default function App() {
 
           {/* /learn/* — study engine */}
           <Route path="/learn"              element={<ProtectedRoute><Learn /></ProtectedRoute>} />
+          <Route path="/learn/dashboard"    element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/learn/daily"        element={<ProtectedRoute><DailyReview /></ProtectedRoute>} />
           <Route path="/learn/category/:id" element={<ProtectedRoute><CategoryDetail /></ProtectedRoute>} />
           <Route path="/learn/card/:id"     element={<ProtectedRoute><CardViewer /></ProtectedRoute>} />

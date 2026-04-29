@@ -617,3 +617,86 @@ export interface QuizItemUpdateRequest {
   display_order?: number
 }
 
+// ─── Phase 6 — User-self FSRS dashboard (slice 6.8 / spec #09 §5) ───────────
+// Field-for-field mirrors of app/schemas/dashboard.py. Single envelope per
+// §12 D-3; cold-start = is_cold_start true + zeroed/empty section payloads.
+
+export interface CardsDueByState {
+  new: number
+  learning: number
+  review: number
+  relearning: number
+}
+
+export interface CardsDueSection {
+  due_today: number
+  due_next_7_days: number
+  due_breakdown_by_state: CardsDueByState
+  total_quiz_items_in_progress: number
+}
+
+export interface DailyRetentionPoint {
+  date: string // ISO date YYYY-MM-DD (user-local per §12 D-6)
+  sample_size: number
+  recall_rate: number | null // null when sample_size === 0
+}
+
+export interface RetentionSection {
+  sample_size: number
+  overall_recall_rate: number
+  overall_lapse_rate: number
+  daily_retention: DailyRetentionPoint[]
+}
+
+export interface DeckMastery {
+  deck_id: string
+  deck_slug: string
+  deck_title: string
+  total_quiz_items_visible: number
+  quiz_items_with_progress: number
+  quiz_items_mastered: number
+  mastery_pct: number // [0, 1]
+}
+
+export interface DeckMasterySection {
+  decks: DeckMastery[]
+}
+
+export interface StreakSection {
+  current_streak: number
+  longest_streak: number
+  last_active_date: string | null // ISO date YYYY-MM-DD
+  freezes_available: number
+  total_xp: number
+}
+
+export interface RecentReview {
+  quiz_item_id: string
+  lesson_id: string
+  lesson_title: string
+  deck_slug: string
+  rating: number // 1..4 (py-fsrs Rating)
+  fsrs_state_after: string // 'new' | 'learning' | 'review' | 'relearning'
+  reviewed_at: string // ISO datetime
+}
+
+export interface ReviewHistorySection {
+  window_days: number
+  total_in_window: number
+  recent_reviews: RecentReview[]
+}
+
+export interface DashboardResponse {
+  user_id: string
+  persona: string | null
+  plan: string | null
+  is_cold_start: boolean
+  retention_window_days: number
+  generated_at: string // ISO datetime
+  cards_due: CardsDueSection
+  retention: RetentionSection
+  deck_mastery: DeckMasterySection
+  streak: StreakSection
+  review_history: ReviewHistorySection
+}
+
