@@ -7,7 +7,7 @@
 | **Slice** | 6.8 |
 | **Phase** | 6 (Curriculum Platform) |
 | **Mode** | Mode 4 spec-author → followed by §12 amendment → impl |
-| **Filed at** | `<this-slice>` (spec-author HEAD pin — replaced at SHA backfill) |
+| **Filed at** | `6ff39b7` (spec-author HEAD pin) |
 | **BACKLOG row** | **B-080** 🔴 (filed by this slice) |
 | **Depends on** | spec #00 (`docs/specs/phase-6/00-analytics-tables.md` — `quiz_review_events` + `lesson_view_events` tables and append-only invariant; shipped `e7a0044`) ▪ spec #01 (`docs/specs/phase-6/01-foundation-schema.md` — `decks` + `lessons` + `quiz_items` + `quiz_item_progress`; shipped `a989539`) ▪ spec #02 (`docs/specs/phase-6/02-fsrs-quiz-item-binding.md` — `quiz_item_progress` write path + `get_quiz_progress` aggregator; shipped `7b654fb`) ▪ spec #06 (`docs/specs/phase-6/06-read-time-invariants.md` — visibility filter chain + `curriculum_visibility.py` extraction; shipped `930a6a2`) ▪ spec #07 (`docs/specs/phase-6/07-deck-lesson-ranker.md` — persona/tier visibility helpers reused; shipped `5011518`) ▪ existing `gamification_service.get_stats` (Phase-2 streak + XP) ▪ existing `Depends(get_current_user)` chain. |
 | **Blocks** | none — this is a leaf surface in the Phase-6 user-facing curriculum loop. The admin-side retention/cohort dashboard (scout slice 6.11 / 6.16 framing) ships separately and is **not** this slice's deliverable. |
