@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.8: User-Self FSRS Dashboard (Read-Only Phase-6 Progress Surface)
 
-## Status: Drafted — §12 awaits amendment slice locking D-1..D-N from §14 OQ-1..OQ-N
+## Status: Drafted + §12 amended at `<this-slice>` locking D-1..D-14 from §14 OQ-1..OQ-13 (incl. sub-OQ-5b)
 
 | Field | Value |
 |-------|-------|
@@ -131,7 +131,7 @@ post-slice-6.7 implementation `c6d9274`):
    library). Adding a charting library would be a new
    dependency surface; staying hand-rolled keeps the bundle lean
    but limits what the retention-curve component can express.
-   Surfaced as **§14 OQ-4**.
+   Locked at **§12 D-4** (hand-rolled SVG).
 
 9. **Existing PostHog events that touch FSRS data.** From
    `analytics.md` + the slice 6.0 / 6.2 / 6.7 specs:
@@ -146,7 +146,8 @@ post-slice-6.7 implementation `c6d9274`):
    read-time hardening), the conservative default is to ship
    only `dashboard_viewed` with the same `useRef` once-per-mount
    discipline as `home_dashboard_viewed` / `learn_page_viewed`.
-   Surfaced as **§14 OQ-10**.
+   Locked at **§12 D-11** (one event `dashboard_viewed`
+   once-per-mount via `useRef`).
 
 10. **Cold-start state (a fresh user with zero reviews).**
     `quiz_item_progress` returns zero rows;
@@ -166,7 +167,8 @@ post-slice-6.7 implementation `c6d9274`):
     visibility filter chain, but the **dashboard surface itself**
     (the page mount, the endpoint) — should it be free-allowed or
     Pro-gated? `Profile.tsx` is universally accessible today.
-    Surfaced as **§14 OQ-9**.
+    Locked at **§12 D-10** (free-allowed page + premium-deck
+    mastery rows filtered by visibility helpers).
 
 12. **Profile.tsx coexistence.** `<XPBar>` / `<StreakBadge>` /
     `<SkillRadar>` / `<ActivityHeatmap>` continue to render on
@@ -175,7 +177,8 @@ post-slice-6.7 implementation `c6d9274`):
     this slice. Migration / deprecation of the legacy Profile
     surfaces is a separate concern picked up either by slice 6.15
     (cleanup) or by a follow-up Profile-redesign slice. Surfaced
-    as **§14 OQ-11**.
+    at **§12 D-12** (coexist v1 unchanged; follow-up B-### at
+    slice 6.15).
 
 ### 1.2 Why this matters
 
@@ -193,13 +196,13 @@ post-slice-6.7 implementation `c6d9274`):
   write cost; without a read consumer the table is write-only
   storage. The retention-curve aggregation is the first SQL
   consumer of the new table.
-- **Persona-aware reflection (if §14 OQ-2 locks it in).** A
-  career_climber user's "how am I doing" framing is streak-and-
-  weekly-progress; an interview_prepper's framing is gap-coverage
-  vs target_date. A universal one-page-fits-all design under-
-  serves both. Spec #34 + spec #61 + slice 6.7 establish the
-  per-persona render-mode pattern; the dashboard inherits it if
-  OQ-2 lands per-persona.
+- **Persona-aware reflection** is a follow-up. A career_climber
+  user's "how am I doing" framing is streak-and-weekly-progress;
+  an interview_prepper's framing is gap-coverage vs target_date.
+  Per-persona composition was considered and **rejected for v1
+  per §12 D-2** (universal composition for Q1 simplicity); spec
+  #34 + spec #61 + slice 6.7 establish the per-persona render-
+  mode pattern that a follow-up slice can adopt.
 
 Slice 6.8 ships the user-self FSRS dashboard as a read-only Phase-6
 surface that reuses every existing primitive (no new write paths,
@@ -211,12 +214,12 @@ no new analytics tables, no new persona logic).
 
 | # | Goal |
 |---|------|
-| G-1 | **User-self read-only dashboard at a single mount path.** New `src/pages/Dashboard.tsx` (mount path locked at §14 OQ-1) renders the Phase-6 FSRS-progress surfaces in a single page. Read-only — no FSRS mutations, no study-session initiation. |
-| G-2 | **Five canonical sections.** Cards-due, retention-curve, deck-mastery, streak-summary, recent-review-history. Each section has a stable Pydantic shape (§5) and a stable React component (§8). Sections may render or suppress per persona depending on §14 OQ-2 lock. |
-| G-3 | **One backend aggregator.** New `app/services/dashboard_service.py::aggregate_user_dashboard(user, db, *, retention_window_days)` returns a single `DashboardResponse` with all five section payloads. Section-level fan-out (§14 OQ-3) is the alternative if the spec amendment locks split endpoints. |
-| G-4 | **Read-only / additive only.** Zero new write paths, zero migrations, zero PostHog payload changes (analytics events are §14 OQ-10). Reuses existing visibility helpers (`curriculum_visibility.py`) for deck-mastery section so retired/archived/persona-invisible decks never surface. |
+| G-1 | **User-self read-only dashboard at a single mount path.** New `src/pages/Dashboard.tsx` (mount path locked at **§12 D-1** = `/learn/dashboard`) renders the Phase-6 FSRS-progress surfaces in a single page. Read-only — no FSRS mutations, no study-session initiation. |
+| G-2 | **Five canonical sections.** Cards-due, retention-curve, deck-mastery, streak-summary, recent-review-history. Each section has a stable Pydantic shape (§5) and a stable React component (§8). Composition is universal across personas per **§12 D-2**. |
+| G-3 | **One backend aggregator.** New `app/services/dashboard_service.py::aggregate_user_dashboard(user, db, *, retention_window_days)` returns a single `DashboardResponse` with all five section payloads. Single-envelope endpoint locked at **§12 D-3**; section-level fan-out rejected for v1. |
+| G-4 | **Read-only / additive only.** Zero new write paths, zero migrations, zero PostHog payload changes beyond the single `dashboard_viewed` event locked at **§12 D-11**. Reuses existing visibility helpers (`curriculum_visibility.py`) for deck-mastery section so retired/archived/persona-invisible decks never surface. |
 | G-5 | **Cold-start safe.** Fresh user (zero reviews, zero progress rows) gets a response with `is_cold_start: true` and zeroed-out section payloads. No 404, no 204, no division-by-zero — section components render their cold-start variant copy. |
-| G-6 | **Persona-aware composition (composition only).** The `DashboardResponse` shape is persona-agnostic; the FE composition decides which sections to surface per persona. Persona scope and per-persona section visibility lock at §14 OQ-2. |
+| G-6 | **Persona-agnostic BE shape.** The `DashboardResponse` envelope is persona-agnostic regardless of FE composition; **§12 D-2** locks the FE composition as universal for v1 (per-persona render-modes deferred to a follow-up). |
 | G-7 | **No Phase-5 endpoint duplication.** The dashboard does NOT call `/api/v1/progress/radar` or `/api/v1/progress/heatmap` — those are legacy `card_progress` / `categories` consumers and will go dark in slice 6.15. The dashboard reads exclusively from Phase-6 tables (+ `gamification_stats` for streak/XP). |
 
 ---
@@ -235,8 +238,8 @@ no new analytics tables, no new persona logic).
 - **No replacement of `Profile.tsx`.** Existing Profile mounts of
   `<XPBar>` / `<StreakBadge>` / `<SkillRadar>` / `<ActivityHeatmap>`
   remain unchanged this slice. Profile-redesign or Profile-
-  retirement is a separate concern (§14 OQ-11 surfaces the
-  coexistence question for §12 amendment).
+  retirement is a separate concern (locked at **§12 D-12** =
+  coexist v1 unchanged; follow-up B-### at slice 6.15).
 - **No admin-side cohort retention.** The scout audit's slice 6.11 /
   6.16 framing covers admin-aggregated retention curves across all
   users, deck-quality leaderboards, etc. That surface ships in its
@@ -252,15 +255,15 @@ no new analytics tables, no new persona logic).
   `email_preferences`.
 - **No HogQL / PostHog Query API integration.** Spec #38 ban
   unchanged. All aggregation is Postgres SQL via SQLAlchemy 2.0.
-- **No new PostHog events beyond at-most-one
-  `dashboard_viewed`** (§14 OQ-10 may decide zero events). The
-  dashboard is a glanceable read; per-section view events would
-  proliferate without a clear consumer.
+- **No new PostHog events beyond `dashboard_viewed`** per
+  **§12 D-11** (single event once-per-mount). The dashboard is a
+  glanceable read; per-section view events would proliferate
+  without a clear consumer.
 - **No new BACKLOG B-### IDs filed for sub-OQs** beyond B-080
-  itself. If a §14 OQ surfaces work that warrants its own
+  itself. If a §12 D-N lock surfaces work that warrants its own
   slice (e.g., "extract retention-curve component into a shared
-  chart primitive"), the §12 amendment is the place to file the
-  follow-up row, not this spec-author commit.
+  chart primitive"), the impl slice is the place to file the
+  follow-up row.
 - **No real-time / SSE / WebSocket.** The dashboard refetches on
   navigation to the page; no live stream, no polling timer.
 - **No deep-link drill-down on individual cards.** Clicking a row
@@ -268,7 +271,9 @@ no new analytics tables, no new persona logic).
   `/learn/lesson/<lesson_id>` (existing slice 6.3 surface), NOT
   to a new "review detail" page.
 - **No tier-gating widening.** Slice 6.5 / 6.6 tier rules unchanged.
-  Whether the dashboard surface itself is Pro-gated is §14 OQ-9.
+  Pro-gating of the dashboard surface itself locked at **§12 D-10**
+  (free-allowed page + premium-deck mastery rows filtered by
+  visibility helpers).
 
 ---
 
@@ -315,26 +320,19 @@ useFsrsDashboard() fetches once on mount via Learn-page-equivalent
   ↓
 <Dashboard /> mounts <CardsDueSection> + <RetentionCurveSection> +
               <DeckMasterySection> + <StreakSummarySection> +
-              <ReviewHistorySection> per §14 OQ-2 persona composition lock
+              <ReviewHistorySection> per §12 D-2 universal composition
 ```
 
 ### 4.3 Persona composition (composition rules)
 
 The `DashboardResponse` shape is **persona-agnostic** — backend
 returns the same envelope for every persona. Per-persona section
-visibility decisions are FE-only. The §14 OQ-2 lock decides whether:
-
-- **(a)** universal — every persona sees every section in the same
-  order (simpler, mirrors the current `Profile.tsx` universal
-  layout); or
-- **(b)** persona-aware — three render modes mirror the
-  `LearnInterviewMode` / `LearnHabitMode` / `LearnTeamMode`
-  pattern from slice 6.7, with each mode deciding section presence
-  and order.
-
-If (b) lands at amendment, per-persona composition rules go in
-§4.4 of the amended spec body. If (a) lands, §4.4 stays a single
-section list.
+visibility decisions are FE-only. **§12 D-2 locks (a) universal**
+— every persona sees every section in the same order (mirrors the
+current `Profile.tsx` universal layout). The per-persona option
+(three render modes mirroring `LearnInterviewMode` /
+`LearnHabitMode` / `LearnTeamMode` from slice 6.7) is a follow-up
+if D-11 telemetry shows persona-specific disengagement.
 
 ### 4.4 Cross-cutting composition rules
 
@@ -344,17 +342,18 @@ Computed at the parent `Dashboard.tsx` level (mirroring the
 contract at `src/pages/Learn.tsx`):
 
 - The `useFsrsDashboard` fetch fires once per mount with the
-  default `retention_window_days` value (locked at §14 OQ-6).
-  Window selection by the user (e.g., 7d / 30d / 90d toggle) is a
-  §14 OQ-6 sub-question — if locked in v1, the toggle re-fires the
-  hook with the new value; if deferred, the dashboard is fixed at
-  one window and the toggle ships in a follow-up.
+  default `retention_window_days` value (locked at §12 D-7 = 30
+  days). Window-selection toggle (7d / 30d / 90d) was considered
+  and **deferred per §12 D-7** — v1 ships fixed at 30 days; the
+  toggle ships in a follow-up if D-11 telemetry surfaces user
+  demand.
 - Cold-start (`response.is_cold_start === true`) is the parent's
   responsibility to detect and pass to each section as a
   `coldStart` prop. Each section component renders its own
   cold-start variant.
-- Section ordering rendered top-to-bottom is locked at §14 OQ-2
-  (coupled with persona scope).
+- Section ordering rendered top-to-bottom is universal per
+  §12 D-2 (cards-due → streak → retention → deck-mastery →
+  review-history per §8.1 default).
 
 ---
 
@@ -421,7 +420,7 @@ class RetentionSection(BaseModel):
     daily_retention: list[DailyRetentionPoint]  # newest-last; gaps filled with zero-sample entries
 
 class DailyRetentionPoint(BaseModel):
-    date: date                           # local date (UTC; OQ-5 sub-question)
+    date: date                           # user-local date per §12 D-6
     sample_size: int                     # reviews on that day
     recall_rate: Optional[float]         # null if sample_size == 0
 ```
@@ -429,8 +428,9 @@ class DailyRetentionPoint(BaseModel):
 Source: `quiz_review_events` for the user, `reviewed_at >= now() -
 interval 'N days'`. Recall is `rating IN (3, 4)` (Good + Easy);
 lapse is `rating == 1` (Again). `rating == 2` (Hard) counts toward
-recall by py-fsrs convention but flagged in §14 OQ-5b as
-"verify with a spec amendment lock".
+recall by py-fsrs convention but excluded per §12 D-5
+(`overall_recall_rate` counts Good + Easy only;
+`overall_lapse_rate` counts Again only).
 
 The series is **continuous** — every date in the window appears,
 sample-zero days carry `sample_size: 0, recall_rate: None`. This
@@ -453,7 +453,7 @@ class DeckMastery(BaseModel):
 ```
 
 The "mastery threshold" — what counts as a mastered quiz_item — is
-a tunable. v1 candidates surfaced at **§14 OQ-7** (`reps >= 3` vs
+a tunable. **§12 D-8 locks `state == 'review' AND reps >= 3`** (vs
 `state == 'review'` AND `stability >= some_value` vs `state == 'review'`
 alone). The visibility filter chain (curriculum_visibility helpers
 + slice 6.6 D-6) is reused so retired / archived / persona-invisible
@@ -497,7 +497,7 @@ class RecentReview(BaseModel):
 Source: `quiz_review_events` JOIN `lessons` (for `lesson_title`)
 JOIN `decks` (for `deck_slug`) for the user, ordered
 `reviewed_at DESC`, LIMIT `MAX_RECENT_REVIEWS`. The cap value is
-locked at §14 OQ-8 (default proposal: 20 — enough to scroll, small
+locked at §12 D-9 (= 20 — enough to scroll, small
 enough to not drag the response payload).
 
 The `fsrs_state_after` field gives the FE row a "state badge" hint
@@ -549,10 +549,10 @@ the section.)
 Constants live at module scope:
 
 ```python
-DEFAULT_RETENTION_WINDOW_DAYS = 30        # may move per OQ-6 lock
-DEFAULT_REVIEW_HISTORY_WINDOW_DAYS = 30   # may move per OQ-8 lock
-DEFAULT_MAX_RECENT_REVIEWS = 20           # may move per OQ-8 lock
-MASTERY_REPS_THRESHOLD = 3                # may move per OQ-7 lock
+DEFAULT_RETENTION_WINDOW_DAYS = 30        # locked at §12 D-7
+DEFAULT_REVIEW_HISTORY_WINDOW_DAYS = 30   # locked at §12 D-9 (same as retention)
+DEFAULT_MAX_RECENT_REVIEWS = 20           # locked at §12 D-9
+MASTERY_REPS_THRESHOLD = 3                # locked at §12 D-8
 ```
 
 ### 6.2 New route — `app/api/v1/routes/dashboard.py`
@@ -571,14 +571,10 @@ async def get_fsrs_dashboard(
     ...
 ```
 
-Auth required. Free-tier visibility lock at §14 OQ-9 (default
-proposal: free-allowed; Pro-gating belongs to per-section
-limitations rather than the whole surface). No new
-`PaywallTrigger` union member regardless — the dashboard is read,
-not write.
-
-The endpoint surface (single endpoint vs split per-section) is
-locked at §14 OQ-3. The single-envelope shape above is the §6 default.
+Auth required. Free-tier visibility locked at **§12 D-10** =
+free-allowed page + premium-deck mastery rows filtered by
+`curriculum_visibility` helpers (no PaywallTrigger; no new union
+member). Single-envelope endpoint shape locked at **§12 D-3**.
 
 Mounted in `app/main.py` next to the existing `app.include_router`
 calls for `quiz_items`, `progress`, `gamification` — alphabetical
@@ -623,9 +619,10 @@ disk:
 - `gamification_stats` + `badges` shipped pre-Phase-6 (Phase 2).
 - The visibility-helper module shipped at slice 6.6 (`5011518`).
 
-If §14 OQ-8 locks "review-history needs lesson_view_events
-alongside review_events", the implementation can join on the
-existing `lesson_view_events` table — still no migration.
+§12 D-9 locks review-history reads from `quiz_review_events`
+only; `lesson_view_events` is unused by v1 sections. A future
+amendment that wants view-events alongside reviews can join
+the existing `lesson_view_events` table — still no migration.
 
 The only additive write paths Phase-6 has produced are slice 6.0's
 two events tables; this slice is a pure consumer of those write
@@ -637,11 +634,10 @@ paths.
 
 ### 8.1 New page — `src/pages/Dashboard.tsx`
 
-Mounts under the path locked at §14 OQ-1 (default proposal:
-`/learn/dashboard`, keeps the surface inside the `/learn/*`
-namespace alongside `/learn` (Learn page), `/learn/daily` (Daily
-Review), `/learn/lesson/:id` (Lesson reader), `/learn/mission`
-(Mission Mode)).
+Mounts at `/learn/dashboard` per **§12 D-1** — same `/learn/*`
+namespace as `/learn` (Learn page), `/learn/daily` (Daily Review),
+`/learn/lesson/:id` (Lesson reader), `/learn/mission` (Mission
+Mode).
 
 Page structure:
 
@@ -654,7 +650,7 @@ function Dashboard() {
   return (
     <PageContainer>
       <DashboardHeader persona={persona} isColdStart={isColdStart} />
-      {/* per-persona composition per §14 OQ-2 lock */}
+      {/* universal composition per §12 D-2 */}
       <CardsDueSection data={data?.cards_due} coldStart={isColdStart} />
       <StreakSummarySection data={data?.streak} coldStart={isColdStart} />
       <RetentionCurveSection data={data?.retention} coldStart={isColdStart} />
@@ -665,10 +661,10 @@ function Dashboard() {
 }
 ```
 
-Persona-aware composition (§14 OQ-2 (b)) mirrors slice 6.7's inline
-mode functions (`DashboardInterviewMode` / `DashboardHabitMode` /
-`DashboardTeamMode`); the choice of (a) universal vs (b) per-persona
-is locked at amendment.
+Universal composition per **§12 D-2** — no inline persona-mode
+functions. A future per-persona refactor (mirroring slice 6.7's
+inline-mode pattern) is a separate slice if D-11 telemetry
+surfaces persona-specific disengagement.
 
 ### 8.2 New hook — `src/hooks/useFsrsDashboard.ts`
 
@@ -697,16 +693,17 @@ Five components, one per section. All:
 - Receive zero context dependencies (the parent `Dashboard.tsx`
   owns `useAuth` + `useFsrsDashboard`; sections are pure).
 
-Charting decision (§14 OQ-4) shapes `<RetentionCurveSection>`'s
-internals — see OQ-4 for option set.
+Charting locked at **§12 D-4** = hand-rolled SVG (~80 LoC for the
+curve chart; mirrors on-disk `<SkillRadar>` / `<ActivityHeatmap>`
+precedent; no new dep).
 
 ### 8.4 Modified files
 
 - `src/App.tsx` — one route added (`/learn/dashboard` →
   `<Dashboard />` wrapped in `<ProtectedRoute>` per the
   established pattern). Dashboard is **not** lazy-loaded in v1
-  (matches `<Learn />`'s eager mount); §14 OQ does not surface
-  this — Q1 simplicity.
+  (matches `<Learn />`'s eager mount); not surfaced as an OQ —
+  Q1 simplicity.
 - `src/services/api.ts` — `fetchFsrsDashboard(opts?: {
   retentionWindowDays?: number })` helper added (additive).
 - `src/types/index.ts` — `DashboardResponse` + section types
@@ -717,11 +714,13 @@ internals — see OQ-4 for option set.
 
 - `src/pages/Profile.tsx` — `<XPBar>` / `<StreakBadge>` /
   `<SkillRadar>` / `<ActivityHeatmap>` continue to render
-  unchanged. Coexistence question at §14 OQ-11.
+  unchanged. Coexistence locked at **§12 D-12** (coexist v1;
+  follow-up retirement B-### at slice 6.15).
 - `src/pages/Learn.tsx` (slice 6.7) — composition rules unchanged.
   No "click here for your stats" CTA wired in v1; the dashboard
   is reachable via direct URL + the navigation chrome (whether
-  TopNav adds a "Dashboard" link is §14 OQ-1's sub-question).
+  TopNav adds a "Dashboard" link locked at §12 D-1 sub-decision = wait
+  until D-11 telemetry proves the surface).
 - `src/pages/HomeDashboard.tsx` (Phase-5 spec #34 + #61) —
   unchanged; composition rules untouched.
 
@@ -731,17 +730,17 @@ internals — see OQ-4 for option set.
 
 ### 9.1 Default proposal — at most one new event
 
-Default ship per §14 OQ-10 (a):
+Per **§12 D-11** = single event:
 
 | Event | Source | Properties | Fires |
 |-------|--------|------------|-------|
 | `dashboard_viewed` | `src/pages/Dashboard.tsx` | `{persona, plan, is_cold_start, retention_window_days}` | Once per Dashboard mount via `useRef` (matches `home_dashboard_viewed` / `learn_page_viewed` convention). Fires AFTER the `useFsrsDashboard` fetch resolves (so payload includes the cold-start flag). |
 
 Per-section view events (`dashboard_section_viewed`) and per-row
-click events (`dashboard_review_history_row_clicked`) are §14 OQ-10
-(b) / (c). The conservative default is (a) — one event, mirrors the
-slice 6.6 D-11 zero-events default and the slice 6.0 D-11 "no new
-events on read-time hardening" precedent.
+click events (`dashboard_review_history_row_clicked`) were
+considered and **rejected for v1 per §12 D-11** — single event
+mirrors the slice 6.6 D-11 / 6.0 D-11 read-side conservatism while
+keeping enough signal that the page is being visited.
 
 ### 9.2 Existing events touched
 
@@ -801,7 +800,7 @@ Estimated **~6-8 tests**:
 | 5 | `dashboard_viewed fires once via useRef even on Strict-Mode double-render` | §9 idempotency. |
 | 6 | `dashboard_viewed payload includes persona + plan + is_cold_start + retention_window_days` | §9 payload regression. |
 | 7 | `null persona redirects to /onboarding/persona via PersonaGate` | PersonaGate compatibility regression (matches slice 6.7 AC-4). |
-| 8 | `per-persona composition (if §14 OQ-2 (b) lands)` | OQ-2 lock observable. |
+| 8 | `universal composition renders all sections in the §8.1 order across all three personas` | §12 D-2 lock observable. |
 
 ### 10.4 FE — `tests/components/dashboard/*.test.tsx` — section components
 
@@ -848,7 +847,7 @@ external service, no integration marker.
 | **AC-6** | `_aggregate_retention_curve` | user with 0 reviews on a date in window | day appears in `daily_retention` with `sample_size: 0, recall_rate: null` | pytest |
 | **AC-7** | `_aggregate_streak` | user with `gamification_stats.current_streak == 7` | `streak.current_streak == 7` | pytest |
 | **AC-8** | `Dashboard.tsx` | persona=null user mount | PersonaGate redirect to `/onboarding/persona` | Vitest `MemoryRouter` |
-| **AC-9** | `Dashboard.tsx` | authed populated user mount | Renders all five section components in DOM order locked at §14 OQ-2 | Vitest `getByTestId` ordering |
+| **AC-9** | `Dashboard.tsx` | authed populated user mount | Renders all five section components in DOM order locked at §12 D-2 (universal composition; cards-due → streak → retention → deck-mastery → review-history per §8.1) | Vitest `getByTestId` ordering |
 | **AC-10** | `Dashboard.tsx` | mount with `is_cold_start: true` | Each section's cold-start variant renders | Vitest |
 | **AC-11** | `dashboard_viewed` | mount completes after fetch resolves | event fires exactly once even under React Strict Mode double-render | Vitest `vi.spyOn(captureMock)` |
 | **AC-12** | `tsc --noEmit` | post-impl baseline | type-check passes; new types in `src/types/index.ts` mirror `app/schemas/dashboard.py` field-for-field | `npm run typecheck` |
@@ -858,12 +857,133 @@ external service, no integration marker.
 
 ## 12. Decisions
 
-> **Empty at spec-author.** Locks D-1..D-N from §14 OQ-1..OQ-N
-> land in a §12 amendment slice mirroring slice 6.0 `e8eecdd` /
-> slice 6.4.5 `df58eaf` / slice 6.5 `acba7ed` / slice 6.6
-> `fb92396` / slice 6.7 `0c21223` precedent. Each D-N below will
-> resolve the like-numbered §14 OQ; §14 retains the question +
-> RESOLVED pointer back here for traceability after amendment.
+> Locked at §12 amendment `<this-slice>` (2026-04-29) from §14
+> OQ-1..OQ-13 + sub-OQ-5b (mirrors slice 6.0 `e8eecdd` / slice
+> 6.4.5 `df58eaf` / slice 6.5 `acba7ed` / slice 6.6 `fb92396` /
+> slice 6.7 `0c21223` precedent). Each D-N below resolves a §14
+> OQ; §14 retains the question + RESOLVED pointer back here for
+> traceability. OQ→D mapping: OQ-1→D-1, OQ-2→D-2, OQ-3→D-3,
+> OQ-4→D-4, OQ-5→D-5, OQ-5b→D-6, OQ-6→D-7, OQ-7→D-8, OQ-8→D-9,
+> OQ-9→D-10, OQ-10→D-11, OQ-11→D-12, OQ-12→D-13, OQ-13→D-14.
+
+**D-1 (resolves OQ-1) — mount path = `/learn/dashboard`** per
+author hint (a). Keeps the surface inside the `/learn/*` namespace
+alongside Learn / Daily Review / Lesson / Mission — same namespace
+as the rest of slice 6.7 / 6.6 / 6.3 collateral. Sub-decision:
+TopNav `Dashboard` link is NOT added this slice (wait until the
+surface is proven via direct-URL traffic + telemetry from D-11).
+
+**D-2 (resolves OQ-2) — persona scope = universal composition**
+per author hint (a). Every persona sees every section in the same
+order (matches `Profile.tsx` precedent). Q1 simplicity for v1;
+per-persona render-mode (option (b) mirroring slice 6.7) is a
+follow-up if telemetry from D-11 surfaces persona-specific
+disengagement. The `DashboardResponse` shape stays persona-
+agnostic (§5.1) regardless — the lock affects FE composition only.
+
+**D-3 (resolves OQ-3) — endpoint surface = single envelope** per
+author hint (a). One `GET /api/v1/learn/dashboard` returns the full
+`DashboardResponse`. The 200ms total budget (§6.4) gives no latency
+case for splitting; future split is non-breaking (split routes can
+re-call the aggregator with a section selector).
+
+**D-4 (resolves OQ-4) — charting library = hand-rolled SVG** per
+author hint (a). No new dep; ~80 LoC for the retention-curve chart;
+mirrors on-disk `<SkillRadar>` / `<ActivityHeatmap>` precedent.
+Replaceable with `recharts` (option (b)) when the admin retention
+dashboard slice ships and forces the chart-lib decision.
+
+**D-5 (resolves OQ-5) — recall-rate definition = `rating IN (3, 4)`
+(Good + Easy) only** per author hint (a). User-facing dashboards
+report confident recall; Hard sits in the middle and is arguably a
+near-lapse. The §5.3 `overall_recall_rate` field takes a single
+definition; py-fsrs's "remembered" semantics (option (b)) are
+exposed as a separate `overall_lapse_rate` (`rating == 1`) on the
+same shape, so a future amendment can switch the recall framing
+without schema change.
+
+**D-6 (resolves OQ-5b) — date bucketing = user-local date via
+`email_preferences.timezone`** per author hint (b). Gamification's
+streak math already uses user-local timezone (per `/gamification/
+stats` lazy-reset on UTC day rollover); mismatch between dashboard
+date-bucketing and streak day-rollover would read as a bug. One
+extra `email_preferences` lookup per request (cheap; the row is
+small and joinable in the same query).
+
+**D-7 (resolves OQ-6) — default `retention_window_days = 30`, no
+toggle in v1** per author hint (a). 30 days is enough samples to
+be statistically informative and short enough that a casual user
+sees recent behavior. The 7d / 30d / 90d toggle UI (option (c))
+defers to a follow-up if telemetry from D-11 surfaces user demand.
+Constant lives in `dashboard_service.py` per §6.1; query param
+(`?retention_window_days=N`) per D-14 lets ad-hoc tuning happen
+without redeploy.
+
+**D-8 (resolves OQ-7) — mastery threshold = `state == 'review' AND
+reps >= 3`** per author hint (a). Most legible to the user
+("you've reviewed this 3+ times and consistently got it right");
+FSRS-stability-based (option (c)) is faithful but requires
+explaining `stability` in copy; `state == 'review'` alone (option
+(b)) is too lenient (a single Good rating in learning + first
+review = 2 reps). Constant `MASTERY_REPS_THRESHOLD = 3` lives at
+module scope per §6.1.
+
+**D-9 (resolves OQ-8) — review-history = `MAX_RECENT_REVIEWS = 20`,
+same window as retention** per author hint (a). 20 rows scroll
+comfortably without dragging the response payload; same window as
+the retention curve above keeps the section semantically aligned.
+Sub-decision: row click navigates to `/learn/lesson/<lesson_id>`
+(existing slice 6.3 surface); no inline drawer in v1. Section's own
+window (option (c)) deferred — coupling to retention window is a
+v1 simplicity win, splittable in a follow-up if user feedback
+asks.
+
+**D-10 (resolves OQ-9) — tier-gating = (a) free-allowed page +
+(c) premium-deck mastery rows hidden from free users** per author
+hint (compound). The page itself has no PaywallTrigger — read-only
+data, no quota cost, blocking foundation users from their own
+progress is anti-engagement. Premium-deck mastery rows are already
+filtered out by the `curriculum_visibility` helper chain (slice
+6.6 D-10 / slice 6.5 D-2) so no extra FE branch is needed; the
+filter happens in `_aggregate_deck_mastery` (§6.1).
+
+**D-11 (resolves OQ-10) — analytics = one event `dashboard_viewed`
+once-per-mount via `useRef`** per author hint (a). Single event
+with rich payload (`{persona, plan, is_cold_start,
+retention_window_days}`) is enough to funnel-analyze. Per-section
+view events / row click events (option (b)) over-instrument before
+there is a consumer dashboard; zero events (option (c)) loses signal
+that the page is being visited at all. Matches `home_dashboard_viewed`
+/ `learn_page_viewed` cadence convention.
+
+**D-12 (resolves OQ-11) — Profile.tsx = coexist v1 unchanged** per
+author hint (a). Q2 surgical-changes prevails; Profile is a working
+surface and the legacy `card_progress` data isn't going dark until
+slice 6.15. A follow-up B-### to retire `<SkillRadar>` /
+`<ActivityHeatmap>` from Profile (option (b)) is the right ledger
+entry once slice 6.15 (cleanup) ships — file at that point, not
+this slice. Inline deprecation (option (c)) is rejected — would mix
+slice scopes and risk breaking the Phase-5 surfaces before their
+data source is retired.
+
+**D-13 (resolves OQ-12) — cold-start CTA copy = per-section
+variants** per author hint (a). Each section's cold-start variant
+tells the user what that section will do once they have data
+(e.g., "Nothing due — start a session" on cards-due; "Review some
+cards to see your retention curve" on retention). A page-level
+banner alone (option (b)) is a wall; banner + per-section (option
+(c)) over-communicates. Five variants are locked per-section in
+the §10.4 component-test table.
+
+**D-14 (resolves OQ-13) — query param shape = `?retention_window_days=N`
+only** per author hint (a). One param is the right minimum;
+`MAX_RECENT_REVIEWS` and `DEFAULT_REVIEW_HISTORY_WINDOW_DAYS` stay
+hardcoded constants in `dashboard_service.py` (§6.1). Exposing every
+constant (option (b)) over-parameterises the surface before there
+is a caller demanding the knobs; zero query params (option (c))
+loses ad-hoc tuning for QA / debug. Route signature locks at
+`get_fsrs_dashboard(retention_window_days: int = Query(default=30,
+ge=1, le=365), ...)` per §6.2.
 
 ---
 
@@ -890,9 +1010,9 @@ external service, no integration marker.
   this slice. A future slice can add a thin pointer-widget if
   product wants the dashboard discoverable from `/home`.
 - **TopNav "Dashboard" navigation entry.** Whether the chrome adds
-  a Dashboard link is §14 OQ-1's sub-question; the default `/learn/
-  dashboard` mount is reachable via direct URL until the chrome
-  decision is locked at amendment.
+  a Dashboard link locked at §12 D-1 sub-decision = wait until
+  D-11 telemetry proves the surface; the `/learn/dashboard` mount
+  is reachable via direct URL in v1.
 - **Real-time / SSE / WebSocket.** Static fetch on page mount; no
   live stream.
 - **Comparison surfaces** (peer comparison, "you're in the top
@@ -902,166 +1022,110 @@ external service, no integration marker.
   events, unlock-a-trophy-for-mastering-a-deck, etc.). The
   dashboard reads `gamification_stats`; it does NOT extend the
   badges catalog.
-- **Charting library adoption beyond §14 OQ-4 lock.** Whatever
-  OQ-4 picks (hand-rolled SVG / recharts / numeric-only), v1
-  ships that. Library swap is a follow-up if the admin retention
-  dashboard slice forces a different choice.
-- **Window-toggle UI.** §14 OQ-6 may lock a single retention
-  window for v1; the 7d / 30d / 90d toggle ships in a follow-up
-  if locked out of v1.
+- **Charting library adoption beyond §12 D-4 lock.** v1 ships
+  hand-rolled SVG; library swap to `recharts` (option (b)) is a
+  follow-up if the admin retention dashboard slice forces a
+  different choice.
+- **Window-toggle UI.** §12 D-7 locks 30 days fixed for v1; the
+  7d / 30d / 90d toggle ships in a follow-up if D-11 telemetry
+  surfaces user demand.
 - **Accessibility audits beyond R12 token compliance.** Standard
   alt-text on charts and ARIA roles on tables apply (per AGENTS.md
   baseline) — no extra WCAG sweep this slice.
 - **i18n.** Copy is English-only; no translation infra extended.
-- **A/B variants of cold-start copy.** Spec locks one variant per
-  §14 OQ-8 / OQ-? amendment; no rollout-tooling scope.
+- **A/B variants of cold-start copy.** Spec locks per-section
+  variants per §12 D-13; no rollout-tooling scope.
 
 ---
 
 ## 14. Open questions
 
-> All OQs lock at §12 amendment slice mirroring prior Phase 6 §12
-> amendment precedent (`e8eecdd` / `df58eaf` / `acba7ed` /
-> `fb92396` / `0c21223`). Each OQ carries options + an author hint
-> per option to minimize amendment churn. Spec-author does NOT
-> pick — that's §12's job.
+> All OQs locked at §12 amendment `<this-slice>` (mirrors slice 6.0
+> `e8eecdd` / 6.4.5 `df58eaf` / 6.5 `acba7ed` / 6.6 `fb92396` /
+> 6.7 `0c21223` precedent). Each OQ retains its question text +
+> RESOLVED pointer to §12 D-N for traceability; option bodies +
+> author hints have been replaced.
 
-**OQ-1 — Mount path for the dashboard.**
-- (a) `/learn/dashboard` — keeps the surface inside `/learn/*`
-  alongside Learn / Daily Review / Lesson / Mission.
-- (b) `/dashboard` — top-level peer of `/home`; cleaner URL but
-  blurs the namespace.
-- (c) `/profile/dashboard` — sub-page of Profile alongside the
-  legacy gamification surfaces.
+**OQ-1 — Mount path for the dashboard.** Where does the new page
+mount inside the `/learn/*` namespace, at top level, or under
+Profile?
+RESOLVED — see §12 **D-1** (`<this-slice>`): `/learn/dashboard`;
+no TopNav link this slice (wait until proven via D-11 telemetry).
 
-Author hint: **(a)** — same namespace as the rest of the slice's
-collateral. Sub-question: does the chrome add a `Dashboard` link
-to TopNav this slice or wait until proven? Author hint: wait.
-
-**OQ-2 — Persona scope and per-persona composition.**
-- (a) universal — every persona sees every section in the same
-  order. Matches `Profile.tsx` precedent.
-- (b) per-persona — three render modes mirror slice 6.7
-  (`DashboardInterviewMode` / `DashboardHabitMode` /
-  `DashboardTeamMode`). More tailored, doubles surface.
-
-Author hint: **(a)** — Q1 simplicity for v1; (b) is a follow-up if
-telemetry shows persona-specific disengagement. BE shape is persona-
-agnostic regardless (§5.1).
+**OQ-2 — Persona scope and per-persona composition.** Universal
+section composition or three render modes mirroring slice 6.7?
+RESOLVED — see §12 **D-2** (`<this-slice>`): universal
+composition; BE response stays persona-agnostic regardless.
 
 **OQ-3 — Endpoint surface (single envelope vs split per-section).**
-- (a) single `GET /api/v1/learn/dashboard` returning full
-  `DashboardResponse` envelope. One fetch on mount.
-- (b) split: `/dashboard/cards-due`, `/retention`, etc. Five
-  fetches; consumer can subset.
-
-Author hint: **(a)** — 200ms total budget (§6.4) gives no latency
-case for splitting; future split is non-breaking.
+One `/learn/dashboard` returning the full envelope vs five
+section endpoints?
+RESOLVED — see §12 **D-3** (`<this-slice>`): single envelope
+per §6.4 perf budget; future split is non-breaking.
 
 **OQ-4 — Charting library for `RetentionCurveSection`.**
-- (a) hand-rolled SVG (no new dep; ~80 LoC; mirrors on-disk
-  `<SkillRadar>` / `<ActivityHeatmap>` precedent).
-- (b) `recharts` (~150KB gzipped; declarative; future-proof for
-  admin retention dashboard slice).
-- (c) numeric-only — render "78% recall over 30d / 412 reviews"
-  as a single tile, no chart.
+Hand-rolled SVG, `recharts`, or numeric-only tile?
+RESOLVED — see §12 **D-4** (`<this-slice>`): hand-rolled SVG;
+no new dep; replaceable with `recharts` when the admin retention
+dashboard slice forces the lib decision.
 
-Author hint: **(a)** — ships without a dep; replaceable with (b)
-when admin retention dashboard slice forces the chart-lib decision.
+**OQ-5 — Recall-rate definition.** Which py-fsrs ratings count as
+recall in `overall_recall_rate`?
+RESOLVED — see §12 **D-5** (`<this-slice>`): `rating IN (3, 4)`
+(Good + Easy) only; `overall_lapse_rate` covers `rating == 1`
+on the same shape.
 
-**OQ-5 — Recall-rate definition.**
-- (a) `rating IN (3, 4)` (Good + Easy) — strict.
-- (b) `rating IN (2, 3, 4)` (+Hard) — py-fsrs default "remembered".
-- (c) `rating != 1` — equivalent to (b).
+**OQ-5b — Date bucketing for the daily-retention curve.** UTC
+date or user-local via `email_preferences.timezone`?
+RESOLVED — see §12 **D-6** (`<this-slice>`): user-local date;
+matches gamification streak day-rollover semantics.
 
-Author hint: **(a)** — user-facing dashboards report confident
-recall; Hard is arguably a near-lapse. Single field
-(`overall_recall_rate`) takes one definition.
+**OQ-6 — Default `retention_window_days` and toggle-in-v1.** 30d
+no toggle / 7d no toggle / 30d with 7d-30d-90d toggle UI?
+RESOLVED — see §12 **D-7** (`<this-slice>`): 30 days, no toggle
+in v1; toggle defers unless D-11 telemetry surfaces demand.
 
-**OQ-5b — Date bucketing for the daily-retention curve.**
-- (a) UTC date — server-side, no timezone math.
-- (b) user-local date via `email_preferences.timezone`.
+**OQ-7 — Mastery threshold definition.** `state == 'review' AND
+reps >= 3` / `state == 'review'` alone / FSRS stability-based?
+RESOLVED — see §12 **D-8** (`<this-slice>`): `state == 'review'
+AND reps >= 3`; `MASTERY_REPS_THRESHOLD = 3` lives at module
+scope per §6.1.
 
-Author hint: **(b)** — gamification's streak math already uses
-user-local timezone; mismatch would read as a bug.
+**OQ-8 — Review-history shape and cap.** Cap value + window
+coupling?
+RESOLVED — see §12 **D-9** (`<this-slice>`): `MAX_RECENT_REVIEWS
+= 20`, same window as retention; row click navigates to
+`/learn/lesson/<lesson_id>`; no inline drawer in v1.
 
-**OQ-6 — Default `retention_window_days` and toggle-in-v1.**
-- (a) 30 days, no toggle.
-- (b) 7 days default, no toggle.
-- (c) 30 days default with 7d / 30d / 90d toggle UI in v1.
+**OQ-9 — Tier-gating of the dashboard surface.** Free-allowed /
+Pro-gated / free-allowed-with-premium-row-hidden?
+RESOLVED — see §12 **D-10** (`<this-slice>`): page free-allowed
+(no PaywallTrigger) + premium-deck mastery rows already filtered
+by `curriculum_visibility` helpers (compound (a)+(c)).
 
-Author hint: **(a)** — 30 days has enough samples; toggle defers
-unless telemetry surfaces demand.
+**OQ-10 — Analytics events.** Single `dashboard_viewed`, two
+events incl. `dashboard_section_clicked`, or zero events?
+RESOLVED — see §12 **D-11** (`<this-slice>`): one event
+`dashboard_viewed` once-per-mount via `useRef`; payload
+`{persona, plan, is_cold_start, retention_window_days}`.
 
-**OQ-7 — Mastery threshold definition.**
-- (a) `state == 'review' AND reps >= 3` — survived learning + 3+
-  reviews.
-- (b) `state == 'review'` alone — survived learning phase.
-- (c) `state == 'review' AND stability >= 30` — FSRS-stability-
-  based.
+**OQ-11 — Profile.tsx coexistence vs migration.** Coexist v1
+unchanged / coexist + file follow-up retirement B-### / inline
+deprecation now?
+RESOLVED — see §12 **D-12** (`<this-slice>`): coexist v1
+unchanged. Follow-up B-### filed at slice 6.15 (cleanup) when
+Phase-5 data sources retire.
 
-Author hint: **(a)** — most legible to user; (c) is faithful but
-needs explaining `stability`; (b) is too lenient.
+**OQ-12 — Cold-start CTA copy variants.** Per-section / page-level
+banner / both?
+RESOLVED — see §12 **D-13** (`<this-slice>`): per-section copy
+locked per the §10.4 component-test table; no page-level banner.
 
-**OQ-8 — Review-history shape and cap.**
-- (a) `MAX_RECENT_REVIEWS = 20`, same window as retention.
-- (b) `MAX_RECENT_REVIEWS = 50`, same window.
-- (c) Review-history takes its OWN fixed window (e.g. 14 days)
-  separate from `retention_window_days`.
-
-Author hint: **(a)** — 20 rows scroll comfortably; same window keeps
-sections semantically aligned. Sub-question: row click navigates
-to `/learn/lesson/<lesson_id>` (existing slice 6.3 surface) or
-opens inline drawer? Author hint: navigate; no drawer v1.
-
-**OQ-9 — Tier-gating of the dashboard surface.**
-- (a) Free-allowed (no PaywallTrigger) — read-only data.
-- (b) Pro-gated — `Depends(require_plan('pro'))`.
-- (c) Free-allowed; premium-deck mastery rows hidden from free
-  users (matches slice 6.6 D-10).
-
-Author hint: **(a)** for the page + **(c)** for deck-mastery content
-(premium decks already filtered by visibility chain). Pro-gating
-the whole surface blocks users from seeing their own foundation
-progress — anti-engagement.
-
-**OQ-10 — Analytics events.**
-- (a) one event: `dashboard_viewed` once-per-mount via `useRef`.
-- (b) two events: + `dashboard_section_clicked` on interactions.
-- (c) zero events (mirrors slice 6.6 D-11 / 6.0 D-11).
-
-Author hint: **(a)** — single event with rich payload
-(`{persona, plan, is_cold_start, retention_window_days}`); (c)
-loses signal that the page is visited; (b) over-instruments.
-
-**OQ-11 — Profile.tsx coexistence vs migration.**
-- (a) coexist v1; Profile.tsx unchanged.
-- (b) coexist v1 + file follow-up B-### to retire `<SkillRadar>` /
-  `<ActivityHeatmap>` once Phase-5 cleanup (slice 6.15) lands.
-- (c) deprecate inline this slice — replace Profile mounts with
-  Phase-6 equivalents now.
-
-Author hint: **(a)** — Q2 surgical-changes; legacy data isn't going
-dark until slice 6.15. (b) is the right follow-up flag if Dhamo
-wants the ledger entry.
-
-**OQ-12 — Cold-start CTA copy variants.**
-- (a) per-section cold-start copy (five variants, locked per section).
-- (b) single page-level cold-start banner inhibiting section cards.
-- (c) per-section + page-level banner.
-
-Author hint: **(a)** — per-section copy tells the user what each
-section will do once they have data; (b) is a wall; (c)
-over-communicates.
-
-**OQ-13 — Session/window query param shape.**
-- (a) `?retention_window_days=N` only.
-- (b) every constant as query param
-  (`?retention_window_days=N&review_history_window_days=M&max_recent_reviews=K`).
-- (c) no query params; all server-side constants in v1.
-
-Author hint: **(a)** — one param is the right minimum; others are
-hardcoded constants and become query params only if needed.
+**OQ-13 — Session/window query param shape.** Single window
+param / every constant exposed / no params at all?
+RESOLVED — see §12 **D-14** (`<this-slice>`): `?retention_window_days=N`
+only; `MAX_RECENT_REVIEWS` + `DEFAULT_REVIEW_HISTORY_WINDOW_DAYS`
+stay hardcoded constants per §6.1.
 
 ---
 
@@ -1071,10 +1135,10 @@ Implementation row: **B-080** 🔴 (filed by this slice).
 
 Forward dependencies before impl can start:
 
-1. **§12 amendment slice** locking D-1..D-N from §14 OQ-1..OQ-N
-   (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 §12 amendment
-   pattern at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` /
-   `0c21223`). Must land before impl pickup.
+1. **§12 amendment slice** locked D-1..D-14 from §14 OQ-1..OQ-13
+   (incl. sub-OQ-5b) at `<this-slice>` (mirrors slice 6.0 / 6.4.5
+   / 6.5 / 6.6 / 6.7 §12 amendment pattern at `e8eecdd` /
+   `df58eaf` / `acba7ed` / `fb92396` / `0c21223`). ✅ shipped.
 2. No BE primitive prerequisite — every data source is on disk:
    - `quiz_item_progress` (slice 6.1, `a989539`).
    - `quiz_review_events` + `lesson_view_events` (slice 6.0,
@@ -1090,7 +1154,7 @@ Impl slice expected scope:
 - `app/main.py` route mount addition (1 line + 1 import).
 - Two new BE test files per §10.1 + §10.2 (~10-13 tests).
 - New file `src/pages/Dashboard.tsx` (~200-300 lines per
-  §14 OQ-2 lock).
+  §12 D-2 universal composition).
 - New file `src/hooks/useFsrsDashboard.ts` (~30-50 lines).
 - Five new section components under `src/components/dashboard/`
   (~80-150 lines each; ~500-750 lines total).
@@ -1103,7 +1167,7 @@ Impl slice expected scope:
   field-for-field (~50-80 lines).
 - Six new FE test files per §10.3 + §10.4 (~11-15 tests).
 - `.agent/skills/analytics.md` update: at most one new event row
-  per §14 OQ-10 lock.
+  per §12 D-11 (one new event row).
 - BACKLOG B-080 closure with impl SHA.
 - SESSION-STATE Recently Completed entry.
 - CODE-REALITY targeted regen at impl close (new page + components +
