@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.10: AI Ingestion Pipeline (Gemini Gen + Cross-Model Critique)
 
-## Status: Drafted, §12 amended — D-1..D-16 locked at `<this-slice>` from §14 OQ-A..OQ-P (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 precedent at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168`); B-083 🔴 unchanged (impl not shipped)
+## Status: Drafted, §12 amended — D-1..D-16 locked at `be7d59a` from §14 OQ-A..OQ-P (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 precedent at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168`); B-083 🔴 unchanged (impl not shipped)
 
 | Field | Value |
 |-------|-------|
@@ -1032,7 +1032,7 @@ Per **§12 D-14 + D-15** new params:
 
 ## 12. Decisions
 
-> Locked at §12 amendment `<this-slice>` (2026-04-29) from §14
+> Locked at §12 amendment `be7d59a` (2026-04-29) from §14
 > OQ-A..OQ-P (mirrors slice 6.0 `e8eecdd` / 6.4.5 `df58eaf` /
 > 6.5 `acba7ed` / 6.6 `fb92396` / 6.7 `0c21223` / 6.8 `ab07168`
 > precedent). Each D-N below resolves a §14 OQ; §14 retains the
@@ -1285,7 +1285,7 @@ together reconstruct ingestion's full admin attribution chain.
 
 ## 14. Open questions
 
-> All OQs locked at §12 amendment `<this-slice>` (mirrors slice 6.0
+> All OQs locked at §12 amendment `be7d59a` (mirrors slice 6.0
 > `e8eecdd` / 6.4.5 `df58eaf` / 6.5 `acba7ed` / 6.6 `fb92396` /
 > 6.7 `0c21223` / 6.8 `ab07168` precedent). Each OQ retains its
 > question text + RESOLVED pointer to §12 D-N for traceability;
@@ -1293,27 +1293,27 @@ together reconstruct ingestion's full admin attribution chain.
 
 **OQ-A — Source-content delivery shape.** Paste-text-only v1, file-
 upload v1 (multipart `UploadFile`), or both?
-RESOLVED — see §12 **D-1** (`<this-slice>`): paste-text-only v1;
+RESOLVED — see §12 **D-1** (`be7d59a`): paste-text-only v1;
 multipart upload deferred to a future slice (`source_format` column
 is the forward-compat hook).
 
 **OQ-B — Job framework readiness.** Is RQ already wired or is
 greenfield infra stand-up required this slice?
-RESOLVED — see §12 **D-2** (`<this-slice>`): greenfield (audit-
+RESOLVED — see §12 **D-2** (`be7d59a`): greenfield (audit-
 confirmed); RQ-on-Redis stand-up bundles into the 6.10 impl.
 
 **OQ-C — Prompt-template-registry shape.** New
 `app/services/prompt_template_service.py` with `Path.read_text()` +
 `@functools.cache`, OR inline f-strings co-located with the
 ingestion service?
-RESOLVED — see §12 **D-3** (`<this-slice>`): new module
+RESOLVED — see §12 **D-3** (`be7d59a`): new module
 (`Path.read_text()` + `@functools.cache`); no version registry,
 no hot-reload.
 
 **OQ-D — Cross-model critique provider.** Same-provider-different-
 model (e.g. Gemini Flash for critique vs Gemini Pro for gen) or true
 cross-provider (Anthropic Claude for critique vs Gemini for gen)?
-RESOLVED — see §12 **D-4** (`<this-slice>`): true cross-provider —
+RESOLVED — see §12 **D-4** (`be7d59a`): true cross-provider —
 Gemini Pro reasoning-tier for gen + Anthropic Claude for critique;
 prerequisite D-14 (`provider_override` extension) ships bundled in
 the impl commit.
@@ -1321,39 +1321,39 @@ the impl commit.
 **OQ-E — Idempotency on re-ingestion.** Content-hash dedupe at job-
 enqueue / deck-slug overwrite triggers substantive-edit cascade /
 reject duplicate as 409?
-RESOLVED — see §12 **D-5** (`<this-slice>`): compound — content-hash
+RESOLVED — see §12 **D-5** (`be7d59a`): compound — content-hash
 dedupe at enqueue + slug-based UPSERT in Stage 3 (re-ingest of edited
 source triggers spec #04 §7 substantive-edit cascade).
 
 **OQ-F — Retry semantics.** Per-job retry budget (3 attempts default)
 / per-step retry (gen-only, critique-only, persist-only) / no-retry-
 LLM-only-flake?
-RESOLVED — see §12 **D-6** (`<this-slice>`): per-step with 3-attempt
+RESOLVED — see §12 **D-6** (`be7d59a`): per-step with 3-attempt
 budget per stage; total job timeout cap of 600s; backoff schedule
 `[5, 15, 45]` as a module-level constant.
 
 **OQ-G — Visibility timing.** Ingested lessons land as drafts
 (`published_at=NULL`) / auto-publish on critique=PASS / configurable
 per-deck?
-RESOLVED — see §12 **D-7** (`<this-slice>`): drafts only
+RESOLVED — see §12 **D-7** (`be7d59a`): drafts only
 (`published_at=NULL`); admin publishes via existing slice 6.4b
 `POST /admin/lessons/{id}/publish` route.
 
 **OQ-H — Rate-limit shape.** Per-admin-user / global / no limit
 (admin trust)?
-RESOLVED — see §12 **D-8** (`<this-slice>`): per-admin-user 10/hour
+RESOLVED — see §12 **D-8** (`be7d59a`): per-admin-user 10/hour
 via slowapi custom `key_func` resolving admin user_id from request
 scope; paired with Redis-backed INCR counter for telemetry.
 
 **OQ-I — Source-content size cap.** 100KB / 1MB / 10MB / no cap?
-RESOLVED — see §12 **D-9** (`<this-slice>`): 1MB v1 enforced via
+RESOLVED — see §12 **D-9** (`be7d59a`): 1MB v1 enforced via
 `Field(min_length=100, max_length=1_048_576)` on
 `IngestionJobCreateRequest.source_text`.
 
 **OQ-J — Job-status surface.** FE-polling endpoint
 (`GET /api/v1/admin/ingest/{job_id}` + `useIngestionJob` hook) /
 SSE / no-FE-this-slice (admin reads logs)?
-RESOLVED — see §12 **D-10** (`<this-slice>`): FE-polling endpoint
+RESOLVED — see §12 **D-10** (`be7d59a`): FE-polling endpoint
 scaffolded BE; FE consumer is a follow-up sub-slice tracked via a new
 BACKLOG row at impl close.
 
@@ -1361,14 +1361,14 @@ BACKLOG row at impl close.
 90d / TTL 30d / delete on ingest-complete? Sub-question: SDK choice
 — `boto3` (sync, mature) / `aiobotocore` (async, less mature) /
 `aioboto3`?
-RESOLVED — see §12 **D-11** (`<this-slice>`): forever v1 (no TTL);
+RESOLVED — see §12 **D-11** (`be7d59a`): forever v1 (no TTL);
 boto3 (sync) wrapped in `asyncio.to_thread` on the async FastAPI
 side; RQ worker runs sync natively.
 
 **OQ-L — Quality signal v1.** Emit `quality_score` from this slice
 (layer-2 partial implementation) / defer entirely to slice 6.11 +
 6.13.5?
-RESOLVED — see §12 **D-12** (`<this-slice>`): defer entirely; v1
+RESOLVED — see §12 **D-12** (`be7d59a`): defer entirely; v1
 critique gates publish-readiness via PASS / FAIL / NEEDS_REVIEW
 verdict only — no `lessons.quality_score` write, no `card_quality_signals`
 touch (table itself ships in slice 6.13.5).
@@ -1376,14 +1376,14 @@ touch (table itself ships in slice 6.13.5).
 **OQ-M — Telemetry events.** Zero / `ingestion_started` only /
 `ingestion_started` + `ingestion_completed` + `ingestion_failed`
 three-event minimum / four-event (add per-stage events)?
-RESOLVED — see §12 **D-13** (`<this-slice>`): three-event minimum
+RESOLVED — see §12 **D-13** (`be7d59a`): three-event minimum
 (`ingestion_job_enqueued` / `_completed` / `_failed`), all BE-emitted
 with `internal: true` per analytics.md admin-event convention.
 
 **OQ-N — `llm_router.generate_for_task` `provider_override`
 extension scope.** Land the additive parameter in this slice's impl
 or as a separate prereq sub-slice?
-RESOLVED — see §12 **D-14** (`<this-slice>`): bundle into the 6.10
+RESOLVED — see §12 **D-14** (`be7d59a`): bundle into the 6.10
 impl (~15 LoC + 1 test); existing call sites unaffected (regression
 assertion in §10.7). D-4 cross-provider critique is unbuildable
 without it — they ship bundled.
@@ -1393,7 +1393,7 @@ close).** Plumb `response_schema` into `generate_for_task` +
 `_call_gemini` per D-016 close-shape this slice (since ingestion's
 structured-output use case is the natural impl driver), or defer to
 a separate D-016-close sub-slice?
-RESOLVED — see §12 **D-15** (`<this-slice>`): bundle into the 6.10
+RESOLVED — see §12 **D-15** (`be7d59a`): bundle into the 6.10
 impl (~30 LoC + 1 test); plumbs into `types.GenerateContentConfig`
 when both `json_mode=True` AND a schema are provided. Closes drift
 D-016 in the impl commit (NOT this amendment commit).
@@ -1403,7 +1403,7 @@ D-016 in the impl commit (NOT this amendment commit).
 `audit_admin_request`) / additional rows per `lesson_admin_service`
 call from the worker (so the audit log has a row for each
 generated lesson + quiz_item)?
-RESOLVED — see §12 **D-16** (`<this-slice>`): one row per admin HTTP
+RESOLVED — see §12 **D-16** (`be7d59a`): one row per admin HTTP
 request (current default suffices); the worker's slice-6.4b service
 calls already write their own admin events — don't duplicate the
 trail.
@@ -1417,7 +1417,7 @@ Implementation row: **B-083** 🔴 (filed by this slice).
 Forward dependencies before impl can start:
 
 1. **§12 amendment slice** locked D-1..D-16 from §14 OQ-A..OQ-P at
-   `<this-slice>` (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8
+   `be7d59a` (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8
    §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` /
    `fb92396` / `0c21223` / `ab07168`). ✅ shipped this commit.
 2. No BE primitive prerequisite — every existing data source is on
@@ -1501,5 +1501,5 @@ skill-author follow-up if a third RQ consumer appears.
 *Spec authored at `409762f` against HEAD `c2491e0`. All on-
 disk citations verified at audit time per SOP-5; phantom citations
 zero. Forward-filed B-083 at status 🔴 per R15(c). §12 amendment
-locked D-1..D-16 from §14 OQ-A..OQ-P at `<this-slice>` (2026-04-29);
+locked D-1..D-16 from §14 OQ-A..OQ-P at `be7d59a` (2026-04-29);
 B-083 stays 🔴 pending impl pickup.*
