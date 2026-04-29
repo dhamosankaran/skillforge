@@ -7,7 +7,7 @@
 | **Slice** | 6.10 (Track D opener — first AI-content-generation slice) |
 | **Phase** | 6 (Curriculum Platform) |
 | **Mode** | Mode 4 spec-author → followed by §12 amendment → impl |
-| **Filed at** | `<this-slice>` (spec-author HEAD pin) |
+| **Filed at** | `409762f` (spec-author HEAD pin) |
 | **BACKLOG row** | **B-083** 🔴 (filed by this slice) |
 | **Depends on** | spec #00 (`docs/specs/phase-6/00-analytics-tables.md` — `quiz_review_events` + `lesson_view_events` + dual-write contract; shipped `e7a0044`) ▪ spec #01 (`docs/specs/phase-6/01-foundation-schema.md` — `decks` / `lessons` / `quiz_items` + `superseded_by_id` self-ref FK; shipped `a989539`) ▪ spec #04 (`docs/specs/phase-6/04-admin-authoring.md` — admin services + write schemas + substantive-edit cascade + admin auth chain; shipped `d6bda3b` BE + `634f633` FE) ▪ spec #05 (`docs/specs/phase-6/05-seed-lessons.md` — savepoint-protected UPSERT pattern + natural-key idempotency; shipped `ac5b905`) ▪ existing `app/core/llm_router.py::generate_for_task` (R11 contract) ▪ existing `Depends(require_admin)` + `audit_admin_request` chain (`app/core/deps.py`) ▪ existing `slowapi` rate limiter (`app/core/rate_limit.py`). |
 | **Blocks** | Slice 6.11 (cross-model critique scoring → `card_quality_signals` table — slice 6.13.5 builds the table; this slice writes layer 1 of the curriculum.md §7 three-layer quality skeleton). Slice 6.13.5 (user-thumbs feedback layer) consumes the same admin-write surfaces this slice exercises. |
@@ -1330,7 +1330,7 @@ skill-author follow-up if a third RQ consumer appears.
 
 ---
 
-*Spec authored at `<this-slice>` against HEAD `c2491e0`. All on-
+*Spec authored at `409762f` against HEAD `c2491e0`. All on-
 disk citations verified at audit time per SOP-5; phantom citations
 zero. Forward-fil ed B-083 at status 🔴 per R15(c). §12 amendment
 slice locks D-1..D-N from §14 OQ-A..OQ-P before impl pickup.*
