@@ -26,7 +26,8 @@ from app.schemas.analytics_event import (
     LessonViewEventCreate,
     LessonViewEventRequest,
 )
-from app.services import analytics_event_service, quiz_item_study_service
+from app.services import analytics_event_service
+from app.services.curriculum_visibility import _resolve_plan
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ async def post_lesson_view_event(
             detail="deck_id does not match lesson.deck_id",
         )
 
-    plan = quiz_item_study_service._resolve_plan(user)
+    plan = _resolve_plan(user)
     persona = user.persona
 
     # D-7 best-effort wrapper — analytics never blocks the user request.

@@ -51,6 +51,12 @@ from app.schemas.quiz_item import (
 )
 from app.schemas.study import DailyStatus
 from app.services import analytics_event_service
+from app.services.curriculum_visibility import (
+    _allowed_tiers_for_user,
+    _persona_visible_to,
+    _resolve_plan,
+    _visible_persona_set,
+)
 from app.utils.timezone import get_user_timezone
 
 logger = logging.getLogger(__name__)
@@ -198,46 +204,6 @@ class QuizItemNotVisibleError(Exception):
         super().__init__(
             f"Quiz item {quiz_item_id!r} is not visible to the requesting user"
         )
-
-
-# ── Read-time visibility helpers (slice 6.5 §6.3 / D-5 — duplicated to
-# `lesson_service.py`) ────────────────────────────────────────────────────────
-
-
-def _persona_visible_to(deck_persona: str, user_persona: Optional[str]) -> bool:
-    """True iff a user with ``user_persona`` may see a deck with
-    ``persona_visibility == deck_persona``. Mirrors deck_admin_service
-    semantics: ``'both'`` is visible to everyone; the named persona is
-    visible only to a user with that persona.
-    """
-    if deck_persona == "both":
-        return True
-    if user_persona is None:
-        return False
-    return deck_persona == user_persona
-
-
-def _visible_persona_set(user: Optional[User]) -> tuple[str, ...]:
-    """``Deck.persona_visibility`` values the user is allowed to see.
-
-    Persona-null users see only ``'both'``; persona-set users see
-    ``'both'`` + their persona.
-    """
-    if user is None or user.persona is None:
-        return ("both",)
-    return ("both", user.persona)
-
-
-def _allowed_tiers_for_user(user: Optional[User]) -> tuple[str, ...]:
-    """``Deck.tier`` values the user can access given their plan (D-2).
-
-    Free users (and persona-null / unloaded-subscription) see only
-    ``'foundation'``; paid plans see ``'foundation'`` + ``'premium'``.
-    """
-    plan = _resolve_plan(user)
-    if plan and plan != "free":
-        return ("foundation", "premium")
-    return ("foundation",)
 
 
 # ── Daily-status read (spec 6.2 §4.4 / §7 — sentinel only per D-4) ──────────
@@ -586,25 +552,6 @@ async def review_quiz_item(
     )
 
 
-def _resolve_plan(user: Optional[User]) -> Optional[str]:
-    """Best-effort plan extraction for analytics — only inspects already-loaded
-    attributes to avoid triggering async lazy-loads from the synchronous service
-    body. Returns None when the subscription is not eagerly loaded (e.g. service
-    tests that construct User directly without going through `get_current_user`).
-    """
-    if user is None:
-        return None
-    from sqlalchemy import inspect
-
-    state = inspect(user)
-    if "subscription" in state.unloaded:
-        return None  # don't trigger lazy load
-    sub = user.subscription
-    if sub is None:
-        return "free"
-    if getattr(sub, "status", None) != "active":
-        return "free"
-    return getattr(sub, "plan", "free")
 
 
 def _state_before(progress: QuizItemProgress, pre_review_card: FsrsCard) -> str:

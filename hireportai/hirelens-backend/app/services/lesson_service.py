@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from sqlalchemy import inspect, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -31,57 +31,13 @@ from app.schemas.lesson import (
     LessonWithQuizzesResponse,
 )
 from app.schemas.quiz_item import QuizItemResponse
+from app.services.curriculum_visibility import (
+    _allowed_tiers_for_user,
+    _persona_visible_to,
+    _resolve_plan,
+    _visible_persona_set,
+)
 from app.services.quiz_item_study_service import QuizItemForbiddenError
-
-
-# ── Read-time visibility helpers (slice 6.5 §6.3 / D-5 — duplicated from
-# `quiz_item_study_service.py`). Promote to a shared
-# `app/services/curriculum_visibility.py` once a third on-disk consumer
-# materializes (D-5 escape hatch).
-# `deck_admin_service._PERSONA_EXPANSION` is NOT semantically equivalent
-# (it maps deck-visibility → user-set, the inverse direction), so the
-# rule-of-three threshold is not yet tripped.
-
-
-def _persona_visible_to(deck_persona: str, user_persona: Optional[str]) -> bool:
-    """True iff a user with ``user_persona`` may see a deck with
-    ``persona_visibility == deck_persona``.
-    """
-    if deck_persona == "both":
-        return True
-    if user_persona is None:
-        return False
-    return deck_persona == user_persona
-
-
-def _visible_persona_set(user: Optional[User]) -> tuple[str, ...]:
-    """``Deck.persona_visibility`` values the user is allowed to see."""
-    if user is None or user.persona is None:
-        return ("both",)
-    return ("both", user.persona)
-
-
-def _resolve_plan(user: Optional[User]) -> Optional[str]:
-    """Best-effort plan extraction without triggering a sync lazy-load."""
-    if user is None:
-        return None
-    state = inspect(user)
-    if "subscription" in state.unloaded:
-        return None
-    sub = user.subscription
-    if sub is None:
-        return "free"
-    if getattr(sub, "status", None) != "active":
-        return "free"
-    return getattr(sub, "plan", "free")
-
-
-def _allowed_tiers_for_user(user: Optional[User]) -> tuple[str, ...]:
-    """``Deck.tier`` values the user can access given their plan (D-2)."""
-    plan = _resolve_plan(user)
-    if plan and plan != "free":
-        return ("foundation", "premium")
-    return ("foundation",)
 
 
 # ── Public service methods ───────────────────────────────────────────────────
