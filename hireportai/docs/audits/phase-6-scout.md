@@ -885,6 +885,28 @@ this is greenfield.
 > foundation exists vs what must be built, plus any dependency the
 > original plan looks like it missed.
 
+> **⚠️ Numbering drift since this audit (`5b0aa23`, 2026-04-26):**
+> Phase 6 was re-sequenced post-scout. On-disk reality (see
+> `SESSION-STATE.md` Phase 6 specs block + BACKLOG B-078 / B-080) is
+> the authoritative slice→spec mapping. Notable changes:
+>
+> - **Slice 6.8** now = user-self FSRS dashboard (spec
+>   `docs/specs/phase-6/09-fsrs-dashboard.md`, shipped `0968a13` /
+>   B-080 ✅). The "Pro-only daily digest emails" framing in this
+>   audit's slice 6.8 entry below has moved to slice 6.14.
+> - **Slice 6.14** now = daily Pro digest + cron architecture
+>   decision (B-078 🟦, gated on pre-launch readiness — consolidates
+>   this audit's slice 6.8 *and* slice 6.14 framings into one
+>   forward-filed row). Spec #14 not yet authored; the cron
+>   architecture decision (in-repo scheduler / Railway cron config /
+>   external scheduler) must land before spec-author begins. Phase 6
+>   locked decision **G2** currently leans Railway cron, but B-078
+>   exists to surface the alternatives at activation time.
+>
+> Other slice numbering (6.0–6.7, 6.9–6.13.5, 6.15, 6.16) unchanged.
+> Treat the slice-by-slice block below as historical scout context;
+> consult SESSION-STATE + spec dir for current state.
+
 **Slice 6.0 — analytics-as-foundation event taxonomy.** Foundation:
 PostHog wired both tiers, catalog file in `.agent/skills/analytics.md`,
 catalog conventions enforced by R8 + R12. Build: pick whether quiz/lesson
@@ -958,7 +980,11 @@ via spec #62. Build: new Learn-page composition that mounts ranker output
 for Interview Prepper + free-grid for Climber. Reuses
 `StudyDashboard.tsx` patterns.
 
-**Slice 6.8 — Pro-only daily digest emails.** Foundation:
+**Slice 6.8 — Pro-only daily digest emails.**
+*(See top-of-section drift notice — slice 6.8 is now FSRS dashboard
+[B-080 ✅, spec `docs/specs/phase-6/09-fsrs-dashboard.md`]; this
+entry's framing applies to current slice 6.14 [B-078 🟦].)*
+Foundation:
 Resend wrapper + `reminder_service` pattern. Build: digest assembly
 (top quiz_items due, retention summary, persona-tailored), Pro-user
 selector query, opt-out flag, dedup via `email_log` (NEW TABLE — see
@@ -999,7 +1025,12 @@ there's reason to ship Climber free-pick first.
 under 6.8. May be a separate slice for surface-area reasons (email-prefs
 UI + table + dedup) — fine.
 
-**Slice 6.14 — daily digest cron entry point.** Same as 6.8's missed
+**Slice 6.14 — daily digest cron entry point.**
+*(See top-of-section drift notice — slice 6.14 is now daily Pro
+digest + cron architecture decision [B-078 🟦, spec #14 unauthored];
+this entry's framing is consolidated into the same current slice
+6.14, which absorbed the scout's slice 6.8 daily-digest framing.)*
+Same as 6.8's missed
 dependency. Either pull this earlier (foundation) or roll into 6.8.
 
 **Slice 6.15 — Phase-6 cleanup (drop legacy `/api/*` mounts,
