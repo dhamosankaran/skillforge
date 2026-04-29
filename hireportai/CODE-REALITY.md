@@ -9,9 +9,9 @@
 
 | Field | Value |
 |-------|-------|
-| Commit sha (short) | `<this-slice>` (B-079 full regen — closes B-079). **Scope:** all 13 sections regenerated. **Prior anchor:** `6a2a224` (B-070 targeted regen, 2026-04-28). **Raw gap:** 23 commits. **Code-touching commits in window (under sharpened LD-1):** 2 — `5011518` slice 6.6 impl (deck-ranker service + curriculum_visibility extraction + ranker route + ranker schemas); `c6d9274` slice 6.7 impl (persona Learn page replaces StudyDashboard + RankedDeckList component + useRankedDecks hook + ranker FE types + App.tsx mount swap). The other 21 = spec-author + §12 amendments + SHA backfills + B-073 cohort items 1+2 (skill-author `backend.md` + CLAUDE.md SOP amendments) + B-075 (`curriculum.md` skill-author) + B-076 (SESSION-STATE compaction + drift-archive) + B-078 cron-decision filing. **Lineage from `6a2a224`:** `6a2a224` → `76acd21` SHA backfill → `e23e22a` slice 6.5 spec slice 3/3 → spec/SHA-backfill chain through `c201a65` → `930a6a2` slice 6.5 impl → `c201a65` SHA backfill → `84060b3` backend.md skill-author → `b468025` B-073 item 2 docs slice → `bcb1085` SHA backfill → `a1b4bb5` slice 6.6 spec-author → `41db8e8` SHA backfill → `fb92396` slice 6.6 §12 amendment → `8640136` SHA backfill → `49fc7e7` curriculum.md skill-author + E-028 close → `582253e` SHA backfill → `5011518` slice 6.6 impl → `917ff39` SHA backfill → `6c130f3` SESSION-STATE compaction (B-076) → `31863dd` SHA backfill → `c14b9ca` slice 6.7 spec-author → `4fc82c4` SHA backfill → `0c21223` slice 6.7 §12 amendment → `90aefd3` SHA backfill → `c6d9274` slice 6.7 impl → `055f63c` SHA backfill → `d1f522e` B-078 filing → THIS commit (full regen, B-079). |
+| Commit sha (short) | `4c4d88f` (B-079 full regen — closes B-079). **Scope:** all 13 sections regenerated. **Prior anchor:** `6a2a224` (B-070 targeted regen, 2026-04-28). **Raw gap:** 23 commits. **Code-touching commits in window (under sharpened LD-1):** 2 — `5011518` slice 6.6 impl (deck-ranker service + curriculum_visibility extraction + ranker route + ranker schemas); `c6d9274` slice 6.7 impl (persona Learn page replaces StudyDashboard + RankedDeckList component + useRankedDecks hook + ranker FE types + App.tsx mount swap). The other 21 = spec-author + §12 amendments + SHA backfills + B-073 cohort items 1+2 (skill-author `backend.md` + CLAUDE.md SOP amendments) + B-075 (`curriculum.md` skill-author) + B-076 (SESSION-STATE compaction + drift-archive) + B-078 cron-decision filing. **Lineage from `6a2a224`:** `6a2a224` → `76acd21` SHA backfill → `e23e22a` slice 6.5 spec slice 3/3 → spec/SHA-backfill chain through `c201a65` → `930a6a2` slice 6.5 impl → `c201a65` SHA backfill → `84060b3` backend.md skill-author → `b468025` B-073 item 2 docs slice → `bcb1085` SHA backfill → `a1b4bb5` slice 6.6 spec-author → `41db8e8` SHA backfill → `fb92396` slice 6.6 §12 amendment → `8640136` SHA backfill → `49fc7e7` curriculum.md skill-author + E-028 close → `582253e` SHA backfill → `5011518` slice 6.6 impl → `917ff39` SHA backfill → `6c130f3` SESSION-STATE compaction (B-076) → `31863dd` SHA backfill → `c14b9ca` slice 6.7 spec-author → `4fc82c4` SHA backfill → `0c21223` slice 6.7 §12 amendment → `90aefd3` SHA backfill → `c6d9274` slice 6.7 impl → `055f63c` SHA backfill → `d1f522e` B-078 filing → THIS commit (full regen, B-079). |
 | Branch | `main` (62 commits ahead of `origin/main`; not yet pushed) |
-| Generated | 2026-04-28 (full regen at HEAD `<this-slice>`). Gap 23 commits exceeds LD-1 ~10-commit targeted threshold, so all 13 sections rebuilt. LD-2: counts via `find` / `wc` enumeration, not estimation. LD-3: ambiguous fields flagged. |
+| Generated | 2026-04-28 (full regen at HEAD `4c4d88f`). Gap 23 commits exceeds LD-1 ~10-commit targeted threshold, so all 13 sections rebuilt. LD-2: counts via `find` / `wc` enumeration, not estimation. LD-3: ambiguous fields flagged. |
 | Backend model files | 24 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models`). 27 ORM model classes (some files declare 2: `analytics_event.py` → `QuizReviewEvent` + `LessonViewEvent`; `gamification.py` → `GamificationStats` + `Badge` + `UserBadge`; `mission.py` → `Mission` + `MissionDay`). |
 | Backend service files | 41 functional top-level (in `app/services/`, excl. `__init__.py`) + 3 under `services/llm/` = 44. **+2 since `6a2a224`**: `deck_ranker_service.py` + `curriculum_visibility.py` (slice 6.6, `5011518`). |
 | Backend schema files | 16 (`app/schemas/*.py`, excl. `__init__.py`). **+1 since `6a2a224`**: `ranker.py` (slice 6.6, `5011518`) — 4 Pydantic v2 schemas (`ScoreBreakdown` / `RankedDeck` / `RankedLesson` / `RankedDecksResponse`). |
@@ -576,7 +576,7 @@ Spec #40 priority-slot types. Unchanged.
 | `hirelens-backend/app/services/llm/` | Legacy provider abstraction parallel to `app/core/llm_router.py`. Phase-6 consolidation pending. | leave (Phase-6) |
 | `pages/CategoryDetail.tsx:13`, `components/PaywallModal.tsx:5` | Comments reference the deleted `StudyDashboard` page. Stale refs but harmless (comment-only). | clean on next edit |
 
-No components found behind `{false && …}` guards or dormant feature flags at HEAD `<this-slice>`. Background-job framework absent — cron architecture decision pending at B-078 🟦 (Phase 6 LD G2 leans Railway cron for slice 6.14 daily Pro digest).
+No components found behind `{false && …}` guards or dormant feature flags at HEAD `4c4d88f`. Background-job framework absent — cron architecture decision pending at B-078 🟦 (Phase 6 LD G2 leans Railway cron for slice 6.14 daily Pro digest).
 
 ---
 
@@ -627,7 +627,7 @@ Three directory-style skills on disk but not in git (each shows `??` in `git sta
 
 ## Section 11 — Drift flags (AGENTS.md / master-doc vs code)
 
-Re-verified at HEAD `<this-slice>`. Items 22 + 23 from prior regen reconciled below; new item 24 added.
+Re-verified at HEAD `4c4d88f`. Items 22 + 23 from prior regen reconciled below; new item 24 added.
 
 1. **AGENTS.md legacy-routes paths use underscores; decorators use hyphens.** `app/api/routes/cover_letter.py:22` decorates `/cover-letter`; AGENTS.md row says `/api/cover_letter`. Same for `/api/interview` → `/api/interview-prep`. **Status: still drifted.**
 
@@ -730,7 +730,7 @@ Walked `docs/specs/**/*.md` — **89 spec files across 7 phases** (+2 since `6a2
 | 6.5 | `06-read-time-invariants.md` | B-072 ✅ | `930a6a2` | Read-time service-layer invariants — added persona-narrowing filters across 7 user-facing reads. |
 | 6.6 | `07-deck-lesson-ranker.md` | B-074 ✅ | `5011518` | **Deck-ranker BE** — `deck_ranker_service` + `curriculum_visibility` extraction + `ranker.py` route + `ranker.py` schemas. Cold-start safe. Zero FE this slice. |
 | 6.7 | `08-persona-learn-page.md` | B-077 ✅ | `c6d9274` | **Persona Learn page FE** — `pages/Learn.tsx` replaces `StudyDashboard.tsx` + `RankedDeckList` + `useRankedDecks` + ranker FE types + App.tsx mount swap. Zero BE this slice. |
-| (process) | (none) | B-073 cohort items 1+2 + B-075 + B-076 + B-078 + B-079 | `84060b3` / `b468025` / `49fc7e7` / `6c130f3` / `d1f522e` / `<this-slice>` | `backend.md` skill-author + CLAUDE.md SOP amendments + `curriculum.md` skill-author + SESSION-STATE compaction + B-078 cron decision row + this CR regen. |
+| (process) | (none) | B-073 cohort items 1+2 + B-075 + B-076 + B-078 + B-079 | `84060b3` / `b468025` / `49fc7e7` / `6c130f3` / `d1f522e` / `4c4d88f` | `backend.md` skill-author + CLAUDE.md SOP amendments + `curriculum.md` skill-author + SESSION-STATE compaction + B-078 cron decision row + this CR regen. |
 
 ### phase-0
 | File | Status |
@@ -860,4 +860,4 @@ Walked `docs/specs/**/*.md` — **89 spec files across 7 phases** (+2 since `6a2
 
 ---
 
-*End of snapshot. Generated 2026-04-28 at HEAD `<this-slice>` — full regen, all 13 sections (closes B-079). Slice absorption: 6.6 + 6.7 + B-073/B-075/B-076/B-078 process work. Lineage extends `6a2a224` → 23 commits → THIS commit. Next regen recommended once another ~10-commit code-touching delta accumulates (LD-1 sharpened threshold) — likely after Phase 6 slice 6.8 or first slice in the 6.10+ ingestion track.*
+*End of snapshot. Generated 2026-04-28 at HEAD `4c4d88f` — full regen, all 13 sections (closes B-079). Slice absorption: 6.6 + 6.7 + B-073/B-075/B-076/B-078 process work. Lineage extends `6a2a224` → 23 commits → THIS commit. Next regen recommended once another ~10-commit code-touching delta accumulates (LD-1 sharpened threshold) — likely after Phase 6 slice 6.8 or first slice in the 6.10+ ingestion track.*
