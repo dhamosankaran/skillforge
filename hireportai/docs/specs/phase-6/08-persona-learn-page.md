@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.7: Persona-Aware Learn Page (FE Consumer of Slice 6.6 Ranker)
 
-## Status: Drafted + §12 amended at `<this-slice>` locking D-1..D-8 from §14 OQ-1..OQ-8
+## Status: Drafted + §12 amended at `0c21223` locking D-1..D-8 from §14 OQ-1..OQ-8
 
 | Field | Value |
 |-------|-------|
@@ -587,7 +587,7 @@ None. The slice 6.6 BE is already covered by
 
 ## 12. Decisions
 
-> Locked at §12 amendment `<this-slice>` from §14 OQ-1..OQ-8
+> Locked at §12 amendment `0c21223` from §14 OQ-1..OQ-8
 > (mirrors slice 6.0 `e8eecdd` / slice 6.4.5 `df58eaf` / slice 6.5
 > `acba7ed` / slice 6.6 `fb92396` precedent). Each D-N below resolves
 > the like-numbered §14 OQ; §14 retains the question + RESOLVED
@@ -684,7 +684,7 @@ PostHog funnels for zero gain. The event source-file column in
 
 ## 14. Open questions
 
-> All OQs locked at §12 amendment `<this-slice>` (mirrors slice 6.0
+> All OQs locked at §12 amendment `0c21223` (mirrors slice 6.0
 > `e8eecdd` / slice 6.4.5 `df58eaf` / slice 6.5 `acba7ed` / slice 6.6
 > `fb92396` precedent). Each OQ retains its question text + RESOLVED
 > pointer to §12 D-N for traceability; option bodies + author hints
@@ -693,43 +693,43 @@ PostHog funnels for zero gain. The event source-file column in
 **OQ-1 — Deck-card visual treatment (compact list vs card grid).**
 The slice 6.6 response carries up to 12 decks per response;
 compact list vs card grid trades scan-density for visual weight.
-RESOLVED — see §12 **D-1** (`<this-slice>`): card grid (2-col
+RESOLVED — see §12 **D-1** (`0c21223`): card grid (2-col
 desktop, ~160px tall, larger matched-gap chips + score breakdown).
 
 **OQ-2 — `RankedDeckList` empty-state copy.** When ranker returns
 `decks=[]` AND `cold_start=false` (defensive — slice 6.6 §3
 non-goal #6 means this should not normally happen).
-RESOLVED — see §12 **D-2** (`<this-slice>`): "No decks match
+RESOLVED — see §12 **D-2** (`0c21223`): "No decks match
 your profile yet — scan your resume to get personalized
 recommendations." (actionable variant).
 
 **OQ-3 — Legacy `StudyDashboard.tsx` file disposition.** Delete
 or keep-as-shell-export?
-RESOLVED — see §12 **D-3** (`<this-slice>`): DELETE; `Learn.tsx`
+RESOLVED — see §12 **D-3** (`0c21223`): DELETE; `Learn.tsx`
 absorbs all behaviour, no other importer (`rg` confirmed §7.3).
 
 **OQ-4 — `LearnHabitMode` ranked-deck section default state.**
 Expanded-by-default vs collapsed-with-toggle?
-RESOLVED — see §12 **D-4** (`<this-slice>`): expanded-by-default.
+RESOLVED — see §12 **D-4** (`0c21223`): expanded-by-default.
 Collapsed would under-surface the ranker for the career_climber
 persona (~half the user base per PRD §1.3 split).
 
 **OQ-5 — Mode files: inline functions vs separate component
 files.** Mirror HomeDashboard's on-disk inline-function pattern,
 or extract to `src/components/learn/{LearnInterviewMode,…}.tsx`?
-RESOLVED — see §12 **D-5** (`<this-slice>`): inline functions
+RESOLVED — see §12 **D-5** (`0c21223`): inline functions
 inside `Learn.tsx` mirroring HomeDashboard
 (`src/pages/HomeDashboard.tsx:32/65/79`).
 
 **OQ-6 — `learn_mode_rendered` event firing cadence.** Once per
 mount via `useRef`, or once per session via sessionStorage?
-RESOLVED — see §12 **D-6** (`<this-slice>`): once per mount via
+RESOLVED — see §12 **D-6** (`0c21223`): once per mount via
 `useRef` (matches `home_dashboard_viewed` / `lesson_viewed` /
 `study_dashboard_viewed` family convention).
 
 **OQ-7 — Cold-start CTA copy variant.** Three proposals (each
 zero PII, design-token only).
-RESOLVED — see §12 **D-7** (`<this-slice>`): variant (a)
+RESOLVED — see §12 **D-7** (`0c21223`): variant (a)
 "Take a scan to personalize your learning path. We'll rank the
 lessons that close your skill gaps." (verbose-most-specific).
 
@@ -737,7 +737,7 @@ lessons that close your skill gaps." (verbose-most-specific).
 preserve.** Source file moves from `StudyDashboard.tsx` to
 `Learn.tsx` but the contract (idempotent `useRef`, payload
 `{source, persona, copy_variant}`) is unchanged.
-RESOLVED — see §12 **D-8** (`<this-slice>`): preserve verbatim
+RESOLVED — see §12 **D-8** (`0c21223`): preserve verbatim
 per spec #62 §7.4. Source-file column in `analytics.md` updates
 at impl time; payload + idempotency + `copy_variant: '6A'` stay
 unchanged.
@@ -751,7 +751,7 @@ Implementation row: **B-077** 🔴 (filed by this slice).
 Forward dependencies before impl can start:
 
 1. **§12 amendment slice** locked D-1..D-8 from §14 OQ-1..OQ-8
-   at `<this-slice>` (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6
+   at `0c21223` (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6
    pattern at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396`).
    ✅ shipped.
 2. No BE prerequisite — slice 6.6 (B-074, `5011518`) shipped the
