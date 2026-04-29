@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.10: AI Ingestion Pipeline (Gemini Gen + Cross-Model Critique)
 
-## Status: Drafted, not shipped — §12 EMPTY at spec-author; locks via amendment slice mirroring slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 precedent (`e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168`)
+## Status: Drafted, §12 amended — D-1..D-16 locked at `<this-slice>` from §14 OQ-A..OQ-P (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 precedent at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168`); B-083 🔴 unchanged (impl not shipped)
 
 | Field | Value |
 |-------|-------|
@@ -126,8 +126,8 @@ post-slice-6.9 retro-close):
    R2-flavored endpoint URL is the simplest path; new env vars
    needed: `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
    `R2_ACCOUNT_ID`, `R2_BUCKET_INGESTION_ARTIFACTS`. Greenfield
-   wiring this slice (or a thin sub-slice prereq — see **§14
-   OQ-K**).
+   wiring this slice (or a thin sub-slice prereq — see **§12
+   D-11**).
 
 3. **`llm_router.generate_for_task` signature audit.**
    `app/core/llm_router.py:210-266` exposes:
@@ -152,7 +152,7 @@ post-slice-6.9 retro-close):
      so a single ingestion job can target two providers without
      flipping the global env var (scout R-6 recommendation), or (b)
      hot-swapping `LLM_REASONING_PROVIDER` mid-job (fragile per
-     scout). See **§14 OQ-D + OQ-N**.
+     scout). See **§12 D-4 + D-14**.
    - **No `response_schema` plumbing.** `_call_gemini:68-126` accepts
      `json_mode` (which maps to `response_mime_type="application/
      json"` in `types.GenerateContentConfig`) but never accepts a
@@ -160,7 +160,7 @@ post-slice-6.9 retro-close):
      captures this gap. Ingestion's structured-output need (the
      orchestrator parses LLM output into `LessonCreateRequest` +
      `list[QuizItemCreateRequest]`) is the natural impl driver to
-     close D-016. See **§14 OQ-O**.
+     close D-016. See **§12 D-15**.
 
 4. **Prompt-template registry on disk: greenfield.**
    Prompts are inlined in service code as f-strings. Examples:
@@ -190,8 +190,8 @@ post-slice-6.9 retro-close):
    `@limiter.limit("5/minute")` precedent at
    `app/api/v1/routes/admin.py:137`). Per-route override via the
    `@limiter.limit(...)` decorator. New ingestion enqueue endpoint
-   needs a stricter cap (per **§14 OQ-H** author hint = 10/hour per
-   admin user) — slowapi's per-key limit by `get_remote_address` is
+   needs a stricter cap (per **§12 D-8** = 10/hour per admin user)
+   — slowapi's per-key limit by `get_remote_address` is
    IP-based; per-user keying needs a custom `key_func` or the
    ingestion service can enforce its own per-admin counter via
    Redis (`INCR ingestion:enqueue:{user_id}:{hour}` with TTL).
@@ -208,7 +208,7 @@ post-slice-6.9 retro-close):
    cascade (curriculum.md §4 + spec #04 §7) and the
    `EditClassificationConflictError` 409 mapping
    (`admin_lessons.py:107-116`) apply when ingestion overwrites an
-   existing lesson — see **§14 OQ-E** for idempotency / overwrite
+   existing lesson — see **§12 D-5** for idempotency / overwrite
    semantics.
 
 8. **Natural-key UPSERT pattern: mature.** `seed_lessons_service.
@@ -219,13 +219,13 @@ post-slice-6.9 retro-close):
    `(quiz_items.lesson_id, sha256(question)[:16])` per spec #05 §6.1.2.
    Ingestion v1 reuses the same UPSERT pattern when re-running
    against the same source content (idempotency floor: re-run is a
-   no-op if source-content-hash matches). See **§14 OQ-E**.
+   no-op if source-content-hash matches). See **§12 D-5**.
 
 9. **Pre-existing ingestion event surface: zero.**
    `rg "ingestion_|generate_lesson_|critique_"` against
    `hirelens-frontend/src/` and `hirelens-backend/app/` returns no
    hits. Greenfield event surface (no deprecated rows, no
-   collisions). Per **§14 OQ-M** author hint, three events
+   collisions). Per **§12 D-13**, three events
    (`ingestion_job_enqueued`, `ingestion_job_completed`,
    `ingestion_job_failed`) is the v1 minimum — admin observability
    demands at least the start/end/error triple.
@@ -245,7 +245,7 @@ post-slice-6.9 retro-close):
     `/admin/decks`, `/admin/lessons`, `/admin/quiz-items`,
     `/admin/analytics`. AdminGate wraps `/admin/*` routes per slice
     6.4a (`b0806d0`). New `/admin/ingest` (or alternatives — see
-    **§14 OQ-J**) mounts alongside; no auth surface change.
+    **§12 D-10**) mounts alongside; no auth surface change.
 
 12. **Substantive-edit cascade ON: lessons / quiz_items.** Per
     curriculum.md §4 + spec #04 §7, lesson updates that exceed the
@@ -256,7 +256,7 @@ post-slice-6.9 retro-close):
     classification consistency. Ingestion's "re-ingest the same
     source markdown after admin tweaks" path crosses this cascade —
     the orchestrator declares a classification claim per-PATCH and
-    handles the 409 retry-with-corrected-claim path. See **§14 OQ-E**.
+    handles the 409 retry-with-corrected-claim path. See **§12 D-5**.
 
 13. **Event-table FK shape (slice 6.0):** `quiz_review_events` and
     `lesson_view_events` are append-only with `FK ON DELETE CASCADE`
@@ -265,7 +265,7 @@ post-slice-6.9 retro-close):
     admin-cum-machine writes); they DO touch lesson rows that may
     later receive `lesson_view_events` writes. No new event table
     needed for ingestion — three PostHog events (per finding #9 +
-    §14 OQ-M) are the v1 telemetry envelope.
+    §12 D-13) are the v1 telemetry envelope.
 
 14. **`thinking_budget` plumbing:** `_call_gemini:75-105` accepts
     `thinking_budget: Optional[int]` and plumbs into
@@ -276,7 +276,7 @@ post-slice-6.9 retro-close):
     `max_output_tokens` pool (per B-001 / spec #51 LD-4 Option A
     rationale). The orchestrator passes a non-default
     `thinking_budget` for the gen call; critique runs on a faster
-    tier without thinking. See **§14 OQ-D**.
+    tier without thinking. See **§12 D-4**.
 
 15. **Existing `ai_card_service.generate_card_draft` precedent:**
     the closest on-disk pattern to "LLM generates structured
@@ -315,10 +315,10 @@ post-slice-6.9 retro-close):
   D-016 flagged as belt-and-suspenders-missing on cover-letter is
   acceptable for short-form output but unacceptable for a 2000-
   token JSON-shaped lesson + quiz_item batch. Plumbing
-  `response_schema` (per **§14 OQ-O**) lands as part of the impl
+  `response_schema` (per **§12 D-15**) lands as part of the impl
   slice's natural blast radius.
 - **Forward-compatible with multi-source v2.** v1 accepts paste-
-  text Markdown only (per **G-3** + **§14 OQ-A**); the
+  text Markdown only (per **G-3** + **§12 D-1**); the
   R2-artifact-key abstraction in the `ingestion_jobs` row (§5.3)
   lets a future v2 PDF / DOCX / URL upload slice slot in without
   schema migration.
@@ -331,11 +331,11 @@ post-slice-6.9 retro-close):
 |---|------|
 | **G-1** | **Async job framework: RQ on Redis** per LD G2 + scout R-5. New `app/jobs/ingestion_worker.py` consumed by an `rq worker` process; Redis already a dep. New deps: `rq>=1.16` (additive `requirements.txt` line). The same primitive is reused by slice 6.14 (daily digest) and any future async-job slice; this slice is the canonical ground-up reference for RQ-on-Redis conventions in this codebase. |
 | **G-2** | **Source-content artifact storage: Cloudflare R2** per LD H1. New `app/services/object_storage_service.py` wraps an R2 client (S3-compatible API). Source markdown blobs and generated draft markdown + critique reports persist under `s3://<bucket>/ingestion/<job_id>/{source.md, draft.md, critique.json}`. New env vars: `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_ACCOUNT_ID`, `R2_BUCKET_INGESTION_ARTIFACTS`. |
-| **G-3** | **Source content format v1: Markdown only.** Admin pastes Markdown text in the request body; ingestion parses Markdown frontmatter (optional `target_deck_slug`) + body. PDF / DOCX upload deferred to a future slice (§13); multipart `UploadFile` upload deferred (§14 OQ-A author hint). |
+| **G-3** | **Source content format v1: Markdown only.** Admin pastes Markdown text in the request body; ingestion parses Markdown frontmatter (optional `target_deck_slug`) + body. PDF / DOCX upload deferred to a future slice (§13); multipart `UploadFile` upload deferred (per §12 D-1). |
 | **G-4** | **Admin-only access in v1.** `POST /api/v1/admin/ingest` and `GET /api/v1/admin/ingest/{job_id}` gated by the existing `Depends(require_admin)` + `audit_admin_request` chain at the router level (`APIRouter(dependencies=[Depends(audit_admin_request)])`). No user-facing upload UX. |
 | **G-5** | **Single source of truth.** Ingestion writes go through the existing slice 6.4b admin services (`deck_admin_service` / `lesson_admin_service` / `quiz_item_admin_service`) — same UPSERT semantics, same substantive-edit cascade, same admin-attribution pattern. **No parallel ingestion-staging schema; no direct ORM writes from the worker.** |
-| **G-6** | **Two-stage AI pipeline: Gemini reasoning-tier gen → cross-model critique.** Ingestion orchestrator routes the lesson-generation step through `llm_router.generate_for_task(task="lesson_gen", ...)` with the reasoning-tier provider (Gemini 2.5 Pro per env defaults), then routes the critique step through the same router with a `provider_override` parameter (per §14 OQ-D author hint = Anthropic Claude). Both steps emit structured output (per §14 OQ-O = `response_schema` plumbed). Critique runs **pre-publish** so generated drafts land at `published_at=NULL` (per §14 OQ-G author hint). |
-| **G-7** | **Durable job state + observable retry.** New `ingestion_jobs` table (one Alembic migration, §7) tracks `status` per job through the pipeline (`pending → running → generating → critiquing → publishing → completed | failed`). Per-step retry budget per **§14 OQ-F**; total job timeout cap per **§14 OQ-F**. Failed jobs surface a structured `error_message` so admins can re-trigger from the saved R2 source artifact without re-pasting. |
+| **G-6** | **Two-stage AI pipeline: Gemini reasoning-tier gen → cross-model critique.** Ingestion orchestrator routes the lesson-generation step through `llm_router.generate_for_task(task="lesson_gen", ...)` with the reasoning-tier provider (Gemini 2.5 Pro per env defaults), then routes the critique step through the same router with a `provider_override` parameter (per §12 D-4 = Anthropic Claude). Both steps emit structured output (per §12 D-15 = `response_schema` plumbed). Critique runs **pre-publish** so generated drafts land at `published_at=NULL` (per §12 D-7). |
+| **G-7** | **Durable job state + observable retry.** New `ingestion_jobs` table (one Alembic migration, §7) tracks `status` per job through the pipeline (`pending → running → generating → critiquing → publishing → completed | failed`). Per-step retry budget per **§12 D-6**; total job timeout cap per **§12 D-6**. Failed jobs surface a structured `error_message` so admins can re-trigger from the saved R2 source artifact without re-pasting. |
 
 ---
 
@@ -345,14 +345,14 @@ post-slice-6.9 retro-close):
   Source-format expansion is a future slice that builds on the same
   R2-artifact-key abstraction (§5.3); the `source_format` column on
   `ingestion_jobs` is a forward-compat hook, not a feature.
-- **No multipart `UploadFile` in v1** (per §14 OQ-A author hint).
+- **No multipart `UploadFile` in v1** (per §12 D-1).
   Admin pastes text in the JSON request body; v1's request size cap
-  is 1MB (per §14 OQ-I author hint). Multipart upload + larger size
+  is 1MB (per §12 D-9). Multipart upload + larger size
   cap is a v2 sub-slice.
 - **No user-facing ingestion UX.** No "submit a question for the AI to
   generate a flashcard" surface. Per G-4, ingestion is an admin
   authoring affordance, not a user-feature.
-- **No quality-score emission v1** (per §14 OQ-L author hint). Layer
+- **No quality-score emission v1** (per §12 D-12). Layer
   2 of curriculum.md §7 (critique-derived `quality_score` writes to
   `lessons.quality_score` + `card_quality_signals`) is **slice 6.11
   / 6.13.5** territory. This slice's critique step gates publish-
@@ -365,7 +365,7 @@ post-slice-6.9 retro-close):
   ingestion (e.g. "ingest the entire seed corpus weekly") is out of
   scope; slice 6.14's cron architecture decision (B-078 🟦) is the
   natural home for any future scheduled trigger.
-- **No FE consumer this slice** (per §14 OQ-J author hint). The
+- **No FE consumer this slice** (per §12 D-10). The
   job-status endpoint scaffolds BE-side; the FE polling consumer
   (`pages/admin/Ingest.tsx` + a `useIngestionJob` hook) is a follow-
   up slice. Admin in v1 reads logs / `ingestion_jobs` rows directly
@@ -384,7 +384,7 @@ post-slice-6.9 retro-close):
   `POST /admin/ingest` (or a follow-up sub-slice that exposes a
   "retry" endpoint reading the same R2 source artifact).
 - **No automatic publish-on-pass-critique.** Critique-PASS jobs
-  still land lessons at `published_at=NULL` (per **G-6** + §14 OQ-G).
+  still land lessons at `published_at=NULL` (per **G-6** + §12 D-7).
   Admin reviews and publishes via existing slice 6.4b
   `POST /admin/lessons/{id}/publish`. Auto-publish gating is a
   product decision deferred until layer 2 quality-score is in flight.
@@ -446,7 +446,7 @@ hirelens-backend/app/
 └── main.py                                  [MOD; +admin_ingest router mount]
 ```
 
-Two adjacent edits to existing services per **§14 OQ-N + OQ-O**:
+Two adjacent edits to existing services per **§12 D-14 + D-15**:
 - `app/core/llm_router.py` — additive `provider_override: str | None = None`
   parameter to `generate_for_task` + plumbing into provider dispatch.
 - `app/core/llm_router.py::_call_gemini` — additive
@@ -462,7 +462,7 @@ admin pastes Markdown → POST /api/v1/admin/ingest
   ├─ require_admin + audit_admin_request (router-level)
   ├─ ingestion_service.enqueue_ingestion(payload, db, admin)
   │    1. compute source_content_sha256
-  │    2. dedupe lookup (§14 OQ-E): if active job with same hash, return existing job
+  │    2. dedupe lookup (§12 D-5): if active job with same hash, return existing job
   │    3. write source markdown to R2 (s3://<bucket>/ingestion/<job_id>/source.md)
   │    4. INSERT ingestion_jobs row (status='pending')
   │    5. enqueue RQ job: ingestion_worker.run_ingestion_job(job_id)
@@ -494,7 +494,7 @@ ingestion_worker.run_ingestion_job(job_id):
   │    - if target_deck not on disk: deck_admin_service.create_deck(...)
   │    - lesson_admin_service.create_lesson(deck_id, ...)  [G-5 single source]
   │    - for each quiz_item: quiz_item_admin_service.create_quiz_item(lesson_id, ...)
-  │    - lessons.published_at stays NULL (drafts; per G-6 + §14 OQ-G)
+  │    - lessons.published_at stays NULL (drafts; per G-6 + §12 D-7)
   │    - mark status='completed'
   └─ emit posthog event: ingestion_job_completed (or _failed on exception)
 
@@ -503,8 +503,8 @@ admin polls GET /api/v1/admin/ingest/{job_id} → IngestionJobResponse
 
 ### 4.3 Failure modes + recovery
 
-Per **§14 OQ-F** author hint = per-step retry budget of 3 attempts;
-total job timeout cap of 600s (10 min) — generous because Gemini 2.5
+Per **§12 D-6** = per-step retry budget of 3 attempts; total job
+timeout cap of 600s (10 min) — generous because Gemini 2.5
 Pro reasoning-tier latency on 2000-token output can exceed 60s and
 critique adds another 30-60s.
 
@@ -537,18 +537,18 @@ single `ingestion_jobs.current_attempt` column.
    `ingestion_jobs.created_by_user_id` and threads it through —
    ingestion appears in `admin_audit_log` with the admin who
    triggered the run, not the worker process.
-3. **Idempotency floor: source-content-hash dedupe** (per **§14
-   OQ-E** author hint). Active job (`status IN
+3. **Idempotency floor: source-content-hash dedupe** (per **§12
+   D-5**). Active job (`status IN
    ('pending','running','generating','critiquing','publishing')`)
    with the same `source_content_sha256` returns the existing job's
    `IngestionJobResponse` instead of enqueueing a duplicate. Admin
    gets the same `job_id` back.
-4. **Drafts only, never auto-publish** (per **G-6** + §14 OQ-G).
+4. **Drafts only, never auto-publish** (per **G-6** + §12 D-7).
    `lesson_admin_service.create_lesson` defaults to
    `published_at=NULL` per spec #04 §4.4 LessonCreateRequest;
    ingestion never sets `published_at` directly. Admin publish via
    existing `POST /admin/lessons/{id}/publish` route.
-5. **R2 retention: forever v1** (per **§14 OQ-K** author hint). No
+5. **R2 retention: forever v1** (per **§12 D-11**). No
    TTL, no scheduled deletion. Cost is negligible (Markdown +
    JSON), and forever-retention aligns with audit-log-style
    reasoning ("we want to be able to replay any prompt that
@@ -565,7 +565,7 @@ class IngestionJobCreateRequest(BaseModel):
     """Admin pastes Markdown; ingestion produces lesson + N quiz_items
     drafts under the target deck.
     """
-    source_text: str = Field(..., min_length=100, max_length=1_048_576)  # 1MB cap (OQ-I)
+    source_text: str = Field(..., min_length=100, max_length=1_048_576)  # 1MB cap (D-9)
     target_deck_slug: Optional[str] = Field(
         None,
         description="If supplied, lesson lands under existing deck. "
@@ -577,7 +577,7 @@ class IngestionJobCreateRequest(BaseModel):
     notes: Optional[str] = Field(None, max_length=2000)  # admin-side memo
 ```
 
-Length validators bound the request (G-3 + OQ-I = 1MB cap;
+Length validators bound the request (G-3 + D-9 = 1MB cap;
 `expected_lesson_count` capped at 5 to prevent runaway batches).
 
 ### 5.2 `IngestionJobResponse` (new)
@@ -647,7 +647,7 @@ class IngestionArtifacts(BaseModel):
     critique_r2_key: Optional[str] = None
     # Pre-signed URLs are NOT exposed in v1 — admins read R2 keys
     # via direct R2 dashboard / wrangler CLI access. Pre-signed URL
-    # surfacing is OQ-J's FE-follow-up scope.
+    # surfacing is D-10's FE-follow-up scope.
 ```
 
 ### 5.5 `LessonGenSchema` + `CritiqueSchema` (LLM structured output)
@@ -666,7 +666,7 @@ class LessonGenSchema(BaseModel):
     concept_md: str
     production_md: str
     examples_md: str
-    quiz_items: list[_GeneratedQuizItem]  # 1..5 per OQ-D author hint
+    quiz_items: list[_GeneratedQuizItem]  # 1..5 per D-4
 
 class _CritiqueDimension(BaseModel):
     name: Literal['accuracy', 'clarity', 'completeness', 'cohesion']
@@ -679,7 +679,7 @@ class CritiqueSchema(BaseModel):
     rationale: str
 ```
 
-Both schemas are passed as `response_schema=…` per **§14 OQ-O**;
+Both schemas are passed as `response_schema=…` per **§12 D-15**;
 Pydantic validates the LLM output before persistence.
 
 ---
@@ -731,7 +731,7 @@ def _generate_lesson(source_md: str) -> LessonGenSchema:
     """Stage 1 — Gemini reasoning-tier."""
 
 def _critique_lesson(draft: LessonGenSchema) -> CritiqueSchema:
-    """Stage 2 — cross-model (Anthropic per OQ-D author hint)."""
+    """Stage 2 — cross-model (Anthropic per D-4)."""
 
 def _persist_drafts(
     job: IngestionJob, gen: LessonGenSchema, critique: CritiqueSchema, db: Session
@@ -750,7 +750,7 @@ router = APIRouter(dependencies=[Depends(audit_admin_request)])
 
 @router.post("/admin/ingest", response_model=IngestionJobResponse,
              status_code=status.HTTP_202_ACCEPTED)
-@limiter.limit("10/hour")  # per OQ-H author hint
+@limiter.limit("10/hour")  # per D-8
 async def enqueue_ingestion_route(
     request: Request,  # required for slowapi
     payload: IngestionJobCreateRequest,
@@ -795,7 +795,7 @@ class ObjectStorageService:
     def exists(self, key: str) -> bool: ...
 ```
 
-Per **§14 OQ-K** sub-question: `boto3` (sync) wrapped in
+Per **§12 D-11** sub-question: `boto3` (sync) wrapped in
 `asyncio.to_thread` for async surfaces. boto3 talks to R2 via the
 S3-compatible `endpoint_url` parameter (Cloudflare convention:
 `https://<account_id>.r2.cloudflarestorage.com`). Retain the sync
@@ -827,7 +827,7 @@ Per scout R-7-style philosophy: thin loader, no version registry.
 | `core.deps.audit_admin_request` | route dependency | admin observability |
 
 `llm_router.generate_for_task` requires two additive parameters per
-**§14 OQ-N + OQ-O** (`provider_override` + `response_schema`); see
+**§12 D-14 + D-15** (`provider_override` + `response_schema`); see
 §4.1 component graph.
 
 ### 6.7 Performance envelope
@@ -866,7 +866,7 @@ db-migration.md.
 
 ## 8. Frontend
 
-**Zero new FE surface in v1.** Per **§14 OQ-J** author hint, the
+**Zero new FE surface in v1.** Per **§12 D-10**, the
 job-status endpoint is scaffolded BE-side; admin reads job status
 via direct API call (e.g. `httpie GET /api/v1/admin/ingest/{job_id}`)
 or via a one-liner ops CLI (out of scope this slice).
@@ -884,7 +884,7 @@ admin chrome (`AdminGate` + `AdminLayout`) consumes the future
 
 ## 9. Analytics
 
-Per **§14 OQ-M** author hint = three events (start / complete /
+Per **§12 D-13** = three events (start / complete /
 fail). All BE-emitted, all gated by ingestion's admin-only audience
 (`internal: true` discriminator per `analytics.md` admin-event
 convention).
@@ -936,7 +936,7 @@ Mocks: `llm_router.generate_for_task` (both stages),
   corrected claim → success.
 - Stage 3 `LessonSlugConflictError` → no retry → status='failed'.
 - `published_at IS NULL` on the created lesson rows
-  post-completion (G-6 + OQ-G assertion).
+  post-completion (G-6 + D-7 assertion).
 
 ### 10.3 BE route — `tests/test_admin_ingest_routes.py` (~6-8 tests)
 
@@ -976,7 +976,7 @@ required.
 
 ### 10.7 LLM router extension — `tests/test_llm_router_extensions.py` (~3-4 tests)
 
-Per **§14 OQ-N + OQ-O** new params:
+Per **§12 D-14 + D-15** new params:
 - `generate_for_task(provider_override='anthropic')` dispatches to
   `_call_anthropic` regardless of `LLM_REASONING_PROVIDER` env.
 - `generate_for_task(response_schema=Schema)` plumbs into
@@ -1032,14 +1032,201 @@ Per **§14 OQ-N + OQ-O** new params:
 
 ## 12. Decisions
 
-> **EMPTY at spec-author.** Locks via §12 amendment slice mirroring
-> slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 §12 amendment pattern at
-> `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` /
-> `ab07168`. Each D-N below will resolve a §14 OQ; §14 retains the
-> question + RESOLVED pointer back here for traceability after
-> amendment.
+> Locked at §12 amendment `<this-slice>` (2026-04-29) from §14
+> OQ-A..OQ-P (mirrors slice 6.0 `e8eecdd` / 6.4.5 `df58eaf` /
+> 6.5 `acba7ed` / 6.6 `fb92396` / 6.7 `0c21223` / 6.8 `ab07168`
+> precedent). Each D-N below resolves a §14 OQ; §14 retains the
+> question + RESOLVED pointer back here for traceability. OQ→D
+> mapping: OQ-A→D-1, OQ-B→D-2, OQ-C→D-3, OQ-D→D-4, OQ-E→D-5,
+> OQ-F→D-6, OQ-G→D-7, OQ-H→D-8, OQ-I→D-9, OQ-J→D-10, OQ-K→D-11,
+> OQ-L→D-12, OQ-M→D-13, OQ-N→D-14, OQ-O→D-15, OQ-P→D-16.
 
-(populated by §12 amendment slice; placeholder per spec-author convention)
+**D-1 (resolves OQ-A) — paste-text-only v1; multipart `UploadFile`
+deferred to a future slice.** Per §14 OQ-A author hint accepted
+verbatim — paste-text-only minimises the v1 surface area. Ingestion
+takes a `source_text` field in the JSON request body, parses optional
+Markdown frontmatter for `target_deck_slug`, and rejects multipart
+upload at the schema boundary. The `source_format` column on
+`ingestion_jobs` (§5.3) is the forward-compat hook so the v2 PDF /
+DOCX / URL upload slice can slot in without schema migration.
+Bounded by the 1MB size cap locked at D-9.
+
+**D-2 (resolves OQ-B) — RQ-on-Redis stand-up bundles into the 6.10
+impl; greenfield audit-confirmed.** Per §14 OQ-B author hint accepted
+verbatim — `requirements.txt` has no `rq` entry; `app/jobs/` doesn't
+exist (§1.1 audit finding #1). Stand up RQ-on-Redis this slice (new
+dep `rq>=1.16`, new `app/jobs/` package, new `RQ_*` env vars for
+queue naming + worker concurrency); reuses the existing
+`Settings.redis_url` wiring. This primitive is reused by slice 6.14
+(daily Pro digest) and any future async-job slice; locking it here
+frees those slices from the infra prereq.
+
+**D-3 (resolves OQ-C) — new `app/services/prompt_template_service.py`
+with `Path.read_text()` + `@functools.cache`.** Per §14 OQ-C author
+hint accepted verbatim — two prompts (lesson_gen + ingestion_critique)
+are non-trivial Markdown bodies (~1-2KB each); inlining as f-strings
+hurts readability and complicates iteration. Loader is ~30 LoC (load
++ cache + raise `FileNotFoundError` on unknown template). No version
+registry, no hot-reload, no A/B variants v1 — all future-slice scope
+per §13.
+
+**D-4 (resolves OQ-D) — true cross-provider: Gemini 2.5 Pro
+(reasoning-tier) for gen + Anthropic Claude for critique.** Per §14
+OQ-D author hint accepted verbatim — cross-provider critique is what
+the slice 6.10 framing literally promises ("Gemini gen, cross-model
+critique"); same-provider critique is a same-prior risk. The impl
+slice picks the specific Anthropic model (Sonnet 4.6 vs Haiku 4.5)
+via env override at task registration. **Prerequisite:** D-14
+(`provider_override` extension on `generate_for_task`) lands in the
+same impl commit — D-4 is unbuildable without it. The two ship
+bundled.
+
+**D-5 (resolves OQ-E) — content-hash dedupe at job-enqueue +
+slug-based UPSERT in Stage 3.** Per §14 OQ-E author hint accepted
+verbatim — same source text returns the existing active job;
+re-ingest of edited source against an existing slug triggers the
+spec #04 §7 substantive-edit cascade (the orchestrator declares a
+`claimed_classification` per-PATCH and handles the 409 retry-with-
+corrected-claim path per §4.4 cross-cutting rule 3). Reject-as-409
+is too brittle for the "edit source markdown, re-ingest" loop.
+Idempotency floor is the `source_content_sha256` column on
+`ingestion_jobs` (§5.3).
+
+**D-6 (resolves OQ-F) — per-step retry with 3-attempt budget per
+stage; total job timeout cap of 600s.** Per §14 OQ-F author hint
+accepted verbatim — pipeline-level retry restarts the whole 90s gen
+on a critique flake (wasteful); per-step keeps retry granular and
+observable via the `current_attempt` column. Backoff schedule
+`[5, 15, 45]` lives as a module-level constant in
+`ingestion_service.py` (§6.1). Per-step backoff sleeps inside the
+worker (not via RQ `failure_callback`) so the per-job retry budget
+is observable in a single column per §4.3 commentary.
+
+**D-7 (resolves OQ-G) — drafts only (`published_at = NULL`); admin
+publishes via existing slice 6.4b admin route.** Per §14 OQ-G author
+hint accepted verbatim — auto-publish requires layer-2 quality-score
+infra + a confidence threshold not landing until slice 6.11 / 6.13.5;
+configurable per-deck adds a column with no consumer. Drafts-only is
+the strict G-5 single-source-of-truth read and preserves the
+review-before-launch invariant the curriculum.md §7 three-layer
+quality skeleton assumes. Single-admin context noted: drafts-only
+still applies — the admin who triggered ingestion is the same admin
+who reviews + publishes, but separating gen-time from publish-time
+keeps the human-in-the-loop surface that auto-publish would erode.
+Admin publishes via existing
+`POST /admin/lessons/{id}/publish` (slice 6.4b).
+
+**D-8 (resolves OQ-H) — per-admin-user 10/hour rate limit via slowapi
+custom `key_func` resolving the admin user_id from request scope.**
+Per §14 OQ-H author hint accepted verbatim — slowapi's default IP
+keying is inappropriate (admins share dev / production IP pools).
+Implementation pairs the slowapi decorator with a Redis-backed
+`INCR ingestion:enqueue:{user_id}:{hour}` counter inside the service
+for clarity (the slowapi decorator handles the 429 response mapping;
+the service-side counter is for telemetry / admin observability —
+both report the same number). Single-admin context noted: 10/hour is
+a soft ceiling against runaway loops, not a quota; expand if a second
+admin lands and the cap proves too tight in practice.
+
+**D-9 (resolves OQ-I) — 1MB markdown size cap at request-validation
+time.** Per §14 OQ-I author hint accepted verbatim — markdown above
+1MB is a smell (raw transcript or raw OCR); revisit if a legitimate
+use case surfaces. Validator lives on
+`IngestionJobCreateRequest.source_text` per §5.1
+(`Field(..., min_length=100, max_length=1_048_576)`); the
+request-size middleware's existing 5MB cap (`MAX_UPLOAD_SIZE_MB` per
+AGENTS.md) is the outer bound. Book-length ingestion would chunk on
+the way in anyway (future-slice scope per §13).
+
+**D-10 (resolves OQ-J) — FE-polling endpoint scaffolded BE this
+slice; FE consumer is a follow-up sub-slice.** Per §14 OQ-J author
+hint accepted verbatim — the polling pattern is identical to the
+slice 6.4b admin editor pages and will be cheap to wire in a
+follow-up; SSE is overkill for ~3-minute jobs. v1 scaffolds
+`GET /api/v1/admin/ingest/{job_id}` + `GET /api/v1/admin/ingest` per
+§6.3 routes; admin reads via direct API call (e.g.
+`httpie GET /api/v1/admin/ingest/{job_id}`) or one-liner ops CLI in
+v1. The FE consumer (`pages/admin/Ingest.tsx` + `useIngestionJob`
+hook + polling effect + paste-Markdown editor surface) is a follow-up
+tracked via a new BACKLOG row at impl close per §15 forward-link.
+
+**D-11 (resolves OQ-K) — R2 retention forever v1; boto3 (sync)
+wrapped in `asyncio.to_thread` for the async surfaces.** Per §14
+OQ-K author hint accepted verbatim — R2 is cheap, Markdown + JSON
+artifacts are tiny, and forever-retention aligns with audit-log-style
+reasoning ("we want to be able to replay any prompt that produced
+any lesson"). No TTL, no scheduled deletion v1; revisit on first
+cost concern. Sub-question SDK pick: `boto3` (sync, mature) wrapped
+in `asyncio.to_thread` for the async FastAPI side; the RQ worker
+runs sync natively (no wrapping needed). Avoid `aiobotocore` /
+`aioboto3` until async R2 patterns prove load-bearing elsewhere. R2
+is reached via boto3's S3-compatible `endpoint_url` parameter
+(Cloudflare convention:
+`https://<account_id>.r2.cloudflarestorage.com`).
+
+**D-12 (resolves OQ-L) — defer `quality_score` emission entirely to
+slice 6.11 + 6.13.5.** Per §14 OQ-L author hint accepted verbatim —
+this slice is layer 1 (gen) of the curriculum.md §7 three-layer
+quality skeleton; layer-2 (critique-derived score) and layer-3
+(user-signal-derived score) belong to slices 6.11 and 6.13.5
+respectively. Critique here gates publish-readiness via a categorical
+verdict (PASS / FAIL / NEEDS_REVIEW per §5.5 `CritiqueSchema`) but
+does NOT write `lessons.quality_score` and does NOT touch
+`card_quality_signals` (the table itself ships in slice 6.13.5 —
+does not exist on disk this slice). The R2 critique.json artifact
+preserves dimensions + scores so 6.11 can backfill numeric scores
+from history if desired.
+
+**D-13 (resolves OQ-M) — three-event minimum:
+`ingestion_job_enqueued` / `ingestion_job_completed` /
+`ingestion_job_failed`.** Per §14 OQ-M author hint accepted verbatim
+— admin needs observability; matches scout's "durable job storage"
+framing. Per-stage events over-instrument before there is a consumer
+dashboard; zero events loses signal that ingestion is running at all.
+All three BE-emitted with `internal: true` per analytics.md
+admin-event convention (per §9 properties table); catalog discipline
+updates land in `.agent/skills/analytics.md` lock-step with the impl
+slice per the §15 forward-link.
+
+**D-14 (resolves OQ-N) — additive `provider_override: str | None =
+None` on `generate_for_task` bundles into the 6.10 impl.** Per §14
+OQ-N author hint accepted verbatim — the diff is small (~15 LoC + 1
+test) and a separate prereq sub-slice churns the spec / BACKLOG /
+SHA-backfill cycle for negligible isolation gain. Scout R-6
+recommends this extension and frames it as a slice-6.10 prerequisite.
+Implementation is additive: `generate_for_task` accepts
+`provider_override` and plumbs it into provider dispatch
+(`_call_gemini` / `_call_anthropic` / `_call_openai`); existing call
+sites (cover_letter / card_draft / resume_rewrite) are unaffected
+(regression assertion in §10.7). D-4 cross-provider critique is
+unbuildable without D-14 — they ship bundled in the impl commit.
+
+**D-15 (resolves OQ-O) — `response_schema: Optional[Type[BaseModel]]
+= None` plumbed into `generate_for_task` + `_call_gemini` this slice;
+closes drift D-016.** Per §14 OQ-O author hint accepted verbatim —
+~30 LoC + 1 test, and prompt-only enforcement on a 2000-token
+JSON-shaped output is fragile per the D-016 finding. Plumbing
+`response_schema` makes Stage 1 + Stage 2 deterministic JSON-shaped
+outputs; ingestion is the first call site that materially benefits.
+Implementation: `response_schema` plumbs into
+`types.GenerateContentConfig(response_schema=...)` when both
+`response_mime_type="application/json"` (i.e., `json_mode=True`) AND
+a schema are provided; passing schema without `json_mode` raises
+`ValueError` at the router boundary. The D-016 close happens in the
+impl commit, NOT this amendment commit (the amendment only locks the
+decision to plumb).
+
+**D-16 (resolves OQ-P) — one `admin_audit_log` row per
+`POST /admin/ingest` HTTP request (current default via router-level
+`audit_admin_request` dep).** Per §14 OQ-P author hint accepted
+verbatim — the worker's slice-6.4b service calls
+(`lesson_admin_service.create_lesson` +
+`quiz_item_admin_service.create_quiz_item`) already write their own
+admin events (`admin_lesson_created`, etc.) per slice 6.4b.
+Duplicating the trail by adding ingestion-side rows for each
+generated lesson + quiz_item creates audit-log noise without new
+signal. The single HTTP audit row + the slice-6.4b service-call rows
+together reconstruct ingestion's full admin attribution chain.
 
 ---
 
@@ -1053,7 +1240,7 @@ Per **§14 OQ-N + OQ-O** new params:
   AI flashcard" UX. v1 is an admin authoring affordance per G-4.
   User-facing AI features would require a separate quota / pricing /
   abuse-control surface.
-- **Quality score emission v1** (per §14 OQ-L author hint). Layer 2
+- **Quality score emission v1** (per §12 D-12). Layer 2
   of curriculum.md §7 (`lessons.quality_score` writes,
   `card_quality_signals` table) is **slice 6.11 / 6.13.5**
   territory.
@@ -1064,7 +1251,7 @@ Per **§14 OQ-N + OQ-O** new params:
   Scheduled bulk ingestion, daily content refresh, etc. — slice
   6.14 (B-078 🟦) cron architecture decision territory.
 - **FE consumer surface.** No `/admin/ingest` page in v1 (per §14
-  OQ-J author hint). FE consumer is a follow-up sub-slice tracked
+  §12 D-10). FE consumer is a follow-up sub-slice tracked
   via a new BACKLOG row at impl close.
 - **Pre-signed URL surfacing for R2 artifacts.** Admins read R2 via
   direct dashboard / wrangler CLI in v1; pre-signed URL endpoints
@@ -1098,146 +1285,128 @@ Per **§14 OQ-N + OQ-O** new params:
 
 ## 14. Open questions
 
-> Spec-author surface for §12 amendment lock-down. Each OQ carries
-> author-hint guidance (chat-Claude pre-draft + audit refinement).
-> §12 amendment will lock D-1..D-N from these per slice 6.0 /
-> 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 precedent.
+> All OQs locked at §12 amendment `<this-slice>` (mirrors slice 6.0
+> `e8eecdd` / 6.4.5 `df58eaf` / 6.5 `acba7ed` / 6.6 `fb92396` /
+> 6.7 `0c21223` / 6.8 `ab07168` precedent). Each OQ retains its
+> question text + RESOLVED pointer to §12 D-N for traceability;
+> option bodies + author hints have been replaced.
 
 **OQ-A — Source-content delivery shape.** Paste-text-only v1, file-
 upload v1 (multipart `UploadFile`), or both?
-*Author hint:* paste-text-only v1 (simplest; defer multipart upload to
-a future slice). Bounded by 1MB request size cap per OQ-I.
+RESOLVED — see §12 **D-1** (`<this-slice>`): paste-text-only v1;
+multipart upload deferred to a future slice (`source_format` column
+is the forward-compat hook).
 
 **OQ-B — Job framework readiness.** Is RQ already wired or is
 greenfield infra stand-up required this slice?
-*Author hint (audit-confirmed):* greenfield. `requirements.txt` has no
-`rq` entry; no `app/jobs/` directory. Stand up RQ-on-Redis primitive
-in this slice's impl.
+RESOLVED — see §12 **D-2** (`<this-slice>`): greenfield (audit-
+confirmed); RQ-on-Redis stand-up bundles into the 6.10 impl.
 
 **OQ-C — Prompt-template-registry shape.** New
 `app/services/prompt_template_service.py` with `Path.read_text()` +
 `@functools.cache`, OR inline f-strings co-located with the
 ingestion service?
-*Author hint:* new module. Two prompts (lesson_gen +
-ingestion_critique) are non-trivial Markdown bodies (~1-2KB each);
-inlining as f-strings hurts readability and complicates iteration.
-Thin loader is ~30 LoC.
+RESOLVED — see §12 **D-3** (`<this-slice>`): new module
+(`Path.read_text()` + `@functools.cache`); no version registry,
+no hot-reload.
 
 **OQ-D — Cross-model critique provider.** Same-provider-different-
 model (e.g. Gemini Flash for critique vs Gemini Pro for gen) or true
 cross-provider (Anthropic Claude for critique vs Gemini for gen)?
-*Author hint:* true cross-provider — Gemini Pro reasoning-tier for
-gen + Claude (Sonnet 4.6 or Haiku 4.5 — the impl slice picks the
-specific model via env override) for critique. Cross-provider
-critique is what the slice 6.10 framing literally promises ("Gemini
-gen, cross-model critique"); same-provider critique is a same-prior
-risk.
+RESOLVED — see §12 **D-4** (`<this-slice>`): true cross-provider —
+Gemini Pro reasoning-tier for gen + Anthropic Claude for critique;
+prerequisite D-14 (`provider_override` extension) ships bundled in
+the impl commit.
 
 **OQ-E — Idempotency on re-ingestion.** Content-hash dedupe at job-
 enqueue / deck-slug overwrite triggers substantive-edit cascade /
 reject duplicate as 409?
-*Author hint:* compound — content-hash dedupe (same source text
-returns existing active job) + slug-based UPSERT in Stage 3 (re-
-ingest of edited source against existing slug triggers
-substantive-edit cascade per spec #04 §7). Reject-as-409 (option c)
-is too brittle for the "edit source markdown, re-ingest" loop.
+RESOLVED — see §12 **D-5** (`<this-slice>`): compound — content-hash
+dedupe at enqueue + slug-based UPSERT in Stage 3 (re-ingest of edited
+source triggers spec #04 §7 substantive-edit cascade).
 
 **OQ-F — Retry semantics.** Per-job retry budget (3 attempts default)
 / per-step retry (gen-only, critique-only, persist-only) / no-retry-
 LLM-only-flake?
-*Author hint:* per-step with 3-attempt budget per stage; total job
-timeout cap of 600s. Pipeline-level retry (option a) restarts the
-whole 90s gen on a critique flake — wasteful. Per-step keeps the
-retry granular and observable via `current_attempt` column.
+RESOLVED — see §12 **D-6** (`<this-slice>`): per-step with 3-attempt
+budget per stage; total job timeout cap of 600s; backoff schedule
+`[5, 15, 45]` as a module-level constant.
 
 **OQ-G — Visibility timing.** Ingested lessons land as drafts
 (`published_at=NULL`) / auto-publish on critique=PASS / configurable
 per-deck?
-*Author hint:* drafts only — admin publishes via existing slice 6.4b
-admin route. Auto-publish (option b) requires layer-2 quality-score
-infra + a confidence threshold; configurable per-deck (option c)
-adds a column with no consumer. Drafts-only is the strict G-5
-single-source-of-truth read.
+RESOLVED — see §12 **D-7** (`<this-slice>`): drafts only
+(`published_at=NULL`); admin publishes via existing slice 6.4b
+`POST /admin/lessons/{id}/publish` route.
 
 **OQ-H — Rate-limit shape.** Per-admin-user / global / no limit
 (admin trust)?
-*Author hint:* per-admin-user 10/hour. Slowapi's default IP keying is
-inappropriate (admins share dev / production IP pools); a custom
-key_func reads the admin's user_id from the request scope.
-Implementation may also enforce a Redis-backed `INCR
-ingestion:enqueue:{user_id}:{hour}` counter inside the service for
-clarity.
+RESOLVED — see §12 **D-8** (`<this-slice>`): per-admin-user 10/hour
+via slowapi custom `key_func` resolving admin user_id from request
+scope; paired with Redis-backed INCR counter for telemetry.
 
 **OQ-I — Source-content size cap.** 100KB / 1MB / 10MB / no cap?
-*Author hint:* 1MB v1. Markdown above 1MB is a smell (raw transcript
-or raw OCR); revisit if a legitimate use case surfaces (book-length
-ingestion would chunk on the way in anyway, future-slice scope).
+RESOLVED — see §12 **D-9** (`<this-slice>`): 1MB v1 enforced via
+`Field(min_length=100, max_length=1_048_576)` on
+`IngestionJobCreateRequest.source_text`.
 
 **OQ-J — Job-status surface.** FE-polling endpoint
 (`GET /api/v1/admin/ingest/{job_id}` + `useIngestionJob` hook) /
 SSE / no-FE-this-slice (admin reads logs)?
-*Author hint:* FE-polling endpoint scaffolded BE but no FE consumer
-this slice. The polling pattern is identical to the slice 6.4b admin
-editor pages and will be cheap to wire in a follow-up. SSE (option
-b) is overkill for ~3 minute jobs.
+RESOLVED — see §12 **D-10** (`<this-slice>`): FE-polling endpoint
+scaffolded BE; FE consumer is a follow-up sub-slice tracked via a new
+BACKLOG row at impl close.
 
 **OQ-K — Source-content + artifact retention in R2.** Forever / TTL
 90d / TTL 30d / delete on ingest-complete? Sub-question: SDK choice
 — `boto3` (sync, mature) / `aiobotocore` (async, less mature) /
 `aioboto3`?
-*Author hint:* forever v1 (R2 is cheap; retention adds infra surface;
-revisit on first cost concern). Sub-question: `boto3` sync wrapped
-in `asyncio.to_thread` for the FastAPI side; the RQ worker runs sync
-natively. Avoid `aiobotocore` until async R2 patterns prove
-load-bearing elsewhere.
+RESOLVED — see §12 **D-11** (`<this-slice>`): forever v1 (no TTL);
+boto3 (sync) wrapped in `asyncio.to_thread` on the async FastAPI
+side; RQ worker runs sync natively.
 
 **OQ-L — Quality signal v1.** Emit `quality_score` from this slice
 (layer-2 partial implementation) / defer entirely to slice 6.11 +
 6.13.5?
-*Author hint:* defer entirely. This slice is layer-1 (gen) of the
-curriculum.md §7 three-layer skeleton; layer-2 (critique-derived
-score) and layer-3 (user-signal-derived score) belong to slices
-6.11 and 6.13.5 respectively. Critique here gates publish-readiness
-(PASS/FAIL/NEEDS_REVIEW) but does NOT write a numeric score; the R2
-critique.json artifact preserves dimensions + scores so 6.11 can
-backfill from history.
+RESOLVED — see §12 **D-12** (`<this-slice>`): defer entirely; v1
+critique gates publish-readiness via PASS / FAIL / NEEDS_REVIEW
+verdict only — no `lessons.quality_score` write, no `card_quality_signals`
+touch (table itself ships in slice 6.13.5).
 
 **OQ-M — Telemetry events.** Zero / `ingestion_started` only /
 `ingestion_started` + `ingestion_completed` + `ingestion_failed`
 three-event minimum / four-event (add per-stage events)?
-*Author hint:* three-event minimum. Admin needs observability;
-matches scout's "durable job storage" framing. Per-stage events
-(option d) over-instrument before there is a consumer dashboard.
+RESOLVED — see §12 **D-13** (`<this-slice>`): three-event minimum
+(`ingestion_job_enqueued` / `_completed` / `_failed`), all BE-emitted
+with `internal: true` per analytics.md admin-event convention.
 
 **OQ-N — `llm_router.generate_for_task` `provider_override`
 extension scope.** Land the additive parameter in this slice's impl
 or as a separate prereq sub-slice?
-*Author hint:* bundle into this slice's impl. The diff is small (~15
-LoC + 1 test) and the alternative (a separate sub-slice solely for
-the param addition) churns the spec / BACKLOG / SHA backfill cycle
-for negligible isolation gain. Scout R-6 explicitly recommends this
-extension and frames it as a slice-6.10 prerequisite.
+RESOLVED — see §12 **D-14** (`<this-slice>`): bundle into the 6.10
+impl (~15 LoC + 1 test); existing call sites unaffected (regression
+assertion in §10.7). D-4 cross-provider critique is unbuildable
+without it — they ship bundled.
 
 **OQ-O — `_call_gemini` `response_schema` plumbing scope (D-016
 close).** Plumb `response_schema` into `generate_for_task` +
 `_call_gemini` per D-016 close-shape this slice (since ingestion's
 structured-output use case is the natural impl driver), or defer to
 a separate D-016-close sub-slice?
-*Author hint:* bundle into this slice's impl. Same reasoning as OQ-N
-— ~30 LoC + 1 test, and prompt-only enforcement on a 2000-token
-JSON-shaped output is fragile per D-016 finding. Plumbing
-`response_schema` makes Stage 1 + Stage 2 deterministic JSON-shaped
-outputs; ingestion is the first call site that materially benefits.
+RESOLVED — see §12 **D-15** (`<this-slice>`): bundle into the 6.10
+impl (~30 LoC + 1 test); plumbs into `types.GenerateContentConfig`
+when both `json_mode=True` AND a schema are provided. Closes drift
+D-016 in the impl commit (NOT this amendment commit).
 
 **OQ-P — Ingestion job admin attribution audit-log shape.** One
 `admin_audit_log` row per `POST /admin/ingest` (current default via
 `audit_admin_request`) / additional rows per `lesson_admin_service`
 call from the worker (so the audit log has a row for each
 generated lesson + quiz_item)?
-*Author hint:* one row per admin HTTP request (current default
-suffices) plus the worker's slice-6.4b service calls already write
-their own admin events (`admin_lesson_created`, etc.) per slice
-6.4b. Don't duplicate the trail.
+RESOLVED — see §12 **D-16** (`<this-slice>`): one row per admin HTTP
+request (current default suffices); the worker's slice-6.4b service
+calls already write their own admin events — don't duplicate the
+trail.
 
 ---
 
@@ -1247,11 +1416,10 @@ Implementation row: **B-083** 🔴 (filed by this slice).
 
 Forward dependencies before impl can start:
 
-1. **§12 amendment slice** to lock D-1..D-N from §14 OQ-A..OQ-P at
-   `<§12-amendment-sha>` (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 /
-   6.7 / 6.8 §12 amendment pattern at `e8eecdd` / `df58eaf` /
-   `acba7ed` / `fb92396` / `0c21223` / `ab07168`). 🔴 not yet
-   shipped.
+1. **§12 amendment slice** locked D-1..D-16 from §14 OQ-A..OQ-P at
+   `<this-slice>` (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8
+   §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` /
+   `fb92396` / `0c21223` / `ab07168`). ✅ shipped this commit.
 2. No BE primitive prerequisite — every existing data source is on
    disk:
    - `decks` / `lessons` / `quiz_items` (slice 6.1, `a989539`).
@@ -1276,7 +1444,7 @@ Impl slice expected scope (from §4.1 component graph + §6 backend +
   `app/prompts/ingestion_critique.md` (~40-80 lines).
 - New Alembic migration `<hash>_ingestion_jobs.py` (~80-120 lines).
 - Modify `app/core/llm_router.py` — additive `provider_override` +
-  `response_schema` parameters per OQ-N + OQ-O (~25-40 lines added).
+  `response_schema` parameters per §12 D-14 + D-15 (~25-40 lines added).
 - Modify `app/core/config.py` — add R2_* + RQ_* env vars (~15-25
   lines).
 - Modify `app/main.py` — mount admin_ingest router (~3-5 lines).
@@ -1332,5 +1500,6 @@ skill-author follow-up if a third RQ consumer appears.
 
 *Spec authored at `409762f` against HEAD `c2491e0`. All on-
 disk citations verified at audit time per SOP-5; phantom citations
-zero. Forward-fil ed B-083 at status 🔴 per R15(c). §12 amendment
-slice locks D-1..D-N from §14 OQ-A..OQ-P before impl pickup.*
+zero. Forward-filed B-083 at status 🔴 per R15(c). §12 amendment
+locked D-1..D-16 from §14 OQ-A..OQ-P at `<this-slice>` (2026-04-29);
+B-083 stays 🔴 pending impl pickup.*
