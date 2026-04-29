@@ -39,6 +39,7 @@ import type {
   QuizItemUpdateRequest,
   QuizReviewRequest,
   QuizReviewResponse,
+  RankedDecksResponse,
   ReviewRequest,
   ReviewResponse,
   RewriteResponse,
@@ -321,6 +322,24 @@ export async function fetchCategories(): Promise<CategoriesResponse> {
 
 export async function fetchDailyQueue(): Promise<DailyQueueResponse> {
   const response = await api.get<DailyQueueResponse>('/api/v1/study/daily')
+  return response.data
+}
+
+// Phase 6 slice 6.7 — Lens-ranked decks consumer (spec #08 §5.1).
+// BE route shipped in slice 6.6 (`5011518`). Optional query params per
+// spec #07 §12 D-14 defaults (`lookback_days=30`, `max_scans=5`).
+export interface FetchRankedDecksOptions {
+  lookback_days?: number
+  max_scans?: number
+}
+
+export async function fetchRankedDecks(
+  opts: FetchRankedDecksOptions = {},
+): Promise<RankedDecksResponse> {
+  const response = await api.get<RankedDecksResponse>(
+    '/api/v1/learn/ranked-decks',
+    { params: opts },
+  )
   return response.data
 }
 

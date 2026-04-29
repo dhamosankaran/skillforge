@@ -12,7 +12,7 @@ vi.mock('@/pages/Results',                  () => ({ default: () => <div data-te
 vi.mock('@/pages/Rewrite',                  () => ({ default: () => <div data-testid="page-rewrite" /> }))
 vi.mock('@/pages/Interview',                () => ({ default: () => <div data-testid="page-interview" /> }))
 vi.mock('@/pages/Tracker',                  () => ({ default: () => <div data-testid="page-tracker" /> }))
-vi.mock('@/pages/StudyDashboard',           () => ({ default: () => <div data-testid="page-study-dashboard" /> }))
+vi.mock('@/pages/Learn',                    () => ({ default: () => <div data-testid="page-learn" /> }))
 vi.mock('@/pages/DailyReview',              () => ({ default: () => <div data-testid="page-daily-review" /> }))
 vi.mock('@/pages/CategoryDetail',           () => ({ default: () => <div data-testid="page-category-detail" /> }))
 vi.mock('@/pages/CardViewer',               () => ({ default: () => <div data-testid="page-card-viewer" /> }))
@@ -80,7 +80,7 @@ const cases: RedirectCase[] = [
   { oldPath: '/rewrite',              expectedTestId: 'page-rewrite' },
   { oldPath: '/interview',            expectedTestId: 'page-interview' },
   { oldPath: '/tracker',              expectedTestId: 'page-tracker' },
-  { oldPath: '/study',                expectedTestId: 'page-study-dashboard' },
+  { oldPath: '/study',                expectedTestId: 'page-learn' },
   { oldPath: '/study/daily',          expectedTestId: 'page-daily-review' },
   { oldPath: '/mission',              expectedTestId: 'page-mission-mode' },
 ]

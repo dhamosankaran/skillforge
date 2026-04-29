@@ -16,7 +16,7 @@ import Rewrite from '@/pages/Rewrite'
 import Tracker from '@/pages/Tracker'
 import Pricing from '@/pages/Pricing'
 import Interview from '@/pages/Interview'
-import StudyDashboard from '@/pages/StudyDashboard'
+import Learn from '@/pages/Learn'
 import CategoryDetail from '@/pages/CategoryDetail'
 import CardViewer from '@/pages/CardViewer'
 import DailyReview from '@/pages/DailyReview'
@@ -90,7 +90,7 @@ export default function App() {
           <Route path="/first-action" element={<ProtectedRoute><FirstAction /></ProtectedRoute>} />
 
           {/* /learn/* — study engine */}
-          <Route path="/learn"              element={<ProtectedRoute><StudyDashboard /></ProtectedRoute>} />
+          <Route path="/learn"              element={<ProtectedRoute><Learn /></ProtectedRoute>} />
           <Route path="/learn/daily"        element={<ProtectedRoute><DailyReview /></ProtectedRoute>} />
           <Route path="/learn/category/:id" element={<ProtectedRoute><CategoryDetail /></ProtectedRoute>} />
           <Route path="/learn/card/:id"     element={<ProtectedRoute><CardViewer /></ProtectedRoute>} />

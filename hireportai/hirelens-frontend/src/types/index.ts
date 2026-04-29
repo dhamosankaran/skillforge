@@ -482,6 +482,37 @@ export interface DeckWithLessons {
   lessons: Lesson[]
 }
 
+// ─── Phase 6 — Lens-ranked decks (slice 6.6 / spec #07 §5) ───────────────────
+// Field-for-field mirrors of app/schemas/ranker.py. v1 always returns
+// `lessons: null` per spec #07 §12 D-5; the field is forward-compat for
+// a hypothetical slice 6.6b lesson surface.
+
+export interface ScoreBreakdown {
+  gap_match: number
+  fsrs_due: number
+  avg_quality: number
+  display_order_rank: number
+}
+
+export interface RankedDeck {
+  deck: Deck
+  score: number
+  rank: number
+  matched_gaps: string[]
+  score_breakdown: ScoreBreakdown
+}
+
+export interface RankedDecksResponse {
+  user_id: string
+  persona: string | null
+  cold_start: boolean
+  lookback_days: number
+  recent_gap_count: number
+  ranked_at: string
+  decks: RankedDeck[]
+  lessons: null
+}
+
 // Mirrors app/schemas/quiz_item.py::QuizReviewRequest (slice 6.2).
 // Re-declared here so the FE consumer in slice 6.3 doesn't reach into
 // study-engine types. Rating: Again=1, Hard=2, Good=3, Easy=4.
