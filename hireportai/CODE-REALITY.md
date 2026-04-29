@@ -9,27 +9,27 @@
 
 | Field | Value |
 |-------|-------|
-| Commit sha (short) | `4c4d88f` (B-079 full regen — closes B-079). **Scope:** all 13 sections regenerated. **Prior anchor:** `6a2a224` (B-070 targeted regen, 2026-04-28). **Raw gap:** 23 commits. **Code-touching commits in window (under sharpened LD-1):** 2 — `5011518` slice 6.6 impl (deck-ranker service + curriculum_visibility extraction + ranker route + ranker schemas); `c6d9274` slice 6.7 impl (persona Learn page replaces StudyDashboard + RankedDeckList component + useRankedDecks hook + ranker FE types + App.tsx mount swap). The other 21 = spec-author + §12 amendments + SHA backfills + B-073 cohort items 1+2 (skill-author `backend.md` + CLAUDE.md SOP amendments) + B-075 (`curriculum.md` skill-author) + B-076 (SESSION-STATE compaction + drift-archive) + B-078 cron-decision filing. **Lineage from `6a2a224`:** `6a2a224` → `76acd21` SHA backfill → `e23e22a` slice 6.5 spec slice 3/3 → spec/SHA-backfill chain through `c201a65` → `930a6a2` slice 6.5 impl → `c201a65` SHA backfill → `84060b3` backend.md skill-author → `b468025` B-073 item 2 docs slice → `bcb1085` SHA backfill → `a1b4bb5` slice 6.6 spec-author → `41db8e8` SHA backfill → `fb92396` slice 6.6 §12 amendment → `8640136` SHA backfill → `49fc7e7` curriculum.md skill-author + E-028 close → `582253e` SHA backfill → `5011518` slice 6.6 impl → `917ff39` SHA backfill → `6c130f3` SESSION-STATE compaction (B-076) → `31863dd` SHA backfill → `c14b9ca` slice 6.7 spec-author → `4fc82c4` SHA backfill → `0c21223` slice 6.7 §12 amendment → `90aefd3` SHA backfill → `c6d9274` slice 6.7 impl → `055f63c` SHA backfill → `d1f522e` B-078 filing → THIS commit (full regen, B-079). |
-| Branch | `main` (62 commits ahead of `origin/main`; not yet pushed) |
-| Generated | 2026-04-28 (full regen at HEAD `4c4d88f`). Gap 23 commits exceeds LD-1 ~10-commit targeted threshold, so all 13 sections rebuilt. LD-2: counts via `find` / `wc` enumeration, not estimation. LD-3: ambiguous fields flagged. |
+| Commit sha (short) | `<this-slice>` (B-081 targeted regen — closes B-081). **Scope:** §1 / §3 / §4 / §6 / §7 / §8 / §13 regenerated; §2 / §5 / §9 / §10 / §11 / §12 carried forward verbatim. **Prior anchor:** `4c4d88f` (B-079 full regen, 2026-04-28). **Raw gap:** 8 commits. **Code-touching commits in window (under sharpened LD-1):** 1 — `0968a13` slice 6.8 impl (FSRS dashboard: `dashboard_service.py` aggregator + `dashboard.py` schemas/route + `Dashboard.tsx` page + 5 components under `components/dashboard/` + `useFsrsDashboard` hook + 10 FE types + `App.tsx` route mount). The other 7 = `6ff39b7` slice 6.8 spec-author + `ab07168` slice 6.8 §12 amendment + 3 SHA backfills + `7036968` scout-audit slice 6.8/6.14 numbering annotation (process slice annotating `docs/audits/phase-6-scout.md` snapshot) + 1 SHA backfill. Targeted scope justified: single-feature blast radius, well-bounded under LD-1. **Lineage from `4c4d88f`:** `4c4d88f` → `bb3997b` SHA backfill → `6ff39b7` slice 6.8 spec-author → `24db82d` SHA backfill → `ab07168` slice 6.8 §12 amendment → `1e70b99` SHA backfill → `0968a13` slice 6.8 impl → `e3ede6d` SHA backfill → `7036968` scout-annotation → `989b909` SHA backfill → THIS commit (targeted regen, B-081). |
+| Branch | `main` (still ahead of `origin/main`; this slice's two commits queued in same un-pushed batch) |
+| Generated | 2026-04-29 (targeted regen at HEAD `989b909`). Gap 8 commits with single code-touching delta — well-bounded under LD-1 ~10-commit targeted threshold, so only affected sections rebuilt. LD-2: counts via `find` / `wc` enumeration, not estimation. LD-3: ambiguous fields flagged. |
 | Backend model files | 24 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models`). 27 ORM model classes (some files declare 2: `analytics_event.py` → `QuizReviewEvent` + `LessonViewEvent`; `gamification.py` → `GamificationStats` + `Badge` + `UserBadge`; `mission.py` → `Mission` + `MissionDay`). |
-| Backend service files | 41 functional top-level (in `app/services/`, excl. `__init__.py`) + 3 under `services/llm/` = 44. **+2 since `6a2a224`**: `deck_ranker_service.py` + `curriculum_visibility.py` (slice 6.6, `5011518`). |
-| Backend schema files | 16 (`app/schemas/*.py`, excl. `__init__.py`). **+1 since `6a2a224`**: `ranker.py` (slice 6.6, `5011518`) — 4 Pydantic v2 schemas (`ScoreBreakdown` / `RankedDeck` / `RankedLesson` / `RankedDecksResponse`). |
-| Backend router files | 26 v1 + 6 legacy = 32. **+1 since `6a2a224`** (v1): `ranker.py` (slice 6.6, `5011518`; mounts `GET /learn/ranked-decks`). |
-| Backend endpoints | 82 unique decorators across both folders + 6 re-export double-mounts (the v1 thin re-exports of `analyze` / `cover_letter` / `interview` / `rewrite`) = **88 mount-point appearances** in §3 flat table. **+1 since `6a2a224`** (slice 6.6: `GET /api/v1/learn/ranked-decks`). |
-| Alembic revisions | 27 (Head = `b8a9d4f3e2c1`). Unchanged since `6a2a224` — slices 6.6 + 6.7 ship zero migrations. |
-| Frontend pages | 26 — net unchanged file count vs `6a2a224` (slice 6.7 deleted `pages/StudyDashboard.tsx` and added `pages/Learn.tsx` — net 0). 20 top-level + 6 under `pages/admin/`. |
-| Frontend components | **74** (excl. `__tests__/*`). **+1 since `6a2a224`**: `components/learn/RankedDeckList.tsx` (slice 6.7, `c6d9274`). |
-| Frontend utils | 7 utility .ts files in `src/utils/`. `services/api.ts` (separate module) gained `fetchRankedDecks(opts)` exported helper this regen window (slice 6.7, `c6d9274`). |
-| Shared TS types | `src/types/index.ts` (619 lines) + `src/types/homeState.ts` (28 lines, unchanged). **+3 interfaces in `index.ts:490-514` since `6a2a224`** (slice 6.7, `c6d9274`): `ScoreBreakdown` / `RankedDeck` / `RankedDecksResponse` (field-for-field mirrors of `app/schemas/ranker.py`). |
-| Frontend hooks | **17** (`src/hooks/*.ts`, excl. `__tests__`). **+1 since `6a2a224`**: `useRankedDecks.ts` (slice 6.7, `c6d9274`). |
+| Backend service files | 42 functional top-level (in `app/services/`, excl. `__init__.py`) + 3 under `services/llm/` = 45. **+1 since `4c4d88f`**: `dashboard_service.py` (slice 6.8, `0968a13`) — single aggregator `aggregate_user_dashboard()` composing 5 private section helpers (cards-due / retention curve / deck-mastery / streak / review-history). Reuses `curriculum_visibility` (D-10) + `gamification_service.get_stats` (D-006). |
+| Backend schema files | 17 (`app/schemas/*.py`, excl. `__init__.py`). **+1 since `4c4d88f`**: `dashboard.py` (slice 6.8, `0968a13`) — 10 Pydantic v2 schemas (`CardsDueByState` / `CardsDueSection` / `DailyRetentionPoint` / `RetentionSection` / `DeckMastery` / `DeckMasterySection` / `StreakSection` / `RecentReview` / `ReviewHistorySection` / `DashboardResponse`). |
+| Backend router files | 27 v1 + 6 legacy = 33. **+1 since `4c4d88f`** (v1): `dashboard.py` (slice 6.8, `0968a13`; mounts `GET /learn/dashboard`). |
+| Backend endpoints | 83 unique decorators across both folders + 6 re-export double-mounts (the v1 thin re-exports of `analyze` / `cover_letter` / `interview` / `rewrite`) = **89 mount-point appearances** in §3 flat table. **+1 since `4c4d88f`** (slice 6.8: `GET /api/v1/learn/dashboard?retention_window_days=N`). |
+| Alembic revisions | 27 (Head = `b8a9d4f3e2c1`). Unchanged since `4c4d88f` — slice 6.8 ships zero migrations. |
+| Frontend pages | 27 — **+1 since `4c4d88f`**: `pages/Dashboard.tsx` (slice 6.8, `0968a13`). 21 top-level + 6 under `pages/admin/`. |
+| Frontend components | **79** (excl. `__tests__/*`). **+5 since `4c4d88f`** (all under `components/dashboard/` slice 6.8 `0968a13`): `DueToday.tsx` / `Streak.tsx` / `RetentionCurve.tsx` / `DeckMastery.tsx` / `ReviewHistory.tsx`. NB: `components/dashboard/` directory now hosts both the prior 10 ATS-analysis panels (Phase 1) AND these 5 FSRS-dashboard sections (Phase 6) — see §6 component graph. |
+| Frontend utils | 7 utility .ts files in `src/utils/`. `services/api.ts` (separate module) gained `fetchFsrsDashboard(opts)` exported helper this regen window (slice 6.8, `0968a13`); `fetchRankedDecks(opts)` from prior window unchanged. |
+| Shared TS types | `src/types/index.ts` (**702 lines**, +83 since `4c4d88f`) + `src/types/homeState.ts` (28 lines, unchanged). **+10 interfaces in `index.ts:624-702` since `4c4d88f`** (slice 6.8, `0968a13`): `CardsDueByState` / `CardsDueSection` / `DailyRetentionPoint` / `RetentionSection` / `DeckMastery` / `DeckMasterySection` / `StreakSection` / `RecentReview` / `ReviewHistorySection` / `DashboardResponse` (field-for-field mirrors of `app/schemas/dashboard.py`). |
+| Frontend hooks | **18** (`src/hooks/*.ts`, excl. `__tests__`). **+1 since `4c4d88f`**: `useFsrsDashboard.ts` (slice 6.8, `0968a13`). |
 | Frontend context providers | 5 (`AnalysisContext`, `AuthContext`, `GamificationContext`, `ThemeContext`, `UsageContext`) — unchanged. |
-| Skills (tracked) | **22** in `.agent/skills/*.md`. **+2 since `6a2a224`**: `backend.md` (B-073 cohort item 1, `84060b3` 2026-04-28) + `curriculum.md` (B-075, `49fc7e7` 2026-04-28). |
+| Skills (tracked) | **22** in `.agent/skills/*.md`. Unchanged since `4c4d88f` (no skill-author slices in this window). |
 | Skills (untracked) | 3 directory-style under `.agent/skills/` — `stripe-best-practices/`, `stripe-projects/`, `upgrade-stripe/` (each contains `SKILL.md` + optional `references/`); not in git, source unknown — see §10. |
-| Specs | **89 across 7 phases** (phase-0=6, phase-1=13, phase-2=8, phase-3=11, phase-4=6, phase-5=36, phase-6=9). **+2 since `6a2a224`**: phase-6 +2 (`07-deck-lesson-ranker.md` slice 6.6 + `08-persona-learn-page.md` slice 6.7). |
-| Tests | **BE 636** / **FE 397** carried forward from slice 6.7 final report (`c6d9274`). R14 exception (b) — process slice, no test runs this regen. BE counts under `FREE_DAILY_REVIEW_LIMIT=10 FREE_LIFETIME_SCAN_LIMIT=1 FREE_MONTHLY_INTERVIEW_LIMIT=3 python -m pytest tests/ -m "not integration"` (canonical CI invocation per `backend.md`). |
+| Specs | **90 across 7 phases** (phase-0=6, phase-1=13, phase-2=8, phase-3=11, phase-4=6, phase-5=36, phase-6=10). **+1 since `4c4d88f`**: phase-6 +1 (`09-fsrs-dashboard.md` slice 6.8). |
+| Tests | **BE 651** / **FE 414** carried forward from slice 6.8 implementation final report (`0968a13`: BE 636→651 +15, FE 395→414 +19). R14 exception (b) — process slice, no test runs this regen. BE counts under `FREE_DAILY_REVIEW_LIMIT=10 FREE_LIFETIME_SCAN_LIMIT=1 FREE_MONTHLY_INTERVIEW_LIMIT=3 python -m pytest tests/ -m "not integration"` (canonical CI invocation per `backend.md`). |
 
-**Slice absorption (this regen):** 6.6 (deck-ranker BE, closes B-074) + 6.7 (persona Learn page FE, closes B-077). Plus context: B-073 cohort item 1 (`backend.md` skill-author) + item 2 (CLAUDE.md amendments + drift-archive rule) + B-075 (`curriculum.md` + E-028 close) + B-076 (SESSION-STATE compaction + drift archive) + B-078 (cron decision row 🟦 for slice 6.14). **Background work:** still none in repo (FastAPI synchronous request lifecycle only) — slice 6.14 cron architecture decision pending at B-078 🟦 (Phase 6 LD G2 leans Railway cron but row exists for re-evaluation when 6.13.5 closes).
+**Slice absorption (this regen):** 6.8 (user-self FSRS dashboard, closes B-080). Plus context: scout-audit slice 6.8/6.14 numbering annotation slice (`7036968`, closes JC #1 from slice 6.8 spec-author — annotates `docs/audits/phase-6-scout.md` snapshot at `5b0aa23` with top-of-section drift notice + 2 inline pointer notes; not in CR scope, audit doc is a process artifact). This regen self-closes B-081. **Background work:** still none in repo (FastAPI synchronous request lifecycle only) — slice 6.14 cron architecture decision pending at B-078 🟦 (Phase 6 LD G2 leans Railway cron but row exists for re-evaluation when 6.13.5 closes).
 
 ---
 
@@ -196,6 +196,7 @@ Two classes: `Mission` (`mission.py:45`), `MissionDay` (`:71`). Interview sprint
 | `app/api/v1/routes/auth.py` | `/api/v1` | 4 (Google login, refresh, logout, me) | Auth router; ungated. |
 | `app/api/v1/routes/cards.py` | `/api/v1` | 4 (list, search, by-category, by-id) | User-facing card reads. |
 | `app/api/v1/routes/cover_letter.py` | `/api/v1` | (re-export) | Re-export of legacy. |
+| `app/api/v1/routes/dashboard.py` | `/api/v1` | 1 (GET `/learn/dashboard`) | **NEW slice 6.8** (`0968a13`). User-self FSRS dashboard. Query param `?retention_window_days=N` range [1, 365], default 30. |
 | `app/api/v1/routes/decks.py` | `/api/v1` | 2 (list, by-id) | Phase 6 slice 6.3. |
 | `app/api/v1/routes/email_prefs.py` | `/api/v1` | 2 (GET, PUT) | Mounted at `/email-preferences`; AGENTS.md table says `/email-prefs` (§11 #7 drift). |
 | `app/api/v1/routes/feedback.py` | `/api/v1` | 3 (POST + 2 admin) | NPS + card feedback. |
@@ -214,7 +215,7 @@ Two classes: `Mission` (`mission.py:45`), `MissionDay` (`:71`). Interview sprint
 | `app/api/v1/routes/tracker.py` | `/api/v1` | 4 (list, create, patch, delete) | Application tracker CRUD. |
 | `app/api/v1/routes/users.py` | `/api/v1` | 2 (PATCH persona, POST home-first-visit) | User profile mutations. |
 
-### Flat endpoint table (mount-point convention; 88 appearances)
+### Flat endpoint table (mount-point convention; 89 appearances)
 
 Listed in router-file order. Re-export double-mounts marked with `[2x]`. Files with explicit decorators in `app/api/routes/` are listed once at `/api/...` and once at `/api/v1/...` per `main.py:135-170` mount.
 
@@ -293,7 +294,8 @@ v1 `/api/v1/*` (alphabetical by file):
 | GET `/api/v1/quiz-items/daily` | `quiz_items.py:28` |
 | POST `/api/v1/quiz-items/review` | `quiz_items.py:54` |
 | GET `/api/v1/quiz-items/progress` | `quiz_items.py:111` |
-| GET `/api/v1/learn/ranked-decks` **NEW slice 6.6** | `ranker.py:27` |
+| GET `/api/v1/learn/dashboard` **NEW slice 6.8** | `dashboard.py:28` |
+| GET `/api/v1/learn/ranked-decks` (slice 6.6) | `ranker.py:27` |
 | POST `/api/v1/resume/upload` | `resume.py:21` |
 | POST `/api/v1/resume/{resume_id}/optimize` | `resume.py:66` |
 | GET `/api/v1/resume/{resume_id}` | `resume.py:119` |
@@ -313,7 +315,7 @@ App factory at `app/main.py:62` — middleware stack: Sentry init (line 66), COR
 
 ## Section 4 — Backend services
 
-### Top-level `app/services/` (41 files)
+### Top-level `app/services/` (42 files)
 
 | File | Public surface | Notes |
 |------|----------------|-------|
@@ -325,7 +327,8 @@ App factory at `app/main.py:62` — middleware stack: Sentry init (line 66), COR
 | `bullet_analyzer.py` | `analyze_bullets` | Per-bullet ATS analyzer. |
 | `card_admin_service.py` | Card CRUD + import | Backed by `admin.py`. |
 | `card_service.py` | Read-side card lookup, search, category bundles. |  |
-| `curriculum_visibility.py` **NEW slice 6.6** | `_persona_visible_to:30`, `_visible_persona_set:45`, `_resolve_plan:56`, `_allowed_tiers_for_user:77` | Extracted from `lesson_service` per slice 6.5 D-5 escape hatch (rule-of-three, slice 6.6 D-6). Pure helpers: persona/tier visibility resolution. |
+| `curriculum_visibility.py` (slice 6.6) | `_persona_visible_to:30`, `_visible_persona_set:45`, `_resolve_plan:56`, `_allowed_tiers_for_user:77` | Extracted from `lesson_service` per slice 6.5 D-5 escape hatch (rule-of-three, slice 6.6 D-6). Pure helpers: persona/tier visibility resolution. Re-used by slice 6.8 `dashboard_service` for D-10 free-vs-premium deck filtering. |
+| `dashboard_service.py` **NEW slice 6.8** | `aggregate_user_dashboard:77` (public) + `_get_user_timezone:133`, `_aggregate_cards_due:163`, `_aggregate_retention_curve:264`, `_aggregate_deck_mastery:340`, `_aggregate_one_deck:392`, `_aggregate_streak:458`, `_aggregate_review_history:479` (private) | User-self FSRS dashboard aggregator. Single read-only entry point composing 5 section helpers (cards-due / retention curve / deck-mastery / streak / review-history) — D-3 single envelope. Reuses `curriculum_visibility` helpers (D-10 — free page + premium decks filtered for free), `gamification_service.get_stats` (no streak math re-derivation, §6.3), `email_preferences.timezone` for D-6 user-local date bucketing. Reads-only across `quiz_item_progress` + `quiz_review_events` + `lesson_view_events` + `decks` + `lessons` + `quiz_items` + `gamification_stats`. Cold-start safe via `is_cold_start` flag; per-section cold-start variants per D-13. Constants (top of file): `MAX_RECENT_REVIEWS = 20` (D-9), `MASTERY_REPS_THRESHOLD = 3` (D-8), `_RECALL_RATINGS = (3, 4)` Good+Easy (D-5), `DEFAULT_RETENTION_WINDOW_DAYS = 30` (D-7). |
 | `deck_admin_service.py` | Deck CRUD | Slice 6.4b admin authoring. |
 | `deck_ranker_service.py` **NEW slice 6.6** | `get_recent_skill_gaps:85`, `rank_decks_for_user:169`, helpers `_list_visible_decks:260`, `_gap_match_score:283`, `_fsrs_due_score:310`, `_avg_quality_score:346` | Lens-ranked deck ordering. Aggregates skill gaps from `tracker_applications_v2.analysis_payload` (D-14 defaults: 30 days / 5 scans). 4 signals at default weights 0.55/0.25/0.10/0.10 (§12 D-1). Cold-start safe (returns `display_order` ASC if no scans). |
 | `email_service.py` | `send_email` (Resend wrapper) | Spec #15 daily reminders. |
@@ -406,46 +409,47 @@ Routes declared in `src/App.tsx:78-137`. Public + protected, with namespace migr
 
 | Path | Element | File:Line | Access |
 |---|---|---|---|
-| `/` | `<HomeRoute>` (LandingPage for guests, redirect `/home` for auth) | `App.tsx:80` | Public |
-| `/login` | `LoginPage` | `App.tsx:81` | Public |
-| `/pricing` | `Pricing` | `App.tsx:82` | Public (chrome only for guests) |
-| `/home` | `HomeDashboard` (persona-aware, 3 modes per spec #34) | `App.tsx:85` | Protected |
-| `/onboarding` | `Onboarding` | `App.tsx:88` | Protected |
-| `/onboarding/persona` | `PersonaPicker` (full-page) | `App.tsx:89` | Protected |
-| `/first-action` | `FirstAction` (full-page interstitial spec #46) | `App.tsx:90` | Protected |
-| `/learn` | **`Learn`** *(slice 6.7 — replaces `StudyDashboard`)* | `App.tsx:93` | Protected |
-| `/learn/daily` | `DailyReview` | `App.tsx:94` | Protected |
-| `/learn/category/:id` | `CategoryDetail` | `App.tsx:95` | Protected |
-| `/learn/card/:id` | `CardViewer` | `App.tsx:96` | Protected |
-| `/learn/lesson/:id` | `Lesson` | `App.tsx:97` | Protected |
-| `/learn/mission` | `MissionMode` (lazy) | `App.tsx:98` | Protected |
-| `/prep` → `/prep/analyze` | `<Navigate replace>` | `App.tsx:101` | Protected |
-| `/prep/analyze` | `Analyze` | `App.tsx:102` | Protected |
-| `/prep/results` | `Results` | `App.tsx:103` | Protected |
-| `/prep/rewrite` | `Rewrite` | `App.tsx:104` | Protected |
-| `/prep/interview` | `Interview` | `App.tsx:105` | Protected |
-| `/prep/tracker` | `Tracker` | `App.tsx:106` | Protected |
-| `/profile` | `Profile` (lazy) | `App.tsx:109` | Protected |
-| `/admin` | `<AdminGate><AdminLayout>` (lazy) | `App.tsx:113` | Admin only (E-040) |
-| `/admin/cards` | `AdminCards` | `App.tsx:115` | Admin (nested) |
-| `/admin/decks` | `AdminDecks` | `App.tsx:116` | Admin (nested) |
-| `/admin/decks/:deckId` | `AdminDeckDetail` | `App.tsx:117` | Admin (nested) |
-| `/admin/lessons` | `AdminLessons` | `App.tsx:118` | Admin (nested) |
-| `/admin/lessons/:lessonId` | `AdminLessonEditor` | `App.tsx:119` | Admin (nested) |
-| `/admin/lessons/:lessonId/quiz-items` | `AdminQuizItems` | `App.tsx:120` | Admin (nested) |
-| `/admin/analytics` | `AdminAnalytics` | `App.tsx:121` | Admin (nested) |
-| `/analyze` `/results` `/rewrite` `/interview` `/tracker` `/study` `/study/daily` `/study/category/:id` `/study/card/:id` `/mission` | `<Navigate replace>` → new namespaced path | `App.tsx:125-134` | Transitional — drop in Phase 6 cleanup |
-| `*` | `<Navigate to="/" replace>` | `App.tsx:136` | Catch-all |
+| `/` | `<HomeRoute>` (LandingPage for guests, redirect `/home` for auth) | `App.tsx:81` | Public |
+| `/login` | `LoginPage` | `App.tsx:82` | Public |
+| `/pricing` | `Pricing` | `App.tsx:83` | Public (chrome only for guests) |
+| `/home` | `HomeDashboard` (persona-aware, 3 modes per spec #34) | `App.tsx:86` | Protected |
+| `/onboarding` | `Onboarding` | `App.tsx:89` | Protected |
+| `/onboarding/persona` | `PersonaPicker` (full-page) | `App.tsx:90` | Protected |
+| `/first-action` | `FirstAction` (full-page interstitial spec #46) | `App.tsx:91` | Protected |
+| `/learn` | `Learn` (slice 6.7 — replaces `StudyDashboard`) | `App.tsx:94` | Protected |
+| `/learn/dashboard` | **`Dashboard`** *(NEW slice 6.8)* | `App.tsx:95` | Protected |
+| `/learn/daily` | `DailyReview` | `App.tsx:96` | Protected |
+| `/learn/category/:id` | `CategoryDetail` | `App.tsx:97` | Protected |
+| `/learn/card/:id` | `CardViewer` | `App.tsx:98` | Protected |
+| `/learn/lesson/:id` | `Lesson` | `App.tsx:99` | Protected |
+| `/learn/mission` | `MissionMode` (lazy) | `App.tsx:100` | Protected |
+| `/prep` → `/prep/analyze` | `<Navigate replace>` | `App.tsx:103` | Protected |
+| `/prep/analyze` | `Analyze` | `App.tsx:104` | Protected |
+| `/prep/results` | `Results` | `App.tsx:105` | Protected |
+| `/prep/rewrite` | `Rewrite` | `App.tsx:106` | Protected |
+| `/prep/interview` | `Interview` | `App.tsx:107` | Protected |
+| `/prep/tracker` | `Tracker` | `App.tsx:108` | Protected |
+| `/profile` | `Profile` (lazy) | `App.tsx:111` | Protected |
+| `/admin` | `<AdminGate><AdminLayout>` (lazy) | `App.tsx:115` | Admin only (E-040) |
+| `/admin/cards` | `AdminCards` | `App.tsx:117` | Admin (nested) |
+| `/admin/decks` | `AdminDecks` | `App.tsx:118` | Admin (nested) |
+| `/admin/decks/:deckId` | `AdminDeckDetail` | `App.tsx:119` | Admin (nested) |
+| `/admin/lessons` | `AdminLessons` | `App.tsx:120` | Admin (nested) |
+| `/admin/lessons/:lessonId` | `AdminLessonEditor` | `App.tsx:121` | Admin (nested) |
+| `/admin/lessons/:lessonId/quiz-items` | `AdminQuizItems` | `App.tsx:122` | Admin (nested) |
+| `/admin/analytics` | `AdminAnalytics` | `App.tsx:123` | Admin (nested) |
+| `/analyze` `/results` `/rewrite` `/interview` `/tracker` `/study` `/study/daily` `/study/category/:id` `/study/card/:id` `/mission` | `<Navigate replace>` → new namespaced path | `App.tsx:127-136` | Transitional — drop in Phase 6 cleanup |
+| `*` | `<Navigate to="/" replace>` | `App.tsx:138` | Catch-all |
 
 `<ProtectedRoute>` (`App.tsx:48`) redirects unauthenticated users to `/`; `<PersonaGate>` handles persona-null routing inside it. `<AdminGate>` (`components/auth/AdminGate.tsx:10`) returns 403 view if `user?.role !== 'admin'`, preventing AdminLayout lazy-chunk download.
 
-### Component graph (74 components, organized by directory)
+### Component graph (79 components, organized by directory)
 
 | Directory | Files | Notes |
 |---|---|---|
 | `components/admin/` | `AdminLayout.tsx`, `ConfirmCascadeModal.tsx`, `ConfirmPersonaNarrowingModal.tsx`, `MarkdownEditor.tsx` | Slice 6.4a (AdminLayout) + 6.4b (modals + editor). |
 | `components/auth/` | `AdminGate.tsx` | E-040 frontend admin guard. |
-| `components/dashboard/` | 10 components (`ATSScoreGauge`, `BulletAnalyzer`, `FormattingIssues`, `ImprovementSuggestions`, `JobFitExplanation`, `KeywordChart`, `MissingSkillsPanel`, `PanelSection`, `ScoreBreakdown`, `SkillOverlapChart`) | ATS analysis result panels. |
+| `components/dashboard/` | 15 components — **prior 10 ATS-analysis panels:** `ATSScoreGauge`, `BulletAnalyzer`, `FormattingIssues`, `ImprovementSuggestions`, `JobFitExplanation`, `KeywordChart`, `MissingSkillsPanel`, `PanelSection`, `ScoreBreakdown`, `SkillOverlapChart` (consumed by `pages/Results.tsx`). **+5 NEW slice 6.8 (`0968a13`) FSRS-dashboard sections:** `DueToday.tsx`, `Streak.tsx`, `RetentionCurve.tsx` (hand-rolled SVG per D-4), `DeckMastery.tsx`, `ReviewHistory.tsx` (consumed by `pages/Dashboard.tsx`). Directory hosts both surfaces; consumers do not cross. |
 | `components/home/` | `DashboardWidget`, `InterviewDateModal`, `StateAwareWidgets` + `widgets/` (14 widgets) | Spec #40 / #61 / #62 home composition. |
 | `components/home/widgets/` | `CountdownWidget`, `FirstSessionDoneWidget`, `InactiveReturnerWidget`, `InterviewPrepperChecklist`, `InterviewTargetWidget`, `LastScanWidget`, `MissionActiveWidget`, `MissionOverdueWidget`, `ResumeStaleWidget`, `StreakAtRiskWidget`, `StreakWidget`, `StudyGapsPromptWidget`, `TeamComingSoonWidget`, `TodaysReviewWidget`, `WeeklyProgressWidget` | 15 files (note: `StateAwareWidgets.tsx` listed under `home/`). |
 | `components/layout/` | `AppShell`, `MobileNav`, `Navbar` *(unused — §9)*, `PageWrapper`, `TopNav`, `UserMenu` | AppShell mounts TopNav (md:+) and MobileNav. |
@@ -468,7 +472,7 @@ Routes declared in `src/App.tsx:78-137`. Public + protected, with namespace migr
 
 ## Section 7 — Frontend pages
 
-26 files (20 top-level in `src/pages/` + 6 under `pages/admin/`).
+27 files (21 top-level in `src/pages/` + 6 under `pages/admin/`).
 
 | File | Mounted at | Notes |
 |------|-----------|-------|
@@ -477,6 +481,7 @@ Routes declared in `src/App.tsx:78-137`. Public + protected, with namespace migr
 | `pages/CardViewer.tsx` | `/learn/card/:id` | Single-card flip view. |
 | `pages/CategoryDetail.tsx` | `/learn/category/:id` | Category card list. Comment at line 13 references the deleted `StudyDashboard` (stale; harmless). |
 | `pages/DailyReview.tsx` | `/learn/daily` | FSRS daily review flow. |
+| **`pages/Dashboard.tsx`** | `/learn/dashboard` | **NEW slice 6.8** (`0968a13`). User-self FSRS dashboard. Universal D-2 composition (no persona modes); 5 sections in §8.1 order: cards-due → streak → retention curve (SVG) → deck-mastery → review-history. Reads via `useFsrsDashboard` hook hitting `GET /api/v1/learn/dashboard?retention_window_days=30`. Cold-start safe (`is_cold_start: true` flag + per-section variants). Fires `dashboard_viewed` PostHog event D-11 once-per-mount via `useRef` with `{persona, plan, is_cold_start, retention_window_days}` payload. Profile.tsx unchanged per D-12 coexistence. |
 | `pages/FirstAction.tsx` | `/first-action` | Spec #46 one-CTA interstitial. |
 | `pages/HomeDashboard.tsx` | `/home` | Spec #34/#40 persona-aware home. 3 inline render modes (career_climber / interview_prepper / team_lead). |
 | `pages/Interview.tsx` | `/prep/interview` | Interview Q generator + persistence. |
@@ -505,7 +510,7 @@ Routes declared in `src/App.tsx:78-137`. Public + protected, with namespace migr
 
 ## Section 8 — Frontend shared types
 
-### `src/types/index.ts` (619 lines, 47 exports)
+### `src/types/index.ts` (702 lines, 57 exports)
 
 Top-of-file domain types: `ATSScoreBreakdown:3`, `SkillGap:10`, `BulletAnalysis:16`, `FormattingIssue:23`, `KeywordChartData:29`, `SkillOverlapData:36`, `AnalysisResponse:42`, `RewriteEntry:60`, `RewriteSection:69`, `RewriteHeader:75`, `RewriteResponse:80`, `CoverLetterRecipient:87`, `CoverLetterResponse:92`, `InterviewQuestion:103`, `InterviewPrepResponse:108`.
 
@@ -554,6 +559,25 @@ QuizReviewResponse:527
 ### Phase 6 ranker schemas (slice 6.6)
 
 `app/schemas/ranker.py:21-76` declares 4 schemas: `ScoreBreakdown:21`, `RankedDeck:34`, `RankedLesson:46` (forward-compat for hypothetical 6.6b — always None in v1 per D-5), `RankedDecksResponse:62`. FE mirror at `src/types/index.ts:490-514` (slice 6.7 — drops `RankedLesson` since FE doesn't render it).
+
+### Phase 6 dashboard schemas (slice 6.8, `0968a13`)
+
+`app/schemas/dashboard.py:19-160` declares 10 Pydantic v2 schemas:
+
+```ts
+CardsDueByState:19      // new / learning / review / relearning ints
+CardsDueSection:28      // due_today / due_next_7_days / due_breakdown_by_state / total_quiz_items_in_progress
+DailyRetentionPoint:45  // date (ISO YYYY-MM-DD, user-local D-6) / sample_size / recall_rate (null when sample==0)
+RetentionSection:60     // sample_size / overall_recall_rate / overall_lapse_rate / daily_retention[]
+DeckMastery:77          // deck_id / deck_slug / deck_title / total_quiz_items_visible / quiz_items_with_progress / quiz_items_mastered / mastery_pct
+DeckMasterySection:95   // decks[]
+StreakSection:104       // current_streak / longest_streak / last_active_date / freezes_available / total_xp
+RecentReview:120        // quiz_item_id / lesson_id / lesson_title / deck_slug / rating / fsrs_state_after / reviewed_at
+ReviewHistorySection:136// window_days / total_in_window / recent_reviews[]
+DashboardResponse:147   // user_id / persona / plan / is_cold_start / retention_window_days / generated_at + 5 section payloads
+```
+
+FE mirror at `src/types/index.ts:624-702` — field-for-field per slice 6.8 D-3 single-envelope contract. Recall-rate semantics per D-5 (`rating IN (3,4)` Good+Easy); mastery threshold per D-8 (`state == 'review' AND reps >= 3`); cap per D-9 (`MAX_RECENT_REVIEWS = 20`).
 
 ### Persona / auth types (`src/context/AuthContext.tsx`)
 
@@ -699,7 +723,7 @@ The four Phase 6 product decisions chat sometimes references (cron arch G2, file
 
 ## Section 13 — Specs inventory
 
-Walked `docs/specs/**/*.md` — **89 spec files across 7 phases** (+2 since `6a2a224`: phase-6 +2 — `07-deck-lesson-ranker.md`, `08-persona-learn-page.md`).
+Walked `docs/specs/**/*.md` — **90 spec files across 7 phases** (+1 since `4c4d88f`: phase-6 +1 — `09-fsrs-dashboard.md`).
 
 ### Per-phase counts
 | Phase | Files | With explicit Status line | No status field |
@@ -710,8 +734,8 @@ Walked `docs/specs/**/*.md` — **89 spec files across 7 phases** (+2 since `6a2
 | phase-3 | 11 | 8 | 3 |
 | phase-4 | 6 | 6 | 0 |
 | phase-5 | 36 | 14 | 22 |
-| phase-6 | 9 | 9 | 0 |
-| **Total** | **89** | **56** | **33** |
+| phase-6 | 10 | 10 | 0 |
+| **Total** | **90** | **57** | **33** |
 
 ### Status legend
 `Done` · `Complete` · `Implemented — Spec Backfill Pending (P5-S###)` · `Draft` · `Drafted, not shipped` · `Shipped (spec + impl)` · `Done — Shipped in <sha>` · `Partially Done` · `Planned — Known-Broken` · `Deferred` · `Complete — Spec Backfill Pending`
@@ -720,17 +744,9 @@ Walked `docs/specs/**/*.md` — **89 spec files across 7 phases** (+2 since `6a2
 
 | Slice | Spec | BACKLOG | Closing commit | Notes |
 |---|---|---|---|---|
-| 6.0 | `00-analytics-tables.md` | B-069 ✅ | `e7a0044` | Analytics dual-write tables foundation. |
-| 6.1 | `01-foundation-schema.md` | B-061 ✅ | `a989539` / `f621248` | 4 foundation tables. |
-| 6.2 | `02-fsrs-quiz-item-binding.md` | B-062 ✅ | `7b654fb` / `a02639c` | FSRS service + routes against `quiz_item_progress`. |
-| 6.3 | `03-lesson-ux.md` | B-063 ✅ | `ba00331` | Lesson-card UX (FE-first, fixture-data initially, swap to DB at 6.4b). |
-| 6.4a | `04-admin-authoring.md` | B-064 ✅ | `b0806d0` | Admin shell refactor; `pages/AdminPanel.tsx` deleted. |
-| 6.4b | `04-admin-authoring.md` | B-065 + B-068 ✅ | `d6bda3b` (BE) + `634f633` (FE) | Admin authoring — 4 pages + 3 modals + `MarkdownEditor` + `lessonEdit.ts` + 4 hooks + 13 api helpers + 8 write-shapes. |
-| 6.4.5 | `05-seed-lessons.md` | B-071 ✅ | `ac5b905` | Seed corpus + idempotent UPSERT loader + CLI. |
-| 6.5 | `06-read-time-invariants.md` | B-072 ✅ | `930a6a2` | Read-time service-layer invariants — added persona-narrowing filters across 7 user-facing reads. |
-| 6.6 | `07-deck-lesson-ranker.md` | B-074 ✅ | `5011518` | **Deck-ranker BE** — `deck_ranker_service` + `curriculum_visibility` extraction + `ranker.py` route + `ranker.py` schemas. Cold-start safe. Zero FE this slice. |
-| 6.7 | `08-persona-learn-page.md` | B-077 ✅ | `c6d9274` | **Persona Learn page FE** — `pages/Learn.tsx` replaces `StudyDashboard.tsx` + `RankedDeckList` + `useRankedDecks` + ranker FE types + App.tsx mount swap. Zero BE this slice. |
-| (process) | (none) | B-073 cohort items 1+2 + B-075 + B-076 + B-078 + B-079 | `84060b3` / `b468025` / `49fc7e7` / `6c130f3` / `d1f522e` / `4c4d88f` | `backend.md` skill-author + CLAUDE.md SOP amendments + `curriculum.md` skill-author + SESSION-STATE compaction + B-078 cron decision row + this CR regen. |
+| 6.8 | `09-fsrs-dashboard.md` | B-080 ✅ | `0968a13` | **User-self FSRS dashboard** — `dashboard_service.py` aggregator + `dashboard.py` schemas (10 BE) + `dashboard.py` route (`GET /api/v1/learn/dashboard`) + `pages/Dashboard.tsx` (universal D-2 composition) + 5 components under `components/dashboard/` + `useFsrsDashboard` hook + 10 FE types + `App.tsx` route mount. Reuses `curriculum_visibility` (D-10) + `gamification_service.get_stats` + `email_preferences.timezone` (D-6). Zero migrations, zero new write paths, zero new PostHog payload changes (1 new event `dashboard_viewed` D-11). |
+| (process) | (none) | B-081 | `<this-slice>` | This CR regen. Plus context: `7036968` scout-audit slice 6.8/6.14 numbering annotation (closes JC #1 from slice 6.8 spec-author — annotates `docs/audits/phase-6-scout.md` snapshot). |
+| (carry) | (prior log) | B-061..B-079 | (see prior CR at `4c4d88f`) | Slices 6.0–6.7 + B-073/B-075/B-076/B-078/B-079 process work absorbed in B-079 full regen. Not re-listed here. |
 
 ### phase-0
 | File | Status |
@@ -847,7 +863,8 @@ Walked `docs/specs/**/*.md` — **89 spec files across 7 phases** (+2 since `6a2
 | 05-seed-lessons.md | Shipped (spec + impl) — closes B-071. Impl `ac5b905`. |
 | 06-read-time-invariants.md | Shipped (spec + impl) — closes B-072. Impl `930a6a2`. |
 | 07-deck-lesson-ranker.md | **Shipped (spec + impl) — closes B-074. Impl `5011518`.** *(NEW Phase 6 slice 6.6. Spec authored `a1b4bb5` 2026-04-28 + §12 amendment `fb92396` locking D-1..D-16 from §14 OQ-1..OQ-11. Impl ships `app/services/deck_ranker_service.py` + `app/services/curriculum_visibility.py` extraction + `app/api/v1/routes/ranker.py` + `app/schemas/ranker.py` (4 schemas). 4 signals (gap_match 0.55 / fsrs_due 0.25 / avg_quality 0.10 / display_order_rank 0.10 — D-1). Cold-start safe. Zero FE this slice; zero analytics events; zero migrations.)* |
-| 08-persona-learn-page.md | **Shipped (spec + impl) — closes B-077. Impl `c6d9274`.** *(NEW Phase 6 slice 6.7. Spec authored `c14b9ca` 2026-04-28 + §12 amendment `0c21223` locking D-1..D-8 from §14 OQ-1..OQ-8. Impl ships `pages/Learn.tsx` (replaces `StudyDashboard.tsx`) with three inline persona-mode functions per D-5 + `components/learn/RankedDeckList.tsx` + `hooks/useRankedDecks.ts` + ranker types `src/types/index.ts:490-514` + `services/api.ts::fetchRankedDecks` + App.tsx mount swap. 3 new analytics events (`learn_page_viewed` / `learn_deck_clicked` / `learn_mode_rendered`) all `useRef`-idempotent. Zero BE files touched.)* |
+| 08-persona-learn-page.md | **Shipped (spec + impl) — closes B-077. Impl `c6d9274`.** *(Phase 6 slice 6.7. Spec authored `c14b9ca` 2026-04-28 + §12 amendment `0c21223` locking D-1..D-8 from §14 OQ-1..OQ-8. Impl ships `pages/Learn.tsx` (replaces `StudyDashboard.tsx`) with three inline persona-mode functions per D-5 + `components/learn/RankedDeckList.tsx` + `hooks/useRankedDecks.ts` + ranker types `src/types/index.ts:490-514` + `services/api.ts::fetchRankedDecks` + App.tsx mount swap. 3 new analytics events (`learn_page_viewed` / `learn_deck_clicked` / `learn_mode_rendered`) all `useRef`-idempotent. Zero BE files touched.)* |
+| 09-fsrs-dashboard.md | **Shipped (spec + impl) — closes B-080. Impl `0968a13`.** *(NEW Phase 6 slice 6.8. Spec authored `6ff39b7` 2026-04-28 + §12 amendment `ab07168` locking D-1..D-14 from §14 OQ-1..OQ-13 + sub-OQ-5b. Impl ships BE `app/services/dashboard_service.py` aggregator + `app/schemas/dashboard.py` (10 schemas) + `app/api/v1/routes/dashboard.py` route mounted at `GET /api/v1/learn/dashboard?retention_window_days=N`; FE `src/pages/Dashboard.tsx` (universal D-2 composition, 5 sections per §8.1 order) + 5 section components under `src/components/dashboard/` (DueToday / Streak / RetentionCurve hand-rolled SVG D-4 / DeckMastery / ReviewHistory) + `useFsrsDashboard` hook + `fetchFsrsDashboard` api helper + 10 dashboard types in `src/types/index.ts` + `/learn/dashboard` route in `App.tsx` + `dashboard_viewed` D-11 useRef once-per-mount event. Reuses `curriculum_visibility` (D-10), `gamification_service.get_stats` (§6.3), `email_preferences.timezone` for D-6 user-local bucketing. Zero migrations, zero new write paths. Tests BE 636 → 651 (+15); FE 395 → 414 (+19). All AC-1..AC-13 green. Profile.tsx unchanged per D-12 coexistence.)* |
 
 ### Numbering anomalies / duplicates / gaps
 
@@ -860,4 +877,4 @@ Walked `docs/specs/**/*.md` — **89 spec files across 7 phases** (+2 since `6a2
 
 ---
 
-*End of snapshot. Generated 2026-04-28 at HEAD `4c4d88f` — full regen, all 13 sections (closes B-079). Slice absorption: 6.6 + 6.7 + B-073/B-075/B-076/B-078 process work. Lineage extends `6a2a224` → 23 commits → THIS commit. Next regen recommended once another ~10-commit code-touching delta accumulates (LD-1 sharpened threshold) — likely after Phase 6 slice 6.8 or first slice in the 6.10+ ingestion track.*
+*End of snapshot. Generated 2026-04-29 at HEAD `<this-slice>` — targeted regen (closes B-081). Sections regenerated: §1 / §3 / §4 / §6 / §7 / §8 / §13. Sections carried forward verbatim: §2 / §5 / §9 / §10 / §11 / §12. Slice absorption: 6.8 (FSRS dashboard, closes B-080) + scout-annotation slice context. Lineage extends `4c4d88f` → 8 commits (1 code-touching `0968a13`, 7 doc/process) → THIS commit. Next regen recommended once another ~10-commit code-touching delta accumulates (LD-1 sharpened threshold) — likely after the next Phase 6 implementation slice (6.9 or 6.10+ ingestion track).*
