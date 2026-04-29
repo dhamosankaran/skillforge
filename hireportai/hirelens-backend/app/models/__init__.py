@@ -20,3 +20,4 @@ from app.models.lesson import Lesson  # noqa: F401
 from app.models.quiz_item import QuizItem  # noqa: F401
 from app.models.quiz_item_progress import QuizItemProgress  # noqa: F401
 from app.models.analytics_event import LessonViewEvent, QuizReviewEvent  # noqa: F401
+from app.models.ingestion_job import IngestionJob  # noqa: F401

@@ -66,6 +66,24 @@ class Settings(BaseSettings):
     # --- Admin access (spec #54 / E-040) ---
     admin_emails: str = ""
 
+    # --- Object storage (Cloudflare R2; spec #10 LD H1 + D-11) ---
+    # Optional: lazy-init means tests / non-ingestion code paths run with
+    # everything blank. RQ worker + ingestion routes raise at first use if
+    # any required field is unset. S3-compatible API reached via the
+    # `endpoint_url` (Cloudflare convention:
+    # `https://<account_id>.r2.cloudflarestorage.com`).
+    r2_account_id: str = ""
+    r2_access_key_id: str = ""
+    r2_secret_access_key: str = ""
+    r2_bucket_name: str = ""
+    r2_endpoint_url: str = ""
+
+    # --- Background jobs (RQ on Redis; spec #10 LD G2 + D-2) ---
+    # Queue name + worker concurrency are static module-level for v1; future
+    # multi-queue work moves these to per-queue config.
+    rq_ingestion_queue: str = "ingestion"
+    rq_default_timeout_seconds: int = 600
+
     # --- Free-tier paywall limits (testing affordance) ---
     # Defaults match production. Override via env to hit any paywall in
     # seconds without burning real quota.
