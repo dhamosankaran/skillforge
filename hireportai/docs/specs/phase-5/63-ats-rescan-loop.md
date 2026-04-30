@@ -1,6 +1,6 @@
 # Phase 5 — Spec #63: ATS Re-Scan Loop per Tracker Application
 
-> **Status:** Drafted, not shipped — files **B-086** at status 🔴 for the impl slice. Spec authored 2026-04-30 at `<this-slice>` (E-043 parent feature row carries forward; this slice authors the spec + forward-files the impl row, mirroring slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 spec-author + forward-file precedent).
+> **Status:** Drafted, not shipped — files **B-086** at status 🔴 for the impl slice. Spec authored 2026-04-30 at `da14c01` (E-043 parent feature row carries forward; this slice authors the spec + forward-files the impl row, mirroring slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 spec-author + forward-file precedent).
 > **Closes drift D-020** at impl-merge time (Q1 lock — bundled `jd_hash` + `jd_text` migration). See §1.3 + §7.
 > **Mode:** 4 (spec-author + forward-file impl row). R14 default — net-new feature with data-model surface + new endpoint + new FE component.
 
@@ -861,4 +861,4 @@ See §3 non-goals + these deferred-to-impl-or-later items:
 
 ---
 
-*Spec authored 2026-04-30 at `<this-slice>`. R14 default — net-new feature with data-model surface + new endpoint + new FE component + analytics catalog extension + drift D-020 closure at impl-merge. R15(c) forward-file: B-086 🔴 inserted above B-085 (numerically descending) in BACKLOG.md per highest-numeric-first ordering. R17 watermark verified at slice start: B-085 highest in-use; B-086 free pre-slice; B-087 next-free post-slice.*
+*Spec authored 2026-04-30 at `da14c01`. R14 default — net-new feature with data-model surface + new endpoint + new FE component + analytics catalog extension + drift D-020 closure at impl-merge. R15(c) forward-file: B-086 🔴 inserted above B-085 (numerically descending) in BACKLOG.md per highest-numeric-first ordering. R17 watermark verified at slice start: B-085 highest in-use; B-086 free pre-slice; B-087 next-free post-slice.*
