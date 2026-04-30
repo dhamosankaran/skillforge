@@ -1,6 +1,6 @@
 # Phase 5 — Spec #63: ATS Re-Scan Loop per Tracker Application
 
-> **Status:** Drafted, not shipped — files **B-086** at status 🔴 for the impl slice. Spec authored 2026-04-30 at `da14c01` (E-043 parent feature row carries forward; this slice authors the spec + forward-files the impl row, mirroring slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 spec-author + forward-file precedent).
+> **Status:** Drafted, §12 amended — D-1..D-12 locked at `<this-slice>` from §14 OQ-A..OQ-L (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 precedent at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc`); B-086 🔴 unchanged (impl not shipped); D-020 closure pending impl per §1.3. Spec authored 2026-04-30 at `da14c01` (E-043 parent feature row carries forward; this slice authors the spec + forward-files the impl row, mirroring slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 spec-author + forward-file precedent).
 > **Closes drift D-020** at impl-merge time (Q1 lock — bundled `jd_hash` + `jd_text` migration). See §1.3 + §7.
 > **Mode:** 4 (spec-author + forward-file impl row). R14 default — net-new feature with data-model surface + new endpoint + new FE component.
 
@@ -34,13 +34,13 @@ The result: the loop's improvement signal is invisible. Users who study diligent
 
 7. **Tracker row read service** — `tracker_service_v2.get_application_by_id` at `app/services/tracker_service_v2.py:145`. Confirms row exists + belongs to `user_id`. Companion helpers `get_scan_by_id:89` / `find_by_scan_id:113` for scan-id-keyed lookups. The `/rescan` endpoint calls `get_application_by_id(tracker_id, user_id, db)` to verify ownership before scoring.
 
-8. **Tracker row detail FE surface** — `pages/Tracker.tsx` mounts a list view + an inline focused-row editor block (lines ~125-200) gated by the `?focus={tracker_id}` URL param. Spec #57 §6.3 established this pattern. **OQ-D pre-lock confirmed by audit:** `<ScoreDeltaWidget>` mounts INSIDE the focused-row block (inline expand), not as a separate route. No new route required.
+8. **Tracker row detail FE surface** — `pages/Tracker.tsx` mounts a list view + an inline focused-row editor block (lines ~125-200) gated by the `?focus={tracker_id}` URL param. Spec #57 §6.3 established this pattern. **§12 D-4 confirmed by audit:** `<ScoreDeltaWidget>` mounts INSIDE the focused-row block (inline expand), not as a separate route. No new route required.
 
-9. **Home dashboard composition (spec #61 / `HomeDashboard.tsx`)** — `interview_prepper` persona's widget matrix (per spec #61 composition rules). `CountdownWidget` is the canonical anchor for the next interview surface; `StudyGapsPromptWidget` is `career_climber`-only — no slot conflict. **OQ-E pre-lock confirmed by audit:** `<HomeScoreDeltaWidget>` (the home variant) mounts immediately below `CountdownWidget` in the `interview_prepper` matrix when `next_interview != null` AND that tracker row has ≥ 2 score history entries. Cold-start (only-1-score-row) shows nothing — no widget render rather than empty state, per spec #61 minimalism.
+9. **Home dashboard composition (spec #61 / `HomeDashboard.tsx`)** — `interview_prepper` persona's widget matrix (per spec #61 composition rules). `CountdownWidget` is the canonical anchor for the next interview surface; `StudyGapsPromptWidget` is `career_climber`-only — no slot conflict. **§12 D-5 confirmed by audit:** `<HomeScoreDeltaWidget>` (the home variant) mounts immediately below `CountdownWidget` in the `interview_prepper` matrix when `next_interview != null` AND that tracker row has ≥ 2 score history entries. Cold-start (only-1-score-row) shows nothing — no widget render rather than empty state, per spec #61 minimalism.
 
 10. **PostHog scan event surface** — `.agent/skills/analytics.md` catalog has `paywall_hit{trigger}` (line 41), `optimize_clicked` (line 42). **No existing `scan_completed` / `scan_started` / `analyze_completed` events on disk.** This spec adds 4 net-new events: `rescan_initiated`, `rescan_completed`, `rescan_failed`, `rescan_short_circuited`. The orthogonal "no completion event for fresh `/analyze`" gap is not in scope here.
 
-11. **Score-delta math site** — `AnalysisResponse.score_breakdown` already exposes per-axis floats; `ats_score` is int. Per-axis deltas are computable from any two `AnalysisResponse` shapes. **OQ-F pre-lock confirmed by audit:** BE computes deltas in `ScoreDeltaResponse` envelope (single source of truth); the FE widget renders pre-computed values without re-doing the math.
+11. **Score-delta math site** — `AnalysisResponse.score_breakdown` already exposes per-axis floats; `ats_score` is int. Per-axis deltas are computable from any two `AnalysisResponse` shapes. **§12 D-6 confirmed by audit:** BE computes deltas in `ScoreDeltaResponse` envelope (single source of truth); the FE widget renders pre-computed values without re-doing the math.
 
 12. **Spec #59 `?scan_id` rehydration** — re-scan creates a NEW scan tied to the same tracker row. The existing scan_id on the tracker row remains the "before" anchor; the rescan mints a fresh `scan_id = str(uuid.uuid4())` (mirroring `analyze.py:216`) and writes it into a new `tracker_application_scores` row. Both rows persist into score history. The FE rehydration pattern is reused: `useScoreHistory(tracker_id)` hits a GET endpoint that returns the score-history array; FE renders before/after using array items by index.
 
@@ -62,7 +62,7 @@ Drift D-020 has been open since 2026-04-23 (~7 days at slice-author time). The d
 
 **Per Dhamo decision Q1 = (a) bundle:** this spec's impl migration adds BOTH `jd_hash: str | null` AND `jd_text: text | null` to `tracker_applications_v2` in a SINGLE Alembic migration (see §7). They are complementary:
 - `jd_text` is the source of truth for re-scoring at re-scan time (we can't re-score against a JD we don't have).
-- `jd_hash` is the dedupe key for the OQ-B short-circuit ("did the JD change since last scan?") and provides a stable fingerprint independent of whitespace / encoding noise in `jd_text`.
+- `jd_hash` is the dedupe key for the §12 D-2 short-circuit ("did the JD change since last scan?") and provides a stable fingerprint independent of whitespace / encoding noise in `jd_text`.
 
 D-020 closes ✅ at impl-merge of B-086 (the forward-filed impl row). The §7 migration callout block records the closure as an explicit line item so the §12-amendment slice and the impl slice both see the cross-ref.
 
@@ -89,7 +89,7 @@ D-020 closes ✅ at impl-merge of B-086 (the forward-filed impl row). The §7 mi
 - "What-if" scoring (predict score against a hypothetical resume edit before saving). Out — speculative; existing `Rewrite` flow already gives directional signal.
 - Score history visualization beyond the simple before/after delta widget (sparkline, full chart, axis-by-axis trend lines). Out — v1 is a single delta widget; chart UX is a follow-up.
 - Fresh-scan completion event (`scan_completed`). Orthogonal gap surfaced at audit #10; addressed separately.
-- Backfill of `jd_text` / `jd_hash` for tracker rows that pre-date this migration. Out — those rows have no stored JD to backfill from. They'll show the "JD not stored — re-scan unavailable" empty state per OQ-I.
+- Backfill of `jd_text` / `jd_hash` for tracker rows that pre-date this migration. Out — those rows have no stored JD to backfill from. They'll show the "JD not stored — re-scan unavailable" empty state per §12 D-9.
 - Admin-side aggregate analytics page ("avg score improvement per persona"). Out — `tracker_application_scores` table makes the query trivial when we want it; no UI in v1.
 - Pagination / infinite scroll on score history. Out — typical history is < 5 entries per tracker row; max bound ~20 in practice.
 - Cron-triggered automatic re-scoring. Out — every re-scan is user-initiated.
@@ -146,7 +146,7 @@ Home variant: `HomeDashboard.tsx` → `<HomeScoreDeltaWidget>` (interview_preppe
 1. **User triggers re-scan** in the focused-row block on `/prep/tracker?focus={tracker_id}`. Click handler reads the in-memory user `resume_text` (already loaded post-rewrite or post-resume-upload) and POSTs to `/api/v1/analyze/rescan` with `{tracker_application_id, resume_text}`.
 2. **Route handler** (`analyze.py::rescan_application`) calls `tracker_service_v2.get_application_by_id` → enforces ownership; reads `tracker_applications_v2.jd_text` + `jd_hash` for the row.
 3. **Resume-text fingerprinting** via `hash_jd(resume_text)` (existing helper at `app/utils/text_hash.py`). Combined with row's `jd_hash`, builds a `(jd_hash, resume_hash)` dedupe key.
-4. **Short-circuit check** (OQ-B pre-lock): if a `tracker_application_scores` row exists where `jd_hash == row.jd_hash` AND `resume_hash == hash_jd(resume_text)`, fire `rescan_short_circuited{tracker_application_id}` and return the existing scores envelope without re-running the LLM pipeline. Mirrors spec #49's `?force_regenerate` interview-prep dedupe pattern.
+4. **Short-circuit check** (§12 D-2): if a `tracker_application_scores` row exists where `jd_hash == row.jd_hash` AND `resume_hash == hash_jd(resume_text)`, fire `rescan_short_circuited{tracker_application_id}` and return the existing scores envelope without re-running the LLM pipeline. Mirrors spec #49's `?force_regenerate` interview-prep dedupe pattern.
 5. **Free-tier counter** — `usage_service.check_and_increment(user_id, "analyze", window="lifetime")`. On 402: raise `DailyReviewLimitError`-shaped 402 with `trigger='scan_limit'` (G-7 reuse).
 6. **Score** — `analysis_service.score_resume_against_jd(resume_text, jd_text, prior_scan_id=row.scan_id)` returns `AnalysisResponse`. Generates a fresh `scan_id = str(uuid.uuid4())`.
 7. **Persist** — `tracker_application_score_service.write_score_row(tracker_application_id, response, scan_id, jd_hash, resume_hash, db)` INSERTs a new `tracker_application_scores` row with the per-axis breakdown.
@@ -158,7 +158,7 @@ Home variant: `HomeDashboard.tsx` → `<HomeScoreDeltaWidget>` (interview_preppe
 ### §4.3 Failure modes
 
 - **Tracker row not found / not owned by user** — 404 with `{detail: 'Application not found'}`. No row read leaks across users (G-1 invariant).
-- **`jd_text` is NULL on the tracker row** — 422 with `{detail: 'JD not stored on this application — re-scan unavailable. Please run a fresh scan.'}` (OQ-I pre-lock). Pre-migration rows fall here permanently; post-migration rows always carry `jd_text` because the create path writes it (see §6.1 backend write hook).
+- **`jd_text` is NULL on the tracker row** — 422 with `{detail: 'JD not stored on this application — re-scan unavailable. Please run a fresh scan.'}` (§12 D-9). Pre-migration rows fall here permanently; post-migration rows always carry `jd_text` because the create path writes it (see §6.1 backend write hook).
 - **Free-tier counter exhausted** — 402 with `{error, trigger: 'scan_limit', counter, plan}` envelope (FE axios interceptor unwraps identically to fresh-scan 402 per spec #50 LD-2 mirror).
 - **Scoring pipeline failure (LLM 502 / parse error)** — 502 with `{detail: 'Scoring failed; please try again'}`. No score row written; no counter increment (counter increments only on success per `check_and_increment` post-write semantics — verify in §11 audit during impl). `rescan_failed{tracker_application_id, error_class}` event fired.
 - **Concurrent re-scan from same user on same tracker row** — slowapi default rate limit (100/min) + the application is a fast operation; treated as benign. If a second request arrives mid-flight, the second short-circuit will likely match the first request's row write. No special concurrency lock.
@@ -242,7 +242,7 @@ class ScoreHistoryResponse(BaseModel):
     delta: Optional["ScoreDelta"]      # null when len(history) < 2
 
 class ScoreDelta(BaseModel):
-    """Pre-computed delta between latest two history rows (BE-side per OQ-F)."""
+    """Pre-computed delta between latest two history rows (BE-side per §12 D-6)."""
     overall_delta: int                  # latest.overall_score - prev.overall_score
     keyword_match_delta: float
     skills_coverage_delta: float
@@ -302,7 +302,7 @@ class TrackerApplicationScore(Base):
     formatting_compliance_score: Mapped[float] = mapped_column(Float, nullable=False)
     bullet_strength_score: Mapped[float] = mapped_column(Float, nullable=False)
 
-    # Dedupe keys for OQ-B short-circuit. NOT FKs — they're hash strings, not row refs.
+    # Dedupe keys for §12 D-2 short-circuit. NOT FKs — they're hash strings, not row refs.
     jd_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     resume_hash: Mapped[str] = mapped_column(String(64), nullable=False)
 
@@ -315,7 +315,7 @@ class TrackerApplicationScore(Base):
         Index("ix_tas_tracker_app_scanned_at", "tracker_application_id", "scanned_at"),
         # Admin analytics "avg score improvement" queries.
         Index("ix_tas_user_scanned_at", "user_id", "scanned_at"),
-        # OQ-B dedupe lookup.
+        # §12 D-2 dedupe lookup.
         Index("ix_tas_dedupe_lookup", "tracker_application_id", "jd_hash", "resume_hash"),
     )
 ```
@@ -332,7 +332,7 @@ jd_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 jd_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
 ```
 
-`jd_hash` carries `index=True` for OQ-B dedupe lookups + future cross-row JD-fingerprint queries. `jd_text` is NOT indexed (full-text body, not a lookup key). Both nullable for backward compat with existing rows.
+`jd_hash` carries `index=True` for §12 D-2 dedupe lookups + future cross-row JD-fingerprint queries. `jd_text` is NOT indexed (full-text body, not a lookup key). Both nullable for backward compat with existing rows.
 
 ---
 
@@ -404,7 +404,7 @@ async def rescan_application(
     resume_hash = hash_jd(request.resume_text)
     jd_hash = row.jd_hash or hash_jd(row.jd_text)  # row.jd_hash always set post-migration
 
-    # 3. Short-circuit per OQ-B
+    # 3. Short-circuit per §12 D-2
     existing = await tracker_application_score_service.find_by_dedupe(
         request.tracker_application_id, jd_hash, resume_hash, db,
     )
@@ -467,7 +467,7 @@ async def rescan_application(
 
 Public surface:
 - `write_score_row(...) -> TrackerApplicationScore` — INSERT one history row. Called from /rescan route + (optionally) from fresh-scan route to backfill the first history entry.
-- `find_by_dedupe(tracker_application_id, jd_hash, resume_hash, db) -> Optional[TrackerApplicationScore]` — OQ-B short-circuit lookup.
+- `find_by_dedupe(tracker_application_id, jd_hash, resume_hash, db) -> Optional[TrackerApplicationScore]` — §12 D-2 short-circuit lookup.
 - `get_score_history(tracker_application_id, user_id, db) -> List[TrackerApplicationScore]` — chronological, oldest-first; enforces ownership via `user_id`.
 - `compute_delta(history: List[TrackerApplicationScore]) -> Optional[ScoreDelta]` — pure helper; returns `None` if `len(history) < 2`.
 - `get_prior_overall_score(tracker_application_id, before: datetime, db) -> Optional[int]` — for `rescan_completed` payload.
@@ -496,7 +496,7 @@ async def get_score_history(
 
 ### §6.5 — Performance envelope
 
-Re-scan is the same shape as fresh-scan minus file parsing (file parsing is O(KB), negligible). LLM call dominates (~3-8s p50). No caching beyond OQ-B dedupe.
+Re-scan is the same shape as fresh-scan minus file parsing (file parsing is O(KB), negligible). LLM call dominates (~3-8s p50). No caching beyond §12 D-2 dedupe.
 
 Score history GET is one indexed query against `tracker_application_scores` (≤ ~20 rows per tracker app). p50 < 50ms.
 
@@ -537,7 +537,7 @@ def upgrade() -> None:
         "tracker_applications_v2",
         ["jd_hash"],
     )
-    # OQ-J author-hint: backfill jd_hash for any rows where jd_text was
+    # §12 D-10: backfill jd_hash for any rows where jd_text was
     # populated via mid-migration application code. v1 ships with both
     # columns NULL on existing rows; backfill is a future-row concern.
 
@@ -711,7 +711,7 @@ Four net-new events appended to `.agent/skills/analytics.md`:
 | `rescan_failed` | BE | `{tracker_application_id, error_class: 'scoring_error'\|'jd_missing'\|'auth'\|'paywall'\|'not_found'}` |
 | `rescan_short_circuited` | BE | `{tracker_application_id, jd_hash_prefix}` |
 
-OQ-L pre-lock confirmed: `rescan_completed` includes `ats_score_before` / `ats_score_after` / `delta` for analytics depth (mirrors `optimize_clicked` enrichment style). FE does NOT fire its own `rescan_*` events; BE-side capture per spec #50 / spec #57 backend-event precedent.
+§12 D-12 confirmed: `rescan_completed` includes per-axis deltas + `short_circuited: bool` flag for analytics depth (mirrors `optimize_clicked` enrichment style). FE does NOT fire its own `rescan_*` events; BE-side capture per spec #50 / spec #57 backend-event precedent.
 
 No new `internal: true` flag — these are user-facing events (admin-funnel + product-funnel both legitimate).
 
@@ -748,13 +748,13 @@ Total estimated test envelope: **+18..+24 BE + +10..+15 FE + +3 integration**.
 - **AC-2** Authed POST against tracker row owned by another user → 404 (no row leak).
 - **AC-3** Authed POST against tracker row with `jd_text=NULL` → 422 with explicit copy.
 - **AC-4** Authed happy path → 200 + `AnalysisResponse` + 1 `tracker_application_scores` INSERT + `tracker_applications_v2.ats_score` UPDATE.
-- **AC-5** OQ-B short-circuit: 2nd POST with same `(jd_hash, resume_hash)` → returns existing scores (no LLM call); fires `rescan_short_circuited`.
+- **AC-5** §12 D-2 short-circuit: 2nd POST with same `(jd_hash, resume_hash)` → returns existing scores (no LLM call); fires `rescan_short_circuited`.
 - **AC-6** Free-tier user at `FREE_LIFETIME_SCAN_LIMIT` → 402 with `trigger: 'scan_limit'`.
 - **AC-7** Pro/admin user → unlimited (counter short-circuits at `max_uses == -1`).
 - **AC-8** Scoring failure → 502 + `rescan_failed{error_class}` + counter NOT incremented + score row NOT written.
 - **AC-9** `tracker_applications_v2.scan_id` does NOT change across rescans (audit #12 invariant).
 - **AC-10** `GET /api/v1/tracker/{id}/scores` (auth, ownership) → 200 + chronological history + delta (null if len < 2).
-- **AC-11** `rescan_completed` payload includes `ats_score_before` / `ats_score_after` / `delta` (OQ-L pre-lock).
+- **AC-11** `rescan_completed` payload includes the full per-axis delta envelope per §12 D-12 (`ats_score_before` / `ats_score_after` / `ats_score_delta` + per-axis deltas + `short_circuited: bool`).
 - **AC-12** Alembic migration round-trip `upgrade head → downgrade -1 → upgrade head` clean (D-020 closure verifiable on disk: `\d+ tracker_applications_v2` shows `jd_hash` + `jd_text` columns post-upgrade; absent post-downgrade).
 - **AC-13** Inline `<ScoreDeltaWidget>` mounts on `/prep/tracker?focus={id}` block; renders 1-of-3 states (empty / baseline / delta) by history length.
 - **AC-14** `<HomeScoreDeltaWidget>` mounts on `/home` for `interview_prepper` persona iff `next_interview != null && history.length >= 2`; otherwise zero render (no empty state).
@@ -766,7 +766,31 @@ Total estimated test envelope: **+18..+24 BE + +10..+15 FE + +3 integration**.
 
 ## §12 Decisions
 
-*(EMPTY at spec-author. Locks via §12 amendment slice mirroring slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc`. Author hints in §14 are advisory; amendment slice locks D-1..D-N from §14 OQ-A..OQ-L.)*
+*Locked at `<this-slice>` (2026-04-30) — D-1..D-12 resolve §14 OQ-A..OQ-L. All 12 author-hint dispositions accepted verbatim per Dhamo single-admin disposition (no overrides). Mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 §12 amendment precedent at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc`.*
+
+**D-1** *(resolves §14 OQ-A)* — re-scan consumes from the **same `FREE_LIFETIME_SCAN_LIMIT` counter** as fresh scans (no separate quota). Free users get 1 lifetime scan total whether fresh or re-scan. Minimizes counter sprawl per `usage_service.py` precedent.
+
+**D-2** *(resolves §14 OQ-B)* — when JD hash matches the existing scan's `jd_hash` AND the `resume_text` hash matches the prior submission's resume hash, return the existing `tracker_application_scores` row + fire `rescan_short_circuited` analytics event. Mirrors interview-prep `?force_regenerate` dedupe pattern from spec #49. Short-circuit does NOT consume from the counter (D-1 only triggers on actual LLM call).
+
+**D-3** *(resolves §14 OQ-C)* — `GET /api/v1/tracker/{id}/scores` returns all history rows in a single envelope (no pagination v1). Bounded by ~20 rows per active tracker app realistically. Pagination scaffold deferred (added to §13 out-of-scope with v2-trigger note: revisit if any single tracker app exceeds 50 history rows in production telemetry).
+
+**D-4** *(resolves §14 OQ-D)* — `<ScoreDeltaWidget>` mounts **inline-expand** on the tracker row (no separate `/prep/tracker/:id/scores` page). Mirrors the existing tracker row detail expand pattern at `Tracker.tsx` per Step 1 audit finding #8.
+
+**D-5** *(resolves §14 OQ-E)* — home-dashboard variant slots into `mission_in_flight × interview_prepper × has_tracker_row_with_scores` cell per spec #61 composition matrix. Widget renders below `<CountdownWidget>` per "improvement on your nearest upcoming interview" framing. **Suppression rule:** when `<CountdownWidget>` surfaces date for `tracker_application_id X`, `<ScoreDeltaWidget>` surfaces score history for the SAME `tracker_application_id` (no cross-routing).
+
+**D-6** *(resolves §14 OQ-F)* — delta math computed **BE-side** in `ScoreDeltaResponse` envelope (per-axis `before` + `after` + `delta` fields pre-computed). FE widget renders pre-computed values. One source of truth. Mirrors `AnalysisResponse` field-shape per JC #1 corrected schema (`keyword_match` / `skills_coverage` / `formatting_compliance` / `bullet_strength` floats + `ats_score` int).
+
+**D-7** *(resolves §14 OQ-G)* — `tracker_application_scores.user_id` is a **denormalized FK** (redundant with `tracker_application_id → tracker_applications_v2.user_id`). Accepts redundancy for query performance per `quiz_review_events.user_id` precedent at slice 6.0. Admin analytics surface needs indexed access without joining through `tracker_applications_v2`.
+
+**D-8** *(resolves §14 OQ-H)* — `POST /rescan` rate-limit shape **inherits `/analyze` slowapi default** (no stricter per-route override). Re-scan isn't more expensive than fresh scan; LLM cost is identical.
+
+**D-9** *(resolves §14 OQ-I)* — if the tracker row's `jd_text` IS NULL (pre-E-043 row that never had `jd_text` populated), `POST /rescan` returns **422** with explicit copy "JD text not stored on this tracker — please run a fresh scan to populate." Backfill of historical rows is OUT OF SCOPE this slice (deferred to follow-up if Dhamo decides).
+
+**D-10** *(resolves §14 OQ-J)* — Alembic migration adds `jd_hash` + `jd_text` columns as **nullable**. NO backfill of existing rows (existing tracker rows pre-migration have both columns NULL). D-9 422 path covers the gap. Backfill deferred to optional follow-up slice if user complaints surface.
+
+**D-11** *(resolves §14 OQ-K)* — PaywallTrigger when free user hits `/rescan` after lifetime cap = **reuse `'scan_limit'`** (existing trigger), NOT a new `'rescan_attempt'` trigger. One paywall surface for all scan operations is cleaner UX. Trade-off accepted: analytics dimensioning loses re-scan-vs-fresh-scan signal at the paywall surface, but `rescan_initiated` event upstream still preserves the dimension.
+
+**D-12** *(resolves §14 OQ-L)* — `rescan_completed` event payload includes `{tracker_application_id, scan_id, ats_score_before, ats_score_after, ats_score_delta, keyword_match_delta, skills_coverage_delta, formatting_compliance_delta, bullet_strength_delta, jd_hash, short_circuited: bool}`. Per-axis dimensioning depth from analytics.md catalog convention. Mirrors `scan_completed` enrichment pattern. Field names align with JC #1 disk-truth correction.
 
 ---
 
@@ -789,41 +813,43 @@ See §3 non-goals + these deferred-to-impl-or-later items:
 
 ## §14 Open questions
 
+*All 12 OQs RESOLVED at `<this-slice>` (§12 amendment, 2026-04-30). Author-hint dispositions accepted verbatim per Dhamo single-admin disposition.*
+
 - **OQ-A** Free-tier counter contract — does `/rescan` consume from the same `"analyze"` lifetime counter as fresh scans, or have its own?
-  *Author hint:* same counter. Re-scan IS still a scoring operation against an LLM call; minimizing counter sprawl is cleaner UX. Pre-locked at G-7.
+  **RESOLVED:** locked at §12 D-1 (`<this-slice>`).
 
 - **OQ-B** No-change short-circuit — if `(jd_hash, resume_hash)` matches an existing `tracker_application_scores` row, should we short-circuit and return existing scores, or always re-score?
-  *Author hint:* short-circuit; fire `rescan_short_circuited`. Mirrors spec #49 interview-prep dedupe via `?force_regenerate`. Saves LLM cost when user clicks "rescan" without actually changing the resume.
+  **RESOLVED:** locked at §12 D-2 (`<this-slice>`).
 
 - **OQ-C** Score history pagination — return all rows or paginate?
-  *Author hint:* return all. Bounded ~20/tracker in practice; can paginate later if needed.
+  **RESOLVED:** locked at §12 D-3 (`<this-slice>`).
 
 - **OQ-D** ScoreDeltaWidget mount — separate page (`/prep/tracker/:id/scores`) or inline expand?
-  *Author hint:* inline expand inside the existing focused-row block (audit #8 confirmed pattern). No new route.
+  **RESOLVED:** locked at §12 D-4 (`<this-slice>`).
 
 - **OQ-E** Home dashboard variant slot — which composition cell?
-  *Author hint:* `interview_prepper × next_interview != null × history.length >= 2`, mounted directly below `CountdownWidget`. Cold-start (history < 2) renders nothing, not an empty state — minimalism per spec #61.
+  **RESOLVED:** locked at §12 D-5 (`<this-slice>`).
 
 - **OQ-F** Per-axis delta computation site — BE in `ScoreDeltaResponse` envelope or FE math?
-  *Author hint:* BE — single source of truth. Widget renders pre-computed deltas.
+  **RESOLVED:** locked at §12 D-6 (`<this-slice>`).
 
 - **OQ-G** `tracker_application_scores.user_id` denormalization — accept FK redundancy for query perf?
-  *Author hint:* yes; mirrors `quiz_review_events.user_id` precedent (slice 6.0 D-1). Admin analytics queries don't want to join through `tracker_applications_v2`.
+  **RESOLVED:** locked at §12 D-7 (`<this-slice>`).
 
 - **OQ-H** Rate limit on `/rescan` — same as `/analyze` (slowapi default 100/min) or stricter?
-  *Author hint:* same as `/analyze`. Re-scan isn't more expensive than scan; counter (G-7) already gates abuse for free users.
+  **RESOLVED:** locked at §12 D-8 (`<this-slice>`).
 
 - **OQ-I** Error semantics for `jd_text=NULL` — what's the FE-facing copy + status code?
-  *Author hint:* 422 with `'JD not stored on this application — re-scan unavailable. Please run a fresh scan.'`. Pre-migration rows fall here permanently; backfill is out of scope.
+  **RESOLVED:** locked at §12 D-9 (`<this-slice>`).
 
 - **OQ-J** D-020 `jd_hash` backfill at migration time — should `hash_jd(jd_text)` run on existing rows in the upgrade step?
-  *Author hint:* no — existing rows have `jd_text=NULL`, so there's nothing to backfill from. Future rows always have both populated via the create-path write hook (§6.1).
+  **RESOLVED:** locked at §12 D-10 (`<this-slice>`).
 
 - **OQ-K** PaywallTrigger reuse — `'rescan_attempt'` (new) or `'scan_limit'` (existing)?
-  *Author hint:* `'scan_limit'` reuse (G-7). One paywall surface for all scoring operations.
+  **RESOLVED:** locked at §12 D-11 (`<this-slice>`).
 
 - **OQ-L** `rescan_completed` event payload depth — include score deltas or just IDs?
-  *Author hint:* include `ats_score_before` / `ats_score_after` / `delta`. Analytics depth matters for the funnel; mirrors `optimize_clicked` enrichment style.
+  **RESOLVED:** locked at §12 D-12 (`<this-slice>`).
 
 ---
 
@@ -850,15 +876,15 @@ See §3 non-goals + these deferred-to-impl-or-later items:
 - Spec #59 (`?scan_id` rehydration) — referenced for read-side history pattern; not a hard dependency.
 - Spec #55 / B-030 (Re-Analyze paywall gate) — `/rescan` inherits gating contract via G-7.
 - B-031 (free-tier scan lifetime cap) — `/rescan` consumes from same counter via G-7.
-- Spec #49 (interview question storage) — referenced for OQ-B short-circuit pattern (`?force_regenerate` + JD-hash-keyed cache).
+- Spec #49 (interview question storage) — referenced for §12 D-2 short-circuit pattern (`?force_regenerate` + JD-hash-keyed cache).
 - Existing `hash_jd` helper at `app/utils/text_hash.py` (audit #5).
 - Existing `Depends(get_current_user)` chain on `/api/v1/*` routes.
 - Phase 6 slice 6.10a alembic head `c4e21d8a7f12` (audit #14).
 
-**§12-amendment slice gate:** §12 starts EMPTY; locks D-1..D-N from §14 OQ-A..OQ-L (12 OQs surfaced) per slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 §12 amendment precedent. Impl pickup happens after §12 locks land.
+**§12-amendment slice gate:** ✅ shipped at `<this-slice>` (2026-04-30) — D-1..D-12 locked from §14 OQ-A..OQ-L per slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 §12 amendment precedent. Impl pickup unblocked.
 
 **D-020 closure timing:** drift D-020 closes ✅ at impl-merge of B-086 (the migration in §7 lands the `jd_hash` + `jd_text` columns side-by-side per Q1 LOCKED). Spec body §1.3 + §7 + AC-15 carry the cross-ref.
 
 ---
 
-*Spec authored 2026-04-30 at `da14c01`. R14 default — net-new feature with data-model surface + new endpoint + new FE component + analytics catalog extension + drift D-020 closure at impl-merge. R15(c) forward-file: B-086 🔴 inserted above B-085 (numerically descending) in BACKLOG.md per highest-numeric-first ordering. R17 watermark verified at slice start: B-085 highest in-use; B-086 free pre-slice; B-087 next-free post-slice.*
+*Spec authored 2026-04-30 at `da14c01`. §12 amendment locked D-1..D-12 from §14 OQ-A..OQ-L at `<this-slice>` (2026-04-30); B-086 stays 🔴 pending impl pickup; D-020 closure committed at impl per §7. R14 default — net-new feature with data-model surface + new endpoint + new FE component + analytics catalog extension + drift D-020 closure at impl-merge. R15(c) forward-file: B-086 🔴 inserted above B-085 (numerically descending) in BACKLOG.md per highest-numeric-first ordering. R17 watermark verified at amendment slice start: B-086 highest in-use; B-087 next-free post-slice.*
