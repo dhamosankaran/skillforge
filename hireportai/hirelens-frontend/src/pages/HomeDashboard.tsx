@@ -15,6 +15,7 @@ import { InterviewPrepperChecklist } from '@/components/home/widgets/InterviewPr
 import { StudyGapsPromptWidget } from '@/components/home/widgets/StudyGapsPromptWidget'
 import { useUsage } from '@/context/UsageContext'
 import { fetchActiveMission, fetchUserApplications } from '@/services/api'
+import type { NextInterview } from '@/types/homeState'
 
 const GRID = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
 
@@ -31,14 +32,12 @@ interface PersonaModeProps {
 
 function InterviewPrepperMode({
   persona,
-  company,
-  date,
+  nextInterview,
   countdownSuppressedByMissionState,
   interviewTargetSuppressedByMissionState,
   lastScanSuppressed,
 }: PersonaModeProps & {
-  company: string | null | undefined
-  date: string | null | undefined
+  nextInterview: NextInterview | null
 }) {
   return (
     <>
@@ -46,13 +45,12 @@ function InterviewPrepperMode({
       <div data-testid="home-mode-interview_prepper" className={GRID}>
         <CountdownWidget
           persona={persona}
-          date={date}
+          nextInterview={nextInterview}
           suppressedByMissionState={countdownSuppressedByMissionState}
         />
         <InterviewTargetWidget
           persona={persona}
-          company={company}
-          date={date}
+          nextInterview={nextInterview}
           suppressedByMissionState={interviewTargetSuppressedByMissionState}
         />
         <TodaysReviewWidget persona={persona} />
@@ -140,15 +138,19 @@ export default function HomeDashboard() {
   const topState = homeState.data?.states[0] ?? null
 
   // Spec #61 §3.1 — Mission state suppresses Countdown only when the
-  // active mission's target_date matches user.interview_target_date
-  // (per-mission suppression). InterviewTarget §5 suppression is
-  // broader: any Mission state in the slot.
+  // active mission's target_date matches the user's nearest upcoming
+  // interview (per-mission suppression). Source flipped from
+  // `user.interview_target_date` to `homeState.context.next_interview.date`
+  // per spec #57 AC-7 (deprecated user-level read). InterviewTarget §5
+  // suppression is broader: any Mission state in the slot.
+  const nextInterview: NextInterview | null =
+    homeState.data?.context.next_interview ?? null
   const missionStateActive =
     topState === 'mission_active' || topState === 'mission_overdue'
   const missionTargetMatchesUser =
     homeState.data?.context.mission_target_date != null &&
-    user?.interview_target_date != null &&
-    homeState.data.context.mission_target_date === user.interview_target_date
+    nextInterview != null &&
+    homeState.data.context.mission_target_date === nextInterview.date
   const countdownSuppressedByMissionState =
     missionStateActive && missionTargetMatchesUser
   const interviewTargetSuppressedByMissionState = missionStateActive
@@ -213,8 +215,7 @@ export default function HomeDashboard() {
         {user.persona === 'interview_prepper' && (
           <InterviewPrepperMode
             persona={user.persona}
-            company={user.interview_target_company}
-            date={user.interview_target_date}
+            nextInterview={nextInterview}
             countdownSuppressedByMissionState={
               countdownSuppressedByMissionState
             }

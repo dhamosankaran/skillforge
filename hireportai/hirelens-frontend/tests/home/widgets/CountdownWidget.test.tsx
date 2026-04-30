@@ -1,15 +1,13 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { AuthUser } from '@/context/AuthContext'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { MissionDetailResponse } from '@/types'
+import type { NextInterview } from '@/types/homeState'
 
 const fetchActiveMission = vi.fn()
-const updatePersona = vi.fn()
 vi.mock('@/services/api', () => ({
   fetchActiveMission: (...args: unknown[]) => fetchActiveMission(...args),
-  updatePersona: (...args: unknown[]) => updatePersona(...args),
 }))
 
 const capture = vi.fn()
@@ -17,38 +15,6 @@ vi.mock('@/utils/posthog', () => ({
   capture: (...args: unknown[]) => capture(...args),
   default: {},
 }))
-
-const navigate = vi.fn()
-vi.mock('react-router-dom', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('react-router-dom')>()
-  return { ...actual, useNavigate: () => navigate }
-})
-
-const updateUser = vi.fn()
-let mockUser: AuthUser = {
-  id: 'u1',
-  email: 't@example.com',
-  name: 'Test',
-  avatar_url: null,
-  role: 'user',
-  persona: 'interview_prepper',
-  onboarding_completed: true,
-}
-
-vi.mock('@/context/AuthContext', async () => {
-  const actual =
-    await vi.importActual<typeof import('@/context/AuthContext')>('@/context/AuthContext')
-  return {
-    ...actual,
-    useAuth: () => ({
-      user: mockUser,
-      isLoading: false,
-      signIn: vi.fn(),
-      signOut: vi.fn(),
-      updateUser,
-    }),
-  }
-})
 
 // Countdown component is visual — stub so we can assert Mode 2 renders it.
 vi.mock('@/components/mission/Countdown', () => ({
@@ -59,10 +25,13 @@ vi.mock('@/components/mission/Countdown', () => ({
 
 import { CountdownWidget } from '@/components/home/widgets/CountdownWidget'
 
-function renderWidget(date: string | null | undefined) {
+function renderWidget(
+  nextInterview: NextInterview | null,
+  persona: 'interview_prepper' | 'career_climber' | 'team_lead' = 'interview_prepper',
+) {
   return render(
     <MemoryRouter>
-      <CountdownWidget persona="interview_prepper" date={date} />
+      <CountdownWidget persona={persona} nextInterview={nextInterview} />
     </MemoryRouter>,
   )
 }
@@ -86,162 +55,101 @@ function mission(
   }
 }
 
+function isoNDaysAhead(n: number): string {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+
 beforeEach(() => {
   fetchActiveMission.mockReset()
-  updatePersona.mockReset()
-  updateUser.mockReset()
   capture.mockReset()
-  navigate.mockReset()
-  mockUser = {
-    id: 'u1',
-    email: 't@example.com',
-    name: 'Test',
-    avatar_url: null,
-    role: 'user',
-    persona: 'interview_prepper',
-    onboarding_completed: true,
-  }
 })
 
-describe('CountdownWidget', () => {
-  // ── Spec #53 / B-018 Mode 1 reframe: link-only unlock affordance ────────
+afterEach(() => {
+  vi.useRealTimers()
+})
 
-  it('Mode 1 (no date) renders the LD-3 unlock copy and CTA button (AC-3)', () => {
+describe('CountdownWidget — spec #57', () => {
+  // ── No-date branch ───────────────────────────────────────────────────────
+
+  it('AC-5 no-date interview_prepper renders the Add-date CTA pointing to /prep/tracker?new=1', () => {
     renderWidget(null)
     expect(
-      screen.getByText(/add an interview date to unlock countdown/i),
+      screen.getByText(/add your interview date to unlock countdown/i),
     ).toBeInTheDocument()
-    expect(screen.getByTestId('countdown-unlock-cta')).toBeInTheDocument()
-    // Regression guard: no inline date-setter (OD-2 — dropped).
-    expect(screen.queryByTestId('countdown-date-input')).toBeNull()
-    expect(screen.queryByTestId('countdown-save')).toBeNull()
+    const cta = screen.getByTestId('countdown-add-date-cta')
+    expect(cta).toHaveAttribute('href', '/prep/tracker?new=1')
+    // Regression guard: no inline date editor / modal
+    expect(screen.queryByTestId('interview-date-modal')).toBeNull()
   })
 
-  it('Mode 1 fires countdown_unlock_cta_shown once on mount (home_countdown surface)', async () => {
+  it('AC-5 no-date non-interview-prepper persona — widget does not render', () => {
+    const { container } = renderWidget(null, 'career_climber')
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('CTA click fires countdown_widget_add_date_cta_clicked with source=home', async () => {
+    const user = userEvent.setup()
+    renderWidget(null)
+    await user.click(screen.getByTestId('countdown-add-date-cta'))
+    expect(capture).toHaveBeenCalledWith(
+      'countdown_widget_add_date_cta_clicked',
+      { source: 'home' },
+    )
+  })
+
+  it('renders fires countdown_widget_rendered once with has_date=false', async () => {
     renderWidget(null)
     await waitFor(() =>
-      expect(capture).toHaveBeenCalledWith('countdown_unlock_cta_shown', {
-        surface: 'home_countdown',
+      expect(capture).toHaveBeenCalledWith('countdown_widget_rendered', {
+        has_date: false,
       }),
     )
-    // Idempotent via ref — single fire only, even with Strict-Mode-like
-    // re-invocation on the same mount.
-    const shownCalls = capture.mock.calls.filter(
-      (c) => c[0] === 'countdown_unlock_cta_shown',
+    const calls = capture.mock.calls.filter(
+      (c) => c[0] === 'countdown_widget_rendered',
     )
-    expect(shownCalls).toHaveLength(1)
+    expect(calls).toHaveLength(1)
   })
 
-  // ── B-037: Mode 1 CTA opens an inline date modal instead of navigating ─
-  // away to the new-user onboarding page. Spec #53 §Supersession.
+  // ── Date-present branch ──────────────────────────────────────────────────
 
-  it('Mode 1 CTA click fires clicked event + opens the inline date modal (B-037)', async () => {
-    const user = userEvent.setup()
-    renderWidget(null)
-    expect(screen.queryByTestId('interview-date-modal')).toBeNull()
-    await user.click(screen.getByTestId('countdown-unlock-cta'))
-    expect(capture).toHaveBeenCalledWith('countdown_unlock_cta_clicked', {
-      surface: 'home_countdown',
-    })
-    expect(await screen.findByTestId('interview-date-modal')).toBeInTheDocument()
-    // Regression guard: must NOT route through the onboarding PersonaPicker.
-    expect(navigate).not.toHaveBeenCalledWith(
-      expect.stringContaining('/onboarding/persona'),
-    )
-  })
-
-  it('Mode 1 modal Save calls PATCH with persona + date + preserves existing company (B-037 / B-038 read-and-preserve)', async () => {
-    mockUser = {
-      ...mockUser,
-      interview_target_company: 'JPMorgan',
-      interview_target_date: null,
+  it('AC-5 date-present renders Countdown component + days-until copy with company', async () => {
+    fetchActiveMission.mockRejectedValueOnce(new Error('no mission'))
+    const ni: NextInterview = {
+      date: isoNDaysAhead(14),
+      company: 'Google',
+      tracker_id: 't-1',
     }
-    updatePersona.mockResolvedValueOnce({
-      ...mockUser,
-      interview_target_date: '2026-06-01',
-    })
-    const user = userEvent.setup()
-    renderWidget(null)
-    await user.click(screen.getByTestId('countdown-unlock-cta'))
-    const input = await screen.findByTestId('interview-date-input')
-    await user.type(input, '2026-06-01')
-    await user.click(screen.getByTestId('interview-date-save'))
-    await waitFor(() => {
-      expect(updatePersona).toHaveBeenCalledWith({
-        persona: 'interview_prepper',
-        interview_target_date: '2026-06-01',
-        interview_target_company: 'JPMorgan',
-      })
-    })
-    expect(updateUser).toHaveBeenCalledWith(
-      expect.objectContaining({ interview_target_date: '2026-06-01' }),
-    )
-    expect(capture).toHaveBeenCalledWith('interview_target_date_added', {
-      source: 'persona_edit',
-      surface: 'home_countdown',
-    })
-  })
-
-  it('Mode 1 modal Save sends interview_target_company=null when user has none', async () => {
-    mockUser = {
-      ...mockUser,
-      interview_target_company: null,
-      interview_target_date: null,
-    }
-    updatePersona.mockResolvedValueOnce({
-      ...mockUser,
-      interview_target_date: '2026-06-01',
-    })
-    const user = userEvent.setup()
-    renderWidget(null)
-    await user.click(screen.getByTestId('countdown-unlock-cta'))
-    await user.type(screen.getByTestId('interview-date-input'), '2026-06-01')
-    await user.click(screen.getByTestId('interview-date-save'))
-    await waitFor(() => {
-      expect(updatePersona).toHaveBeenCalledWith({
-        persona: 'interview_prepper',
-        interview_target_date: '2026-06-01',
-        interview_target_company: null,
-      })
-    })
-  })
-
-  it('Mode 1 modal Cancel closes without calling PATCH', async () => {
-    const user = userEvent.setup()
-    renderWidget(null)
-    await user.click(screen.getByTestId('countdown-unlock-cta'))
-    expect(await screen.findByTestId('interview-date-modal')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /cancel/i }))
-    await waitFor(() =>
-      expect(screen.queryByTestId('interview-date-modal')).toBeNull(),
-    )
-    expect(updatePersona).not.toHaveBeenCalled()
-    expect(updateUser).not.toHaveBeenCalled()
-  })
-
-  it('Mode 1 modal Save is disabled until a date is entered', async () => {
-    const user = userEvent.setup()
-    renderWidget(null)
-    await user.click(screen.getByTestId('countdown-unlock-cta'))
-    expect(await screen.findByTestId('interview-date-save')).toBeDisabled()
-  })
-
-  it('Mode 2 (date set) renders the Countdown component', async () => {
-    fetchActiveMission.mockResolvedValueOnce(mission())
-    // Pick a date in the future relative to test execution.
-    const future = new Date()
-    future.setDate(future.getDate() + 14)
-    const iso = future.toISOString().slice(0, 10)
-    renderWidget(iso)
+    renderWidget(ni)
     expect(await screen.findByTestId('countdown-view')).toBeInTheDocument()
+    expect(screen.getByTestId('countdown-tracker-link')).toHaveAttribute(
+      'href',
+      '/prep/tracker?focus=t-1',
+    )
+    expect(screen.getByText(/14 days until Google/i)).toBeInTheDocument()
+  })
+
+  it('AC-5 today copy when interview_date === today', () => {
+    fetchActiveMission.mockRejectedValueOnce(new Error('no mission'))
+    const ni: NextInterview = {
+      date: isoNDaysAhead(0),
+      company: 'JPMorgan',
+      tracker_id: 't-2',
+    }
+    renderWidget(ni)
+    expect(screen.getByText('Today')).toBeInTheDocument()
   })
 
   it('Mode 2 with no active mission shows "Start a Mission sprint" CTA', async () => {
     fetchActiveMission.mockRejectedValueOnce(new Error('no mission'))
-    const future = new Date()
-    future.setDate(future.getDate() + 14)
-    const iso = future.toISOString().slice(0, 10)
-    renderWidget(iso)
+    const ni: NextInterview = {
+      date: isoNDaysAhead(14),
+      company: 'Google',
+      tracker_id: 't-3',
+    }
+    renderWidget(ni)
     expect(
       await screen.findByRole('link', { name: /start a mission sprint/i }),
     ).toHaveAttribute('href', '/learn/mission')
@@ -249,12 +157,31 @@ describe('CountdownWidget', () => {
 
   it('Mode 2 with active mission shows "View mission" CTA', async () => {
     fetchActiveMission.mockResolvedValueOnce(mission({ status: 'active' }))
-    const future = new Date()
-    future.setDate(future.getDate() + 14)
-    const iso = future.toISOString().slice(0, 10)
-    renderWidget(iso)
+    const ni: NextInterview = {
+      date: isoNDaysAhead(14),
+      company: 'Google',
+      tracker_id: 't-4',
+    }
+    renderWidget(ni)
     expect(
       await screen.findByRole('link', { name: /view mission/i }),
     ).toHaveAttribute('href', '/learn/mission')
+  })
+
+  it('renders fires countdown_widget_rendered with has_date=true and days_until', async () => {
+    fetchActiveMission.mockRejectedValueOnce(new Error('no mission'))
+    const ni: NextInterview = {
+      date: isoNDaysAhead(7),
+      company: 'Google',
+      tracker_id: 't-5',
+    }
+    renderWidget(ni)
+    await waitFor(() => {
+      const call = capture.mock.calls.find(
+        (c) => c[0] === 'countdown_widget_rendered',
+      )
+      expect(call).toBeDefined()
+      expect(call?.[1]).toMatchObject({ has_date: true, days_until: 7 })
+    })
   })
 })

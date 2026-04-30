@@ -1,9 +1,10 @@
 /**
  * MissionDateGate — no-date interview_prepper affordance on `/learn/mission`.
  *
- * Spec #53 §7.3. Rendered by `MissionMode.tsx` when:
+ * Spec #53 §7.3 (CTA target amended by spec #57 AC-6). Rendered by
+ * `MissionMode.tsx` when:
  *   - user.persona === 'interview_prepper'
- *   - user.interview_target_date is null
+ *   - homeState.context.next_interview === null
  *   - phase === 'setup' (no active mission — existing predicate)
  *
  * Replaces `MissionSetup` in that specific branch. All other phases
@@ -26,8 +27,14 @@ export function MissionDateGate() {
   }, [])
 
   function handleAddDate() {
+    // Spec #53 §7.3 preserved-event (still fires from MissionDateGate).
     capture('countdown_unlock_cta_clicked', { surface: 'mission_mode' })
-    navigate('/onboarding/persona?return_to=%2Flearn%2Fmission')
+    // Spec #57 §7.1 — new event with `source: 'mission_gate'`.
+    capture('countdown_widget_add_date_cta_clicked', { source: 'mission_gate' })
+    // Spec #57 AC-6 — CTA now routes to the tracker new-row flow rather
+    // than PersonaPicker. The tracker is the canonical date-capture
+    // surface post-spec-57.
+    navigate('/prep/tracker?new=1')
   }
 
   function handleBrowse() {

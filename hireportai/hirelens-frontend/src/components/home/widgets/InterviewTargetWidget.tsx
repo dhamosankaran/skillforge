@@ -1,10 +1,15 @@
 import { DashboardWidget, type WidgetState } from '@/components/home/DashboardWidget'
 import type { Persona } from '@/context/AuthContext'
+import type { NextInterview } from '@/types/homeState'
 
 interface InterviewTargetWidgetProps {
   persona: Persona
-  company: string | null | undefined
-  date: string | null | undefined
+  /**
+   * Spec #57 — nearest-upcoming interview sourced from
+   * `tracker_applications_v2`. The widget shows date+company when present
+   * and an empty-state message otherwise.
+   */
+  nextInterview: NextInterview | null
   /**
    * Spec #61 §5 — when the state-aware Mission slot renders
    * (mission_active or mission_overdue), this widget is suppressed
@@ -16,7 +21,7 @@ interface InterviewTargetWidgetProps {
 }
 
 function formatDate(iso: string): string {
-  const d = new Date(iso)
+  const d = new Date(`${iso}T00:00:00`)
   if (Number.isNaN(d.getTime())) return iso
   return d.toLocaleDateString(undefined, {
     year: 'numeric',
@@ -25,35 +30,15 @@ function formatDate(iso: string): string {
   })
 }
 
-/**
- * Pick the empty-state copy from the actual gap (B-017).
- *
- * The pre-B-017 copy was a single string that told the user to "set the
- * company in the Countdown widget" — but Countdown only captures date, and
- * `interview_target_company` is only capturable from PersonaPicker. The
- * three branches below match the two partial-set cases to the surface that
- * can actually satisfy them (or, for the company gap, state the fact
- * plainly — there is no self-service company editor until E-017 lands).
- */
-function emptyCopy(
-  company: string | null | undefined,
-  date: string | null | undefined,
-): string {
-  if (!company && !date) return 'No interview target set yet.'
-  if (!company) return 'No interview company set yet.'
-  return 'Set your interview date in the Countdown widget below.'
-}
-
 export function InterviewTargetWidget({
   persona,
-  company,
-  date,
+  nextInterview,
   suppressedByMissionState = false,
 }: InterviewTargetWidgetProps) {
   if (suppressedByMissionState) return null
 
-  const hasBoth = Boolean(company && date)
-  const state: WidgetState = hasBoth ? 'data' : 'empty'
+  const hasInterview = nextInterview != null
+  const state: WidgetState = hasInterview ? 'data' : 'empty'
 
   return (
     <DashboardWidget
@@ -61,14 +46,16 @@ export function InterviewTargetWidget({
       testid="interview-target"
       persona={persona}
       state={state}
-      emptyMessage={emptyCopy(company, date)}
+      emptyMessage="No upcoming interview scheduled. Add a date to a tracker row to see it here."
     >
-      {hasBoth && (
+      {hasInterview && (
         <div className="flex flex-col gap-1">
           <div className="font-display text-base font-semibold text-text-primary">
-            {company}
+            {nextInterview.company}
           </div>
-          <div className="text-sm text-text-secondary">{formatDate(date!)}</div>
+          <div className="text-sm text-text-secondary">
+            {formatDate(nextInterview.date)}
+          </div>
         </div>
       )}
     </DashboardWidget>

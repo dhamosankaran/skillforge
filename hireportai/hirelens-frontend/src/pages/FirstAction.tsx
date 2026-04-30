@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/context/AuthContext'
+import { useHomeState } from '@/hooks/useHomeState'
 import { capture } from '@/utils/posthog'
+import type { NextInterview } from '@/types/homeState'
 
 export const FIRST_ACTION_SEEN_KEY = 'first_action_seen'
 
@@ -21,8 +23,7 @@ function daysUntil(targetIso: string): number {
 
 export function computeCta(
   persona: 'interview_prepper' | 'career_climber' | 'team_lead',
-  interviewTargetDate: string | null | undefined,
-  interviewTargetCompany: string | null | undefined,
+  nextInterview: NextInterview | null,
 ): CtaChoice {
   if (persona === 'career_climber') {
     return { label: 'Start your first Daily Review', route: '/learn/daily' }
@@ -30,12 +31,14 @@ export function computeCta(
   if (persona === 'team_lead') {
     return { label: 'Browse the card library', route: '/learn' }
   }
-  // interview_prepper
-  if (!interviewTargetDate) {
+  // interview_prepper — spec #57 AC-7: re-source from next_interview.
+  // Null preserves the existing browse-categories branch verbatim
+  // (FirstAction.tsx pre-spec behaviour).
+  if (!nextInterview) {
     return { label: 'Browse interview prep categories', route: '/learn' }
   }
-  const n = daysUntil(interviewTargetDate)
-  const company = interviewTargetCompany?.trim()
+  const n = daysUntil(nextInterview.date)
+  const company = nextInterview.company.trim()
   return {
     label: company
       ? `Start your ${n}-day Mission to ${company}`
@@ -53,6 +56,7 @@ function firstName(fullName: string | null | undefined): string | null {
 export default function FirstAction() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const homeState = useHomeState()
   const hasCapturedRef = useRef(false)
 
   const persona = user?.persona ?? null
@@ -73,14 +77,12 @@ export default function FirstAction() {
     capture('first_action_viewed', { persona })
   }, [flagSet, persona])
 
+  const nextInterview = homeState.data?.context.next_interview ?? null
+
   const cta = useMemo(() => {
     if (!persona) return null
-    return computeCta(
-      persona,
-      user?.interview_target_date,
-      user?.interview_target_company,
-    )
-  }, [persona, user?.interview_target_date, user?.interview_target_company])
+    return computeCta(persona, nextInterview)
+  }, [persona, nextInterview])
 
   // PersonaGate handles persona === null by redirecting to /onboarding/persona.
   // flagSet short-circuits to /home via the effect above. In both cases render

@@ -29,6 +29,7 @@ import { MissionDateGate } from '@/components/mission/MissionDateGate'
 import { Countdown } from '@/components/mission/Countdown'
 import { DailyTarget } from '@/components/mission/DailyTarget'
 import { useMission } from '@/hooks/useMission'
+import { useHomeState } from '@/hooks/useHomeState'
 import { useAuth } from '@/context/AuthContext'
 import { useGamification } from '@/context/GamificationContext'
 import { capture } from '@/utils/posthog'
@@ -196,6 +197,7 @@ function ProgressBar({ completed, total }: { completed: number; total: number })
 export default function MissionMode() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const homeState = useHomeState()
   const { refresh: refreshGamification } = useGamification()
   const {
     mission,
@@ -382,11 +384,14 @@ export default function MissionMode() {
   if (phase === 'setup') {
     // Spec #53 §7.3 / AC-4: a no-date interview_prepper cannot satisfy
     // MissionSetup's required-date branch, so render MissionDateGate
-    // instead. Other personas and date-present interview_preppers fall
-    // through to MissionSetup as before (AC-6 regression guard).
+    // instead. Spec #57 AC-6 — date-presence is now sourced from
+    // homeState.context.next_interview (per-tracker-row), not the
+    // deprecated `user.interview_target_date`. Other personas and
+    // date-present interview_preppers fall through to MissionSetup as
+    // before (AC-6 regression guard).
     if (
       user?.persona === 'interview_prepper' &&
-      user.interview_target_date == null
+      homeState.data?.context.next_interview == null
     ) {
       return <MissionDateGate />
     }

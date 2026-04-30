@@ -32,7 +32,18 @@ export interface AuthUser {
   role: 'user' | 'admin'
   persona: Persona | null
   onboarding_completed: boolean
+  /**
+   * @deprecated spec #57 — interview targets moved to per-tracker-row
+   * `tracker_applications_v2.interview_date`. Read via
+   * `homeState.context.next_interview` instead. Retained on the response
+   * for one release while the dual-write window stays open; removed in
+   * the Phase-6 cleanup slice.
+   */
   interview_target_company?: string | null
+  /**
+   * @deprecated spec #57 — see `interview_target_company` note. Read the
+   * nearest upcoming interview via `homeState.context.next_interview`.
+   */
   interview_target_date?: string | null
   home_first_visit_seen_at?: string | null
 }

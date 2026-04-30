@@ -28,6 +28,13 @@ vi.mock('@/hooks/useMission', () => ({
   useMission: () => mockUseMission(),
 }))
 
+// Spec #57 AC-6 — MissionMode now reads next_interview from useHomeState
+// to decide between MissionDateGate vs MissionSetup.
+const mockUseHomeState = vi.fn()
+vi.mock('@/hooks/useHomeState', () => ({
+  useHomeState: () => mockUseHomeState(),
+}))
+
 vi.mock('@/context/GamificationContext', () => ({
   useGamification: () => ({ refresh: vi.fn() }),
 }))
@@ -77,8 +84,35 @@ function renderPage() {
   )
 }
 
+function homeStateFixture(nextInterview: {
+  date: string
+  company: string
+  tracker_id: string
+} | null) {
+  return {
+    data: {
+      persona: null,
+      states: [],
+      context: {
+        current_streak: 0,
+        last_review_at: null,
+        active_mission_id: null,
+        mission_target_date: null,
+        last_scan_date: null,
+        plan: 'free' as const,
+        last_activity_at: null,
+        next_interview: nextInterview,
+      },
+    },
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+  }
+}
+
 beforeEach(() => {
   mockUseMission.mockReset()
+  mockUseHomeState.mockReset()
   // Default: setup branch (no active mission, not loading, no error).
   mockUseMission.mockReturnValue({
     mission: null,
@@ -92,44 +126,42 @@ beforeEach(() => {
     refresh: vi.fn(),
     refreshDaily: vi.fn(),
   })
+  // Default: no next_interview (gate fires for interview_prepper).
+  mockUseHomeState.mockReturnValue(homeStateFixture(null))
 })
 
-describe('MissionMode setup-phase branching (spec #53 §7.3)', () => {
-  it('interview_prepper + null date → MissionDateGate, not MissionSetup (AC-4)', () => {
-    mockUser = userFixture({
-      persona: 'interview_prepper',
-      interview_target_date: null,
-    })
+describe('MissionMode setup-phase branching (spec #53 §7.3 + spec #57 AC-6)', () => {
+  it('interview_prepper + no next_interview → MissionDateGate, not MissionSetup (AC-4)', () => {
+    mockUser = userFixture({ persona: 'interview_prepper' })
+    mockUseHomeState.mockReturnValue(homeStateFixture(null))
     renderPage()
     expect(screen.getByTestId('mission-date-gate')).toBeInTheDocument()
     expect(screen.queryByTestId('mission-setup-stub')).toBeNull()
   })
 
-  it('interview_prepper with a date → MissionSetup, not MissionDateGate (AC-6)', () => {
-    mockUser = userFixture({
-      persona: 'interview_prepper',
-      interview_target_date: '2026-06-01',
-    })
+  it('interview_prepper with a next_interview → MissionSetup, not MissionDateGate (AC-6)', () => {
+    mockUser = userFixture({ persona: 'interview_prepper' })
+    mockUseHomeState.mockReturnValue(
+      homeStateFixture({
+        date: '2026-06-01',
+        company: 'Google',
+        tracker_id: 't-1',
+      }),
+    )
     renderPage()
     expect(screen.getByTestId('mission-setup-stub')).toBeInTheDocument()
     expect(screen.queryByTestId('mission-date-gate')).toBeNull()
   })
 
-  it('career_climber → MissionSetup regardless of date field (AC-6)', () => {
-    mockUser = userFixture({
-      persona: 'career_climber',
-      interview_target_date: null,
-    })
+  it('career_climber → MissionSetup regardless of next_interview (AC-6 carve-out)', () => {
+    mockUser = userFixture({ persona: 'career_climber' as Persona })
     renderPage()
     expect(screen.getByTestId('mission-setup-stub')).toBeInTheDocument()
     expect(screen.queryByTestId('mission-date-gate')).toBeNull()
   })
 
-  it('team_lead → MissionSetup regardless of date field (AC-6)', () => {
-    mockUser = userFixture({
-      persona: 'team_lead',
-      interview_target_date: null,
-    })
+  it('team_lead → MissionSetup regardless of next_interview (AC-6 carve-out)', () => {
+    mockUser = userFixture({ persona: 'team_lead' as Persona })
     renderPage()
     expect(screen.getByTestId('mission-setup-stub')).toBeInTheDocument()
     expect(screen.queryByTestId('mission-date-gate')).toBeNull()

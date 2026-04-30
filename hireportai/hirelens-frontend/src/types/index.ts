@@ -124,6 +124,8 @@ export interface TrackerApplication {
   scan_id?: string | null
   skills_matched?: string[] | null
   skills_missing?: string[] | null
+  /** Spec #57 — optional per-application interview date (ISO YYYY-MM-DD). */
+  interview_date?: string | null
   created_at: string
 }
 

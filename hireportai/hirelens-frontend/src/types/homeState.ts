@@ -11,6 +11,17 @@ export type HomeStateName =
   | 'inactive_returner'
   | 'first_session_done'
 
+/**
+ * Per-user nearest upcoming interview, sourced from
+ * `tracker_applications_v2` per spec #57 §2.2 selection rule. Mirrors the
+ * backend `NextInterview` Pydantic model in `app/schemas/home.py`.
+ */
+export interface NextInterview {
+  date: string
+  company: string
+  tracker_id: string
+}
+
 export interface HomeStateContext {
   current_streak: number
   last_review_at: string | null
@@ -19,6 +30,7 @@ export interface HomeStateContext {
   last_scan_date: string | null
   plan: 'free' | 'pro' | 'enterprise'
   last_activity_at: string | null
+  next_interview: NextInterview | null
 }
 
 export interface HomeStateResponse {

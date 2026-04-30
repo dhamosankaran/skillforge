@@ -150,7 +150,11 @@ beforeEach(() => {
   markHomeFirstVisit.mockReset()
   markHomeFirstVisit.mockResolvedValue(userFixture())
   fetchHomeState.mockReset()
-  fetchHomeState.mockResolvedValue({ persona: null, states: [], context: {} })
+  fetchHomeState.mockResolvedValue({
+    persona: null,
+    states: [],
+    context: { next_interview: null },
+  })
   fetchUserApplications.mockReset()
   fetchUserApplications.mockResolvedValue([])
   fetchActiveMission.mockReset()
@@ -357,6 +361,11 @@ describe('HomeDashboard', () => {
           last_scan_date: null,
           plan: 'free',
           last_activity_at: null,
+          next_interview: {
+            date: '2026-06-01',
+            company: 'Google',
+            tracker_id: 't-1',
+          },
         },
       })
       const { container } = renderHome()
@@ -387,6 +396,11 @@ describe('HomeDashboard', () => {
           last_scan_date: null,
           plan: 'free',
           last_activity_at: null,
+          next_interview: {
+            date: '2026-06-01',
+            company: 'Google',
+            tracker_id: 't-1',
+          },
         },
       })
       renderHome()
@@ -411,10 +425,15 @@ describe('HomeDashboard', () => {
           current_streak: 0,
           last_review_at: null,
           active_mission_id: 'm1',
-          mission_target_date: '2026-08-15', // ≠ user's target date
+          mission_target_date: '2026-08-15', // ≠ user's next_interview date
           last_scan_date: null,
           plan: 'free',
           last_activity_at: null,
+          next_interview: {
+            date: '2026-06-01',
+            company: 'Google',
+            tracker_id: 't-1',
+          },
         },
       })
       renderHome()

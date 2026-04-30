@@ -30,7 +30,7 @@ beforeEach(() => {
   navigate.mockReset()
 })
 
-describe('MissionDateGate (spec #53 §7.3)', () => {
+describe('MissionDateGate (spec #57 AC-6 — CTA target amended)', () => {
   it('renders the LD-3 copy and both CTAs (AC-4)', () => {
     renderGate()
     expect(screen.getByTestId('mission-date-gate')).toBeInTheDocument()
@@ -41,7 +41,7 @@ describe('MissionDateGate (spec #53 §7.3)', () => {
     expect(screen.getByTestId('mission-date-gate-browse')).toBeInTheDocument()
   })
 
-  it('fires countdown_unlock_cta_shown once on mount (mission_mode surface)', async () => {
+  it('fires countdown_unlock_cta_shown once on mount (mission_mode surface, preserved per spec #57 §7.3)', async () => {
     renderGate()
     await waitFor(() =>
       expect(capture).toHaveBeenCalledWith('countdown_unlock_cta_shown', {
@@ -54,15 +54,21 @@ describe('MissionDateGate (spec #53 §7.3)', () => {
     expect(shownCalls).toHaveLength(1)
   })
 
-  it('Add-date click fires clicked event + navigates to PersonaPicker with return_to=/learn/mission', async () => {
+  it('Add-date click fires preserved + new events and navigates to /prep/tracker?new=1', async () => {
     const user = userEvent.setup()
     renderGate()
     await user.click(screen.getByTestId('mission-date-gate-add-date'))
     expect(capture).toHaveBeenCalledWith('countdown_unlock_cta_clicked', {
       surface: 'mission_mode',
     })
-    expect(navigate).toHaveBeenCalledWith(
-      '/onboarding/persona?return_to=%2Flearn%2Fmission',
+    expect(capture).toHaveBeenCalledWith(
+      'countdown_widget_add_date_cta_clicked',
+      { source: 'mission_gate' },
+    )
+    expect(navigate).toHaveBeenCalledWith('/prep/tracker?new=1')
+    // Regression guard: must NOT route through PersonaPicker.
+    expect(navigate).not.toHaveBeenCalledWith(
+      expect.stringContaining('/onboarding/persona'),
     )
   })
 
@@ -71,7 +77,6 @@ describe('MissionDateGate (spec #53 §7.3)', () => {
     renderGate()
     await user.click(screen.getByTestId('mission-date-gate-browse'))
     expect(navigate).toHaveBeenCalledWith('/learn')
-    // No unlock_cta_clicked fire on the secondary path.
     const clickedCalls = capture.mock.calls.filter(
       (c) => c[0] === 'countdown_unlock_cta_clicked',
     )
