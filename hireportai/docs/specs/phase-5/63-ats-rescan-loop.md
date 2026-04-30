@@ -1,6 +1,6 @@
 # Phase 5 — Spec #63: ATS Re-Scan Loop per Tracker Application
 
-> **Status:** Drafted, §12 amended — D-1..D-12 locked at `<this-slice>` from §14 OQ-A..OQ-L (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 precedent at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc`); B-086 🔴 unchanged (impl not shipped); D-020 closure pending impl per §1.3. Spec authored 2026-04-30 at `da14c01` (E-043 parent feature row carries forward; this slice authors the spec + forward-files the impl row, mirroring slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 spec-author + forward-file precedent).
+> **Status:** Drafted, §12 amended — D-1..D-12 locked at `71a77e3` from §14 OQ-A..OQ-L (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 precedent at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc`); B-086 🔴 unchanged (impl not shipped); D-020 closure pending impl per §1.3. Spec authored 2026-04-30 at `da14c01` (E-043 parent feature row carries forward; this slice authors the spec + forward-files the impl row, mirroring slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 spec-author + forward-file precedent).
 > **Closes drift D-020** at impl-merge time (Q1 lock — bundled `jd_hash` + `jd_text` migration). See §1.3 + §7.
 > **Mode:** 4 (spec-author + forward-file impl row). R14 default — net-new feature with data-model surface + new endpoint + new FE component.
 
@@ -766,7 +766,7 @@ Total estimated test envelope: **+18..+24 BE + +10..+15 FE + +3 integration**.
 
 ## §12 Decisions
 
-*Locked at `<this-slice>` (2026-04-30) — D-1..D-12 resolve §14 OQ-A..OQ-L. All 12 author-hint dispositions accepted verbatim per Dhamo single-admin disposition (no overrides). Mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 §12 amendment precedent at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc`.*
+*Locked at `71a77e3` (2026-04-30) — D-1..D-12 resolve §14 OQ-A..OQ-L. All 12 author-hint dispositions accepted verbatim per Dhamo single-admin disposition (no overrides). Mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 §12 amendment precedent at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc`.*
 
 **D-1** *(resolves §14 OQ-A)* — re-scan consumes from the **same `FREE_LIFETIME_SCAN_LIMIT` counter** as fresh scans (no separate quota). Free users get 1 lifetime scan total whether fresh or re-scan. Minimizes counter sprawl per `usage_service.py` precedent.
 
@@ -813,43 +813,43 @@ See §3 non-goals + these deferred-to-impl-or-later items:
 
 ## §14 Open questions
 
-*All 12 OQs RESOLVED at `<this-slice>` (§12 amendment, 2026-04-30). Author-hint dispositions accepted verbatim per Dhamo single-admin disposition.*
+*All 12 OQs RESOLVED at `71a77e3` (§12 amendment, 2026-04-30). Author-hint dispositions accepted verbatim per Dhamo single-admin disposition.*
 
 - **OQ-A** Free-tier counter contract — does `/rescan` consume from the same `"analyze"` lifetime counter as fresh scans, or have its own?
-  **RESOLVED:** locked at §12 D-1 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-1 (`71a77e3`).
 
 - **OQ-B** No-change short-circuit — if `(jd_hash, resume_hash)` matches an existing `tracker_application_scores` row, should we short-circuit and return existing scores, or always re-score?
-  **RESOLVED:** locked at §12 D-2 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-2 (`71a77e3`).
 
 - **OQ-C** Score history pagination — return all rows or paginate?
-  **RESOLVED:** locked at §12 D-3 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-3 (`71a77e3`).
 
 - **OQ-D** ScoreDeltaWidget mount — separate page (`/prep/tracker/:id/scores`) or inline expand?
-  **RESOLVED:** locked at §12 D-4 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-4 (`71a77e3`).
 
 - **OQ-E** Home dashboard variant slot — which composition cell?
-  **RESOLVED:** locked at §12 D-5 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-5 (`71a77e3`).
 
 - **OQ-F** Per-axis delta computation site — BE in `ScoreDeltaResponse` envelope or FE math?
-  **RESOLVED:** locked at §12 D-6 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-6 (`71a77e3`).
 
 - **OQ-G** `tracker_application_scores.user_id` denormalization — accept FK redundancy for query perf?
-  **RESOLVED:** locked at §12 D-7 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-7 (`71a77e3`).
 
 - **OQ-H** Rate limit on `/rescan` — same as `/analyze` (slowapi default 100/min) or stricter?
-  **RESOLVED:** locked at §12 D-8 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-8 (`71a77e3`).
 
 - **OQ-I** Error semantics for `jd_text=NULL` — what's the FE-facing copy + status code?
-  **RESOLVED:** locked at §12 D-9 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-9 (`71a77e3`).
 
 - **OQ-J** D-020 `jd_hash` backfill at migration time — should `hash_jd(jd_text)` run on existing rows in the upgrade step?
-  **RESOLVED:** locked at §12 D-10 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-10 (`71a77e3`).
 
 - **OQ-K** PaywallTrigger reuse — `'rescan_attempt'` (new) or `'scan_limit'` (existing)?
-  **RESOLVED:** locked at §12 D-11 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-11 (`71a77e3`).
 
 - **OQ-L** `rescan_completed` event payload depth — include score deltas or just IDs?
-  **RESOLVED:** locked at §12 D-12 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-12 (`71a77e3`).
 
 ---
 
@@ -881,10 +881,10 @@ See §3 non-goals + these deferred-to-impl-or-later items:
 - Existing `Depends(get_current_user)` chain on `/api/v1/*` routes.
 - Phase 6 slice 6.10a alembic head `c4e21d8a7f12` (audit #14).
 
-**§12-amendment slice gate:** ✅ shipped at `<this-slice>` (2026-04-30) — D-1..D-12 locked from §14 OQ-A..OQ-L per slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 §12 amendment precedent. Impl pickup unblocked.
+**§12-amendment slice gate:** ✅ shipped at `71a77e3` (2026-04-30) — D-1..D-12 locked from §14 OQ-A..OQ-L per slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 §12 amendment precedent. Impl pickup unblocked.
 
 **D-020 closure timing:** drift D-020 closes ✅ at impl-merge of B-086 (the migration in §7 lands the `jd_hash` + `jd_text` columns side-by-side per Q1 LOCKED). Spec body §1.3 + §7 + AC-15 carry the cross-ref.
 
 ---
 
-*Spec authored 2026-04-30 at `da14c01`. §12 amendment locked D-1..D-12 from §14 OQ-A..OQ-L at `<this-slice>` (2026-04-30); B-086 stays 🔴 pending impl pickup; D-020 closure committed at impl per §7. R14 default — net-new feature with data-model surface + new endpoint + new FE component + analytics catalog extension + drift D-020 closure at impl-merge. R15(c) forward-file: B-086 🔴 inserted above B-085 (numerically descending) in BACKLOG.md per highest-numeric-first ordering. R17 watermark verified at amendment slice start: B-086 highest in-use; B-087 next-free post-slice.*
+*Spec authored 2026-04-30 at `da14c01`. §12 amendment locked D-1..D-12 from §14 OQ-A..OQ-L at `71a77e3` (2026-04-30); B-086 stays 🔴 pending impl pickup; D-020 closure committed at impl per §7. R14 default — net-new feature with data-model surface + new endpoint + new FE component + analytics catalog extension + drift D-020 closure at impl-merge. R15(c) forward-file: B-086 🔴 inserted above B-085 (numerically descending) in BACKLOG.md per highest-numeric-first ordering. R17 watermark verified at amendment slice start: B-086 highest in-use; B-087 next-free post-slice.*
