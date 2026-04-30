@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.10: AI Ingestion Pipeline (Gemini Gen + Cross-Model Critique)
 
-## Status: Drafted, §12 amended — D-1..D-16 locked at `be7d59a` from §14 OQ-A..OQ-P (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 precedent at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168`); B-083 🔴 unchanged (impl not shipped)
+## Status: ✅ Shipped (spec + impl) — closes B-083 (cascade — B-083a `9bd9397` foundation + B-083b `8735373` orchestrator + admin route + RQ worker). §12 amended at `be7d59a` (D-1..D-16 locked from §14 OQ-A..OQ-P).
 
 | Field | Value |
 |-------|-------|
@@ -1412,14 +1412,16 @@ trail.
 
 ## 15. Implementation slice forward-link
 
-Implementation row: **B-083** 🔴 (filed by this slice).
+Implementation row: **B-083** ✅ (cascade-closed by `8735373` — both
+sub-rows shipped: B-083a `9bd9397` foundation + B-083b `8735373`
+orchestrator).
 
 Forward dependencies before impl can start:
 
 1. **§12 amendment slice** locked D-1..D-16 from §14 OQ-A..OQ-P at
    `be7d59a` (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8
    §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` /
-   `fb92396` / `0c21223` / `ab07168`). ✅ shipped this commit.
+   `fb92396` / `0c21223` / `ab07168`). ✅ shipped at `be7d59a`.
 2. No BE primitive prerequisite — every existing data source is on
    disk:
    - `decks` / `lessons` / `quiz_items` (slice 6.1, `a989539`).
@@ -1501,5 +1503,8 @@ skill-author follow-up if a third RQ consumer appears.
 *Spec authored at `409762f` against HEAD `c2491e0`. All on-
 disk citations verified at audit time per SOP-5; phantom citations
 zero. Forward-filed B-083 at status 🔴 per R15(c). §12 amendment
-locked D-1..D-16 from §14 OQ-A..OQ-P at `be7d59a` (2026-04-29);
-B-083 stays 🔴 pending impl pickup.*
+locked D-1..D-16 from §14 OQ-A..OQ-P at `be7d59a` (2026-04-29).
+**B-083 ✅ shipped 2026-04-29** — cascade-closed by `8735373` (both
+sub-rows shipped: B-083a foundation `9bd9397` + B-083b orchestrator
++ admin route + RQ worker `8735373`). Spec #10 fully implemented
+end-to-end.*
