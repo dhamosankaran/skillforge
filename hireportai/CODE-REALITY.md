@@ -9,33 +9,34 @@
 
 | Field | Value |
 |-------|-------|
-| Commit sha (short) | `4a6d6e7` (B-081 targeted regen — closes B-081). **Scope:** §1 / §3 / §4 / §6 / §7 / §8 / §13 regenerated; §2 / §5 / §9 / §10 / §11 / §12 carried forward verbatim. **Prior anchor:** `4c4d88f` (B-079 full regen, 2026-04-28). **Raw gap:** 8 commits. **Code-touching commits in window (under sharpened LD-1):** 1 — `0968a13` slice 6.8 impl (FSRS dashboard: `dashboard_service.py` aggregator + `dashboard.py` schemas/route + `Dashboard.tsx` page + 5 components under `components/dashboard/` + `useFsrsDashboard` hook + 10 FE types + `App.tsx` route mount). The other 7 = `6ff39b7` slice 6.8 spec-author + `ab07168` slice 6.8 §12 amendment + 3 SHA backfills + `7036968` scout-audit slice 6.8/6.14 numbering annotation (process slice annotating `docs/audits/phase-6-scout.md` snapshot) + 1 SHA backfill. Targeted scope justified: single-feature blast radius, well-bounded under LD-1. **Lineage from `4c4d88f`:** `4c4d88f` → `bb3997b` SHA backfill → `6ff39b7` slice 6.8 spec-author → `24db82d` SHA backfill → `ab07168` slice 6.8 §12 amendment → `1e70b99` SHA backfill → `0968a13` slice 6.8 impl → `e3ede6d` SHA backfill → `7036968` scout-annotation → `989b909` SHA backfill → THIS commit (targeted regen, B-081). |
-| Branch | `main` (still ahead of `origin/main`; this slice's two commits queued in same un-pushed batch) |
-| Generated | 2026-04-29 (targeted regen at HEAD `989b909`). Gap 8 commits with single code-touching delta — well-bounded under LD-1 ~10-commit targeted threshold, so only affected sections rebuilt. LD-2: counts via `find` / `wc` enumeration, not estimation. LD-3: ambiguous fields flagged. |
-| Backend model files | 24 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models`). 27 ORM model classes (some files declare 2: `analytics_event.py` → `QuizReviewEvent` + `LessonViewEvent`; `gamification.py` → `GamificationStats` + `Badge` + `UserBadge`; `mission.py` → `Mission` + `MissionDay`). |
-| Backend service files | 42 functional top-level (in `app/services/`, excl. `__init__.py`) + 3 under `services/llm/` = 45. **+1 since `4c4d88f`**: `dashboard_service.py` (slice 6.8, `0968a13`) — single aggregator `aggregate_user_dashboard()` composing 5 private section helpers (cards-due / retention curve / deck-mastery / streak / review-history). Reuses `curriculum_visibility` (D-10) + `gamification_service.get_stats` (D-006). |
-| Backend schema files | 17 (`app/schemas/*.py`, excl. `__init__.py`). **+1 since `4c4d88f`**: `dashboard.py` (slice 6.8, `0968a13`) — 10 Pydantic v2 schemas (`CardsDueByState` / `CardsDueSection` / `DailyRetentionPoint` / `RetentionSection` / `DeckMastery` / `DeckMasterySection` / `StreakSection` / `RecentReview` / `ReviewHistorySection` / `DashboardResponse`). |
-| Backend router files | 27 v1 + 6 legacy = 33. **+1 since `4c4d88f`** (v1): `dashboard.py` (slice 6.8, `0968a13`; mounts `GET /learn/dashboard`). |
-| Backend endpoints | 83 unique decorators across both folders + 6 re-export double-mounts (the v1 thin re-exports of `analyze` / `cover_letter` / `interview` / `rewrite`) = **89 mount-point appearances** in §3 flat table. **+1 since `4c4d88f`** (slice 6.8: `GET /api/v1/learn/dashboard?retention_window_days=N`). |
-| Alembic revisions | 27 (Head = `b8a9d4f3e2c1`). Unchanged since `4c4d88f` — slice 6.8 ships zero migrations. |
-| Frontend pages | 27 — **+1 since `4c4d88f`**: `pages/Dashboard.tsx` (slice 6.8, `0968a13`). 21 top-level + 6 under `pages/admin/`. |
-| Frontend components | **79** (excl. `__tests__/*`). **+5 since `4c4d88f`** (all under `components/dashboard/` slice 6.8 `0968a13`): `DueToday.tsx` / `Streak.tsx` / `RetentionCurve.tsx` / `DeckMastery.tsx` / `ReviewHistory.tsx`. NB: `components/dashboard/` directory now hosts both the prior 10 ATS-analysis panels (Phase 1) AND these 5 FSRS-dashboard sections (Phase 6) — see §6 component graph. |
-| Frontend utils | 7 utility .ts files in `src/utils/`. `services/api.ts` (separate module) gained `fetchFsrsDashboard(opts)` exported helper this regen window (slice 6.8, `0968a13`); `fetchRankedDecks(opts)` from prior window unchanged. |
-| Shared TS types | `src/types/index.ts` (**702 lines**, +83 since `4c4d88f`) + `src/types/homeState.ts` (28 lines, unchanged). **+10 interfaces in `index.ts:624-702` since `4c4d88f`** (slice 6.8, `0968a13`): `CardsDueByState` / `CardsDueSection` / `DailyRetentionPoint` / `RetentionSection` / `DeckMastery` / `DeckMasterySection` / `StreakSection` / `RecentReview` / `ReviewHistorySection` / `DashboardResponse` (field-for-field mirrors of `app/schemas/dashboard.py`). |
-| Frontend hooks | **18** (`src/hooks/*.ts`, excl. `__tests__`). **+1 since `4c4d88f`**: `useFsrsDashboard.ts` (slice 6.8, `0968a13`). |
+| Commit sha (short) | `<this-slice>` (B-085 targeted regen — closes B-085). **Scope:** §1 / §2 / §3 / §4 / §5 / §6 / §7 / §8 / §9 / §10 / §11 / §13 regenerated; §12 carried forward verbatim. **Prior anchor:** `4a6d6e7` (B-081 targeted regen, 2026-04-29). **Raw gap:** 24 commits. **Code-touching commits in window (under sharpened LD-1):** 3 — `9bd9397` slice 6.10a (AI ingestion foundation: `ingestion_job` model + `ingestion_jobs` alembic migration `c4e21d8a7f12` + `object_storage_service.py` + `app/jobs/__init__.py` package marker + `llm_router` `provider_override` + `response_schema` extensions; closes drift D-016), `8735373` slice 6.10b (orchestrator + admin route + RQ worker: `ingestion_service.py` + `prompt_template_service.py` + `ingestion_errors.py` + `app/jobs/ingestion_worker.py` + `admin_ingest.py` route + `app/schemas/ingestion.py` + `app/prompts/{lesson_gen,ingestion_critique}.md` + `app/main.py` mount + `analytics.md` catalog +3 events; cascade-closes B-083 parent), `b13f410` E-042 FE migration (10 FE consumers migrated from `user.interview_target_*` → `homeState.context.next_interview` + tracker-row `interview_date`; `InterviewDateModal.tsx` deleted; cascade-closes E-017). The other 21 = spec-author + §12 amendment + SHA backfill + push-watermark cycles for slices 6.10 / 6.10a / 6.10b / 6.11 / E-042 (see lineage). Targeted scope justified — 3 code-touching commits well under sharpened LD-1 ~10-commit threshold; gap-by-volume pattern (24 raw commits) driven by process-cycle density, not feature density. **Lineage from `4a6d6e7`:** `4a6d6e7` (B-081 regen) → `c2491e0` SHA backfill → `ab338a1` B-082 retro-close → `409762f` slice 6.10 spec-author → `61f6cc8` SHA backfill → `be7d59a` slice 6.10 §12 amendment → `fac1e0f` SHA backfill → `4ee6b84` slice 6.10 split-decision audit → `0d76828` SHA backfill → `9bd9397` **slice 6.10a impl** → SHA backfill → `8735373` **slice 6.10b impl** → `02c81b2` SHA backfill → `7d7c6e8` slice 6.11 spec-author → `63a71e3` SHA backfill → `057ff93` SESSION-STATE Branch-field watermark → `d9bfcfc` slice 6.11 §12 amendment → `bc5b310` SHA backfill → `e39b0ef` Branch-field watermark → `b13f410` **E-042 FE migration impl** → `3b1aa93` SHA backfill → `081a933` push-watermark → `3683677` push-watermark THIS HEAD. |
+| Branch | `main` (pushed to `origin/main` at `3b1aa93` on 2026-04-30; 1 unpushed commit `3683677` is the post-push watermark itself, then this regen's two commits will queue on top). |
+| Generated | 2026-04-30 (targeted regen at HEAD `3683677`). Raw gap 24 commits with 3 code-touching deltas; targeted scope justified per sharpened LD-1 (counts code-touching only; 3 well below the ~10-commit threshold). LD-2: counts via `find` / `wc` enumeration, not estimation. LD-3: ambiguous fields flagged. |
+| Backend model files | 25 (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models`). 28 ORM model classes (some files declare 2: `analytics_event.py` → `QuizReviewEvent` + `LessonViewEvent`; `gamification.py` → `GamificationStats` + `Badge` + `UserBadge`; `mission.py` → `Mission` + `MissionDay`). **+1 since `4a6d6e7`**: `ingestion_job.py` (slice 6.10a, `9bd9397`). |
+| Backend service files | 46 functional top-level (in `app/services/`, excl. `__init__.py`) + 3 under `services/llm/` + 1 under `app/jobs/` (new package this window) = 50. **+4 top-level since `4a6d6e7`**: `object_storage_service.py` (slice 6.10a, `9bd9397` — boto3 R2 client), `ingestion_service.py` + `prompt_template_service.py` + `ingestion_errors.py` (all slice 6.10b, `8735373`). **+1 jobs module**: `app/jobs/ingestion_worker.py` (slice 6.10b — RQ entry point; `app/jobs/__init__.py` package marker landed in 6.10a). Service-count basis convention: top-level functional `services/` files form the canonical "service file" count; `services/llm/` (legacy provider abstraction) and the new `jobs/` module are tracked as separate hierarchies in this row. |
+| Backend schema files | 18 (`app/schemas/*.py`, excl. `__init__.py`). **+1 since `4a6d6e7`**: `ingestion.py` (slice 6.10b, `8735373`) — 7 Pydantic v2 schemas (`IngestionJobCreateRequest` / `IngestionArtifacts` / `IngestionJobResponse` / `GeneratedQuizItem` / `LessonGenSchema` / `CritiqueDimension` / `CritiqueSchema`). |
+| Backend router files | 28 v1 + 6 legacy = 34. **+1 since `4a6d6e7`** (v1): `admin_ingest.py` (slice 6.10b, `8735373`; mounts 3 admin endpoints under `/api/v1/admin/ingest`). |
+| Backend endpoints | 86 unique decorators across both folders + 6 re-export double-mounts (the v1 thin re-exports of `analyze` / `cover_letter` / `interview` / `rewrite`) = **92 mount-point appearances** in §3 flat table. **+3 since `4a6d6e7`** (slice 6.10b: `POST /api/v1/admin/ingest`, `GET /api/v1/admin/ingest/{job_id}`, `GET /api/v1/admin/ingest`). |
+| Alembic revisions | 28 (Head = `c4e21d8a7f12`). **+1 since `4a6d6e7`**: `c4e21d8a7f12_phase6_ingestion_jobs_table.py` (slice 6.10a, `9bd9397`; down_revision `b8a9d4f3e2c1`). |
+| Frontend pages | 27 — unchanged since `4a6d6e7`. 21 top-level + 6 under `pages/admin/`. (Note: `Tracker.tsx` modified by E-042 FE migration but not new.) |
+| Frontend components | **78** (excl. `__tests__/*`). **−1 since `4a6d6e7`** (E-042 FE migration, `b13f410`): `components/home/InterviewDateModal.tsx` DELETED — modal-based date capture replaced by tracker-row inline editor per spec #57. The five slice-6.8 dashboard components remain. |
+| Frontend utils | 7 utility .ts files in `src/utils/` (unchanged). `services/api.ts` unchanged this window — no new helpers from slice 6.10a/6.10b/E-042 (FE consumer for ingestion deferred per slice 6.10b D-10). |
+| Shared TS types | `src/types/index.ts` (**704 lines**, +2 since `4a6d6e7`) + `src/types/homeState.ts` (**40 lines**, +12 since `4a6d6e7` — E-042 added `NextInterview` interface + `next_interview` field on `HomeStateContext`). **In `index.ts`** E-042 added `interview_date?: string \| null` field on `TrackerApplication` (line 128) + `@deprecated` JSDoc annotation on `User.interview_target_company` / `User.interview_target_date` (carried in `AuthContext.tsx` User-shape typedef, lines 42-47). **No new types from slice 6.10a/6.10b** — D-10 deferred FE consumer for ingestion to follow-up sub-slice. |
+| Frontend hooks | **18** (`src/hooks/*.ts`, excl. `__tests__`). Unchanged since `4a6d6e7`. |
 | Frontend context providers | 5 (`AnalysisContext`, `AuthContext`, `GamificationContext`, `ThemeContext`, `UsageContext`) — unchanged. |
-| Skills (tracked) | **22** in `.agent/skills/*.md`. Unchanged since `4c4d88f` (no skill-author slices in this window). |
+| Skills (tracked) | **22** in `.agent/skills/*.md`. Unchanged since `4a6d6e7` (no skill-author slices in this window). `analytics.md` modified by 6.10b catalog update (3 new ingestion event rows) + E-042 catalog update (4 new tracker/countdown event rows) — content delta only, not a count change. |
 | Skills (untracked) | 3 directory-style under `.agent/skills/` — `stripe-best-practices/`, `stripe-projects/`, `upgrade-stripe/` (each contains `SKILL.md` + optional `references/`); not in git, source unknown — see §10. |
-| Specs | **90 across 7 phases** (phase-0=6, phase-1=13, phase-2=8, phase-3=11, phase-4=6, phase-5=36, phase-6=10). **+1 since `4c4d88f`**: phase-6 +1 (`09-fsrs-dashboard.md` slice 6.8). |
-| Tests | **BE 651** / **FE 414** carried forward from slice 6.8 implementation final report (`0968a13`: BE 636→651 +15, FE 395→414 +19). R14 exception (b) — process slice, no test runs this regen. BE counts under `FREE_DAILY_REVIEW_LIMIT=10 FREE_LIFETIME_SCAN_LIMIT=1 FREE_MONTHLY_INTERVIEW_LIMIT=3 python -m pytest tests/ -m "not integration"` (canonical CI invocation per `backend.md`). |
+| Prompts | **NEW SURFACE** introduced by slice 6.10b — `app/prompts/` directory with 2 Markdown templates: `lesson_gen.md` (Stage-1 Gemini lesson generation) + `ingestion_critique.md` (Stage-2 Anthropic critique). Loaded via `prompt_template_service.load_prompt(name)` with `@functools.cache` (slice 6.10b D-3). |
+| Specs | **92 across 7 phases** (phase-0=6, phase-1=13, phase-2=8, phase-3=11, phase-4=6, phase-5=36, phase-6=12). **+2 since `4a6d6e7`**: phase-6 +2 (`10-ai-ingestion-pipeline.md` slice 6.10 spec-author at `409762f`; `11-content-quality-retention.md` slice 6.11 spec-author at `7d7c6e8`). |
+| Tests | **BE 692** / **FE 417** carried forward verbatim from E-042 FE final report (`b13f410`: FE 414→417 +3 net; BE 692 unchanged — zero BE files touched in E-042). Slice 6.10a was BE 651→663 (+12); slice 6.10b was BE 663→692 (+29) under prod-default env vars. R14 exception (b) — process slice, no test runs this regen. BE counts under `FREE_DAILY_REVIEW_LIMIT=10 FREE_LIFETIME_SCAN_LIMIT=1 FREE_MONTHLY_INTERVIEW_LIMIT=3 python -m pytest tests/ -m "not integration"` (canonical CI invocation per `backend.md`). |
 
-**Slice absorption (this regen):** 6.8 (user-self FSRS dashboard, closes B-080). Plus context: scout-audit slice 6.8/6.14 numbering annotation slice (`7036968`, closes JC #1 from slice 6.8 spec-author — annotates `docs/audits/phase-6-scout.md` snapshot at `5b0aa23` with top-of-section drift notice + 2 inline pointer notes; not in CR scope, audit doc is a process artifact). This regen self-closes B-081. **Background work:** still none in repo (FastAPI synchronous request lifecycle only) — slice 6.14 cron architecture decision pending at B-078 🟦 (Phase 6 LD G2 leans Railway cron but row exists for re-evaluation when 6.13.5 closes).
+**Slice absorption (this regen):** 6.10a (AI ingestion foundation infra, closes B-083a; closes drift D-016), 6.10b (orchestrator + admin route + RQ worker, closes B-083b; cascade-closes B-083), E-042 FE (tracker-level interview date + company; cascade-closes E-017). Plus context: slice 6.10 spec-author + §12 amendment + split-decision audit + slice 6.11 spec-author + §12 amendment process commits (no §13 row count beyond +2 phase-6 specs; spec-author commits are doc-only). This regen self-closes B-085. **Background work:** RQ worker (`ingestion_worker.py`) is now runtime-exercised — first true background-job consumer in the repo (one consumer; `background-jobs.md` skill candidate at flag #1 dormant per slice 6.10b close-loop, awaiting second consumer at slice 6.14 daily Pro digest, B-078 🟦).
 
 ---
 
 ## Section 2 — Backend models
 
-All 24 model files under `app/models/`. 27 ORM model classes total (some files declare multiple). Mixins-only file `base.py` excluded from class count.
+All 25 model files under `app/models/` (excl. `__init__`, `request_models`, `response_models`). 28 ORM model classes total (some files declare multiple). Mixins-only file `base.py` excluded from class count. **+1 since `4a6d6e7`**: `ingestion_job.py` (slice 6.10a, `9bd9397`).
 
 ### `admin_audit_log.py`
 **Class:** `AdminAuditLog` (`app/models/admin_audit_log.py:11`)  **Table:** `admin_audit_log`
@@ -131,6 +132,33 @@ Cols: `id` UUID PK; `category_id` FK; `question`/`answer` Text; `difficulty` Str
 ### `gamification.py`
 Three classes: `GamificationStats` (`gamification.py:28`), `Badge` (`:57`), `UserBadge` (`:74`). Tables: `gamification_stats` / `badges` / `user_badges`. Streaks/XP/badge progress per user.
 
+### `ingestion_job.py` (Phase 6 slice 6.10a, `9bd9397`)
+**Class:** `IngestionJob` (`app/models/ingestion_job.py:34`)  **Table:** `ingestion_jobs`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | String(36) PK | UUID stringified |
+| status | String(20) indexed | NOT NULL — `pending` / `running` / `generating` / `critiquing` / `publishing` / `completed` / `failed` per spec §5.3 |
+| source_format | String(16) | NOT NULL, default + server-default `"markdown"` (D-1: only Markdown supported in v1) |
+| source_content_sha256 | String(64) indexed | NOT NULL — dedupe key per slice 6.10b D-5 |
+| source_r2_key | String(255) | NOT NULL — `ingestion/{job_id}/source.md` |
+| draft_r2_key | String(255) | nullable — written at end of Stage 1 |
+| critique_r2_key | String(255) | nullable — written at end of Stage 2 |
+| created_by_user_id | String(36) FK `users.id` ON DELETE SET NULL | nullable — admin attribution; ON DELETE SET NULL mirrors `quiz_review_events` per slice 6.0 D-1 |
+| target_deck_slug | String(64) | nullable — admin-supplied deck slug hint |
+| target_deck_id | String(36) FK `decks.id` ON DELETE SET NULL | nullable — resolved at Stage 3 if slug exists |
+| generated_lesson_ids | JSON | NOT NULL, default `[]` — lesson UUIDs persisted at Stage 3 |
+| generated_quiz_item_count | Integer | NOT NULL, default + server-default `0` |
+| critique_verdict | String(16) | nullable — `PASS` / `NEEDS_REVIEW` / `FAIL` from `CritiqueSchema` |
+| error_message | Text | nullable — terminal-failure detail |
+| current_attempt | Integer | NOT NULL, default + server-default `0` |
+| max_attempts | Integer | NOT NULL, default + server-default `3` (per slice 6.10b D-6) |
+| created_at | DateTime(tz) | NOT NULL, server default `now()` |
+| started_at | DateTime(tz) | nullable — set when worker picks up |
+| completed_at | DateTime(tz) | nullable — set on terminal status |
+
+**Indexes:** `ix_ingestion_jobs_status_created_at` `(status, created_at)` for admin "recent jobs" view; `ix_ingestion_jobs_admin_created_at` `(created_by_user_id, created_at)` for `mine_only=true` filter on the admin list endpoint. `source_content_sha256` carries `index=True` on its column for the dedupe lookup. Spec: `docs/specs/phase-6/10-ai-ingestion-pipeline.md` §5.3 + §7. Lifecycle: `ingestion_service.enqueue_ingestion` writes the pending row + uploads source to R2 + enqueues an RQ job; `jobs/ingestion_worker.run_ingestion(job_id)` advances `status` per stage.
+
 ### `interview_question_set.py`
 **Class:** `InterviewQuestionSet` (`app/models/interview_question_set.py:16`)  **Table:** `interview_question_sets`. Stores per-user generated interview Q sets.
 
@@ -190,6 +218,7 @@ Two classes: `Mission` (`mission.py:45`), `MissionDay` (`:71`). Interview sprint
 | `app/api/v1/routes/admin.py` | `/api/v1` | 8 | Card CRUD + import + AI generate + registration logs + audit. Router-level `audit_admin_request` dep. |
 | `app/api/v1/routes/admin_analytics.py` | `/api/v1` | 2 (metrics, performance) | Spec #38 / E-018b. Router-level audit dep. |
 | `app/api/v1/routes/admin_decks.py` | `/api/v1` | 4 (POST/PATCH/POST archive/GET list) | Phase 6 slice 6.4b. Router-level audit dep. |
+| `app/api/v1/routes/admin_ingest.py` | `/api/v1` | 3 (POST `/admin/ingest`, GET `/admin/ingest/{id}`, GET `/admin/ingest`) | **NEW Phase 6 slice 6.10b** (`8735373`). Router-level `audit_admin_request` dep + per-handler `Depends(require_admin)`. Custom slowapi `@limiter.limit("10/hour", key_func=_admin_rate_key)` on POST per spec #10 D-8 (per-admin not per-IP). |
 | `app/api/v1/routes/admin_lessons.py` | `/api/v1` | 5 (POST/GET/PATCH/POST publish/POST archive) | Slice 6.4b. Audit dep. |
 | `app/api/v1/routes/admin_quiz_items.py` | `/api/v1` | 4 | Slice 6.4b. Audit dep. |
 | `app/api/v1/routes/analyze.py` | `/api/v1` | (re-export) | Thin re-export of `app/api/routes/analyze.py`. |
@@ -215,7 +244,7 @@ Two classes: `Mission` (`mission.py:45`), `MissionDay` (`:71`). Interview sprint
 | `app/api/v1/routes/tracker.py` | `/api/v1` | 4 (list, create, patch, delete) | Application tracker CRUD. |
 | `app/api/v1/routes/users.py` | `/api/v1` | 2 (PATCH persona, POST home-first-visit) | User profile mutations. |
 
-### Flat endpoint table (mount-point convention; 89 appearances)
+### Flat endpoint table (mount-point convention; 92 appearances)
 
 Listed in router-file order. Re-export double-mounts marked with `[2x]`. Files with explicit decorators in `app/api/routes/` are listed once at `/api/...` and once at `/api/v1/...` per `main.py:135-170` mount.
 
@@ -257,6 +286,9 @@ v1 `/api/v1/*` (alphabetical by file):
 | PATCH `/api/v1/admin/decks/{deck_id}` | `admin_decks.py:47` |
 | POST `/api/v1/admin/decks/{deck_id}/archive` | `admin_decks.py:67` |
 | GET `/api/v1/admin/decks` | `admin_decks.py:81` |
+| POST `/api/v1/admin/ingest` **NEW slice 6.10b** | `admin_ingest.py:65` |
+| GET `/api/v1/admin/ingest/{job_id}` **NEW slice 6.10b** | `admin_ingest.py:91` |
+| GET `/api/v1/admin/ingest` **NEW slice 6.10b** | `admin_ingest.py:111` |
 | POST `/api/v1/admin/lessons` | `admin_lessons.py:35` |
 | GET `/api/v1/admin/lessons` | `admin_lessons.py:61` |
 | PATCH `/api/v1/admin/lessons/{lesson_id}` | `admin_lessons.py:85` |
@@ -315,7 +347,7 @@ App factory at `app/main.py:62` — middleware stack: Sentry init (line 66), COR
 
 ## Section 4 — Backend services
 
-### Top-level `app/services/` (42 files)
+### Top-level `app/services/` (46 files)
 
 | File | Public surface | Notes |
 |------|----------------|-------|
@@ -339,18 +371,22 @@ App factory at `app/main.py:62` — middleware stack: Sentry init (line 66), COR
 | `gap_mapping_service.py` | Map ATS gaps → study cards | Spec ats-card-bridge. |
 | `geo_pricing_service.py` | `get_pricing_for_ip` | IP→country→Stripe price ID. Redis cached. |
 | `gpt_service.py` | `generate_resume_rewrite`, `generate_resume_rewrite_async`, `generate_cover_letter`, `generate_interview_questions` | Returns `Tuple[X, telemetry_str]` for rewrite calls (D-014 open). All LLM calls via `generate_for_task()`. |
-| `home_state_service.py` | `compute_home_state` | Spec #40 priority slot evaluator. Redis cached with invalidation hooks. |
+| `home_state_service.py` | `compute_home_state` | Spec #40 priority slot evaluator. Redis cached with invalidation hooks. Includes `next_interview` envelope on `HomeStateContext` (slice E-042 BE half, `9543aa466524` migration; consumed FE-side post-`b13f410` E-042 FE migration via `homeState.context.next_interview`). |
+| **`ingestion_errors.py`** **NEW slice 6.10b** | `IngestionPayloadError` (400) / `IngestionRateLimitedError` (429) / `R2UploadError` (502) / `IngestionJobNotFoundError` (404) | Domain error envelopes for the ingestion pipeline. Caught at `admin_ingest.py` boundary + mapped to HTTP responses. |
+| **`ingestion_service.py`** **NEW slice 6.10b** | `enqueue_ingestion:165` (public; admin-route entry — validates source size + computes SHA256 + R2 dedupe-window check + R2 upload via `asyncio.to_thread` per D-11 + INSERT pending row + RQ enqueue), `get_ingestion_job:253`, `list_recent_ingestion_jobs:266`, helpers `_compute_sha256:110` / `_to_response:114` / `_find_active_dedupe_job:140` / `_source_r2_key:74` / `draft_r2_key:78` / `critique_r2_key:82` / `get_redis:90` / `get_queue:99` | Module constants `INGESTION_JOB_TIMEOUT_SECONDS=600` + `INGESTION_MAX_ATTEMPTS=3` + `INGESTION_BACKOFF_SCHEDULE=[5,15,45]` per slice 6.10b D-6. Dedupe via `source_content_sha256` + active-status window per D-5 (terminal `completed` / `failed` rows do NOT match dedupe). |
 | `interview_storage_service.py` | Interview Q set persistence | Uses `text_hash.hash_jd` (only consumer). |
 | `keywords.py` | TF-IDF / RAKE keyword extraction. |  |
 | `lesson_admin_service.py` | Lesson CRUD + publish + archive | Slice 6.4b. |
 | `lesson_service.py` | `get_lesson_with_quizzes`, `get_deck_with_meta`, `list_lessons_in_deck`, `get_deck_lessons_bundle` | Phase 6 lesson reads. Slice 6.4b swapped fixture loader → DB. Slice 6.5 (B-072) will add persona-narrowing filters per spec #06 §6.2 (pending). |
 | `mission_service.py` | Mission CRUD + active + daily card pull. |  |
 | `nlp.py` | spaCy wrapper utilities. |  |
+| **`object_storage_service.py`** **NEW slice 6.10a** | `ObjectStorageService:40` class (lazy-init boto3 client, sync `put_object` + `get_object` API), `ObjectStorageError:31`, `get_storage:87` factory | R2 (Cloudflare) artifacts adapter. Sync API meant to be wrapped in `asyncio.to_thread` at the call site (slice 6.10a D-11). Raises `ObjectStorageError` wrapping `botocore.exceptions.ClientError`. Spec #10 §6.4. |
 | `onboarding_checklist_service.py` | First-action checklist computation. |  |
 | `parser.py` | PDF/DOCX → text extraction. |  |
 | `payment_service.py` | Stripe checkout/portal/webhook handling. |  |
 | `paywall_service.py` | Paywall dismissal grace logic. Spec #42. |  |
 | `progress_service.py` | Radar + heatmap aggregation. |  |
+| **`prompt_template_service.py`** **NEW slice 6.10b** | `load_prompt(name) → str` (`:19`) | Reads `app/prompts/{name}.md` via `Path.read_text()` + `@functools.cache` per slice 6.10b D-3. Two templates land with this slice: `lesson_gen.md` (Stage-1 Gemini) + `ingestion_critique.md` (Stage-2 Anthropic). Placeholder convention: `{source_markdown}` / `{deck_context}` / `{generated_lesson_json}`. |
 | `quiz_item_admin_service.py` | Quiz-item CRUD + retire | Slice 6.4b. |
 | `quiz_item_study_service.py` | `get_daily_quiz_items`, `review_quiz_item`, `get_quiz_progress` | Slice 6.2 FSRS quiz-item study. Slice 6.0 added dual-write hook calling `analytics_event_service.write_quiz_review_event` post-flush per spec #00 §6.2. Slice 6.5 will add persona-narrowing per spec #06 §6.1 (pending). |
 | `reminder_service.py` | Daily-reminder send-time computation. |  |
@@ -369,7 +405,14 @@ App factory at `app/main.py:62` — middleware stack: Sentry init (line 66), COR
 | `factory.py` | `get_llm_provider()` legacy abstraction; do NOT import from service code. Phase-6 consolidation pending. |
 | `claude_provider.py`, `gemini_provider.py` | Legacy provider wrappers. |
 
-LLM router lives at `app/core/llm_router.py:1`. `generate_for_task(task, prompt, ...)` dispatches on `FAST_TASKS` / `REASONING_TASKS` frozensets (lines 23-39). Provider chosen from `LLM_FAST_PROVIDER` / `LLM_REASONING_PROVIDER` env. `TIER_PRICE_USD_PER_1M_TOKENS` constant (line 47+) feeds admin spend.
+### `app/jobs/` (NEW package — slice 6.10a / 6.10b)
+
+| File | Public surface | Notes |
+|------|----------------|-------|
+| `__init__.py` | (package marker) | Slice 6.10a (`9bd9397`). |
+| **`ingestion_worker.py`** **NEW slice 6.10b** (`8735373`) | `run_ingestion(job_id) → None:518` (sync RQ entry) | RQ worker entry point. Runs `_run_ingestion_async:292` under `asyncio.run`. Three stages per spec §6.2: **Stage 1 generate** (`_generate_lesson:129` — `generate_for_task(task="ingestion_lesson_gen", reasoning_tier, response_schema=LessonGenSchema, thinking_budget=2000)`), **Stage 2 critique** (`_critique_lesson:143` — `generate_for_task(provider_override='anthropic', response_schema=CritiqueSchema)` per slice 6.10b D-4 cross-provider), **Stage 3 persist** (`_persist_drafts:230` via slice 6.4b admin services per G-5 single-source-of-truth — `lesson_admin_service.create_lesson_draft` + `quiz_item_admin_service.create_quiz_item_draft`; lessons land with `published_at IS NULL` per D-7). Per-step retry via `_with_retry:96` per D-6 (max 3 attempts, exponential backoff `[5,15,45]`). `EditClassificationConflictError` retry-once at Stage 3 per AC-10. FAIL-verdict short-circuits without Stage 3 per AC-8. Status row transitions `pending → running → generating → critiquing → publishing → completed|failed` written via `_set_status:268`. R2 artifact uploads at `ingestion/{job_id}/{source.md, draft.json, critique.json}`. PostHog events: `_emit_completed:477` / `_emit_failed:494`. Test session-pollution shim per slice 6.10b JC #2 (worker calls `db.commit()` for stage transitions; tests shim `db.commit → db.flush` to avoid cross-test row leakage). |
+
+LLM router lives at `app/core/llm_router.py:1`. `generate_for_task(task, prompt, ..., provider_override=None, response_schema=None)` dispatches on `FAST_TASKS` / `REASONING_TASKS` frozensets. Provider chosen from `LLM_FAST_PROVIDER` / `LLM_REASONING_PROVIDER` env, or directly from `provider_override` when supplied (slice 6.10a D-14). `response_schema: Optional[Type[BaseModel]]` plumbs into `types.GenerateContentConfig(response_schema=...)` on the Gemini path (`_call_gemini:111-118`) **closing drift D-016** (slice 6.10a, `9bd9397`); Anthropic + OpenAI dispatchers surface the schema as a system-prompt hint (server-side enforcement Gemini-only in current SDK). `ValueError` at `generate_for_task:299-304` boundary if `response_schema` is supplied without `json_mode=True`. `TIER_PRICE_USD_PER_1M_TOKENS` constant feeds admin spend.
 
 ### CLI / scripts
 
@@ -379,7 +422,7 @@ LLM router lives at `app/core/llm_router.py:1`. `generate_for_task(task, prompt,
 
 ## Section 5 — Alembic revisions
 
-27 revisions in `hirelens-backend/alembic/versions/`. Linear chain. Head: `b8a9d4f3e2c1`.
+28 revisions in `hirelens-backend/alembic/versions/`. Linear chain. Head: `c4e21d8a7f12`.
 
 | Revision | Summary | Down-revision |
 |---|---|---|
@@ -395,7 +438,8 @@ LLM router lives at `app/core/llm_router.py:1`. `generate_for_task(task, prompt,
 | `f75789e4967f` | Add `registration_logs` table | (chain) |
 | `fdc5af6f825f` | Add `card_progress.fsrs_step` | (chain) |
 | `57951e9f4cdc` | Phase 6 slice 6.1 — `decks` + `lessons` + `quiz_items` + `quiz_item_progress` | (chain) |
-| `b8a9d4f3e2c1` | Phase 6 slice 6.0 — `quiz_review_events` + `lesson_view_events` (HEAD) | `57951e9f4cdc` |
+| `b8a9d4f3e2c1` | Phase 6 slice 6.0 — `quiz_review_events` + `lesson_view_events` | `57951e9f4cdc` |
+| `c4e21d8a7f12` | **Phase 6 slice 6.10a — `ingestion_jobs` table (HEAD)** | `b8a9d4f3e2c1` |
 
 (Other 14 revisions are middle-of-chain Phase 1–5 migrations. Full enumeration via `ls hirelens-backend/alembic/versions/*.py`.)
 
@@ -443,14 +487,14 @@ Routes declared in `src/App.tsx:78-137`. Public + protected, with namespace migr
 
 `<ProtectedRoute>` (`App.tsx:48`) redirects unauthenticated users to `/`; `<PersonaGate>` handles persona-null routing inside it. `<AdminGate>` (`components/auth/AdminGate.tsx:10`) returns 403 view if `user?.role !== 'admin'`, preventing AdminLayout lazy-chunk download.
 
-### Component graph (79 components, organized by directory)
+### Component graph (78 components, organized by directory)
 
 | Directory | Files | Notes |
 |---|---|---|
 | `components/admin/` | `AdminLayout.tsx`, `ConfirmCascadeModal.tsx`, `ConfirmPersonaNarrowingModal.tsx`, `MarkdownEditor.tsx` | Slice 6.4a (AdminLayout) + 6.4b (modals + editor). |
 | `components/auth/` | `AdminGate.tsx` | E-040 frontend admin guard. |
 | `components/dashboard/` | 15 components — **prior 10 ATS-analysis panels:** `ATSScoreGauge`, `BulletAnalyzer`, `FormattingIssues`, `ImprovementSuggestions`, `JobFitExplanation`, `KeywordChart`, `MissingSkillsPanel`, `PanelSection`, `ScoreBreakdown`, `SkillOverlapChart` (consumed by `pages/Results.tsx`). **+5 NEW slice 6.8 (`0968a13`) FSRS-dashboard sections:** `DueToday.tsx`, `Streak.tsx`, `RetentionCurve.tsx` (hand-rolled SVG per D-4), `DeckMastery.tsx`, `ReviewHistory.tsx` (consumed by `pages/Dashboard.tsx`). Directory hosts both surfaces; consumers do not cross. |
-| `components/home/` | `DashboardWidget`, `InterviewDateModal`, `StateAwareWidgets` + `widgets/` (14 widgets) | Spec #40 / #61 / #62 home composition. |
+| `components/home/` | `DashboardWidget`, `StateAwareWidgets` + `widgets/` (15 widgets) | Spec #40 / #61 / #62 home composition. **`InterviewDateModal.tsx` DELETED** by E-042 FE migration (`b13f410`) — modal-based date capture replaced by tracker-row inline editor per spec #57. |
 | `components/home/widgets/` | `CountdownWidget`, `FirstSessionDoneWidget`, `InactiveReturnerWidget`, `InterviewPrepperChecklist`, `InterviewTargetWidget`, `LastScanWidget`, `MissionActiveWidget`, `MissionOverdueWidget`, `ResumeStaleWidget`, `StreakAtRiskWidget`, `StreakWidget`, `StudyGapsPromptWidget`, `TeamComingSoonWidget`, `TodaysReviewWidget`, `WeeklyProgressWidget` | 15 files (note: `StateAwareWidgets.tsx` listed under `home/`). |
 | `components/layout/` | `AppShell`, `MobileNav`, `Navbar` *(unused — §9)*, `PageWrapper`, `TopNav`, `UserMenu` | AppShell mounts TopNav (md:+) and MobileNav. |
 | **`components/learn/`** | **`RankedDeckList.tsx`** | **NEW slice 6.7.** Consumes `RankedDecksResponse.decks`. Cold-start CTA + empty state + 2-col grid. |
@@ -467,6 +511,8 @@ Routes declared in `src/App.tsx:78-137`. Public + protected, with namespace migr
 | `components/upload/` | `JDInput`, `ResumeDropzone` | — |
 | `components/PaywallModal.tsx` | (top-level, not in a subdir) | Modal triggered by paywall events. |
 | `components/PersonaGate.tsx` | (top-level) | Persona-null routing guard. |
+
+**E-042 FE migration (`b13f410`) consumer-graph absorption:** 10 FE consumers migrated from `user.interview_target_company` / `user.interview_target_date` → `homeState.context.next_interview` envelope (BE shipped 2026-04-23 per `9543aa466524` + `eb59d4fc1f7e`; FE consumed 2026-04-29 per `b13f410`). Migrated files: `src/types/homeState.ts` (added `NextInterview` interface + `next_interview` field on `HomeStateContext`), `src/types/index.ts` (added `interview_date?: string \| null` field on `TrackerApplication`), `src/context/AuthContext.tsx` (`@deprecated` JSDoc on User-shape `interview_target_company` / `interview_target_date`), `components/home/widgets/CountdownWidget.tsx`, `components/home/widgets/InterviewTargetWidget.tsx`, `components/mission/MissionDateGate.tsx`, `pages/MissionMode.tsx`, `pages/HomeDashboard.tsx`, `pages/FirstAction.tsx`, `pages/Tracker.tsx`. `users.interview_target_date` + `users.interview_target_company` columns remain on disk (schema-comment-only deprecation per E-042 AC-7) but FE no longer reads them; Phase-6 cleanup will drop the columns. PersonaPicker call site for `interview_target_date_added` event preserved per spec #57 §6.1 (deferred to follow-up UI cleanup slice). 4 new PostHog events added to `analytics.md` catalog: `countdown_widget_rendered` / `countdown_widget_add_date_cta_clicked` / `tracker_interview_date_set` / `tracker_interview_date_cleared`.
 
 ---
 
@@ -496,7 +542,7 @@ Routes declared in `src/App.tsx:78-137`. Public + protected, with namespace migr
 | `pages/Profile.tsx` | `/profile` (lazy) | User settings. |
 | `pages/Results.tsx` | `/prep/results` | ATS scan results detail. |
 | `pages/Rewrite.tsx` | `/prep/rewrite` | Resume + cover-letter rewrite. PDF export inline via jsPDF (`ResumePDFTemplate.tsx` is unused, §9). |
-| `pages/Tracker.tsx` | `/prep/tracker` | Application tracker (Kanban + list). |
+| `pages/Tracker.tsx` | `/prep/tracker` | Application tracker (Kanban + list). **Modified by E-042 FE migration (`b13f410`)** — adds `interview_date` row-level editor (replaces deleted `InterviewDateModal.tsx` capture surface) + fires `tracker_interview_date_set` / `tracker_interview_date_cleared` PostHog events per spec #57 §7.1. |
 | `pages/admin/AdminCards.tsx` | `/admin/cards` (nested, lazy) | Card CRUD UI. |
 | `pages/admin/AdminDeckDetail.tsx` | `/admin/decks/:deckId` (lazy) | Deck editor. Slice 6.4b. |
 | `pages/admin/AdminDecks.tsx` | `/admin/decks` (lazy) | Deck list. Slice 6.4a placeholder filled in 6.4b. |
@@ -504,17 +550,17 @@ Routes declared in `src/App.tsx:78-137`. Public + protected, with namespace migr
 | `pages/admin/AdminLessons.tsx` | `/admin/lessons` (lazy) | Lesson list. |
 | `pages/admin/AdminQuizItems.tsx` | `/admin/lessons/:lessonId/quiz-items` (lazy) | Quiz-item editor. Slice 6.4b. |
 
-**Deleted this regen window:** `pages/StudyDashboard.tsx` (slice 6.7, `c6d9274`, per spec #08 D-3 — `Learn.tsx` absorbed). Test file `tests/StudyDashboard.test.tsx` deleted in same commit. `tests/App.redirects.test.tsx:15,86` updated: stub `@/pages/Learn` (was `@/pages/StudyDashboard`); `/study` redirect testid `page-learn` (was `page-study-dashboard`).
+**Deleted this regen window:** `components/home/InterviewDateModal.tsx` (E-042 FE migration `b13f410`, per spec #57 §6.1 — modal-based date capture replaced by tracker-row inline editor). Date capture moves to `Tracker.tsx` row editor + `next_interview` envelope on `homeState.context`. **Carry-forward delete from prior regen:** `pages/StudyDashboard.tsx` (slice 6.7, `c6d9274`, per spec #08 D-3 — `Learn.tsx` absorbed); test file `tests/StudyDashboard.test.tsx` deleted in same commit; `tests/App.redirects.test.tsx:15,86` updated: stub `@/pages/Learn` (was `@/pages/StudyDashboard`); `/study` redirect testid `page-learn` (was `page-study-dashboard`).
 
 ---
 
 ## Section 8 — Frontend shared types
 
-### `src/types/index.ts` (702 lines, 57 exports)
+### `src/types/index.ts` (704 lines, 57 exports)
 
 Top-of-file domain types: `ATSScoreBreakdown:3`, `SkillGap:10`, `BulletAnalysis:16`, `FormattingIssue:23`, `KeywordChartData:29`, `SkillOverlapData:36`, `AnalysisResponse:42`, `RewriteEntry:60`, `RewriteSection:69`, `RewriteHeader:75`, `RewriteResponse:80`, `CoverLetterRecipient:87`, `CoverLetterResponse:92`, `InterviewQuestion:103`, `InterviewPrepResponse:108`.
 
-Application/tracker: `ApplicationStatus:115`, `TrackerApplication:117`. Cards/categories: `Category:132`, `CategoriesResponse:144`, `Card:148`, `FsrsRating:160`, `ReviewRequest:162`, `ReviewResponse:169`, `DailyCard:181`, `DailyStatus:206`, `DailyQueueResponse:213`. Mission: `MissionDayView:232`..`MissionCreateRequest:282`. Onboarding/gamification: `RecommendedCategory:290`, `GapMapping:299`, `OnboardingRecommendationsResponse:305`, `BadgeView:312`, `GamificationStats:318`. Email: `EmailPreference:330`, `EmailPreferenceUpdate:336`. Admin (cards): `AdminCard:343`..`CardImportResponse:387`. Analysis state machine: `AnalysisState:395`, `AnalysisAction:403`.
+Application/tracker: `ApplicationStatus:115`, `TrackerApplication:117` (carries `interview_date?: string \| null` at line 128 — added by E-042 FE migration `b13f410` per spec #57). Cards/categories: `Category:132`, `CategoriesResponse:144`, `Card:148`, `FsrsRating:160`, `ReviewRequest:162`, `ReviewResponse:169`, `DailyCard:181`, `DailyStatus:206`, `DailyQueueResponse:213`. Mission: `MissionDayView:232`..`MissionCreateRequest:282`. Onboarding/gamification: `RecommendedCategory:290`, `GapMapping:299`, `OnboardingRecommendationsResponse:305`, `BadgeView:312`, `GamificationStats:318`. Email: `EmailPreference:330`, `EmailPreferenceUpdate:336`. Admin (cards): `AdminCard:343`..`CardImportResponse:387`. Analysis state machine: `AnalysisState:395`, `AnalysisAction:403`.
 
 ### Phase 6 Curriculum types (`index.ts:415-514`)
 
@@ -583,9 +629,13 @@ FE mirror at `src/types/index.ts:624-702` — field-for-field per slice 6.8 D-3 
 
 `Persona = 'career_climber' | 'interview_prepper' | 'team_lead' | null`. Defined in AuthContext; consumed across pages + widgets.
 
-### Home-state types (`src/types/homeState.ts`, 28 lines)
+### Home-state types (`src/types/homeState.ts`, 40 lines)
 
-Spec #40 priority-slot types. Unchanged.
+Spec #40 priority-slot types. **+12 lines since `4a6d6e7`** (E-042 FE migration `b13f410`): added `NextInterview:19` interface (mirrors BE `NextInterview` Pydantic in `app/schemas/home.py`) — `{tracker_id, company, role, date, days_until, source: 'tracker' | 'soonest_upcoming'}` — and `next_interview: NextInterview | null` field on `HomeStateContext:33`. Replaces `user.interview_target_*` reads on the FE consumer graph (10 consumers migrated; see §6 E-042 absorption note).
+
+### Backend ingestion schemas (slice 6.10b, `8735373`)
+
+`app/schemas/ingestion.py:37-148` declares 7 Pydantic v2 schemas: `IngestionJobCreateRequest:37` (1MB max source size per D-9), `IngestionArtifacts:53`, `IngestionJobResponse:61`, `GeneratedQuizItem:92`, `LessonGenSchema:101` (Stage-1 `response_schema`), `CritiqueDimension:113`, `CritiqueSchema:121` (Stage-2 `response_schema`). **NOT mirrored to FE** — slice 6.10b D-10 deferred FE consumer to follow-up sub-slice (no admin ingest UI yet).
 
 ---
 
@@ -599,8 +649,9 @@ Spec #40 priority-slot types. Unchanged.
 | `hirelens-backend/app/services/ai_service.py` | Duplicates `gpt_service.py` API. Consumed only by enterprise `/api/v1/resume/{id}/optimize`. `[S47-defer]`. | leave (tracked) |
 | `hirelens-backend/app/services/llm/` | Legacy provider abstraction parallel to `app/core/llm_router.py`. Phase-6 consolidation pending. | leave (Phase-6) |
 | `pages/CategoryDetail.tsx:13`, `components/PaywallModal.tsx:5` | Comments reference the deleted `StudyDashboard` page. Stale refs but harmless (comment-only). | clean on next edit |
+| `users.interview_target_company`, `users.interview_target_date` columns | Transitional — schema-comment-only deprecation per E-042 AC-7 (`b13f410`). FE consumers migrated to `homeState.context.next_interview` (`tracker_applications_v2.interview_date` source-of-truth). Columns still on disk; no FE reads. Phase-6 cleanup will drop the columns. | drop columns in dedicated alembic migration during Phase-6 cleanup (cross-ref BACKLOG B-018 / spec #53) |
 
-No components found behind `{false && …}` guards or dormant feature flags at HEAD `4c4d88f`. Background-job framework absent — cron architecture decision pending at B-078 🟦 (Phase 6 LD G2 leans Railway cron for slice 6.14 daily Pro digest).
+No components found behind `{false && …}` guards or dormant feature flags at HEAD `3683677`. **Background-job framework now ACTIVE** as of slice 6.10b (`8735373`) — RQ-on-Redis worker (`app/jobs/ingestion_worker.py`) is the first runtime consumer. Cron architecture decision still pending at B-078 🟦 (Phase 6 LD G2 leans Railway cron for slice 6.14 daily Pro digest); RQ pattern from 6.10b is one option chat-Claude can re-evaluate at B-078 review.
 
 ---
 
@@ -611,7 +662,7 @@ No components found behind `{false && …}` guards or dormant feature flags at H
 | File | Description |
 |------|-------------|
 | admin-panel.md | Card CRUD, bulk import, AI-assisted card generation (Phase 3) |
-| analytics.md | PostHog event catalog (frontend + backend), funnels, conventions |
+| analytics.md | PostHog event catalog (frontend + backend), funnels, conventions. **Modified this window** by slice 6.10b (`8735373`, +3 ingestion event rows: `ingestion_job_enqueued` / `ingestion_job_completed` / `ingestion_job_failed` — all `internal: true` admin-only) and by E-042 FE migration (`b13f410`, +4 tracker/countdown event rows: `countdown_widget_rendered` / `countdown_widget_add_date_cta_clicked` / `tracker_interview_date_set` / `tracker_interview_date_cleared`). Content-only delta — file count unchanged. |
 | ats-card-bridge.md | Maps ATS scan skill gaps to study cards |
 | ats-scanner.md | ATS resume scanning, scoring, keyword extraction, bullet rewriting, auto-tracker |
 | **backend.md** | **NEW (B-073 cohort item 1, `84060b3`).** Service-layer conventions, route mounting, audit dependency chains, dual-write best-effort wrapper, CI invocation pattern. |
@@ -645,19 +696,19 @@ Three directory-style skills on disk but not in git (each shows `??` in `git sta
 
 `SKILL.md` (uppercase) doesn't match SkillForge convention (lowercase slug). Skill discovery walking `.agent/skills/*.md` (top-level glob) won't find these. See §12 Q8.
 
-**Skill-inventory gap surfaced this regen:** none new. The two flagged in prior regens (`backend.md`, `curriculum.md`) are now both authored and tracked. SOP-4 close-loop (per CLAUDE.md amendment in `b468025`): no auto-file fires this slice.
+**Skill-inventory gap surfaced this regen:** none new. The two flagged in prior regens (`backend.md`, `curriculum.md`) are both authored and tracked. **`background-jobs.md` candidate at flag #1 dormant** — slice 6.10b is the first runtime RQ consumer; close-loop discipline awaits a second consumer (slice 6.14 daily Pro digest, B-078 🟦) before activating skill-author. SOP-4 close-loop (per CLAUDE.md amendment in `b468025`): no auto-file fires this slice — consistent with B-079 / B-081 prior regen handling of the dormant flag.
 
 ---
 
 ## Section 11 — Drift flags (AGENTS.md / master-doc vs code)
 
-Re-verified at HEAD `4c4d88f`. Items 22 + 23 from prior regen reconciled below; new item 24 added.
+Re-verified at HEAD `3683677`. **D-016 RESOLVED** (slice 6.10a `9bd9397` plumbed `response_schema` into `_call_gemini` — see §4 LLM router note); item 22 / 23 / 18 / 20 carry-forward; **NEW item 26** added below for spec #57 ghost reference to the deleted `StudyDashboard.tsx`. Item 9 status note refreshed for D-020 / E-043 unblocking; item 3 status note refreshed for E-042 column-deprecation drift.
 
 1. **AGENTS.md legacy-routes paths use underscores; decorators use hyphens.** `app/api/routes/cover_letter.py:22` decorates `/cover-letter`; AGENTS.md row says `/api/cover_letter`. Same for `/api/interview` → `/api/interview-prep`. **Status: still drifted.**
 
 2. **AGENTS.md Routes table lists `/api/v1/onboarding` and `/api/v1/payments` as v1 routers, but the files live in the legacy folder** (`app/api/routes/onboarding.py`, `app/api/routes/payments.py`). Mounted at `/api/v1` via `main.py:169-170`. **Status: still drifted.**
 
-3. **AGENTS.md Models table User row still lists `target_company`, `target_date`** (line 270). Disk: `interview_target_company` (String(100)), `interview_target_date` (Date). Migration `02bf7265b387` did the rename. **Status: still drifted; bumped urgency by E-042 (interview_target_date deprecating in favor of `tracker_applications_v2.interview_date`).**
+3. **AGENTS.md Models table User row still lists `target_company`, `target_date`** (line 270). Disk: `interview_target_company` (String(100)), `interview_target_date` (Date). Migration `02bf7265b387` did the rename. **Status: still drifted post-E-042 FE migration (`b13f410`, 2026-04-29).** AGENTS.md User row also lacks the DEPRECATED flag despite spec #57 schema-comment-only deprecation; FE consumers no longer read the columns (10 migrated this window) but columns remain on disk pending Phase-6 cleanup. AGENTS.md is process-doc drifted; not blocking. Cleanup: amend AGENTS.md User row to mark fields DEPRECATED on next AGENTS.md touch.
 
 4. **AGENTS.md Routes table references `/api/v1/mission` (singular)** (line 213). Decorators are plural `/missions/create`, `/missions/active`, `/missions/daily`, `/missions/complete-day` (`mission.py:52,84,130,167`). `[S35-flag]`. **Status: still drifted.**
 
@@ -669,7 +720,7 @@ Re-verified at HEAD `4c4d88f`. Items 22 + 23 from prior regen reconciled below; 
 
 8. **`study-engine.md` skill file has no `description:` frontmatter.** Other 21 skill files have one. `docs/audits/SKILLS-SPECS-ALIGNMENT-2026-04-21.md` flags as critical. **Status: still drifted.**
 
-9. **Tracker auto-save JD dedupe documented as locked but not implemented.** `tracker_applications_v2` has no `jd_hash` column (§2 verified); `tracker_service_v2.py` does not import `hash_jd`; only `interview_storage_service.py` consumes `text_hash.hash_jd`. `[5.17-follow]`. **Status: still drifted.** D-020 in SESSION-STATE tracks resolution shape (bundle into E-043 ATS re-scan loop).
+9. **Tracker auto-save JD dedupe documented as locked but not implemented.** `tracker_applications_v2` has no `jd_hash` column (§2 verified); `tracker_service_v2.py` does not import `hash_jd`; only `interview_storage_service.py` consumes `text_hash.hash_jd`. `[5.17-follow]`. **Status: still drifted.** D-020 in SESSION-STATE tracks resolution shape. **E-042 BE half shipped 2026-04-23 + FE half shipped 2026-04-29 (`b13f410`)** — E-043 (ATS re-scan loop per tracker application) is now unblocked and can be spec-authored; D-020 close shape per spec-author choice: (a) bundle `jd_hash` + `jd_text` columns into a single tracker-schema migration inside E-043's impl, OR (b) file standalone `E-04X` migration-only row first.
 
 10. **Four legacy `/api/*` routers still mounted alongside v1 counterparts.** `analyze` / `rewrite` / `cover_letter` / `interview` in `main.py:129-132`. v1 equivalents are *re-exports* of legacy router objects, so deprecating legacy mounts requires moving handlers first. **Status: still drifted.**
 
@@ -701,7 +752,9 @@ Re-verified at HEAD `4c4d88f`. Items 22 + 23 from prior regen reconciled below; 
 
 24. **NEW — Pro-path admin-analytics still invisible.** `usage_service.py::check_and_increment` short-circuits on `max_uses == -1` BEFORE reaching `log_usage` (line ~151-152); `admin_analytics_service.py:53-54` maps `rewrite` / `cover_letter` → reasoning tier but the input table stays empty for Pro/admin callers. Same shape as D-021c open drift. Spec #58 §12 errata recorded the overclaim; no fix has shipped. **Status: NEW — surfaced via cross-ref to D-021c. No BACKLOG row pre-allocated.** Close shape: either (i) docs slice amends spec #58 §12 to strike the "retroactively surfaces" claim, or (ii) impl slice moves `log_usage` to fire for every authed request (broad blast radius).
 
-25. **NEW — CLAUDE.md uncommitted Q1-Q4 + "This file is working if" additions in working tree.** Pre-authored content from another slice (preserve-and-coexist per D-019). `git diff CLAUDE.md` shows +42 lines: Q1 Simplicity / Q2 Surgical / Q3 State assumptions / Q4 Verifiable goal Code Quality section + self-check block + revision-history entry. Not staged in this regen. **Status: NEW — info-only. JC #1 of this slice; resolution belongs to whoever owns the in-flight CLAUDE.md edits.**
+25. **CLAUDE.md uncommitted Q1-Q4 + "This file is working if" additions in working tree.** Pre-authored content from another slice (preserve-and-coexist per D-019). Carried forward from prior regen at `4a6d6e7` — content unchanged; in-flight editor not yet committed. **Status: still open (carry-forward) — info-only.**
+
+26. **NEW — Spec #57 §AC-7 cites `StudyDashboard.tsx` as a migration path, but the file was deleted in slice 6.7 (`c6d9274`).** Surfaced as JC #4 in E-042 FE final report. Spec #57 is in shipped (`Done`) status per BACKLOG; AC tracked complete via E-042 FE final report. Spec amendment cleanup non-blocking — the file deletion predates the spec citation; no functional impact. **Status: NEW — harmless on disk; cleanup on next natural spec #57 touch (e.g., final follow-up UI cleanup slice removing PersonaPicker date capture, or any future spec #57 amendment).**
 
 ---
 
@@ -723,7 +776,7 @@ The four Phase 6 product decisions chat sometimes references (cron arch G2, file
 
 ## Section 13 — Specs inventory
 
-Walked `docs/specs/**/*.md` — **90 spec files across 7 phases** (+1 since `4c4d88f`: phase-6 +1 — `09-fsrs-dashboard.md`).
+Walked `docs/specs/**/*.md` — **92 spec files across 7 phases** (+2 since `4a6d6e7`: phase-6 +2 — `10-ai-ingestion-pipeline.md` slice 6.10 spec-author at `409762f`; `11-content-quality-retention.md` slice 6.11 spec-author at `7d7c6e8`).
 
 ### Per-phase counts
 | Phase | Files | With explicit Status line | No status field |
@@ -734,8 +787,8 @@ Walked `docs/specs/**/*.md` — **90 spec files across 7 phases** (+1 since `4c4
 | phase-3 | 11 | 8 | 3 |
 | phase-4 | 6 | 6 | 0 |
 | phase-5 | 36 | 14 | 22 |
-| phase-6 | 10 | 10 | 0 |
-| **Total** | **90** | **57** | **33** |
+| phase-6 | 12 | 12 | 0 |
+| **Total** | **92** | **59** | **33** |
 
 ### Status legend
 `Done` · `Complete` · `Implemented — Spec Backfill Pending (P5-S###)` · `Draft` · `Drafted, not shipped` · `Shipped (spec + impl)` · `Done — Shipped in <sha>` · `Partially Done` · `Planned — Known-Broken` · `Deferred` · `Complete — Spec Backfill Pending`
@@ -744,9 +797,11 @@ Walked `docs/specs/**/*.md` — **90 spec files across 7 phases** (+1 since `4c4
 
 | Slice | Spec | BACKLOG | Closing commit | Notes |
 |---|---|---|---|---|
-| 6.8 | `09-fsrs-dashboard.md` | B-080 ✅ | `0968a13` | **User-self FSRS dashboard** — `dashboard_service.py` aggregator + `dashboard.py` schemas (10 BE) + `dashboard.py` route (`GET /api/v1/learn/dashboard`) + `pages/Dashboard.tsx` (universal D-2 composition) + 5 components under `components/dashboard/` + `useFsrsDashboard` hook + 10 FE types + `App.tsx` route mount. Reuses `curriculum_visibility` (D-10) + `gamification_service.get_stats` + `email_preferences.timezone` (D-6). Zero migrations, zero new write paths, zero new PostHog payload changes (1 new event `dashboard_viewed` D-11). |
-| (process) | (none) | B-081 | `4a6d6e7` | This CR regen. Plus context: `7036968` scout-audit slice 6.8/6.14 numbering annotation (closes JC #1 from slice 6.8 spec-author — annotates `docs/audits/phase-6-scout.md` snapshot). |
-| (carry) | (prior log) | B-061..B-079 | (see prior CR at `4c4d88f`) | Slices 6.0–6.7 + B-073/B-075/B-076/B-078/B-079 process work absorbed in B-079 full regen. Not re-listed here. |
+| 6.10a | `10-ai-ingestion-pipeline.md` | B-083a ✅ | `9bd9397` | **AI ingestion foundation infra** — `app/models/ingestion_job.py` + alembic migration `c4e21d8a7f12` + `app/services/object_storage_service.py` + `app/jobs/__init__.py` package marker + `requirements.txt` (`rq>=1.16` + `boto3>=1.34`) + `app/core/config.py` R2/RQ env vars + `.env.example` mirror + `app/core/llm_router.py` `provider_override` + `response_schema` extensions (closes drift D-016). Tests BE 651→663 (+12 within +10..+15 envelope); FE 414 unchanged. |
+| 6.10b | `10-ai-ingestion-pipeline.md` | B-083b ✅ + B-083 ✅ (cascade) | `8735373` | **Orchestrator + admin route + RQ worker** — `app/services/ingestion_service.py` + `prompt_template_service.py` + `ingestion_errors.py` + `app/jobs/ingestion_worker.py` + `app/api/v1/routes/admin_ingest.py` + `app/schemas/ingestion.py` (7 BE) + `app/prompts/{lesson_gen,ingestion_critique}.md` + `app/main.py` mount + `.agent/skills/analytics.md` (+3 ingestion events). Cross-provider Gemini gen → Anthropic critique pipeline per D-4 + drafts-only persist via slice 6.4b admin services per G-5. Tests BE 663→692 (+29; +4 over forecast — denser AC coverage); +2 integration in `tests/integration_llm/`; FE 414 unchanged. |
+| E-042 FE | `57-tracker-level-interview-date.md` | E-042 ✅ + E-017 ✅ (cascade) | `b13f410` | **Tracker-level interview date FE migration** — 10 FE consumers migrated from `user.interview_target_*` → `homeState.context.next_interview` envelope. `InterviewDateModal.tsx` DELETED. New FE types `NextInterview` (homeState.ts) + `interview_date` field on `TrackerApplication` (index.ts:128). 4 new PostHog events. Tests FE 414→417 (+3 net; below predicted +10..+20 envelope per JC #1); BE 692 unchanged (zero BE files touched). |
+| (process) | (none) | B-085 | `<this-slice>` | This CR regen. Sections regenerated: §1 / §2 / §3 / §4 / §5 / §6 / §7 / §8 / §9 / §10 / §11 / §13. §12 carried forward verbatim. Plus context: slice 6.10 spec-author + §12 amendment + split-decision audit + slice 6.11 spec-author + §12 amendment + 5 SHA-backfill / push-watermark process commits (no §13 row count beyond +2 phase-6 specs). |
+| (carry) | (prior log) | B-061..B-082 | (see prior CR at `4a6d6e7`) | Slices 6.0–6.8 + B-073..B-082 process work absorbed in B-079 full regen + B-081 targeted regen. Not re-listed here. |
 
 ### phase-0
 | File | Status |
@@ -865,6 +920,8 @@ Walked `docs/specs/**/*.md` — **90 spec files across 7 phases** (+1 since `4c4
 | 07-deck-lesson-ranker.md | **Shipped (spec + impl) — closes B-074. Impl `5011518`.** *(NEW Phase 6 slice 6.6. Spec authored `a1b4bb5` 2026-04-28 + §12 amendment `fb92396` locking D-1..D-16 from §14 OQ-1..OQ-11. Impl ships `app/services/deck_ranker_service.py` + `app/services/curriculum_visibility.py` extraction + `app/api/v1/routes/ranker.py` + `app/schemas/ranker.py` (4 schemas). 4 signals (gap_match 0.55 / fsrs_due 0.25 / avg_quality 0.10 / display_order_rank 0.10 — D-1). Cold-start safe. Zero FE this slice; zero analytics events; zero migrations.)* |
 | 08-persona-learn-page.md | **Shipped (spec + impl) — closes B-077. Impl `c6d9274`.** *(Phase 6 slice 6.7. Spec authored `c14b9ca` 2026-04-28 + §12 amendment `0c21223` locking D-1..D-8 from §14 OQ-1..OQ-8. Impl ships `pages/Learn.tsx` (replaces `StudyDashboard.tsx`) with three inline persona-mode functions per D-5 + `components/learn/RankedDeckList.tsx` + `hooks/useRankedDecks.ts` + ranker types `src/types/index.ts:490-514` + `services/api.ts::fetchRankedDecks` + App.tsx mount swap. 3 new analytics events (`learn_page_viewed` / `learn_deck_clicked` / `learn_mode_rendered`) all `useRef`-idempotent. Zero BE files touched.)* |
 | 09-fsrs-dashboard.md | **Shipped (spec + impl) — closes B-080. Impl `0968a13`.** *(NEW Phase 6 slice 6.8. Spec authored `6ff39b7` 2026-04-28 + §12 amendment `ab07168` locking D-1..D-14 from §14 OQ-1..OQ-13 + sub-OQ-5b. Impl ships BE `app/services/dashboard_service.py` aggregator + `app/schemas/dashboard.py` (10 schemas) + `app/api/v1/routes/dashboard.py` route mounted at `GET /api/v1/learn/dashboard?retention_window_days=N`; FE `src/pages/Dashboard.tsx` (universal D-2 composition, 5 sections per §8.1 order) + 5 section components under `src/components/dashboard/` (DueToday / Streak / RetentionCurve hand-rolled SVG D-4 / DeckMastery / ReviewHistory) + `useFsrsDashboard` hook + `fetchFsrsDashboard` api helper + 10 dashboard types in `src/types/index.ts` + `/learn/dashboard` route in `App.tsx` + `dashboard_viewed` D-11 useRef once-per-mount event. Reuses `curriculum_visibility` (D-10), `gamification_service.get_stats` (§6.3), `email_preferences.timezone` for D-6 user-local bucketing. Zero migrations, zero new write paths. Tests BE 636 → 651 (+15); FE 395 → 414 (+19). All AC-1..AC-13 green. Profile.tsx unchanged per D-12 coexistence.)* |
+| 10-ai-ingestion-pipeline.md | **Shipped (spec + impl) — closes B-083 (cascade), B-083a, B-083b. Impl `8735373` (cascade SHA = B-083b) preceded by `9bd9397` (B-083a foundation).** *(NEW Phase 6 slice 6.10 family — Track D opener; first AI-content-generation slice. Spec authored `409762f` 2026-04-29 + §12 amendment `be7d59a` locking D-1..D-16 from §14 OQ-A..OQ-P. Split per Step 1 audit at `4ee6b84` into B-083a foundation + B-083b orchestrator. **6.10a (`9bd9397`)** ships `app/models/ingestion_job.py` + alembic migration `c4e21d8a7f12` + `app/services/object_storage_service.py` (R2 boto3) + `app/jobs/__init__.py` + `app/core/llm_router.py` `provider_override` + `response_schema` extensions (closes drift D-016). **6.10b (`8735373`)** ships `app/services/ingestion_service.py` + `prompt_template_service.py` + `ingestion_errors.py` + `app/jobs/ingestion_worker.py` (Stage 1 Gemini gen → Stage 2 Anthropic critique → Stage 3 persist via slice 6.4b admin services per G-5 drafts-only) + `app/api/v1/routes/admin_ingest.py` (3 admin endpoints) + `app/schemas/ingestion.py` (7 BE schemas) + 2 prompt templates under `app/prompts/` + 3 internal-only PostHog events. Tests BE 651 → 663 (+12, 6.10a) → 692 (+29, 6.10b); +2 integration in `tests/integration_llm/`. FE unchanged (D-10 — FE consumer is follow-up sub-slice).)* |
+| 11-content-quality-retention.md | Drafted, not shipped *(spec authored `7d7c6e8` 2026-04-29 — files B-084 forward at 🔴 status; §12 amendment `d9bfcfc` locks D-1..D-16 from §14 OQ-A..OQ-P. Implementation pending.)* |
 
 ### Numbering anomalies / duplicates / gaps
 
@@ -877,4 +934,4 @@ Walked `docs/specs/**/*.md` — **90 spec files across 7 phases** (+1 since `4c4
 
 ---
 
-*End of snapshot. Generated 2026-04-29 at HEAD `4a6d6e7` — targeted regen (closes B-081). Sections regenerated: §1 / §3 / §4 / §6 / §7 / §8 / §13. Sections carried forward verbatim: §2 / §5 / §9 / §10 / §11 / §12. Slice absorption: 6.8 (FSRS dashboard, closes B-080) + scout-annotation slice context. Lineage extends `4c4d88f` → 8 commits (1 code-touching `0968a13`, 7 doc/process) → THIS commit. Next regen recommended once another ~10-commit code-touching delta accumulates (LD-1 sharpened threshold) — likely after the next Phase 6 implementation slice (6.9 or 6.10+ ingestion track).*
+*End of snapshot. Generated 2026-04-30 at HEAD `<this-slice>` — targeted regen (closes B-085). Sections regenerated: §1 / §2 / §3 / §4 / §5 / §6 / §7 / §8 / §9 / §10 / §11 / §13. Sections carried forward verbatim: §12. Slice absorption: 6.10a (B-083a, `9bd9397`), 6.10b (B-083b cascade-closes B-083, `8735373`), E-042 FE (cascade-closes E-017, `b13f410`). Lineage extends `4a6d6e7` → 24 raw commits (3 code-touching, 21 doc/process) → THIS commit. **Closed in this regen:** drift D-016 (response_schema plumbing on `_call_gemini`). **NEW drift:** item #26 spec #57 ghost-ref to deleted `StudyDashboard.tsx`. Drift table active+resolved count 22 (below 30-row archive cut threshold). Next regen recommended once another ~10-commit code-touching delta accumulates (LD-1 sharpened threshold) — likely after slice 6.11 implementation ships.*
