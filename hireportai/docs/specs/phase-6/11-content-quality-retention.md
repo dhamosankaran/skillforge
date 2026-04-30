@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.11: Content-Quality Retention Dashboard (Admin Observability + `quality_score` Layer-3 Writeback)
 
-## Status: 🔴 Drafted, §12 amended — D-1..D-16 locked at `<this-slice>` from §14 OQ-A..OQ-P (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a`); B-084 🔴 unchanged (impl not shipped).
+## Status: 🔴 Drafted, §12 amended — D-1..D-16 locked at `d9bfcfc` from §14 OQ-A..OQ-P (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a`); B-084 🔴 unchanged (impl not shipped).
 
 | Field | Value |
 |-------|-------|
@@ -1064,7 +1064,7 @@ Test envelope locked at impl. Estimates below.
 
 ## 12. Decisions
 
-> Locked at `<this-slice>` (2026-04-29). D-1..D-16 resolve §14
+> Locked at `d9bfcfc` (2026-04-29). D-1..D-16 resolve §14
 > OQ-A..OQ-P 1:1 (verbatim author-hint dispositions, all 16
 > confirmed by Dhamo). Mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 /
 > 6.7 / 6.8 / 6.10 §12 amendment pattern at `e8eecdd` /
@@ -1269,81 +1269,81 @@ Test envelope locked at impl. Estimates below.
 
 ## 14. Open questions
 
-> All 16 OQs RESOLVED at §12 amendment slice (`<this-slice>`)
+> All 16 OQs RESOLVED at §12 amendment slice (`d9bfcfc`)
 > per author-hint dispositions. Headings + first-sentence
 > questions preserved for historical reference; option bodies
 > + author hints removed (locked dispositions live in §12 D-N).
 
 - **OQ-A — Writeback cadence.** Synchronous on-read vs admin-
   triggered batch vs background job?
-  **RESOLVED:** locked at §12 D-1 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-1 (`d9bfcfc`).
 
 - **OQ-B — quality_score formula v1.** Raw pass_rate vs
   pass_rate × volume_factor vs Bayesian-smoothed?
-  **RESOLVED:** locked at §12 D-2 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-2 (`d9bfcfc`).
 
 - **OQ-C — Aggregation window.** 30 days vs N reviews vs
   lifetime vs configurable?
-  **RESOLVED:** locked at §12 D-3 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-3 (`d9bfcfc`).
 
 - **OQ-D — Minimum review threshold for non-NULL emission.**
   How many reviews before we trust the signal enough to write
   to disk?
-  **RESOLVED:** locked at §12 D-4 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-4 (`d9bfcfc`).
 
 - **OQ-E — `quiz_items.quality_score` column status.** Add the
   column this slice (so per-quiz_item writeback works) or stay
   lesson-level only and defer per-item writeback to slice
   6.13.5?
-  **RESOLVED:** locked at §12 D-5 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-5 (`d9bfcfc`).
 
 - **OQ-F — Admin route shape.** Single envelope vs split
   per-deck/lesson/quiz_item endpoints?
-  **RESOLVED:** locked at §12 D-6 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-6 (`d9bfcfc`).
 
 - **OQ-G — Tier filtering.** Free vs premium content shown
   separately or merged?
-  **RESOLVED:** locked at §12 D-7 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-7 (`d9bfcfc`).
 
 - **OQ-H — Archived/retired content visibility.** Surface
   archived decks / archived lessons / retired quiz_items by
   default?
-  **RESOLVED:** locked at §12 D-8 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-8 (`d9bfcfc`).
 
 - **OQ-I — Writeback granularity.** Per-quiz_item, per-lesson,
   both?
-  **RESOLVED:** locked at §12 D-9 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-9 (`d9bfcfc`).
 
 - **OQ-J — FE chart library.** Match slice 6.8's hand-rolled
   zero-deps pattern or first introduction of recharts?
-  **RESOLVED:** locked at §12 D-10 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-10 (`d9bfcfc`).
 
 - **OQ-K — Analytics events.** Mirror slice 6.10's three-event
   minimum (`_enqueued`, `_completed`, `_failed`) or single
   `_viewed` event?
-  **RESOLVED:** locked at §12 D-11 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-11 (`d9bfcfc`).
 
 - **OQ-L — Access control sub-permission.** Plain
   `require_admin` for v1 or sub-permission like
   `admin.content.review`?
-  **RESOLVED:** locked at §12 D-12 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-12 (`d9bfcfc`).
 
 - **OQ-M — Rating semantics.** Mirror slice 6.8 D-5 (recall =
   3+4; lapse = 1; Hard=2 excluded) or include Hard as pass?
-  **RESOLVED:** locked at §12 D-13 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-13 (`d9bfcfc`).
 
 - **OQ-N — View-volume denominator.** Surface
   `lesson_view_events` view counts alongside review counts (so
   admins see "this lesson is opened 100x but reviewed only
   10x" abandonment signal)?
-  **RESOLVED:** locked at §12 D-14 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-14 (`d9bfcfc`).
 
 - **OQ-O — Low-volume threshold for surfacing problem
   content.** Separate from OQ-D's non-NULL emission threshold:
   should a lesson with 3 reviews and 33% pass_rate appear in
   worst_lessons (provisional signal) or be hidden (insufficient
   data)?
-  **RESOLVED:** locked at §12 D-15 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-15 (`d9bfcfc`).
 
 - **OQ-P — Idempotency vs slice 6.13.5 future migration.**
   When slice 6.13.5 ships `card_quality_signals`, this slice's
@@ -1351,7 +1351,7 @@ Test envelope locked at impl. Estimates below.
   Should v1 leave any breadcrumbs (e.g., a comment in the
   service docstring) or just rely on slice 6.13.5's Step 1
   audit to find the callsite?
-  **RESOLVED:** locked at §12 D-16 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-16 (`d9bfcfc`).
 
 ---
 
@@ -1362,7 +1362,7 @@ happens in the impl commit per R15(c)).
 
 Forward dependencies before impl can start:
 
-1. **§12 amendment slice** ✅ shipped at `<this-slice>` —
+1. **§12 amendment slice** ✅ shipped at `d9bfcfc` —
    locked D-1..D-16 from §14 OQ-A..OQ-P (now §12 D-1..D-16)
    mirroring slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10
    §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed`
@@ -1460,5 +1460,5 @@ RQ work.
 on-disk citations verified at audit time per SOP-5; phantom
 citations zero. Forward-filed B-084 at status 🔴 per R15(c).
 §12 amendment locked D-1..D-16 from §14 OQ-A..OQ-P at
-`<this-slice>` (2026-04-29); B-084 stays 🔴 pending impl
+`d9bfcfc` (2026-04-29); B-084 stays 🔴 pending impl
 pickup.*
