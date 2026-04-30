@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.11: Content-Quality Retention Dashboard (Admin Observability + `quality_score` Layer-3 Writeback)
 
-## Status: 🔴 Drafted — §12 EMPTY at spec-author. Locks via amendment slice mirroring slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a`.
+## Status: 🔴 Drafted, §12 amended — D-1..D-16 locked at `<this-slice>` from §14 OQ-A..OQ-P (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a`); B-084 🔴 unchanged (impl not shipped).
 
 | Field | Value |
 |-------|-------|
@@ -129,7 +129,7 @@ SHA-backfill):
 3. **`quiz_items.quality_score` does NOT exist on disk** at
    `app/models/quiz_item.py:32-93`. No corresponding column, no
    index, no migration. This is the **single largest scope decision
-   of the slice** — see §6 + §7 + OQ-E + OQ-I. Three valid v1
+   of the slice** — see §6 + §7 + §12 D-5 + §12 D-9. Three valid v1
    shapes: (a) **lesson-level only** writeback (zero migrations),
    (b) **add `quiz_items.quality_score: Numeric(3,2) NULLABLE`** in
    §7 and write per-quiz_item too, (c) **defer all non-lesson
@@ -170,7 +170,7 @@ SHA-backfill):
 
    Available if §6.1 needs a "views vs reviews" denominator for
    "how many users opened this lesson but never finished a quiz?"
-   — see OQ-N.
+   — see §12 D-14.
 
 7. **Slice 6.10 worker does NOT write `quality_score` on draft
    creation.** Confirmed by `grep -n "quality_score"
@@ -241,7 +241,7 @@ SHA-backfill):
     "lesson is failing for users" signal computed off ratings
     1+2+3+4 vs 3+4 would not match the user dashboard's "you
     recalled 78% of cards" copy. **Default proposal: mirror D-5.**
-    Locks at §12 amendment per OQ-M.
+    Locked at §12 D-13.
 
 13. **Existing seed corpus is the v1 content universe.** Slice
     6.4.5 (B-071, `ac5b905`) shipped 12 decks × 2 lessons per deck
@@ -314,8 +314,8 @@ recall-trend-direction instead of point-in-time recall), slice
 - **G-3** **First emitter of layer-3 `quality_score` v1.** Derive
   a non-NULL value for `lessons.quality_score` from a
   Bayesian-smoothed pass_rate over `quiz_review_events` (rating
-  semantics per audit finding #12 + OQ-M lock). Lessons below the
-  minimum-review threshold (OQ-D) stay NULL → ranker keeps the
+  semantics per audit finding #12 + §12 D-13 lock). Lessons below the
+  minimum-review threshold (§12 D-4) stay NULL → ranker keeps the
   0.5 fallback per slice 6.6 D-2 — no behavioural delta for
   cold-start lessons. Idempotent UPDATEs (audit finding #14).
 
@@ -328,7 +328,7 @@ recall-trend-direction instead of point-in-time recall), slice
 
 - **G-5** **Reuses existing analytics tables.** Zero new event
   tables. Reads from `quiz_review_events` (slice 6.0) and
-  optionally `lesson_view_events` (per OQ-N lock); both indexed
+  optionally `lesson_view_events` (per §12 D-14 lock); both indexed
   exhaustively per audit findings #5 + #6.
 
 - **G-6** **Reuses slice 6.10 admin auth chain.** No new admin
@@ -343,8 +343,8 @@ recall-trend-direction instead of point-in-time recall), slice
   rollup, per-lesson worst-first list, per-quiz_item worst-first
   list) — mirrors slice 6.8 `DashboardResponse` precedent so the
   FE renders one page from one fetch (no waterfall, no per-section
-  endpoints). Optional query params for windowing (OQ-C lock) +
-  archived-toggle (OQ-H lock).
+  endpoints). Optional query params for windowing (§12 D-3 lock) +
+  archived-toggle (§12 D-8 lock).
 
 ---
 
@@ -392,7 +392,7 @@ recall-trend-direction instead of point-in-time recall), slice
 
 - **Cron-driven recomputation.** No background job recomputes
   quality_score on a schedule. v1 writeback fires synchronously
-  on every dashboard load (OQ-A default proposal) — bounded by
+  on every dashboard load (§12 D-1) — bounded by
   the per-admin slowapi rate limit (G-6 implicit). Background
   recomputation is a slice 6.14 / future-cron territory.
 
@@ -426,7 +426,7 @@ hirelens-backend/
       admin_content_quality_service.py   ← NEW (~250-350 lines)
         ↓ reads
         QuizReviewEvent (slice 6.0 I1 dual-write source)
-        LessonViewEvent (slice 6.0 I1 dual-write source; optional per OQ-N)
+        LessonViewEvent (slice 6.0 I1 dual-write source; per §12 D-14)
         Lesson, QuizItem, Deck (slice 6.1 ORM)
         ↓ writes
         Lesson.quality_score (idempotent UPDATE per finding #14)
@@ -476,12 +476,12 @@ admin_content_quality_service.aggregate_dashboard(db, *, window_days=30, include
    │   ↓
    ├─→ scan quiz_review_events for window (per-lesson + per-quiz_item rollup)
    │   ↓
-   ├─→ scan lesson_view_events for window (per-lesson view-volume, optional per OQ-N)
+   ├─→ scan lesson_view_events for window (per-lesson view-volume, per §12 D-14)
    │   ↓
    ├─→ compute pass_rate + Bayesian-smoothed pass_rate + lapse_rate + review_count
    │   per lesson and per quiz_item
    │   ↓
-   ├─→ if review_count >= MIN_REVIEW_THRESHOLD (OQ-D), UPDATE lessons.quality_score
+   ├─→ if review_count >= MIN_REVIEW_THRESHOLD (§12 D-4), UPDATE lessons.quality_score
    │   (idempotent IS DISTINCT FROM gate per finding #14)
    │   ↓
    ├─→ aggregate per-deck rollup (sum review_count, weighted-avg pass_rate)
@@ -506,7 +506,7 @@ locked at §6.4.
   every lesson reports `review_count=0`, `pass_rate=None`,
   `quality_score=None` (writeback skipped). Dashboard renders an
   empty-state banner; no rows.
-- **Lesson with N reviews where N < MIN_REVIEW_THRESHOLD (OQ-D):**
+- **Lesson with N reviews where N < MIN_REVIEW_THRESHOLD (§12 D-4):**
   rolls up `pass_rate` for display (admin can see early signal)
   but writeback is **skipped** — `quality_score` stays NULL on
   disk; ranker keeps 0.5 fallback. Dashboard tags the row with
@@ -602,7 +602,7 @@ class LessonQualityRow(BaseModel):
     deck_id: str
     deck_slug: str
     review_count_window: int
-    view_count_window: int                        # from lesson_view_events; 0 if OQ-N locks "no view denominator"
+    view_count_window: int                        # from lesson_view_events per §12 D-14
     pass_rate: float | None                       # raw pass_rate; None if review_count_window == 0
     smoothed_quality_score: float | None          # Bayesian-smoothed; None if low-volume below MIN threshold
     persisted_quality_score: float | None         # current lessons.quality_score on disk (post-writeback)
@@ -630,11 +630,11 @@ class QuizItemQualityRow(BaseModel):
 
 `GET /api/v1/admin/content-quality` accepts query params:
 
-- `window_days: int = 30` (clamp [7, 90] per OQ-C lock)
-- `include_archived: bool = False` (per OQ-H lock)
+- `window_days: int = 30` (clamp [7, 90] per §12 D-3 lock)
+- `include_archived: bool = False` (per §12 D-8 lock)
 
 No request body. No POST today (the only writeback is
-synchronous as a side-effect of the GET — see G-6 + OQ-A).
+synchronous as a side-effect of the GET — see G-6 + §12 D-1).
 
 ---
 
@@ -661,19 +661,19 @@ async def aggregate_dashboard(
     Read-only over all user-owned tables (G-2). Reads:
       - Lesson + Deck join (archived filter per param)
       - QuizReviewEvent (per-lesson + per-quiz_item aggregation)
-      - LessonViewEvent (view-volume denominator; OQ-N)
+      - LessonViewEvent (view-volume denominator; §12 D-14)
     Writes:
       - Lesson.quality_score (idempotent IS DISTINCT FROM gate)
     """
 ```
 
-Module constants (locked at §12 amendment per OQ-B + OQ-C + OQ-D):
+Module constants (locked at §12 D-2 + D-3 + D-4):
 
 ```python
-DEFAULT_WINDOW_DAYS = 30                   # OQ-C default proposal
-MIN_WINDOW_DAYS = 7                        # OQ-C lower clamp
-MAX_WINDOW_DAYS = 90                       # OQ-C upper clamp
-MIN_REVIEW_THRESHOLD = 10                  # OQ-D default proposal
+DEFAULT_WINDOW_DAYS = 30                   # §12 D-3
+MIN_WINDOW_DAYS = 7                        # §12 D-3 lower clamp
+MAX_WINDOW_DAYS = 90                       # §12 D-3 upper clamp
+MIN_REVIEW_THRESHOLD = 10                  # §12 D-4
 WORST_LESSONS_CAP = 25                     # number of rows in worst_lessons
 WORST_QUIZ_ITEMS_CAP = 50                  # number of rows in worst_quiz_items
 QUESTION_PREVIEW_CHARS = 80                # for QuizItemQualityRow.question_preview
@@ -688,7 +688,7 @@ _LAPSE_RATING = 1                          # Again
 # Hard (rating=2) excluded from both per slice 6.8 D-5
 ```
 
-Bayesian smoothing formula (locked at §12 amendment per OQ-B):
+Bayesian smoothing formula (locked at §12 D-2):
 
 ```python
 smoothed = (passes + SMOOTHING_PRIOR_PASS_RATE * SMOOTHING_PRIOR_WEIGHT) / \
@@ -790,11 +790,11 @@ Route mounts in `app/main.py` between `admin_analytics` and
 ## 7. Migrations
 
 **Zero migrations.** The default proposal at §12 amendment time
-(OQ-E + OQ-I lock to "lesson-level only") requires no schema
+(§12 D-5 + D-9 lock "lesson-level only") requires no schema
 change — `lessons.quality_score` already exists on disk per
 audit finding #2.
 
-If §12 amendment locks OQ-E to "add `quiz_items.quality_score`
+(D-5 alternative — not the locked path:) if a future amendment flips D-5 to "add `quiz_items.quality_score`
 column", §7 would gain one Alembic migration adding the
 `Numeric(3,2) NULLABLE` column to `quiz_items` mirroring the
 shape of `lessons.quality_score`. Default proposal: do not add
@@ -874,7 +874,7 @@ export function useAdminContentQuality(opts: {
 
 All three use existing table primitives from
 `src/components/ui/` (`Table`, `TableHeader`, `TableRow` etc.).
-No new chart library (audit finding + OQ-J default = match
+No new chart library (audit finding + §12 D-10 = match
 slice 6.8 zero-deps precedent).
 
 ### 8.4 Modified files
@@ -923,8 +923,7 @@ paths (audit finding #11). The path predicate is
 prefix-string-startswith. Slice 6.11 does NOT extend it to
 `/admin/content-quality` — the BE side-fire would be redundant
 with the FE event (which carries window/archived params the BE
-side-fire does not). Locked at §12 amendment per OQ-K default
-proposal.
+side-fire does not). Locked at §12 D-11.
 
 ### 9.3 Existing events touched
 
@@ -1065,11 +1064,170 @@ Test envelope locked at impl. Estimates below.
 
 ## 12. Decisions
 
-> EMPTY at spec-author. Locks via amendment slice mirroring
-> slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 §12
-> amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` /
-> `fb92396` / `0c21223` / `ab07168` / `be7d59a`. Each §14 OQ
-> resolves to a D-N entry here.
+> Locked at `<this-slice>` (2026-04-29). D-1..D-16 resolve §14
+> OQ-A..OQ-P 1:1 (verbatim author-hint dispositions, all 16
+> confirmed by Dhamo). Mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 /
+> 6.7 / 6.8 / 6.10 §12 amendment pattern at `e8eecdd` /
+> `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` /
+> `be7d59a`.
+
+- **D-1** (resolves OQ-A) — **Writeback cadence: synchronous
+  on-read.** `lessons.quality_score` writeback fires
+  synchronously as a side-effect of the admin dashboard GET; no
+  background job in v1. Per G-6 — no new infra, bounded by the
+  per-admin slowapi default rate-limit, idempotent so concurrent
+  admins are safe (audit finding #14 IS DISTINCT FROM gate).
+  Background recompute deferred per §13 (likely bundled with
+  slice 6.14 daily Pro digest infra extension).
+
+- **D-2** (resolves OQ-B) — **`quality_score` formula v1 =
+  Bayesian-smoothed pass_rate.** Formula:
+  `(pass_count + 0.5 × 10) / (review_count + 10)`. Prior =
+  0.5 (neutral, matches slice 6.6 D-2 ranker null-coercion
+  convention); prior weight = 10 (matches the smoothing-prior
+  weight by symmetry with D-4 — at N=10, raw and smoothed
+  contribute equally). Dampens small-sample volatility without
+  dominating the signal at scale. See §6.1 module constants
+  `SMOOTHING_PRIOR_PASS_RATE = 0.5`,
+  `SMOOTHING_PRIOR_WEIGHT = 10`.
+
+- **D-3** (resolves OQ-C) — **Aggregation window: configurable,
+  default 30 days, clamp [7, 90].** Default mirrors slice 6.8
+  D-7 (`DEFAULT_RETENTION_WINDOW_DAYS = 30`) so admin and
+  user-self dashboards stay coherent. Admin-toggleable via
+  `?window_days=N` query param; values outside [7, 90] return
+  422 (Pydantic Query validator). Module constants
+  `DEFAULT_WINDOW_DAYS = 30`, `MIN_WINDOW_DAYS = 7`,
+  `MAX_WINDOW_DAYS = 90`.
+
+- **D-4** (resolves OQ-D) — **Minimum review threshold for
+  non-NULL emission = 10 reviews.** A lesson's
+  `quality_score` stays NULL until it accumulates ≥10 reviews
+  in the configured window. Below threshold, the ranker (slice
+  6.6 D-2) keeps the 0.5 default — no behavioural delta for
+  cold-start lessons. Threshold matches the Bayesian smoothing
+  prior weight (D-2) by symmetry. Module constant
+  `MIN_REVIEW_THRESHOLD = 10`.
+
+- **D-5** (resolves OQ-E) — **Writeback target =
+  `lessons.quality_score` only; `quiz_items.quality_score`
+  column NOT added this slice.** Audit finding #3 confirmed the
+  column does not exist on `quiz_items`. Per-quiz_item
+  writeback defers to slice 6.13.5 + LD J2 `card_quality_signals`
+  table (the proper home for finer-grained per-(lesson,
+  quiz_item, signal_source, dimension) signals). Per-quiz_item
+  rollups STILL surface in the dashboard payload
+  (`QuizItemQualityRow[]`) as read-time aggregations — admin
+  can see them — but no column-add and no writeback to disk.
+  Zero migrations result.
+
+- **D-6** (resolves OQ-F) — **Admin route shape: single envelope.**
+  `GET /api/v1/admin/content-quality?window_days=N&include_archived=bool`
+  returns one `AdminContentQualityResponse` envelope with all
+  three section arrays (per-deck rollup, worst-lessons,
+  worst-quiz_items) populated in the same response. Mirrors
+  slice 6.8 D-3 dashboard precedent — FE renders the page from
+  one fetch, no waterfall, no per-section endpoints.
+
+- **D-7** (resolves OQ-G) — **Tier filtering: merged but
+  tagged.** Free + premium content appear in the same ranked
+  lists; each row carries `DeckQualityRow.tier ∈ {'foundation',
+  'premium'}` for client-side filtering / colour-coding. The
+  dashboard does NOT apply tier-based filtering server-side
+  (admin sees the universe; tier is a presentation hint only).
+
+- **D-8** (resolves OQ-H) — **Archived/retired content
+  visibility: hidden by default, opt-in toggle.**
+  `?include_archived=false` (default) excludes decks with
+  `archived_at IS NOT NULL` AND lessons with `archived_at IS
+  NOT NULL` from all three sections. `?include_archived=true`
+  surfaces them with `archived: true` flag on the row. Retired
+  quiz_items (`retired_at IS NOT NULL`) are ALWAYS hidden in
+  v1 — admin doesn't edit retired rows; the dashboard's question
+  is "what should I author next?", and retired rows are
+  historical, not actionable. Slice 6.13.5 may revisit if the
+  layer-1 critique signal warrants surfacing them.
+
+- **D-9** (resolves OQ-I) — **Writeback granularity: lesson-
+  level only.** Consistent with D-5. Per-quiz_item dashboard
+  rows are read-time aggregations from `quiz_review_events` —
+  no writeback path. The `worst_quiz_items: QuizItemQualityRow[]`
+  array carries `pass_rate` + `lapse_rate` + `review_count_window`
+  + `low_volume` (per D-15) but no persisted score.
+
+- **D-10** (resolves OQ-J) — **FE charts hand-rolled SVG /
+  CSS-grid; zero new deps.** Mirrors slice 6.8's
+  `RetentionCurve.tsx` SVG precedent (D-4 in spec #09). The v1
+  dashboard is tabular not chart-heavy — three sortable tables
+  rendered via existing `src/components/ui/Table` primitives
+  cover the surface. Recharts/Visx introduction deferred until
+  a future spec actually needs continuous-data visualisation
+  beyond what hand-rolled SVG provides cleanly.
+
+- **D-11** (resolves OQ-K) — **One PostHog event:
+  `admin_content_quality_viewed`** fired client-side from
+  `pages/admin/AdminContentQuality.tsx` on mount via `useRef`
+  once-per-mount idempotency guard. Properties:
+  `{admin_id, window_days, include_archived, internal: true}`.
+  Mirrors slice 6.8 D-11 (`dashboard_viewed` once-per-mount
+  pattern). NO BE side-fire extension to `audit_admin_request`
+  — the FE event already carries the window/archived params the
+  BE side-fire would not have access to. Single-event minimum
+  matches slice 6.8 read-only-surface convention (slice 6.10's
+  three-event minimum was specific to its async-job pipeline
+  with start/end states; a synchronous read surface needs only
+  one event).
+
+- **D-12** (resolves OQ-L) — **Access control: plain
+  `Depends(require_admin)`.** No sub-permission introduced
+  (e.g., no `admin.content.review` role). Sub-permission
+  infrastructure deferred until two admin surfaces actually
+  need to differentiate access — today every admin can do every
+  admin thing, and the cost of building a permission system for
+  one consumer is unjustified.
+
+- **D-13** (resolves OQ-M) — **Rating semantics: mirror slice
+  6.8 D-5.** "Pass" = Rating ∈ {3, 4} (Good + Easy); "lapse"
+  = Rating ∈ {1} (Again); Hard (Rating=2) is excluded from
+  both numerators (pass and lapse). Module constants
+  `_RECALL_RATINGS = (3, 4)` and `_LAPSE_RATING = 1` mirror
+  `dashboard_service.py`'s constants verbatim (slice 6.8 D-5
+  audit finding #12 — coherence with user-self dashboard so
+  admin and user "this lesson is X% recall" copy match).
+
+- **D-14** (resolves OQ-N) — **Include `lesson_view_events`
+  view-volume denominator on `LessonQualityRow`.** Read
+  `lesson_view_events` indexed per-lesson over the same
+  configured window (audit finding #6 confirms
+  `ix_lesson_view_events_lesson_viewed_at` supports this
+  efficiently). Expose as `view_count_window: int` on
+  `LessonQualityRow` so the dashboard surfaces "this lesson is
+  opened 100x but reviewed only 10x" abandonment signal — the
+  ratio is a meaningful authoring signal that pure
+  review-volume doesn't capture. One extra indexed query per
+  request; performance envelope per §6.3 unchanged (target
+  ≤500ms holds).
+
+- **D-15** (resolves OQ-O) — **Low-volume surfacing: tagged,
+  not hidden.** Lessons / quiz_items below the D-4 threshold
+  (10 reviews) appear in `worst_lessons` / `worst_quiz_items`
+  with `low_volume: true` flag and `quality_score: null` on
+  the lesson side (D-4 — no writeback). Sort order
+  `smoothed_quality_score ASC NULLS LAST` puts non-NULL
+  worst-first; NULL low-volume rows tail. No separate hiding
+  threshold — every lesson with at least 1 review in window
+  appears, and admins can visually filter via the
+  `low_volume` tag. `LessonQualityRow.low_volume` and
+  `QuizItemQualityRow.low_volume` fields locked.
+
+- **D-16** (resolves OQ-P) — **Slice 6.13.5 docstring
+  breadcrumb in `admin_content_quality_service.py`.** The
+  service's module-level docstring carries a one-line note:
+  `# layer-3 user-signal v1; merges with layer-1 critique
+  signal in slice 6.13.5 via card_quality_signals table per
+  LD J2`. Ensures continuity for the future slice 6.13.5
+  Step 1 audit — the migration target (this writeback path)
+  is grep-discoverable without curriculum.md spelunking.
 
 ---
 
@@ -1111,112 +1269,89 @@ Test envelope locked at impl. Estimates below.
 
 ## 14. Open questions
 
-> All OQs resolve at §12 amendment time. Each carries a default
-> proposal ("Author hint") so the amendment slice runs lean.
+> All 16 OQs RESOLVED at §12 amendment slice (`<this-slice>`)
+> per author-hint dispositions. Headings + first-sentence
+> questions preserved for historical reference; option bodies
+> + author hints removed (locked dispositions live in §12 D-N).
 
 - **OQ-A — Writeback cadence.** Synchronous on-read vs admin-
-  triggered batch vs background job? *Author hint:* synchronous
-  on-read for v1 (G-6 — no new infra; bounded by admin
-  rate-limit; idempotent so concurrent admins are safe).
-  Background recompute deferred per §13.
+  triggered batch vs background job?
+  **RESOLVED:** locked at §12 D-1 (`<this-slice>`).
 
 - **OQ-B — quality_score formula v1.** Raw pass_rate vs
-  pass_rate × volume_factor vs Bayesian-smoothed? *Author hint:*
-  Bayesian-smoothed with prior 0.5, weight=10 (matches
-  curriculum.md §7 null-coercion convention; dampens small-
-  sample volatility).
+  pass_rate × volume_factor vs Bayesian-smoothed?
+  **RESOLVED:** locked at §12 D-2 (`<this-slice>`).
 
 - **OQ-C — Aggregation window.** 30 days vs N reviews vs
-  lifetime vs configurable? *Author hint:* configurable via
-  query param, default 30 days (matches slice 6.8 D-7),
-  clamped [7, 90].
+  lifetime vs configurable?
+  **RESOLVED:** locked at §12 D-3 (`<this-slice>`).
 
 - **OQ-D — Minimum review threshold for non-NULL emission.**
   How many reviews before we trust the signal enough to write
-  to disk? *Author hint:* 10 (matches the smoothing prior
-  weight by symmetry — at N=10, raw and smoothed contribute
-  equally).
+  to disk?
+  **RESOLVED:** locked at §12 D-4 (`<this-slice>`).
 
 - **OQ-E — `quiz_items.quality_score` column status.** Add the
   column this slice (so per-quiz_item writeback works) or stay
   lesson-level only and defer per-item writeback to slice
-  6.13.5? *Author hint:* lesson-level only for v1; defer
-  per-item writeback to slice 6.13.5 + LD J2's
-  `card_quality_signals` table. Per-item rollups are surfaced
-  *in the payload* (admin can see them) but not persisted.
+  6.13.5?
+  **RESOLVED:** locked at §12 D-5 (`<this-slice>`).
 
 - **OQ-F — Admin route shape.** Single envelope vs split
-  per-deck/lesson/quiz_item endpoints? *Author hint:* single
-  envelope (G-7 — mirrors slice 6.8 D-3 dashboard precedent).
+  per-deck/lesson/quiz_item endpoints?
+  **RESOLVED:** locked at §12 D-6 (`<this-slice>`).
 
 - **OQ-G — Tier filtering.** Free vs premium content shown
-  separately or merged? *Author hint:* merged but tagged via
-  `DeckQualityRow.tier`. Admin sees both; dashboard does not
-  apply tier-based filtering.
+  separately or merged?
+  **RESOLVED:** locked at §12 D-7 (`<this-slice>`).
 
 - **OQ-H — Archived/retired content visibility.** Surface
   archived decks / archived lessons / retired quiz_items by
-  default? *Author hint:* hide by default, opt-in toggle
-  (`include_archived: bool` query param + dashboard toggle).
-  Retired quiz_items always hidden in v1 (admin doesn't
-  edit retired rows; the query is "what should I author next?").
+  default?
+  **RESOLVED:** locked at §12 D-8 (`<this-slice>`).
 
 - **OQ-I — Writeback granularity.** Per-quiz_item, per-lesson,
-  both? *Audit-driven on OQ-E.* If OQ-E locks "lesson-level
-  only" → per-lesson only. If OQ-E locks "add column" →
-  both.
+  both?
+  **RESOLVED:** locked at §12 D-9 (`<this-slice>`).
 
 - **OQ-J — FE chart library.** Match slice 6.8's hand-rolled
-  zero-deps pattern or first introduction of recharts? *Author
-  hint:* match slice 6.8 — the v1 dashboard is tabular not
-  chart-heavy. No new dep.
+  zero-deps pattern or first introduction of recharts?
+  **RESOLVED:** locked at §12 D-10 (`<this-slice>`).
 
 - **OQ-K — Analytics events.** Mirror slice 6.10's three-event
   minimum (`_enqueued`, `_completed`, `_failed`) or single
-  `_viewed` event? *Author hint:* single event
-  `admin_content_quality_viewed` (matches slice 6.8 D-11
-  `dashboard_viewed` precedent — read-only surfaces don't need
-  start/end events). No BE side-fire extension to
-  `audit_admin_request` per §9.2.
+  `_viewed` event?
+  **RESOLVED:** locked at §12 D-11 (`<this-slice>`).
 
 - **OQ-L — Access control sub-permission.** Plain
   `require_admin` for v1 or sub-permission like
-  `admin.content.review`? *Author hint:* plain `require_admin`
-  for v1; sub-permission infrastructure deferred until two
-  admin surfaces actually need it (today every admin can do
-  every admin thing).
+  `admin.content.review`?
+  **RESOLVED:** locked at §12 D-12 (`<this-slice>`).
 
 - **OQ-M — Rating semantics.** Mirror slice 6.8 D-5 (recall =
   3+4; lapse = 1; Hard=2 excluded) or include Hard as pass?
-  *Author hint:* mirror D-5 (audit finding #12 — coherence with
-  user dashboard).
+  **RESOLVED:** locked at §12 D-13 (`<this-slice>`).
 
 - **OQ-N — View-volume denominator.** Surface
   `lesson_view_events` view counts alongside review counts (so
   admins see "this lesson is opened 100x but reviewed only
-  10x" abandonment signal)? *Author hint:* yes — read
-  `lesson_view_events` indexed per-lesson, expose
-  `view_count_window` on `LessonQualityRow`. Cheap (one extra
-  indexed query) and a meaningful authoring signal.
+  10x" abandonment signal)?
+  **RESOLVED:** locked at §12 D-14 (`<this-slice>`).
 
 - **OQ-O — Low-volume threshold for surfacing problem
   content.** Separate from OQ-D's non-NULL emission threshold:
   should a lesson with 3 reviews and 33% pass_rate appear in
   worst_lessons (provisional signal) or be hidden (insufficient
-  data)? *Author hint:* surface with `low_volume: true` flag;
-  admin sees it tagged but knows the signal is provisional.
-  No separate threshold — every lesson with at least 1 review
-  in window appears, sorted by smoothed_score (NULL tail).
+  data)?
+  **RESOLVED:** locked at §12 D-15 (`<this-slice>`).
 
 - **OQ-P — Idempotency vs slice 6.13.5 future migration.**
   When slice 6.13.5 ships `card_quality_signals`, this slice's
   writeback path migrates to write the unified table instead.
   Should v1 leave any breadcrumbs (e.g., a comment in the
   service docstring) or just rely on slice 6.13.5's Step 1
-  audit to find the callsite? *Author hint:* leave a one-line
-  comment in `admin_content_quality_service.py` referencing
-  slice 6.13.5 + LD J2 so future-Claude doesn't have to grep
-  curriculum.md to find the migration target.
+  audit to find the callsite?
+  **RESOLVED:** locked at §12 D-16 (`<this-slice>`).
 
 ---
 
@@ -1227,10 +1362,11 @@ happens in the impl commit per R15(c)).
 
 Forward dependencies before impl can start:
 
-1. **§12 amendment slice** locks D-1..D-N from §14 OQ-A..OQ-P
-   (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10
-   §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` /
-   `fb92396` / `0c21223` / `ab07168` / `be7d59a`).
+1. **§12 amendment slice** ✅ shipped at `<this-slice>` —
+   locked D-1..D-16 from §14 OQ-A..OQ-P (now §12 D-1..D-16)
+   mirroring slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10
+   §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed`
+   / `fb92396` / `0c21223` / `ab07168` / `be7d59a`.
 2. No BE primitive prerequisite — every existing data source is
    on disk:
    - `lessons.quality_score Numeric(3,2) NULLABLE` (slice 6.1,
@@ -1270,7 +1406,7 @@ backend + §7 migrations + §8 frontend):
   total).
 - 0 integration tests (R13).
 - 0 new deps.
-- 0 migrations (default per OQ-E lock to lesson-only).
+- 0 migrations (per §12 D-5 lock to lesson-only).
 - `.agent/skills/analytics.md` update: 1 new event row per §9
   (`admin_content_quality_viewed`).
 - `.agent/skills/curriculum.md` — minor §7 layer-3 update
@@ -1323,6 +1459,6 @@ RQ work.
 *Spec authored at `7d7c6e8` against HEAD `057ff93`. All
 on-disk citations verified at audit time per SOP-5; phantom
 citations zero. Forward-filed B-084 at status 🔴 per R15(c).
-§12 EMPTY at spec-author — locks via amendment slice mirroring
-slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 §12
-amendment pattern.*
+§12 amendment locked D-1..D-16 from §14 OQ-A..OQ-P at
+`<this-slice>` (2026-04-29); B-084 stays 🔴 pending impl
+pickup.*
