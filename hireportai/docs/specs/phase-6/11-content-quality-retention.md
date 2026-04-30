@@ -7,7 +7,7 @@
 | **Slice** | 6.11 (Track D — first content-quality observability slice; first non-NULL `quality_score` emitter) |
 | **Phase** | 6 (Curriculum Platform) |
 | **Mode** | Mode 4 spec-author → followed by §12 amendment → impl |
-| **Filed at** | `<this-slice>` (spec-author HEAD pin; replaces post-commit) |
+| **Filed at** | `7d7c6e8` (spec-author commit) |
 | **BACKLOG row** | **B-084** 🔴 (filed by this slice) |
 | **Depends on** | spec #00 (`docs/specs/phase-6/00-analytics-tables.md` — `quiz_review_events` + `lesson_view_events` source tables; shipped `e7a0044`) ▪ spec #01 (`docs/specs/phase-6/01-foundation-schema.md` — `lessons.quality_score` Numeric(3,2) NULLABLE column already on disk; shipped `a989539`) ▪ spec #07 (`docs/specs/phase-6/07-deck-lesson-ranker.md` — slice 6.6 D-2 `_avg_quality_score` null-coercion-to-0.5 contract this slice resolves; shipped `5011518`) ▪ spec #09 (`docs/specs/phase-6/09-fsrs-dashboard.md` — slice 6.8 D-5 rating semantics for recall/lapse + D-11 admin-internal event convention; shipped `0968a13`) ▪ spec #10 (`docs/specs/phase-6/10-ai-ingestion-pipeline.md` — slice 6.10 admin auth chain + `internal: true` admin-event convention + drafts pipeline writes `quality_score=NULL`; shipped `8735373`) ▪ existing `Depends(require_admin)` + `audit_admin_request` chain (`app/core/deps.py`) ▪ existing `slowapi` rate limiter (`app/core/rate_limit.py`). |
 | **Blocks** | Slice 6.13.5 (`card_quality_signals` table per LD J2 — finer-grained per-(lesson, quiz_item, signal_source, dimension) layer-1 + layer-3 unified storage). Slice 6.13 (whatever ships between today and 6.13.5; cross-ref at amendment time). |
@@ -1320,7 +1320,7 @@ RQ work.
 
 ---
 
-*Spec authored at `<this-slice>` against HEAD `057ff93`. All
+*Spec authored at `7d7c6e8` against HEAD `057ff93`. All
 on-disk citations verified at audit time per SOP-5; phantom
 citations zero. Forward-filed B-084 at status 🔴 per R15(c).
 §12 EMPTY at spec-author — locks via amendment slice mirroring
