@@ -146,7 +146,7 @@ Home variant: `HomeDashboard.tsx` → `<HomeScoreDeltaWidget>` (interview_preppe
 1. **User triggers re-scan** in the focused-row block on `/prep/tracker?focus={tracker_id}`. Click handler reads the in-memory user `resume_text` (already loaded post-rewrite or post-resume-upload) and POSTs to `/api/v1/analyze/rescan` with `{tracker_application_id, resume_text}`.
 2. **Route handler** (`analyze.py::rescan_application`) calls `tracker_service_v2.get_application_by_id` → enforces ownership; reads `tracker_applications_v2.jd_text` + `jd_hash` for the row.
 3. **Resume-text fingerprinting** via `hash_jd(resume_text)` (existing helper at `app/utils/text_hash.py`). Combined with row's `jd_hash`, builds a `(jd_hash, resume_hash)` dedupe key.
-4. **Short-circuit check** (§12 D-2): if a `tracker_application_scores` row exists where `jd_hash == row.jd_hash` AND `resume_hash == hash_jd(resume_text)`, fire `rescan_short_circuited{tracker_application_id}` and return the existing scores envelope without re-running the LLM pipeline. Mirrors spec #49's `?force_regenerate` interview-prep dedupe pattern.
+4. **Short-circuit check** (§12 D-2): if a `tracker_application_scores` row exists where `jd_hash == row.jd_hash` AND `resume_hash == hash_jd(resume_text)`, fire `rescan_short_circuited{tracker_application_id}` and return the existing scores envelope without re-running the LLM pipeline. Mirrors spec #49's `?force_regenerate` interview-prep dedupe pattern. The short-circuit response is a slim `AnalysisResponse` with `scan_id`, `ats_score`, `score_breakdown`, and `resume_text` populated from the cached score row + request body. Parse-detail fields (`grade`, `matched_keywords`, `missing_keywords`, `skill_gaps`, `bullet_analysis`, `formatting_issues`, `job_fit_explanation`, `top_strengths`, `top_gaps`, `keyword_chart_data`, `skills_overlap_data`) are returned empty by design — cached LLM-derived narrative would be stale relative to the caller's resume_text. FE consumers MUST NOT rely on those fields from a short-circuit response (gate consumption on `short_circuited` event payload flag, NOT on response body shape). See §16.4 R-4.
 5. **Free-tier counter** — `usage_service.check_and_increment(user_id, "analyze", window="lifetime")`. On 402: raise `DailyReviewLimitError`-shaped 402 with `trigger='scan_limit'` (G-7 reuse).
 6. **Score** — `analysis_service.score_resume_against_jd(resume_text, jd_text, prior_scan_id=row.scan_id)` returns `AnalysisResponse`. Generates a fresh `scan_id = str(uuid.uuid4())`.
 7. **Persist** — `tracker_application_score_service.write_score_row(tracker_application_id, response, scan_id, jd_hash, resume_hash, db)` INSERTs a new `tracker_application_scores` row with the per-axis breakdown.
@@ -158,7 +158,7 @@ Home variant: `HomeDashboard.tsx` → `<HomeScoreDeltaWidget>` (interview_preppe
 ### §4.3 Failure modes
 
 - **Tracker row not found / not owned by user** — 404 with `{detail: 'Application not found'}`. No row read leaks across users (G-1 invariant).
-- **`jd_text` is NULL on the tracker row** — 422 with `{detail: 'JD not stored on this application — re-scan unavailable. Please run a fresh scan.'}` (§12 D-9). Pre-migration rows fall here permanently; post-migration rows always carry `jd_text` because the create path writes it (see §6.1 backend write hook).
+- **`jd_text` is NULL on the tracker row** — 422 with `{detail: {error: 'jd_text_missing', message: 'JD text not stored on this tracker — please run a fresh scan to populate.'}}` (§12 D-9; wording reconciled to AC-3 + shipped impl per §16.5 W-1). Pre-migration rows fall here permanently; post-migration rows always carry `jd_text` because the create path writes it (see §6.1 backend write hook).
 - **Free-tier counter exhausted** — 402 with `{error, trigger: 'scan_limit', counter, plan}` envelope (FE axios interceptor unwraps identically to fresh-scan 402 per spec #50 LD-2 mirror).
 - **Scoring pipeline failure (LLM 502 / parse error)** — 502 with `{detail: 'Scoring failed; please try again'}`. No score row written; no counter increment (counter increments only on success per `check_and_increment` post-write semantics — verify in §11 audit during impl). `rescan_failed{tracker_application_id, error_class}` event fired.
 - **Concurrent re-scan from same user on same tracker row** — slowapi default rate limit (100/min) + the application is a fast operation; treated as benign. If a second request arrives mid-flight, the second short-circuit will likely match the first request's row write. No special concurrency lock.
@@ -406,9 +406,14 @@ async def rescan_application(
     if row.jd_text is None:
         raise HTTPException(
             422,
-            "JD not stored on this application — re-scan unavailable. "
-            "Please run a fresh scan.",
-        )
+            detail={
+                "error": "jd_text_missing",
+                "message": (
+                    "JD text not stored on this tracker — please run a "
+                    "fresh scan to populate."
+                ),
+            },
+        )  # wording reconciled to AC-3 + shipped impl per §16.5 W-1
 
     # 2. Compute hashes
     resume_hash = hash_jd(request.resume_text)
@@ -718,7 +723,7 @@ Four net-new events appended to `.agent/skills/analytics.md`:
 |---|---|---|
 | `rescan_initiated` | BE `app/api/routes/analyze.py::rescan_application` | `{tracker_application_id}` |
 | `rescan_completed` | BE | `{tracker_application_id, jd_hash_prefix, ats_score_before: int\|null, ats_score_after: int, delta: int\|null}` |
-| `rescan_failed` | BE | `{tracker_application_id, error_class: 'scoring_error'\|'jd_missing'\|'auth'\|'paywall'\|'not_found'}` |
+| `rescan_failed` | BE | `{tracker_application_id, error_class: 'scoring_error'\|'jd_missing'\|'paywall'\|'not_found'}` (enum narrowed per §16.1 R-1 — `'auth'` dropped because `Depends(get_current_user)` raises 401 before reaching analytics; Slice 1 / B-088 wires fires for the 4 paths) |
 | `rescan_short_circuited` | BE | `{tracker_application_id, jd_hash_prefix}` |
 
 §12 D-12 confirmed: `rescan_completed` includes per-axis deltas + `short_circuited: bool` flag for analytics depth (mirrors `optimize_clicked` enrichment style). FE does NOT fire its own `rescan_*` events; BE-side capture per spec #50 / spec #57 backend-event precedent.
@@ -799,6 +804,8 @@ Total estimated test envelope: **+18..+24 BE + +10..+15 FE + +3 integration**.
 **D-10** *(resolves §14 OQ-J)* — Alembic migration adds `jd_hash` + `jd_text` columns as **nullable**. NO backfill of existing rows (existing tracker rows pre-migration have both columns NULL). D-9 422 path covers the gap. Backfill deferred to optional follow-up slice if user complaints surface.
 
 **D-11** *(resolves §14 OQ-K)* — PaywallTrigger when free user hits `/rescan` after lifetime cap = **reuse `'scan_limit'`** (existing trigger), NOT a new `'rescan_attempt'` trigger. One paywall surface for all scan operations is cleaner UX. Trade-off accepted: analytics dimensioning loses re-scan-vs-fresh-scan signal at the paywall surface, but `rescan_initiated` event upstream still preserves the dimension.
+
+> **Superseded by §16.2 R-2 (post-impl reconciliation, 2026-05-01).** D-12's original "full `jd_hash`" wording is amended to `jd_hash_prefix` (8-char) to match the §9 catalog and the `rescan_short_circuited` event's existing emission. The §16 reconciliation is the authoritative shape; D-12 body below is preserved verbatim as historical record.
 
 **D-12** *(resolves §14 OQ-L)* — `rescan_completed` event payload includes `{tracker_application_id, scan_id, ats_score_before, ats_score_after, ats_score_delta, keyword_match_delta, skills_coverage_delta, formatting_compliance_delta, bullet_strength_delta, jd_hash, short_circuited: bool}`. Per-axis dimensioning depth from analytics.md catalog convention. Mirrors `scan_completed` enrichment pattern. Field names align with JC #1 disk-truth correction.
 
@@ -899,8 +906,74 @@ See §3 non-goals + these deferred-to-impl-or-later items:
 
 **D-020 closure:** ✅ RESOLVED at `210dcb2` (B-086a foundation slice) — bundled `jd_hash` + `jd_text` columns shipped via migration `e043a1b2c3d4` per Q1 LOCK; AC-15 column-presence verified shell-side (`upgrade head → downgrade -1 → upgrade head` clean). Spec body §1.3 + §7 + AC-15 carry the cross-ref. B-086b 422 path on `jd_text=NULL` covers pre-migration tracker rows per D-9.
 
+**Post-impl reconciliations:** ✅ shipped at `<this-slice>` (this slice — §16 NEW) — five drift items (IFD-1 + IFD-3 + IFD-4 + IFD-6 + W-1) surfaced by validation-probe `35350ea` reconciled in §16.1-§16.6. Slices 1+2 (B-088 + B-089 forward-filed 🔴) implement.
+
+---
+
+## §16 — Post-impl reconciliations
+
+> Decisions locked by chat-Claude triage of the E-043 validation-probe audit
+> (`docs/audits/e043-validation-2026-05-01.md`). Mirrors the §5.3 + §6.1
+> correction-amendment precedent at `1b86bf0` — picks up drift between spec
+> body and shipped impl after runtime exercise, without re-litigating §12
+> D-1..D-12.
+
+### §16.1 R-1 — `rescan_failed` event-fire on non-2xx paths
+
+**Gap (audit IFD-1):** spec §9 catalog (line ~721 pre-amendment) listed the broad enum `error_class ∈ {'scoring_error', 'jd_missing', 'auth', 'paywall', 'not_found'}` for `rescan_failed`, but the shipped route at `app/api/routes/analyze.py::rescan_application` only fires `rescan_failed{error_class:'scoring_error'}` on the 502 LLM-failure path. P3 (422 jd_text-missing) + P4 (402 paywall) probes confirmed at runtime: NO `rescan_failed` event in the PROBE_EVENT log on those paths — route raises HTTPException at line 224 (422) and line 280 (402) before reaching the analytics call site at line 291. Analytics dimensioning loss is total: spec D-11 narrative ("`rescan_initiated` event upstream still preserves the dimension") doesn't hold because `rescan_initiated` also doesn't fire on those error paths.
+
+**Locked:** wire `rescan_failed` event-fires on the four non-2xx paths in `rescan_application`:
+- 402 paywall — `error_class='paywall'`
+- 422 jd_text missing — `error_class='jd_missing'`
+- 404 tracker not found — `error_class='not_found'`
+- 502 scoring failure — `error_class='scoring_error'` (already shipped, retain)
+
+**`'auth'` dropped from the enum** — `Depends(get_current_user)` raises 401 before reaching the route body, so the analytics call site is unreachable on the auth path. The original `'auth'` enum value was speculative in §9 and never had an attainable code path. §9 catalog row updated inline above (post-edit form: `{'scoring_error', 'jd_missing', 'paywall', 'not_found'}`). `.agent/skills/analytics.md::rescan_failed` row currently documents only `'scoring_error'` (matches today's narrow impl); Slice 1 broadens it to the §16.1 enum as part of the impl scope.
+
+Slice 1 (B-088) implements; closes IFD-1.
+
+### §16.2 R-2 — `jd_hash_prefix` (8-char) lock for both rescan_completed + rescan_short_circuited
+
+**Gap (audit IFD-4):** spec §9 catalog said `jd_hash_prefix` for both events; spec §12 D-12 said full `jd_hash` for `rescan_completed`. Shipped impl emits full `jd_hash` (64 chars) on `rescan_completed` and 8-char `jd_hash_prefix` on `rescan_short_circuited` — internal spec-catalog inconsistency, with impl following D-12 for `rescan_completed`.
+
+**Locked:** 8-char `jd_hash_prefix` on BOTH `rescan_completed` AND `rescan_short_circuited`. Privacy-friendly (no raw hash exposure to analytics platform), sufficient for analytics joins (8 hex chars = 32 bits = 4B distinct prefixes vs realistic JD-text cardinality ≪ 1M), and aligns the two rescan-completion-class events on a single shape.
+
+§12 D-12 preserved verbatim per the SUPERSESSION blockquote inserted directly above its body (do NOT edit D-12 in place — the historical record stays intact, the §16 reconciliation is the authoritative shape going forward).
+
+Slice 1 (B-088) implements; closes IFD-4.
+
+### §16.3 R-3 — `ats_scanned` catalog row payload reconciliation
+
+**Gap (audit IFD-6):** `analysis_service.score_resume_against_jd` fires `ats_scanned` from inside the helper (carryover from old in-route handler); the helper is shared between `/analyze` and `/rescan` so the event fires on both. The `ats_scanned` row IS catalogued in `.agent/skills/analytics.md` (line ~122) but its documented payload `{user_id, scan_id, resume_id, job_description_length}` does NOT match what the helper actually emits at runtime: `{score, grade, gaps_found, matched_keywords, missing_keywords}` (per probe captures from P1 + Pro `/analyze` + Cap `/analyze`).
+
+**Locked:** keep helper-side fire as-is (suppressing it on `/rescan` would lose helper-internal observability for `/analyze` callers; firing it adds zero noise on `/rescan` since it accompanies the explicit `rescan_*` events). Reconcile the catalog row's payload to match the helper's actual emission. Slice 1 (B-088) implements catalog-only payload update; no code change.
+
+### §16.4 R-4 — Short-circuit response stub-shape documentation
+
+**Gap (audit IFD-3):** the `/rescan` short-circuit path returns an `AnalysisResponse` with `scan_id` + `ats_score` + `score_breakdown` populated from the cached `tracker_application_scores` row + `resume_text` echoed back from the request body, but `grade=''`, all keyword/skill/bullet/formatting arrays empty, `job_fit_explanation=''`, `top_strengths=[]`, `top_gaps=[]`, `keyword_chart_data=[]`, `skills_overlap_data=[]`. P2 captured the verbatim shape. Spec §4.2 step 4 didn't previously call out the slim shape — FE consumers reading `AnalysisResponse` could naively treat the stub as authoritative narrative.
+
+**Locked:** the stub shape is **intentional** — cached LLM-derived narrative (job_fit_explanation, top_strengths, top_gaps, etc.) would be stale relative to the caller's submitted `resume_text` (the cache key is `(jd_hash, resume_hash)`, not `resume_text` content). Echoing stale narrative would actively mislead. FE consumers MUST gate consumption of those fields on the `short_circuited` event payload flag (NOT on response body shape inspection).
+
+§4.2 step 4 updated in place above with the slim-shape callout. No code change required; spec-doc only.
+
+### §16.5 W-1 — §6.2 + §4.3 sketch wording reconciliation
+
+**Gap (audit P3 incidental):** spec §6.2 sketch (line ~409 pre-amendment) and §4.3 failure-mode bullet (line ~161 pre-amendment) both carried the stale 422 wording `"JD not stored on this application — re-scan unavailable. Please run a fresh scan."` Shipped impl + AC-3 both use `"JD text not stored on this tracker — please run a fresh scan to populate."` Internal spec-vs-impl wording drift caught at runtime in P3.
+
+**Locked:** updated both sites in place above to match AC-3 + shipped impl verbatim. §6.2 sketch additionally now shows the `{detail: {error: 'jd_text_missing', message: ...}}` structured envelope shape that the impl actually emits (the pre-amendment sketch showed a flat string detail). §4.3 bullet updated to match. AC-3 wording preserved as the canonical reference. Spec-doc only; no code change.
+
+### §16.6 R-5 — IFD-5 forward-pointer (Slice 2 hand-off)
+
+**Gap (audit IFD-5):** `app/api/routes/analyze.py::analyze_resume` does NOT call `tracker_application_score_service.write_score_row` for the auto-created tracker row's first scan. As a result, after a user runs `/analyze` once + `/rescan` once, `tracker_application_scores` has only ONE row (the `/rescan` row); GET `/api/v1/tracker/{id}/scores` returns `delta: null` (per §6.4 contract `len(history) < 2 → delta: null`); `rescan_completed` event payload has `ats_score_before: None` + all five `*_delta: None` fields; HomeScoreDeltaWidget renders nothing (per §8.2 `if (history.length < 2 || !delta) return null`). The user's `tracker.ats_score=64` baseline (from the `/analyze` write) exists but is invisible to the score-history surface. Quote from §6.3 on disk verbatim: `write_score_row(...) -> TrackerApplicationScore — INSERT one history row. Called from /rescan route + (optionally) from fresh-scan route to backfill the first history entry.`
+
+**Locked:** the `(optionally)` hint in §6.3 is amended to **REQUIRED**. `analyze_resume` MUST call `tracker_application_score_service.write_score_row` for the auto-created tracker row's first scan. Effect: first `/rescan` after `/analyze` lands `history.length=2`; per-axis delta envelope is non-degenerate; HomeScoreDeltaWidget renders without requiring a second `/rescan`. Slice 2 (B-089) implements; closes IFD-5.
+
+This is a SEPARATE impl slice from Slice 1 (B-088) — no shared code touches; B-089 is byte-isolated from B-088 (different call site, different write semantics). Either may ship first.
+
 ---
 
 *Spec authored 2026-04-30 at `da14c01`. §12 amendment locked D-1..D-12 from §14 OQ-A..OQ-L at `71a77e3` (2026-04-30); B-086 stays 🔴 pending impl pickup; D-020 closure committed at impl per §7. R14 default — net-new feature with data-model surface + new endpoint + new FE component + analytics catalog extension + drift D-020 closure at impl-merge. R15(c) forward-file: B-086 🔴 inserted above B-085 (numerically descending) in BACKLOG.md per highest-numeric-first ordering. R17 watermark verified at amendment slice start: B-086 highest in-use; B-087 next-free post-slice.*
 
 *`1b86bf0` (2026-04-30) — §5.3 (scan_id FK shape) + §6.1 (score_resume_against_jd signature) corrected to match disk reality landed at `210dcb2` (B-086a). JC #2 + JC #3 from B-086a final report dispositioned. D-027 NEW filed in CR §11 same slice. R14 exception (b) — pure spec amendment, no test surface (BE 700 / FE 417 carried forward verbatim). No BACKLOG IDs claimed; B-086a ✅ + B-086b 🔴 + B-086 umbrella 🔴 + E-043 🔴 unchanged. R17 watermark unchanged: B-086 / B-086a / B-086b in-use; B-087 next-free.*
+
+*`<this-slice>` (2026-05-01) — §16 NEW post-impl reconciliations + §4.2 step 4 + §4.3 + §6.2 + §9 + §12 D-12 SUPERSESSION blockquote applied; reconciles 5 drift items (IFD-1, IFD-3, IFD-4, IFD-6, W-1) surfaced by E-043 validation-probe `35350ea`. R14 exception (b) — pure spec amendment + drift filing + BACKLOG forward-files; no test surface (BE 757 / FE 445 carried forward verbatim). D-029 NEW filed in SESSION-STATE drift table at 🟡 PARTIAL. B-088 + B-089 forward-filed 🔴 (Slices 1 + 2 impl pickup; B-088 closes IFD-1+IFD-4+IFD-6, B-089 closes IFD-5; both byte-isolated, either may ship first). R17 watermark: B-088 + B-089 claimed; B-090 next-free numeric ID. R17 drift watermark: D-029 claimed; D-030 next-free.*
