@@ -215,12 +215,28 @@ async def rescan_application(
         request.tracker_application_id, db, user_id=current_user.id
     )
     if row is None:
+        analytics_track(
+            user_id=current_user.id,
+            event="rescan_failed",
+            properties={
+                "tracker_application_id": request.tracker_application_id,
+                "error_class": "not_found",
+            },
+        )
         raise HTTPException(
             status_code=404,
             detail={"error": "tracker_not_found"},
         )
 
     if row.jd_text is None:
+        analytics_track(
+            user_id=current_user.id,
+            event="rescan_failed",
+            properties={
+                "tracker_application_id": request.tracker_application_id,
+                "error_class": "jd_missing",
+            },
+        )
         raise HTTPException(
             status_code=422,
             detail={
@@ -277,6 +293,14 @@ async def rescan_application(
         current_user.id, "analyze", db, window="lifetime"
     )
     if not usage["allowed"]:
+        analytics_track(
+            user_id=current_user.id,
+            event="rescan_failed",
+            properties={
+                "tracker_application_id": request.tracker_application_id,
+                "error_class": "paywall",
+            },
+        )
         raise HTTPException(
             status_code=402,
             detail={
@@ -344,7 +368,7 @@ async def rescan_application(
         properties={
             "tracker_application_id": request.tracker_application_id,
             "scan_id": response.scan_id,
-            "jd_hash": jd_hash,
+            "jd_hash_prefix": jd_hash[:8],
             "ats_score_before": prior_overall,
             "ats_score_after": response.ats_score,
             "ats_score_delta": delta.overall_delta if delta else None,

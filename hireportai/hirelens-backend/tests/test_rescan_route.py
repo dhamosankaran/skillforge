@@ -341,3 +341,142 @@ async def test_rescan_second_resume_creates_second_history_row(
 
     await db_session.refresh(tracker)
     assert tracker.scan_id == original_scan_id  # AC-9
+
+
+# ── B-088 / spec #63 §16.1 R-1 + §16.2 R-2 — rescan_failed + jd_hash_prefix ──
+#
+# These tests capture analytics_track calls via monkeypatch, mirroring the
+# canonical pattern from tests/test_wall.py:174-181 (`captured_events`
+# fixture). Patch target is the local import alias inside analyze.py
+# (`app.api.routes.analyze.analytics_track`), not `app.core.analytics.track`,
+# because the route module imported the symbol at module-load time.
+
+
+@pytest.fixture
+def captured_events(monkeypatch):
+    """Capture every analytics_track call inside analyze.py route module."""
+    from app.api.routes import analyze as analyze_module
+
+    captured: list[tuple] = []
+
+    def _capture(user_id, event, properties=None):
+        captured.append((user_id, event, properties))
+
+    monkeypatch.setattr(analyze_module, "analytics_track", _capture)
+    return captured
+
+
+async def test_rescan_404_fires_rescan_failed_with_not_found(
+    client, db_session, captured_events
+):
+    """B-088 / §16.1 R-1 — 404 path fires `rescan_failed{not_found}`."""
+    owner = await _seed_user(db_session, plan="pro")
+    tracker = await _seed_tracker(db_session, user_id=owner.id)
+    intruder = await _seed_user(db_session, plan="pro")
+
+    resp = await client.post(
+        "/api/v1/analyze/rescan",
+        headers=_auth(intruder),
+        json={
+            "tracker_application_id": tracker.id,
+            "resume_text": _RESUME_TEXT,
+        },
+    )
+    assert resp.status_code == 404
+
+    failed = [
+        props for (_uid, ev, props) in captured_events
+        if ev == "rescan_failed"
+    ]
+    assert len(failed) == 1
+    assert failed[0]["error_class"] == "not_found"
+    assert failed[0]["tracker_application_id"] == tracker.id
+
+
+async def test_rescan_422_fires_rescan_failed_with_jd_missing(
+    client, db_session, captured_events
+):
+    """B-088 / §16.1 R-1 — 422 jd_text=NULL path fires `rescan_failed{jd_missing}`."""
+    user = await _seed_user(db_session, plan="pro")
+    tracker = await _seed_tracker(db_session, user_id=user.id, jd_text=None)
+
+    resp = await client.post(
+        "/api/v1/analyze/rescan",
+        headers=_auth(user),
+        json={
+            "tracker_application_id": tracker.id,
+            "resume_text": _RESUME_TEXT,
+        },
+    )
+    assert resp.status_code == 422
+
+    failed = [
+        props for (_uid, ev, props) in captured_events
+        if ev == "rescan_failed"
+    ]
+    assert len(failed) == 1
+    assert failed[0]["error_class"] == "jd_missing"
+    assert failed[0]["tracker_application_id"] == tracker.id
+
+
+async def test_rescan_402_fires_rescan_failed_with_paywall(
+    client, db_session, captured_events
+):
+    """B-088 / §16.1 R-1 — 402 paywall path fires `rescan_failed{paywall}`."""
+    user = await _seed_user(db_session, plan="free")
+    tracker = await _seed_tracker(db_session, user_id=user.id)
+    db_session.add(
+        UsageLog(user_id=user.id, feature_used="analyze", tokens_consumed=0)
+    )
+    await db_session.flush()
+
+    resp = await client.post(
+        "/api/v1/analyze/rescan",
+        headers=_auth(user),
+        json={
+            "tracker_application_id": tracker.id,
+            "resume_text": _RESUME_TEXT,
+        },
+    )
+    assert resp.status_code == 402
+
+    failed = [
+        props for (_uid, ev, props) in captured_events
+        if ev == "rescan_failed"
+    ]
+    assert len(failed) == 1
+    assert failed[0]["error_class"] == "paywall"
+    assert failed[0]["tracker_application_id"] == tracker.id
+
+
+async def test_rescan_completed_payload_uses_jd_hash_prefix(
+    client, db_session, captured_events
+):
+    """B-088 / §16.2 R-2 — `rescan_completed` payload uses 8-char `jd_hash_prefix`."""
+    user = await _seed_user(db_session, plan="pro")
+    tracker = await _seed_tracker(db_session, user_id=user.id)
+
+    resp = await client.post(
+        "/api/v1/analyze/rescan",
+        headers=_auth(user),
+        json={
+            "tracker_application_id": tracker.id,
+            "resume_text": _RESUME_TEXT,
+        },
+    )
+    assert resp.status_code == 200, resp.text
+
+    completed = [
+        props for (_uid, ev, props) in captured_events
+        if ev == "rescan_completed"
+    ]
+    assert len(completed) == 1
+    payload = completed[0]
+    assert "jd_hash_prefix" in payload
+    assert "jd_hash" not in payload, (
+        "full jd_hash must not be emitted post-§16.2 R-2"
+    )
+    assert len(payload["jd_hash_prefix"]) == 8
+    # Prefix is the first 8 chars of the SHA-256 hex of the JD text.
+    expected_prefix = hash_jd(_JD_TEXT)[:8]
+    assert payload["jd_hash_prefix"] == expected_prefix
