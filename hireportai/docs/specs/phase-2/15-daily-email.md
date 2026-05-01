@@ -160,7 +160,7 @@ To prevent double-sends if the job is slow or re-triggered:
 ### `email_send_log` table (dedup)
 
 > **Superseded by `docs/specs/phase-6/13-pro-digest-opt-out.md` §5.2
-> (slice 6.13, `<this-slice>`).** The canonical `email_log` table design
+> (slice 6.13, `d6ddcb6`).** The canonical `email_log` table design
 > lives in slice 6.13 — additive migration, refined column rationale,
 > Phase-6 model conventions (UUIDPrimaryKeyMixin, denormalized FKs,
 > CASCADE on user delete, composite `(user_id, sent_date)` index). The

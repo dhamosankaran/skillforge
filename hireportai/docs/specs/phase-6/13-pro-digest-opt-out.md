@@ -7,7 +7,7 @@
 | **Slice** | 6.13 (Track D — Pro digest opt-out persistence + `email_log` dedup schema; precondition for slice 6.14 cron) |
 | **Phase** | 6 (Curriculum Platform) |
 | **Mode** | Mode 4 spec-author → followed by §12 amendment → impl |
-| **Filed at** | `<this-slice>` (spec-author commit) |
+| **Filed at** | `d6ddcb6` (spec-author commit) |
 | **BACKLOG row** | **B-087** 🔴 (filed by this slice) |
 | **Depends on** | Phase-2 `email_preferences` table (`alembic/versions/c9863b51075d_add_email_preferences_table.py`; shipped) ▪ Phase-2 `app/services/email_service.py` Resend wrapper (shipped) ▪ Phase-2 `app/services/reminder_service.py` daily-reminder selector (shipped — NOT touched by this slice) ▪ existing `Subscription.plan == "pro"` join precedent (`app/services/admin_analytics_service.py:149`) ▪ existing `usage.plan` FE gating precedent (`src/context/UsageContext.tsx:131` `canUsePro`; `src/components/home/widgets/MissionActiveWidget.tsx:40` `isPaid`) ▪ existing `Depends(get_current_user)` chain (`app/core/deps.py`). |
 | **Blocks** | Slice 6.14 (cron daily Pro digest — consumes the opt-out flag from §5.1 and the `email_log` dedup contract from §5.2 / §6.2). B-078 (cron architecture decision: Railway cron vs APScheduler vs RQ-on-Redis) is orthogonal; locked at LD G2 = Railway cron, but does NOT bind 6.13's surface. |
@@ -849,7 +849,7 @@ of this spec.
 spec-author commit:** a `>` blockquote header BEFORE the
 §`email_send_log` section pointing forward to
 `docs/specs/phase-6/13-pro-digest-opt-out.md` §5.2 (slice 6.13,
-`<this-slice>`). The §`email_send_log` body is preserved verbatim as
+`d6ddcb6`). The §`email_send_log` body is preserved verbatim as
 historical artifact; future readers are pointed here for the canonical
 design.
 
