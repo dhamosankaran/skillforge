@@ -1,33 +1,18 @@
 """Core resume analysis endpoint."""
-import json
-import uuid
 from datetime import date
-from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.response_models import (
-    AnalysisResponse,
-    ATSScoreBreakdown,
-    BulletAnalysis,
-    FormattingIssue,
-    KeywordChartData,
-    SkillGap,
-    SkillOverlapData,
-)
+from app.models.response_models import AnalysisResponse
 from app.core.analytics import track as analytics_track
 from app.core.deps import get_current_user, get_current_user_optional
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.requests import TrackerApplicationCreate
-from app.services.bullet_analyzer import analyze_bullets
-from app.services.formatter_check import check_formatting
-from app.services.gap_detector import detect_gaps, get_skills_overlap_data
-from app.services.keywords import get_keyword_chart_data, match_keywords
-from app.services.nlp import extract_job_requirements, extract_skills
+from app.services.analysis_service import score_resume_against_jd
+from app.services.nlp import extract_job_requirements
 from app.services.parser import parse_docx, parse_pdf
-from app.services.scorer import ATSScorer
 from app.services import home_state_service
 from app.services.tracker_service_v2 import (
     create_application,
@@ -35,9 +20,9 @@ from app.services.tracker_service_v2 import (
     get_scan_by_id,
 )
 from app.services.usage_service import check_and_increment
+from app.utils.text_hash import hash_jd
 
 router = APIRouter()
-scorer = ATSScorer()
 
 ALLOWED_MIME_TYPES = {
     "application/pdf",
@@ -139,121 +124,28 @@ async def analyze_resume(
             detail="Job description is too short. Please provide a complete job description.",
         )
 
-    # Extract resume skills
-    resume_skills = extract_skills(resume_text)
-    resume_data["skills"] = resume_skills
-
-    # Parse job description
-    jd_requirements = extract_job_requirements(job_description)
-    jd_skills = jd_requirements.get("all_skills", [])
-
-    # Keyword matching
-    keyword_results = match_keywords(
+    # G-6 extraction (E-043 / spec #63 §6.1) — file parsing stays in the
+    # route; the file-format-agnostic scoring pipeline lives in
+    # `app/services/analysis_service.py` so /rescan (B-086b) can reuse it
+    # with text-only input. The `parsed_resume` kwarg threads file-derived
+    # `formatting_hints` + `bullet_points` through to preserve AC-17
+    # byte-identity for the file-upload path.
+    response = await score_resume_against_jd(
         resume_text=resume_text,
         jd_text=job_description,
-        jd_skills=jd_skills,
-    )
-    matched_keywords: List[str] = keyword_results["matched"]
-    missing_keywords: List[str] = keyword_results["missing"]
-    jd_keywords: List[str] = keyword_results["jd_keywords"]
-
-    # Formatting check
-    formatting_hints = resume_data.get("formatting_hints", {})
-    formatting_issues_raw = check_formatting(resume_data, formatting_hints)
-    formatting_issues_dicts = [fi.model_dump() for fi in formatting_issues_raw]
-
-    # Bullet analysis
-    bullets_raw = resume_data.get("bullet_points", [])
-    bullet_analyses = analyze_bullets(bullets_raw, job_description)
-    bullet_dicts = [ba.model_dump() for ba in bullet_analyses]
-
-    # Calculate ATS score
-    score_result = scorer.score(
-        matched_keywords=matched_keywords,
-        jd_keywords=jd_keywords,
-        resume_skills=resume_skills,
-        jd_skills=jd_skills,
-        formatting_issues=formatting_issues_dicts,
-        bullets=bullet_dicts,
-    )
-
-    # Skill gap detection
-    skill_gaps = detect_gaps(resume_skills, jd_requirements)
-
-    # Skills overlap data for radar chart
-    skills_overlap = get_skills_overlap_data(resume_skills, jd_requirements)
-
-    # Keyword chart data
-    keyword_chart = get_keyword_chart_data(keyword_results["frequency_data"])
-
-    # GPT-powered job fit explanation (optional, falls back gracefully)
-    job_fit_explanation = ""
-    top_strengths: List[str] = []
-    top_gaps: List[str] = []
-
-    try:
-        from app.services.gpt_service import generate_job_fit_explanation
-        gpt_result = generate_job_fit_explanation(
-            resume_data=resume_data,
-            jd_requirements=jd_requirements,
-            ats_score=score_result["total"],
-            matched_keywords=matched_keywords,
-            missing_keywords=missing_keywords,
-        )
-        job_fit_explanation = gpt_result.get("explanation", "")
-        top_strengths = gpt_result.get("top_strengths", [])
-        top_gaps = gpt_result.get("top_gaps", [])
-    except Exception:
-        # Non-GPT fallback
-        job_fit_explanation = (
-            f"Your resume achieved an ATS score of {score_result['total']}/100 for this role. "
-            f"You matched {len(matched_keywords)} of {len(jd_keywords)} key terms. "
-            f"Focus on incorporating the missing keywords naturally into your experience descriptions."
-        )
-        top_strengths = matched_keywords[:3] if matched_keywords else ["Relevant experience present"]
-        top_gaps = missing_keywords[:3] if missing_keywords else ["Add more role-specific keywords"]
-
-    scan_id = str(uuid.uuid4())
-
-    analytics_track(
+        db=db,
         user_id=current_user.id if current_user else None,
-        event="ats_scanned",
-        properties={
-            "score": score_result["total"],
-            "grade": score_result["grade"],
-            "gaps_found": len(skill_gaps),
-            "matched_keywords": len(matched_keywords),
-            "missing_keywords": len(missing_keywords),
-        },
+        parsed_resume=resume_data,
     )
 
-    # Spec #59 — construct the AnalysisResponse once, persist its JSON
-    # dump alongside the tracker summary (LD-3), and return the same
-    # instance. Guarantees byte-identical re-view on GET /analyze/{scan_id}
-    # (AC-1).
-    response = AnalysisResponse(
-        scan_id=scan_id,
-        ats_score=score_result["total"],
-        grade=score_result["grade"],
-        score_breakdown=ATSScoreBreakdown(**score_result["breakdown"]),
-        matched_keywords=matched_keywords,
-        missing_keywords=missing_keywords,
-        skill_gaps=skill_gaps,
-        bullet_analysis=bullet_analyses,
-        formatting_issues=formatting_issues_raw,
-        job_fit_explanation=job_fit_explanation,
-        top_strengths=top_strengths,
-        top_gaps=top_gaps,
-        keyword_chart_data=[KeywordChartData(**kcd) for kcd in keyword_chart],
-        skills_overlap_data=[SkillOverlapData(**sod) for sod in skills_overlap],
-        resume_text=resume_text,
-    )
-
-    # Auto-populate the job tracker for authenticated users
+    # Auto-populate the job tracker for authenticated users. Spec #63 §6.1
+    # write hook: post-migration tracker rows always carry `jd_text` +
+    # `jd_hash` (D-9 422 path becomes unreachable for new rows; only
+    # pre-migration rows fall through to it).
     if current_user:
-        existing = await find_by_scan_id(scan_id, db, user_id=current_user.id)
+        existing = await find_by_scan_id(response.scan_id, db, user_id=current_user.id)
         if not existing:
-            # Extract company/position from JD requirements
+            jd_requirements = extract_job_requirements(job_description)
             company = jd_requirements.get("company_name") or "Unknown Company"
             position = jd_requirements.get("job_title") or "Position from scan"
 
@@ -261,24 +153,26 @@ async def analyze_resume(
                 company=company[:200],
                 role=position[:200],
                 date_applied=date.today().isoformat(),
-                ats_score=score_result["total"],
+                ats_score=response.ats_score,
                 status="Applied",
-                scan_id=scan_id,
+                scan_id=response.scan_id,
             )
             await create_application(
                 tracker_data,
                 db,
                 user_id=current_user.id,
-                skills_matched=matched_keywords,
-                skills_missing=missing_keywords,
+                skills_matched=response.matched_keywords,
+                skills_missing=response.missing_keywords,
                 analysis_payload=response.model_dump(mode="json"),
+                jd_text=job_description,
+                jd_hash=hash_jd(job_description),
             )
             analytics_track(
                 user_id=current_user.id,
                 event="tracker_auto_created_from_scan",
                 properties={
-                    "ats_score": score_result["total"],
-                    "gaps_count": len(skill_gaps),
+                    "ats_score": response.ats_score,
+                    "gaps_count": len(response.skill_gaps),
                 },
             )
         home_state_service.invalidate(current_user.id)

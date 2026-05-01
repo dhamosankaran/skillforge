@@ -59,12 +59,20 @@ async def create_application(
     skills_matched: Optional[List[str]] = None,
     skills_missing: Optional[List[str]] = None,
     analysis_payload: Optional[dict[str, Any]] = None,
+    jd_text: Optional[str] = None,
+    jd_hash: Optional[str] = None,
 ) -> TrackerApplication:
     """Create a new job application for the given user.
 
     Spec #59: `analysis_payload` persists the full AnalysisResponse for
     scan re-view. None for non-scan-originated rows (manual adds via the
     tracker page).
+
+    Spec #63 (E-043): `jd_text` + `jd_hash` populate the new columns added
+    by the B-086a foundation migration. The /analyze write path always
+    threads both for post-migration rows so /rescan (B-086b) can short-
+    circuit on the (jd_hash, resume_hash) dedupe key. None for manual
+    tracker rows (no JD source).
     """
     _require_user_id(user_id)
     app = TrackerApplicationModel(
@@ -80,6 +88,8 @@ async def create_application(
         skills_missing=json.dumps(skills_missing) if skills_missing else None,
         interview_date=data.interview_date,
         analysis_payload=analysis_payload,
+        jd_text=jd_text,
+        jd_hash=jd_hash,
     )
     db.add(app)
     await db.flush()

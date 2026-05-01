@@ -25,6 +25,13 @@ class TrackerApplicationModel(Base, UUIDPrimaryKeyMixin):
     scan_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     skills_matched: Mapped[str | None] = mapped_column(Text, nullable=True)
     skills_missing: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Spec #63 (E-043) — re-scan loop. `jd_text` is the source of truth for
+    # /rescan re-scoring; `jd_hash` is the (jd_hash, resume_hash) dedupe key
+    # for §12 D-2 short-circuit. Both nullable per D-10 (no backfill of
+    # pre-migration rows; D-9 422 path handles the `jd_text=NULL` case).
+    # Q1 LOCKED — bundled in the foundation migration that closes drift D-020.
+    jd_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    jd_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     # Spec #57 — per-application interview target. Home countdown selects
     # MIN(interview_date) across the user's active (Applied/Interview) rows;
     # see home_state_service.get_next_interview.

@@ -87,6 +87,7 @@ async def engine():
     import app.models.resume_model  # noqa: F401
     import app.models.usage_log     # noqa: F401
     import app.models.tracker       # noqa: F401
+    import app.models.tracker_application_score  # noqa: F401
     import app.models.category      # noqa: F401
     import app.models.card          # noqa: F401
     import app.models.card_progress  # noqa: F401
