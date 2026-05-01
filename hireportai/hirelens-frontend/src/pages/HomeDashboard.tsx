@@ -9,6 +9,7 @@ import { WeeklyProgressWidget } from '@/components/home/widgets/WeeklyProgressWi
 import { LastScanWidget } from '@/components/home/widgets/LastScanWidget'
 import { InterviewTargetWidget } from '@/components/home/widgets/InterviewTargetWidget'
 import { CountdownWidget } from '@/components/home/widgets/CountdownWidget'
+import { HomeScoreDeltaWidget } from '@/components/home/widgets/HomeScoreDeltaWidget'
 import { TeamComingSoonWidget } from '@/components/home/widgets/TeamComingSoonWidget'
 import { StateAwareWidgets } from '@/components/home/StateAwareWidgets'
 import { InterviewPrepperChecklist } from '@/components/home/widgets/InterviewPrepperChecklist'
@@ -47,6 +48,13 @@ function InterviewPrepperMode({
           persona={persona}
           nextInterview={nextInterview}
           suppressedByMissionState={countdownSuppressedByMissionState}
+        />
+        {/* Spec #63 (E-043) §8.7 — D-5 mount: same tracker_id as
+            CountdownWidget; self-suppresses when history.length < 2. */}
+        <HomeScoreDeltaWidget
+          persona={persona}
+          trackerId={nextInterview?.tracker_id ?? null}
+          company={nextInterview?.company ?? null}
         />
         <InterviewTargetWidget
           persona={persona}

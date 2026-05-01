@@ -129,6 +129,37 @@ export interface TrackerApplication {
   created_at: string
 }
 
+// ─── Spec #63 — ATS re-scan loop ──────────────────────────────────────────────
+
+export interface ScoreHistoryEntry {
+  id: string
+  scan_id: string | null
+  overall_score: number
+  keyword_match_score: number
+  skills_coverage_score: number
+  formatting_compliance_score: number
+  bullet_strength_score: number
+  /** ISO8601 (timezone-aware). */
+  scanned_at: string
+}
+
+export interface ScoreDelta {
+  overall_delta: number
+  keyword_match_delta: number
+  skills_coverage_delta: number
+  formatting_compliance_delta: number
+  bullet_strength_delta: number
+  days_between: number
+}
+
+export interface ScoreHistoryResponse {
+  tracker_application_id: string
+  /** Chronological, oldest-first. */
+  history: ScoreHistoryEntry[]
+  /** Pre-computed delta between latest two rows; null when history.length < 2. */
+  delta: ScoreDelta | null
+}
+
 // ─── Study / Cards ────────────────────────────────────────────────────────────
 
 export interface Category {

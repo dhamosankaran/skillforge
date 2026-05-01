@@ -9,6 +9,7 @@ import type {
   AdminLessonStatusFilter,
   AdminQuizItemStatusFilter,
   AnalysisResponse,
+  ScoreHistoryResponse,
   Card,
   CardDraft,
   CardImportResponse,
@@ -962,6 +963,31 @@ export async function adminListQuizItems(
   const response = await api.get<QuizItem[]>(
     `/api/v1/admin/lessons/${lessonId}/quiz-items`,
     { params: { status } },
+  )
+  return response.data
+}
+
+// ─── Spec #63 — ATS re-scan loop ──────────────────────────────────────────────
+
+export async function fetchScoreHistory(
+  trackerApplicationId: string,
+): Promise<ScoreHistoryResponse> {
+  const response = await api.get<ScoreHistoryResponse>(
+    `/api/v1/tracker/${encodeURIComponent(trackerApplicationId)}/scores`,
+  )
+  return response.data
+}
+
+export async function triggerRescan(
+  trackerApplicationId: string,
+  resumeText: string,
+): Promise<AnalysisResponse> {
+  const response = await api.post<AnalysisResponse>(
+    '/api/v1/analyze/rescan',
+    {
+      tracker_application_id: trackerApplicationId,
+      resume_text: resumeText,
+    },
   )
   return response.data
 }

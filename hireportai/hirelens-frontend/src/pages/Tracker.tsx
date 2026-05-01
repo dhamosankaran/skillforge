@@ -5,6 +5,7 @@ import { LayoutGrid, Plus, X } from 'lucide-react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
 import { GlowButton } from '@/components/ui/GlowButton'
 import { KanbanBoard } from '@/components/tracker/KanbanBoard'
+import { ScoreDeltaWidget } from '@/components/tracker/ScoreDeltaWidget'
 import { useTracker } from '@/hooks/useTracker'
 import { capture } from '@/utils/posthog'
 import type { ApplicationStatus } from '@/types'
@@ -198,6 +199,10 @@ export default function Tracker() {
                   Done
                 </button>
               </div>
+            </div>
+            {/* Spec #63 (E-043) §8.6 — score-delta inline-expand mount per D-4. */}
+            <div className="mt-5">
+              <ScoreDeltaWidget trackerApplicationId={focusedRow.id} />
             </div>
           </motion.div>
         )}

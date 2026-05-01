@@ -169,6 +169,29 @@ async def get_application_by_id(
     return _to_response(model) if model else None
 
 
+async def get_application_model_by_id(
+    app_id: str,
+    db: AsyncSession,
+    user_id: str,
+) -> Optional[TrackerApplicationModel]:
+    """Return the ORM row owned by `user_id`, or None.
+
+    Spec #63 (E-043): /rescan needs `jd_text` + `jd_hash` + `scan_id` from
+    the row to score against and persist the new history entry. The
+    Pydantic `TrackerApplication` summary intentionally omits `jd_text` /
+    `jd_hash` (full JD body would inflate list responses), so the route
+    reads through this ORM helper. Mirrors `get_scan_by_id` shape.
+    """
+    _require_user_id(user_id)
+    stmt = (
+        select(TrackerApplicationModel)
+        .where(TrackerApplicationModel.id == app_id)
+        .where(TrackerApplicationModel.user_id == user_id)
+    )
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 async def update_application(
     app_id: str,
     data: TrackerApplicationUpdate,

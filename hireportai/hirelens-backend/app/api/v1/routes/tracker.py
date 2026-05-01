@@ -8,11 +8,16 @@ from app.core.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.requests import TrackerApplicationCreate, TrackerApplicationUpdate
+from app.schemas.rescan import ScoreHistoryResponse
 from app.schemas.responses import TrackerApplication
-from app.services import home_state_service
+from app.services import (
+    home_state_service,
+    tracker_application_score_service,
+)
 from app.services.tracker_service_v2 import (
     create_application,
     delete_application,
+    get_application_model_by_id,
     get_applications,
     update_application,
 )
@@ -69,3 +74,36 @@ async def delete_app(
     if not deleted:
         raise HTTPException(status_code=404, detail=f"Application {app_id} not found.")
     home_state_service.invalidate(user.id)
+
+
+@router.get("/tracker/{app_id}/scores", response_model=ScoreHistoryResponse)
+async def get_score_history(
+    app_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> ScoreHistoryResponse:
+    """Return the full score history for a tracker application owned by
+    the current user.
+
+    Spec #63 (E-043) §6.4 — `<ScoreDeltaWidget>` read source. History is
+    chronological (oldest-first) per §12 D-3 (no pagination v1; bounded
+    to ~20 rows in practice). 404 when the row doesn't exist or is owned
+    by another user (no row leak).
+    """
+    row = await get_application_model_by_id(app_id, db, user_id=user.id)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Application {app_id} not found.")
+
+    history = await tracker_application_score_service.get_score_history(
+        tracker_application_id=app_id,
+        user_id=user.id,
+        db=db,
+    )
+    delta = tracker_application_score_service.compute_delta(history)
+    return ScoreHistoryResponse(
+        tracker_application_id=app_id,
+        history=[
+            tracker_application_score_service.to_history_entry(r) for r in history
+        ],
+        delta=delta,
+    )

@@ -10,13 +10,18 @@ from app.core.deps import get_current_user, get_current_user_optional
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.requests import TrackerApplicationCreate
+from app.schemas.rescan import RescanRequest
 from app.services.analysis_service import score_resume_against_jd
 from app.services.nlp import extract_job_requirements
 from app.services.parser import parse_docx, parse_pdf
-from app.services import home_state_service
+from app.services import (
+    home_state_service,
+    tracker_application_score_service,
+)
 from app.services.tracker_service_v2 import (
     create_application,
     find_by_scan_id,
+    get_application_model_by_id,
     get_scan_by_id,
 )
 from app.services.usage_service import check_and_increment
@@ -176,6 +181,188 @@ async def analyze_resume(
                 },
             )
         home_state_service.invalidate(current_user.id)
+
+    return response
+
+
+@router.post("/analyze/rescan", response_model=AnalysisResponse)
+async def rescan_application(
+    request: RescanRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> AnalysisResponse:
+    """Re-score an existing tracker application against an updated resume.
+
+    Spec #63 (E-043) §6.2 — orchestrator half (B-086b). Auth required
+    (NOT optional, unlike legacy /analyze): re-scan is by definition a
+    user-owned operation against a tracker row. Slowapi default rate
+    limit (100/min) inherits per §12 D-8 — no per-route override.
+
+    Flow:
+      1. Fetch + verify ownership of the tracker row.
+      2. 422 if `jd_text` is NULL (pre-migration row, §12 D-9).
+      3. Compute `(jd_hash, resume_hash)`; short-circuit on dedupe match
+         (§12 D-2 — return existing scores, fire `rescan_short_circuited`,
+         do NOT consume the lifetime counter).
+      4. Counter (§12 D-1 / G-7) — same `"analyze"` lifetime counter as
+         fresh scans.
+      5. Score via the G-6 helper.
+      6. Persist score row + flip tracker `ats_score` (transactional).
+      7. Fire `rescan_completed` with the per-axis delta envelope (§12
+         D-12).
+    """
+    row = await get_application_model_by_id(
+        request.tracker_application_id, db, user_id=current_user.id
+    )
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "tracker_not_found"},
+        )
+
+    if row.jd_text is None:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "jd_text_missing",
+                "message": (
+                    "JD text not stored on this tracker — please run a "
+                    "fresh scan to populate."
+                ),
+            },
+        )
+
+    resume_hash = hash_jd(request.resume_text)
+    jd_hash = row.jd_hash or hash_jd(row.jd_text)
+
+    existing = await tracker_application_score_service.find_by_dedupe(
+        tracker_application_id=request.tracker_application_id,
+        jd_hash=jd_hash,
+        resume_hash=resume_hash,
+        db=db,
+    )
+    if existing is not None:
+        analytics_track(
+            user_id=current_user.id,
+            event="rescan_short_circuited",
+            properties={
+                "tracker_application_id": request.tracker_application_id,
+                "jd_hash_prefix": jd_hash[:8],
+            },
+        )
+        return AnalysisResponse(
+            scan_id=existing.scan_id or "",
+            ats_score=existing.overall_score,
+            grade="",
+            score_breakdown={
+                "keyword_match": existing.keyword_match_score,
+                "skills_coverage": existing.skills_coverage_score,
+                "formatting_compliance": existing.formatting_compliance_score,
+                "bullet_strength": existing.bullet_strength_score,
+            },
+            matched_keywords=[],
+            missing_keywords=[],
+            skill_gaps=[],
+            bullet_analysis=[],
+            formatting_issues=[],
+            job_fit_explanation="",
+            top_strengths=[],
+            top_gaps=[],
+            keyword_chart_data=[],
+            skills_overlap_data=[],
+            resume_text=request.resume_text,
+        )
+
+    usage = await check_and_increment(
+        current_user.id, "analyze", db, window="lifetime"
+    )
+    if not usage["allowed"]:
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "error": "free_tier_limit",
+                "trigger": "scan_limit",
+                "scans_used": usage["used"],
+                "scans_limit": usage["limit"],
+                "plan": usage["plan"],
+            },
+        )
+
+    analytics_track(
+        user_id=current_user.id,
+        event="rescan_initiated",
+        properties={
+            "tracker_application_id": request.tracker_application_id,
+        },
+    )
+
+    try:
+        response = await score_resume_against_jd(
+            resume_text=request.resume_text,
+            jd_text=row.jd_text,
+            db=db,
+            user_id=current_user.id,
+            prior_scan_id=row.scan_id,
+        )
+    except Exception:
+        analytics_track(
+            user_id=current_user.id,
+            event="rescan_failed",
+            properties={
+                "tracker_application_id": request.tracker_application_id,
+                "error_class": "scoring_error",
+            },
+        )
+        raise HTTPException(
+            status_code=502,
+            detail={"error": "scoring_failed"},
+        )
+
+    await tracker_application_score_service.write_score_row(
+        tracker_application_id=request.tracker_application_id,
+        user_id=current_user.id,
+        response=response,
+        scan_id=response.scan_id,
+        jd_hash=jd_hash,
+        resume_hash=resume_hash,
+        db=db,
+    )
+    row.ats_score = response.ats_score
+
+    history = await tracker_application_score_service.get_score_history(
+        tracker_application_id=request.tracker_application_id,
+        user_id=current_user.id,
+        db=db,
+    )
+    delta = tracker_application_score_service.compute_delta(history)
+    prior_overall = (
+        history[-2].overall_score if len(history) >= 2 else None
+    )
+    analytics_track(
+        user_id=current_user.id,
+        event="rescan_completed",
+        properties={
+            "tracker_application_id": request.tracker_application_id,
+            "scan_id": response.scan_id,
+            "jd_hash": jd_hash,
+            "ats_score_before": prior_overall,
+            "ats_score_after": response.ats_score,
+            "ats_score_delta": delta.overall_delta if delta else None,
+            "keyword_match_delta": (
+                delta.keyword_match_delta if delta else None
+            ),
+            "skills_coverage_delta": (
+                delta.skills_coverage_delta if delta else None
+            ),
+            "formatting_compliance_delta": (
+                delta.formatting_compliance_delta if delta else None
+            ),
+            "bullet_strength_delta": (
+                delta.bullet_strength_delta if delta else None
+            ),
+            "short_circuited": False,
+        },
+    )
 
     return response
 
