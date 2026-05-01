@@ -781,7 +781,7 @@ Route mounts in `app/main.py` between `admin_analytics` and
   (`_persona_visible_to`, `_visible_persona_set`, `_resolve_plan`,
   `_allowed_tiers_for_user`); no archived-filter helpers exist
   there. Per Step 1 audit JC #2 (slice 6.11 implementation,
-  `<this-slice>`).
+  `95104d2`).
 - **`Depends(require_admin)` + `audit_admin_request`** — auth
   chain unchanged from slice 6.10 G-4.
 - **Pydantic v2 `BaseModel`** — schemas follow established
