@@ -23,6 +23,7 @@ from app.api.routes import (
 from app.api.v1.routes import (
     admin as v1_admin,
     admin_analytics as v1_admin_analytics,
+    admin_content_quality as v1_admin_content_quality,
     admin_decks as v1_admin_decks,
     admin_ingest as v1_admin_ingest,
     admin_lessons as v1_admin_lessons,
@@ -139,6 +140,11 @@ def create_app() -> FastAPI:
     app.include_router(v1_admin.router, prefix="/api/v1", tags=["v1 Admin"])
     app.include_router(
         v1_admin_analytics.router, prefix="/api/v1", tags=["v1 Admin Analytics"]
+    )
+    app.include_router(
+        v1_admin_content_quality.router,
+        prefix="/api/v1",
+        tags=["v1 Admin Content Quality"],
     )
     app.include_router(v1_admin_decks.router, prefix="/api/v1", tags=["v1 Admin Decks"])
     app.include_router(

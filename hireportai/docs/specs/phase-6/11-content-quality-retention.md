@@ -772,9 +772,16 @@ Route mounts in `app/main.py` between `admin_analytics` and
 
 ### 6.4 Reuse of existing services
 
-- **`app/services/curriculum_visibility.py`** — `archived_at`
-  filter helpers; persona filter intentionally not applied
-  (admin sees all personas).
+- **Archived/published filters: inlined per call site.** Matches
+  the on-disk precedent across `dashboard_service.py`,
+  `deck_ranker_service.py`, and `lesson_service.py` — the
+  `archived_at IS NULL` clause is added directly in each query's
+  `where(...)` block. The `app/services/curriculum_visibility.py`
+  module is consulted only for persona/tier helpers
+  (`_persona_visible_to`, `_visible_persona_set`, `_resolve_plan`,
+  `_allowed_tiers_for_user`); no archived-filter helpers exist
+  there. Per Step 1 audit JC #2 (slice 6.11 implementation,
+  `<this-slice>`).
 - **`Depends(require_admin)` + `audit_admin_request`** — auth
   chain unchanged from slice 6.10 G-4.
 - **Pydantic v2 `BaseModel`** — schemas follow established

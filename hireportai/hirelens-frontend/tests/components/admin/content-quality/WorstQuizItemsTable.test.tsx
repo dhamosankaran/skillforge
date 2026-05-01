@@ -1,0 +1,56 @@
+import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import { describe, it, expect } from 'vitest'
+import { WorstQuizItemsTable } from '@/components/admin/content-quality/WorstQuizItemsTable'
+import type { QuizItemQualityRow } from '@/types'
+
+function row(overrides: Partial<QuizItemQualityRow> = {}): QuizItemQualityRow {
+  return {
+    quiz_item_id: 'q1',
+    lesson_id: 'l1',
+    deck_id: 'd1',
+    question_preview: 'What is X?',
+    review_count_window: 10,
+    pass_rate: 0.4,
+    lapse_rate: 0.3,
+    low_volume: false,
+    retired: false,
+    ...overrides,
+  }
+}
+
+describe('WorstQuizItemsTable', () => {
+  it('renders empty state when no items', () => {
+    render(
+      <MemoryRouter>
+        <WorstQuizItemsTable items={[]} />
+      </MemoryRouter>,
+    )
+    expect(screen.getByTestId('worst-quiz-items-empty')).toBeInTheDocument()
+  })
+
+  it('formats null pass and lapse rates as em-dash', () => {
+    render(
+      <MemoryRouter>
+        <WorstQuizItemsTable
+          items={[row({ pass_rate: null, lapse_rate: null })]}
+        />
+      </MemoryRouter>,
+    )
+    const dashes = screen.getAllByText('—')
+    expect(dashes.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('renders the question preview in the row', () => {
+    render(
+      <MemoryRouter>
+        <WorstQuizItemsTable
+          items={[row({ question_preview: 'Custom question text?' })]}
+        />
+      </MemoryRouter>,
+    )
+    expect(
+      screen.getByText('Custom question text?'),
+    ).toBeInTheDocument()
+  })
+})

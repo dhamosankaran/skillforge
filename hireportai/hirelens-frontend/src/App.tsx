@@ -36,6 +36,7 @@ const AdminLessons = lazy(() => import('@/pages/admin/AdminLessons'))
 const AdminLessonEditor = lazy(() => import('@/pages/admin/AdminLessonEditor'))
 const AdminQuizItems = lazy(() => import('@/pages/admin/AdminQuizItems'))
 const AdminAnalytics = lazy(() => import('@/pages/AdminAnalytics'))
+const AdminContentQuality = lazy(() => import('@/pages/admin/AdminContentQuality'))
 
 function LazyFallback() {
   return (
@@ -121,6 +122,7 @@ export default function App() {
             <Route path="lessons/:lessonId"               element={<AdminLessonEditor />} />
             <Route path="lessons/:lessonId/quiz-items"    element={<AdminQuizItems />} />
             <Route path="analytics"                       element={<AdminAnalytics />} />
+            <Route path="content-quality"                 element={<AdminContentQuality />} />
           </Route>
 
           {/* Transitional redirects — drop in Phase 6 once the old paths stop receiving hits. */}

@@ -5,6 +5,7 @@ import type {
   AdminCardCreateRequest,
   AdminCardListResponse,
   AdminCardUpdateRequest,
+  AdminContentQualityResponse,
   AdminDeckStatusFilter,
   AdminLessonStatusFilter,
   AdminQuizItemStatusFilter,
@@ -836,6 +837,19 @@ export async function fetchAdminAnalyticsPerformance(
 ): Promise<AdminAnalyticsPerformanceResponse> {
   const response = await api.get<AdminAnalyticsPerformanceResponse>(
     '/api/v1/admin/analytics/performance',
+    { params },
+  )
+  return response.data
+}
+
+// ─── Admin Content Quality (Phase 6 slice 6.11 — B-084) ─────────────────────
+
+export async function fetchAdminContentQuality(params?: {
+  window_days?: number
+  include_archived?: boolean
+}): Promise<AdminContentQualityResponse> {
+  const response = await api.get<AdminContentQualityResponse>(
+    '/api/v1/admin/content-quality',
     { params },
   )
   return response.data

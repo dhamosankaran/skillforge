@@ -733,3 +733,58 @@ export interface DashboardResponse {
   review_history: ReviewHistorySection
 }
 
+
+// ─── Phase 6 slice 6.11 — Admin Content Quality (B-084) ─────────────────────
+// Mirrors hirelens-backend/app/schemas/admin_content_quality.py field-for-field.
+
+export interface DeckQualityRow {
+  deck_id: string
+  deck_slug: string
+  deck_title: string
+  tier: 'foundation' | 'premium'
+  persona_visibility: 'climber' | 'interview_prepper' | 'both'
+  archived: boolean
+  lesson_count: number
+  review_count_window: number
+  weighted_pass_rate: number | null
+  avg_quality_score: number | null
+}
+
+export interface LessonQualityRow {
+  lesson_id: string
+  lesson_slug: string
+  lesson_title: string
+  deck_id: string
+  deck_slug: string
+  review_count_window: number
+  view_count_window: number
+  pass_rate: number | null
+  smoothed_quality_score: number | null
+  persisted_quality_score: number | null
+  low_volume: boolean
+  archived: boolean
+  published_at: string | null // ISO datetime
+}
+
+export interface QuizItemQualityRow {
+  quiz_item_id: string
+  lesson_id: string
+  deck_id: string
+  question_preview: string
+  review_count_window: number
+  pass_rate: number | null
+  lapse_rate: number | null
+  low_volume: boolean
+  retired: boolean
+}
+
+export interface AdminContentQualityResponse {
+  window_days: number
+  include_archived: boolean
+  generated_at: string // ISO datetime
+  is_cold_start: boolean
+  decks: DeckQualityRow[]
+  worst_lessons: LessonQualityRow[]
+  worst_quiz_items: QuizItemQualityRow[]
+  writebacks_applied: number
+}
