@@ -1,6 +1,6 @@
 # Phase 5 — Spec #63: ATS Re-Scan Loop per Tracker Application
 
-> **Status:** Drafted, §12 amended — D-1..D-12 locked at `71a77e3` from §14 OQ-A..OQ-L (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 precedent at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc`); B-086 🔴 unchanged (impl not shipped); D-020 closure pending impl per §1.3. Spec authored 2026-04-30 at `da14c01` (E-043 parent feature row carries forward; this slice authors the spec + forward-files the impl row, mirroring slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 spec-author + forward-file precedent).
+> **Status:** Drafted, §12 amended — D-1..D-12 locked at `71a77e3` from §14 OQ-A..OQ-L (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 precedent at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc`); B-086 🔴 unchanged (impl not shipped); D-020 closure pending impl per §1.3. Spec authored 2026-04-30 at `da14c01` (E-043 parent feature row carries forward; this slice authors the spec + forward-files the impl row, mirroring slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 spec-author + forward-file precedent). §5.3 + §6.1 corrected post-B-086a at `<this-slice>` to match disk reality landed at `210dcb2` (B-086a foundation).
 > **Closes drift D-020** at impl-merge time (Q1 lock — bundled `jd_hash` + `jd_text` migration). See §1.3 + §7.
 > **Mode:** 4 (spec-author + forward-file impl row). R14 default — net-new feature with data-model surface + new endpoint + new FE component.
 
@@ -287,11 +287,13 @@ class TrackerApplicationScore(Base):
         nullable=False,
     )
 
-    # ON DELETE SET NULL — preserve score history if scan row is later deleted.
-    # Mirrors B-035 P5-S59 scan_persistence pattern.
+    # scans table not present on disk; FK deferred. Confirmed at 210dcb2 (B-086a).
+    # Original spec-author intent (FK to scans, ON DELETE SET NULL, mirroring
+    # B-035 P5-S59 scan_persistence pattern) preserved here for the day a `scans`
+    # table lands. `tracker_applications_v2.scan_id` is itself a plain String(36)
+    # holding a UUID with no FK; this column matches that shape.
     scan_id: Mapped[Optional[str]] = mapped_column(
         String(36),
-        ForeignKey("scans.id", ondelete="SET NULL"),  # 'scans' table per spec #59
         nullable=True,
     )
 
@@ -349,6 +351,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.responses import AnalysisResponse
 
 
+# parsed_resume kwarg threads formatting_hints + bullet_points for AC-17 byte-identity.
+# Legacy run_rewrite / run_cover_letter form params dropped as dead code (unused on
+# legacy route — they remain on the route handler as Form params for backward URL
+# compat but the extracted service never read them). Confirmed at 210dcb2 (B-086a).
 async def score_resume_against_jd(
     resume_text: str,
     jd_text: str,
@@ -356,8 +362,7 @@ async def score_resume_against_jd(
     *,
     user_id: Optional[str] = None,
     prior_scan_id: Optional[str] = None,
-    run_rewrite: bool = False,
-    run_cover_letter: bool = False,
+    parsed_resume: Optional[dict] = None,
 ) -> AnalysisResponse:
     """Score resume against JD; return full AnalysisResponse with fresh scan_id.
 
@@ -365,6 +370,11 @@ async def score_resume_against_jd(
     /analyze (file-upload entry) and /rescan (text-input entry) call the
     same code path. analyze.py route now wraps file parsing → calls this
     helper → forwards response.
+
+    `parsed_resume` carries the dict shape returned by `parse_pdf` / `parse_docx`
+    (`{"full_text", "formatting_hints", "bullet_points", ...}`). /analyze passes
+    the file-parsed dict; /rescan (B-086b) passes `None` and accepts degraded
+    formatting + bullet analysis since text-only input lacks file-format hints.
 
     G-6 audit-driven extraction. Single-direction refactor — no behavior
     change to /analyze. Test plan §10 covers regression invariants.
@@ -883,8 +893,14 @@ See §3 non-goals + these deferred-to-impl-or-later items:
 
 **§12-amendment slice gate:** ✅ shipped at `71a77e3` (2026-04-30) — D-1..D-12 locked from §14 OQ-A..OQ-L per slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 §12 amendment precedent. Impl pickup unblocked.
 
-**D-020 closure timing:** drift D-020 closes ✅ at impl-merge of B-086 (the migration in §7 lands the `jd_hash` + `jd_text` columns side-by-side per Q1 LOCKED). Spec body §1.3 + §7 + AC-15 carry the cross-ref.
+**§5.3 + §6.1 correction-amendment:** ✅ shipped at `<this-slice>` (2026-04-30) — spec §5.3 `scan_id` FK shape and §6.1 `score_resume_against_jd` signature corrected to match disk reality landed at `210dcb2` (B-086a). JC #2 + JC #3 from B-086a final report dispositioned in spec body. No further amendments expected before B-086b impl pickup.
+
+**B-086 split status:** B-086 umbrella stays 🔴; foundation half **B-086a ✅ shipped at `210dcb2`** (2026-04-30) — alembic migration `e043a1b2c3d4` + G-6 extraction + scaffolded schemas + tracker model column-add. Orchestrator + UI half **B-086b 🔴** ready for impl pickup; cascade-closes B-086 ✅ on B-086b ship.
+
+**D-020 closure:** ✅ RESOLVED at `210dcb2` (B-086a foundation slice) — bundled `jd_hash` + `jd_text` columns shipped via migration `e043a1b2c3d4` per Q1 LOCK; AC-15 column-presence verified shell-side (`upgrade head → downgrade -1 → upgrade head` clean). Spec body §1.3 + §7 + AC-15 carry the cross-ref. B-086b 422 path on `jd_text=NULL` covers pre-migration tracker rows per D-9.
 
 ---
 
 *Spec authored 2026-04-30 at `da14c01`. §12 amendment locked D-1..D-12 from §14 OQ-A..OQ-L at `71a77e3` (2026-04-30); B-086 stays 🔴 pending impl pickup; D-020 closure committed at impl per §7. R14 default — net-new feature with data-model surface + new endpoint + new FE component + analytics catalog extension + drift D-020 closure at impl-merge. R15(c) forward-file: B-086 🔴 inserted above B-085 (numerically descending) in BACKLOG.md per highest-numeric-first ordering. R17 watermark verified at amendment slice start: B-086 highest in-use; B-087 next-free post-slice.*
+
+*`<this-slice>` (2026-04-30) — §5.3 (scan_id FK shape) + §6.1 (score_resume_against_jd signature) corrected to match disk reality landed at `210dcb2` (B-086a). JC #2 + JC #3 from B-086a final report dispositioned. D-027 NEW filed in CR §11 same slice. R14 exception (b) — pure spec amendment, no test surface (BE 700 / FE 417 carried forward verbatim). No BACKLOG IDs claimed; B-086a ✅ + B-086b 🔴 + B-086 umbrella 🔴 + E-043 🔴 unchanged. R17 watermark unchanged: B-086 / B-086a / B-086b in-use; B-087 next-free.*
