@@ -175,7 +175,27 @@ User-visible bugs with dedicated fix slices. Cross-reference: BACKLOG.md.
 
 ## Recently Completed (last 5)
 
-1. 2026-05-02 — **Phase 6 slice 6.14 impl shipped at `bcd89ce` — B-098 ✅.** Ships first scheduled job in codebase per LD G2 = Railway cron. **20/20 ACs satisfied.**
+1. 2026-05-02 — **Phase 6 cleanup triage shipped at `<this-slice>` — B-100 ✅.** Mode-3 scout audit producing per-item retire/migrate/defer verdicts for slice-15 scope.
+
+New `docs/audits/phase-6-cleanup-triage.md` enumerates ~25 deferred-cleanup items across 8 themes (FE legacy routes, FE legacy components, BE legacy services, BE dual-read collapses, BE legacy routes, DB table drops, helper consolidation, telemetry deprecation). Each item carries a verdict bucket + R16 consumer count + rationale.
+
+**Bucket counts:** 4 RETIRE-NOW + 18 RETIRE-WITH-MIGRATION + 9 DEFER + 1 DONE + 1 PROCESS.
+
+**Stop-condition tripped:** 18 RETIRE-WITH-MIGRATION items > prompt's 15-item threshold. Surfaced in §Summary; doc is the artifact, not blocking. Recommendation = Option C: split slice-15 into two specs — `15-legacy-retirement-easy-wins.md` (4-5 items, 1 impl slice) + `16-legacy-cards-schema-retirement.md` (4 cascading impl slices, gated on slice 6.16 FSRS retention dashboard re-platform for `card_progress` drop).
+
+**Drift surfaced (info-only):** B-010 row claims `Navbar.tsx` is dead code, but disk shows 2 live importers (`LandingPage.tsx`, `LoginPage.tsx`). Triage doc flags as DEFER + needs B-010 row review (separate slice).
+
+**R16 consumer counts verified at HEAD `c6415a2`:** `gap_mapping_service` → 1 live route (`onboarding.py`); `/learn/category` → live nav source `Learn.tsx:133`; `card_progress` → 11 service consumers; `card_feedback` → 1 live route (`feedback.py`, gated on B-094b); `study_dashboard_viewed` → zero emitters (catalog cleanup only); `study_dashboard_source_hint_shown` → live emitter `Learn.tsx:302` (slice 6.7 preserved).
+
+**R15(c):** B-100 filed + closed in same slice (single-slice scout file+close, B-091/B-092/B-093/B-095/B-096/B-099 precedent). **R17 watermark advances:** B-100 claimed; B-101 next-free.
+
+**Test counts unchanged** (Mode-3 scout, R14 exception (b)): BE 842 / FE 456 carry-forward. No code touched. Two-commit pattern (audit + BACKLOG + SS in commit 1; SHA backfill in commit 2 replacing `<this-slice>` placeholders).
+
+Prior HEAD: `c6415a2` — 2026-05-02 SHA backfill for B-098.
+
+**Awaiting CODEX review per Rule 11.**
+
+2. 2026-05-02 — **Phase 6 slice 6.14 impl shipped at `bcd89ce` — B-098 ✅.** Ships first scheduled job in codebase per LD G2 = Railway cron. **20/20 ACs satisfied.**
 
 Ships `[[cron]]` in `railway.toml` (`schedule = "0 14 * * *"` per D-1; `command = "python -m app.scripts.send_pro_digest"` per D-2) + `app/scripts/send_pro_digest.py` (43-line CLI mirroring `seed_phase6.py` boot pattern; CLI commits post-orchestrator) + `app/services/pro_digest_service.py` (304-line: selector Pro-tier+opt-out per D-6, composer with strict empty-rule per D-7, orchestrator with `was_sent_today` short-circuit + IntegrityError concurrent-tick handling + 4-event telemetry per D-10 + sequential loop per D-11) + `app/schemas/pro_digest.py` (61-line `DigestPayload` + `SendSummary`) + `app/templates/pro_digest.html` (45-line inline-style HTML per D-4 with CSS-driven `display:none` empty-section visibility) + `analytics.md` 4 new event rows.
 
