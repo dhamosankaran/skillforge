@@ -7,7 +7,7 @@
 | **Slice** | 6.14 (Track D — daily Pro digest cron consumer; LD G2 home; consumes 6.13's `email_log` dedup + `daily_digest_opt_out` opt-out column; closes B-078 cron architecture decision via LD G2 confirmation in §12 amendment slice) |
 | **Phase** | 6 (Curriculum Platform) |
 | **Mode** | Mode 4 spec-author → followed by §12 amendment → impl |
-| **Filed at** | `<this-slice>` (spec-author commit) |
+| **Filed at** | `86bc442` (spec-author commit) |
 | **BACKLOG row (spec-author)** | **B-097** ✅ (filed + closed in this slice per single-slice spec-author lifecycle; mirrors slice 6.10 / 6.11 / 6.13.5 spec-author rows at `409762f` / `7d7c6e8` / `b93beb8`) |
 | **BACKLOG row (impl, forward-filed)** | **B-098** 🔴 (filed at status 🔴 by this slice for the future implementation slice per R15(c)) |
 | **B-078 status flip** | 🟦 → ✅ (cron architecture decision resolved — Dhamo locked LD G2 = Railway cron at filing; this spec depends on that lock and confirms it; the decision row resolves on this spec's commit since the work product is the locked decision now codified in §4.1 architecture) |
@@ -984,7 +984,7 @@ CLAUDE.md SOP-4 sharpening).
 
 ---
 
-*Spec authored at `<this-slice>` against HEAD `aa4e9e4`. §12 will
+*Spec authored at `86bc442` against HEAD `aa4e9e4`. §12 will
 amend at follow-up amendment slice locking D-1..D-N from §14
 OQ-A..OQ-N per author-hint dispositions. All on-disk citations
 verified at audit time per SOP-5; phantom citations zero. B-097 ✅
