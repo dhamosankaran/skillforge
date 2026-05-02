@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.13.5: Quality Signals (`card_quality_signals` Table + Critique-Score Consumption + Per-Quiz_Item Writeback + User-Thumbs Ingestion)
 
-## Status: 🔴 Drafted, §12 amended — D-1..D-14 locked at `<this-slice>` from §14 OQ-A..OQ-N (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc`); B-094 🔴 unchanged (impl not shipped).
+## Status: 🔴 Drafted, §12 amended — D-1..D-14 locked at `4bf5220` from §14 OQ-A..OQ-N (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc`); B-094 🔴 unchanged (impl not shipped).
 
 | Field | Value |
 |-------|-------|
@@ -1259,7 +1259,7 @@ mutation success / mutation error / cache invalidation.
 
 ## 12. Decisions
 
-> Locked at `<this-slice>` (2026-05-01). D-1..D-14 resolve §14
+> Locked at `4bf5220` (2026-05-01). D-1..D-14 resolve §14
 > OQ-A..OQ-N 1:1 (verbatim author-hint dispositions, all 14
 > confirmed by Dhamo single-admin disposition). Mirrors slice 6.0
 > / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 §12 amendment
@@ -1470,65 +1470,65 @@ mutation success / mutation error / cache invalidation.
 
 ## 14. Open questions
 
-> All 14 OQs RESOLVED at §12 amendment slice (`<this-slice>`)
+> All 14 OQs RESOLVED at §12 amendment slice (`4bf5220`)
 > per author-hint dispositions. Headings + first-sentence
 > questions preserved for historical reference; option bodies
 > + author hints removed (locked dispositions live in §12 D-N).
 
 - **OQ-A — `card_quality_signals`: one table or per-source
   split?**
-  **RESOLVED:** locked at §12 D-1 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-1 (`4bf5220`).
 
 - **OQ-B — Per-quiz_item writeback target: `quiz_items.quality_score`
   column or `card_quality_signals` row only?**
-  **RESOLVED:** locked at §12 D-2 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-2 (`4bf5220`).
 
 - **OQ-C — Critique-score consumption: write-time during
   ingestion or read-time via aggregator service?**
-  **RESOLVED:** locked at §12 D-3 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-3 (`4bf5220`).
 
 - **OQ-D — Lesson-level user-aggregate: keep
   `lessons.quality_score` denormalized cache or move to
   `card_quality_signals`?**
-  **RESOLVED:** locked at §12 D-4 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-4 (`4bf5220`).
 
 - **OQ-E — User-thumbs row identity: per-(user, target) or
   aggregated single row?**
-  **RESOLVED:** locked at §12 D-5 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-5 (`4bf5220`).
 
 - **OQ-F — Recompute cadence: sync-on-read only or also cron?**
-  **RESOLVED:** locked at §12 D-6 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-6 (`4bf5220`).
 
 - **OQ-G — Per-quiz_item thumbs UI: in scope or lesson-level
   only?**
-  **RESOLVED:** locked at §12 D-7 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-7 (`4bf5220`).
 
 - **OQ-H — UPSERT semantics: row-level overwrite or version
   history?**
-  **RESOLVED:** locked at §12 D-8 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-8 (`4bf5220`).
 
 - **OQ-I — Persona/tier gating on thumbs submission: free vs
   Pro vs all?**
-  **RESOLVED:** locked at §12 D-9 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-9 (`4bf5220`).
 
 - **OQ-J — Anonymous (logged-out) thumbs?**
-  **RESOLVED:** locked at §12 D-10 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-10 (`4bf5220`).
 
 - **OQ-K — Thumbs-clearing UX: separate DELETE route or
   POST-with-zero?**
-  **RESOLVED:** locked at §12 D-11 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-11 (`4bf5220`).
 
 - **OQ-L — Initial-state read for `<ThumbsControl />`: extend
   lesson detail response or new endpoint?**
-  **RESOLVED:** locked at §12 D-12 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-12 (`4bf5220`).
 
 - **OQ-M — `recorded_at` semantics on UPSERT: keep insertion
   time or update on every UPSERT?**
-  **RESOLVED:** locked at §12 D-13 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-13 (`4bf5220`).
 
 - **OQ-N — Migration `down_revision` choice — which slice's
   migration are we chaining onto?**
-  **RESOLVED:** locked at §12 D-14 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-14 (`4bf5220`).
 
 ---
 
@@ -1539,7 +1539,7 @@ happens in the impl commit per R15(c)).
 
 Forward dependencies before impl can start:
 
-1. **§12 amendment slice** ✅ shipped at `<this-slice>` —
+1. **§12 amendment slice** ✅ shipped at `4bf5220` —
    locked D-1..D-14 from §14 OQ-A..OQ-N (now §12 D-1..D-14)
    mirroring slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 /
    6.11 §12 amendment pattern at `e8eecdd` / `df58eaf` /
@@ -1672,7 +1672,7 @@ Dhamo own the re-evaluation; not this slice's scope.
 ---
 
 *Spec authored at `b93beb8` against HEAD `a7145a7`. §12 amended
-at `<this-slice>` locking D-1..D-14 from §14 OQ-A..OQ-N per
+at `4bf5220` locking D-1..D-14 from §14 OQ-A..OQ-N per
 author-hint dispositions (Dhamo single-admin disposition; mirrors
 slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11
 §12 amendment precedent at `e8eecdd` / `df58eaf` / `acba7ed` /
