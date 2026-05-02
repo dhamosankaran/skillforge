@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.14: Daily Pro Digest Cron (Railway-cron-driven)
 
-## Status: 🔴 Drafted, §12 amended — D-1..D-14 locked at `<this-slice>` from §14 OQ-A..OQ-N (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 / 6.13.5 §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc` / `4bf5220`); B-097 ✅ (spec-author) + B-098 🔴 (impl-pickup ready post-amendment).
+## Status: 🔴 Drafted, §12 amended — D-1..D-14 locked at `b5bec37` from §14 OQ-A..OQ-N (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 / 6.13.5 §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc` / `4bf5220`); B-097 ✅ (spec-author) + B-098 🔴 (impl-pickup ready post-amendment).
 
 | Field | Value |
 |-------|-------|
@@ -763,7 +763,7 @@ Zero FE surface this slice.
 
 ## 12. Decisions
 
-> Locked at `<this-slice>` (2026-05-02). D-1..D-14 resolve §14
+> Locked at `b5bec37` (2026-05-02). D-1..D-14 resolve §14
 > OQ-A..OQ-N 1:1 (verbatim author-hint dispositions, all 14
 > confirmed by Dhamo single-admin disposition). Mirrors slice 6.0
 > / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 / 6.13.5 §12
@@ -907,55 +907,55 @@ Zero FE surface this slice.
 
 ## 14. Open Questions
 
-> All 14 OQs RESOLVED at §12 amendment slice (`<this-slice>`)
+> All 14 OQs RESOLVED at §12 amendment slice (`b5bec37`)
 > per author-hint dispositions. Headings + first-sentence
 > questions preserved for historical reference; option bodies
 > + author hints removed (locked dispositions live in §12 D-N).
 
 - **OQ-A — Cron schedule cadence + UTC time.** Daily once at fixed
   UTC, or hourly with per-user-tz match?
-  **RESOLVED:** locked at §12 D-1 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-1 (`b5bec37`).
 
 - **OQ-B — Cron entry point: CLI script vs FastAPI endpoint.**
-  **RESOLVED:** locked at §12 D-2 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-2 (`b5bec37`).
 
 - **OQ-C — Digest body content fields v1 scope.**
-  **RESOLVED:** locked at §12 D-3 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-3 (`b5bec37`).
 
 - **OQ-D — HTML template: new `pro_digest.html` vs extend
   `daily_reminder.html`?**
-  **RESOLVED:** locked at §12 D-4 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-4 (`b5bec37`).
 
 - **OQ-E — `today` definition: UTC vs per-user-tz?**
-  **RESOLVED:** locked at §12 D-5 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-5 (`b5bec37`).
 
 - **OQ-F — Subscription join filter — active-only or include
   `trialing`?**
-  **RESOLVED:** locked at §12 D-6 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-6 (`b5bec37`).
 
 - **OQ-G — Engagement-signal filter (compose-time empty rule).**
-  **RESOLVED:** locked at §12 D-7 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-7 (`b5bec37`).
 
 - **OQ-H — Failure-mode contract on Resend permanent errors.**
-  **RESOLVED:** locked at §12 D-8 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-8 (`b5bec37`).
 
 - **OQ-I — Backfill / first-time Pro users.**
-  **RESOLVED:** locked at §12 D-9 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-9 (`b5bec37`).
 
 - **OQ-J — Telemetry event split.**
-  **RESOLVED:** locked at §12 D-10 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-10 (`b5bec37`).
 
 - **OQ-K — Per-user concurrency.**
-  **RESOLVED:** locked at §12 D-11 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-11 (`b5bec37`).
 
 - **OQ-L — Observability + log level.**
-  **RESOLVED:** locked at §12 D-12 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-12 (`b5bec37`).
 
 - **OQ-M — Catch-up sweep on missed cron ticks.**
-  **RESOLVED:** locked at §12 D-13 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-13 (`b5bec37`).
 
 - **OQ-N — Migration `down_revision` for any new alembic.**
-  **RESOLVED:** locked at §12 D-14 (`<this-slice>`).
+  **RESOLVED:** locked at §12 D-14 (`b5bec37`).
 
 ---
 
@@ -1048,7 +1048,7 @@ CLAUDE.md SOP-4 sharpening).
 ---
 
 *Spec authored at `86bc442` against HEAD `aa4e9e4`. §12 amended
-at `<this-slice>` locking D-1..D-14 from §14 OQ-A..OQ-N per
+at `b5bec37` locking D-1..D-14 from §14 OQ-A..OQ-N per
 author-hint dispositions (Dhamo single-admin disposition; mirrors
 slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 / 6.13.5
 §12 amendment precedent at `e8eecdd` / `df58eaf` / `acba7ed` /
