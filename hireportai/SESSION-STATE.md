@@ -10,9 +10,9 @@
 
 | Field | Value |
 |-------|-------|
-| **HEAD commit** | `85860d5` — 2026-05-02 Phase 6 slice 6.13.5b impl shipped (B-094b ✅). UI/route half of split slice — `<ThumbsControl />` + `useThumbs` + `POST /api/v1/lessons/:id/thumbs` + `viewer_thumbs` on lesson detail GET + admin thumbs columns populated. Brings 6.13.5 to 20/20 ACs satisfied. Zero new migrations. Tests: BE 786 → 802 (+16); FE 455 → 466 (+11). Prior HEAD: `3981560` — 2026-05-02 D-032 drift log. |
+| **HEAD commit** | `<this-slice>` — 2026-05-02 CR targeted regen + SS RC compaction (B-096 ✅). §1 fully refreshed at anchor `246b4ec`; §2 appends `EmailLog` + `CardQualitySignal`; §5 alembic head flipped to `c2b8a4d9e6f1`; §11 appends D-028 + D-030 + D-032; §13 specs 93→97. RC compaction: B-087 entry 518→199 words; B-092 285→145; worst-RC 517 → 246 (under 250 ceiling). R14 exception (b). Prior HEAD: `246b4ec` — 2026-05-02 SHA backfill for B-094b. |
 | **Branch** | `main` (pushed to `origin/main` at `9834abe` on 2026-04-30; 5 commits fast-forwarded from `3b1aa93` — `3683677` post-push watermark + `691934a` CR targeted regen + `7b82603` CR-regen SHA backfill + `da14c01` E-043 spec-author + `9834abe` E-043 SHA backfill) |
-| **CODE-REALITY.md sha (repo)** | **Stale ❌** at anchor `1ca046f` (last full regen 2026-04-30); 1 code-touching commit since (this slice — `95104d2` Phase 6 slice 6.11 adds new service `admin_content_quality_service.py` + new schemas + new route + new admin page `AdminContentQuality.tsx` + 3 components + types + hook + analytics catalog row + curriculum.md §7 update). Sharpened LD-1 code-touching gap = 1 from this commit (below ~10-commit threshold per LD-2; defer regen to next staleness threshold trip). |
+| **CODE-REALITY.md sha (repo)** | ✅ Fresh at `<this-slice>` — targeted §1 + §2 + §5 + §11 + §13 regen at HEAD `246b4ec` (B-096). Detail sections §3 / §4 / §6 / §7 / §8 / §10 carry-forward at the prior anchor `1ca046f` per LIGHT scope; chat-Claude consults the §1 slice-absorption log + on-disk files for fresh detail until next full-scope regen. |
 | **CODE-REALITY.md in chat Project** | Stale ❌ — Dhamo to re-upload `hireportai/CODE-REALITY.md` to the chat Project before the next planning-level conversation (full regen at this slice; B-086a + B-086b absorbed). |
 | **CODE-REALITY stale (either copy)?** | Repo copy ✅ fresh post-regen; chat Project copy ❌ stale (last upload predates this regen). Regen action: re-upload `hireportai/CODE-REALITY.md` to chat Project to sync. |
 | **Last hand-edit** | 2026-04-25 — P5-S64 drift-bookkeeping slice: three independent hygiene items rolled into one slice, two commits. (1) **Item 1 (audit)** — verified the P5-S60 wiring slice (`56afd99`) shipped without an authoring spec; classification (d) — already tracked at **B-044** (which explicitly names the missing spec at `docs/specs/phase-5/30-free-tier-interview-limits.md`). No new BACKLOG row filed; B-040..B-044 cross-refs to specs #49/#59/#42 verified correct on disk. (2) **Item 2 (`1264324`)** — reconciled spec #60 §3.1 line 66 + §5 AC-3 mount-point drift: `setShowPaywall(true)` + "the existing `<PaywallModal>` mounted on the page" → `setShowUpgradeModal(true)` + "app-root `<UpgradeModal>` wrapper… internally renders `<PaywallModal trigger=\"scan_limit\">`" (matches on-disk `Analyze.tsx:87,169` + `main.tsx:81`). Doc-only; new "Drift / amendments" §9 subsection added cross-ref'ing impl `3c962d8`. AC-3 observable still unchanged. (3) **Item 3 (`2504d6b`)** — added **SOP-8 Concurrent-session guard** to CLAUDE.md Step 0 codifying the ad-hoc guard the prompt itself used at Step 0.2 (and the same class of race that produced D-021/D-022/D-024). Pre-existing R-rules + SOP-1..SOP-7 unchanged. **Concurrent-session guard tripped at this slice's Step 0.2** (HEAD `21aa58f`, not `8f32e00`) — `e8f9d05` + `21aa58f` had landed bookkeeping-only edits to BACKLOG.md on disjoint rows (E-002/E-004/E-005/B-017 audit-close + SHA backfill); reported, awaited proceed signal ("other session is on hold"), then continued. No tests run (docs-only slice). Pre-existing dirty files (`.DS_Store`, `Enhancements.txt`, `wipe_local_user_data.py`) untouched per C2. Prior hand-edit: 2026-04-25 — P5-S63 auth-guard `refreshUsage` (`63203ef` + bookkeeping `8f32e00`). |
@@ -175,7 +175,21 @@ User-visible bugs with dedicated fix slices. Cross-reference: BACKLOG.md.
 
 ## Recently Completed (last 5)
 
-1. 2026-05-02 — **Phase 6 slice 6.13.5b impl shipped at `85860d5` — B-094b ✅.** UI/route half of slice 6.13.5 (foundation: B-094a `91be54f`); brings 6.13.5 to 20/20 ACs.
+1. 2026-05-02 — **CR targeted regen + SS RC compaction shipped at `<this-slice>` — B-096 ✅.** Single-slice file+close (B-091 / B-092 precedent).
+
+CR §1 fully refreshed at anchor `246b4ec` (slice absorption B-084 + B-087 + B-088 + B-089 + B-090 + B-091 + B-092 + B-093 + B-094a + B-094b + B-095 — 8 code-touching slice closes since prior anchor `1ca046f`); §2 appends model rows for `EmailLog` (B-087) + `CardQualitySignal` (B-094a); §5 alembic head flipped `e043a1b2c3d4` → `c2b8a4d9e6f1` (+2 revisions); §11 drift table appends D-028 (alembic-roundtrip cascade) + D-030 (spec `user.is_admin` shorthand) + D-032 (spec `(NULLS-distinct)` parenthetical vs migration `NULLS NOT DISTINCT`); §13 specs 93→97 (phase-6 +2 + new `process/` directory +2). Detail sections §3 / §4 / §6 / §7 / §8 / §10 carry-forward per LIGHT scope.
+
+**RC compaction (R15(d) backstop):** B-087 entry **518 → 199 words**; B-092 entry **285 → 145 words**. Health-check worst-RC **517 → 246 words** (now under 250 hard ceiling). No new caps tripped.
+
+**Prompt-vs-disk drift (info-only):** prompt predicted the 517-word offender was the B-095 §12 amendment entry; on-disk reality is the B-087 slice 6.13 entry at 518w. Resolved by acting on the disk truth.
+
+**No drift discovered during regen** (next-free drift ID stays D-033). R14 exception (b). R15(c): B-096 single-slice file+close. R17: B-096 claimed + closed; B-097 next-free.
+
+Prior HEAD: `246b4ec` — 2026-05-02 SHA backfill for B-094b.
+
+**Awaiting CODEX review per Rule 11.**
+
+2. 2026-05-02 — **Phase 6 slice 6.13.5b impl shipped at `85860d5` — B-094b ✅.** UI/route half of slice 6.13.5 (foundation: B-094a `91be54f`); brings 6.13.5 to 20/20 ACs.
 
 Ships `ThumbsRequest`/`ThumbsResponse` (Literal[-1,1] — schema-level reject of score=0 per §12 D-11) + `LessonWithQuizzesResponse.viewer_thumbs` per §12 D-12 + 3 new `card_quality_signal_service` thumbs readers + `thumbs_service.submit_thumbs` (re-uses slice 6.5 visibility via `lesson_service.get_lesson_with_quizzes`; 404 / 403 mapping) + `POST /api/v1/lessons/{id}/thumbs` route + main.py mount + `admin_content_quality_service` thumbs-aggregate wire + FE `useThumbs` (custom-hook idiom matching `useLesson`; optimistic + revert) + `<ThumbsControl />` (R12 tokens, `aria-pressed`) mounted in `pages/Lesson.tsx` after `<LessonRenderer />` (page-wrapper per JC #1) + `WorstLessonsTable.tsx` Thumbs column + FE event `lesson_thumbs_submitted` + analytics + curriculum §7 layer-3 (c) flip.
 
@@ -225,35 +239,29 @@ Prior HEAD: `d020f4d` — 2026-05-01 Phase 6 slice 6.13 shipped (B-087 ✅).
 
 **Awaiting CODEX review per Rule 11.**
 
-2. 2026-05-01 — **Phase 6 slice 6.13 shipped at `d020f4d` — B-087 ✅. Pro daily digest opt-out persistence + `email_log` dedup table per spec `docs/specs/phase-6/13-pro-digest-opt-out.md`.** Mode 2 (impl-to-spec). Migration `f1a2b3c4d5e6` (additive `email_preferences.daily_digest_opt_out` server-default false + new `email_log` table — UUIDPrimaryKeyMixin PK + UNIQUE `(user_id, email_type, sent_date)` + composite index `(user_id, sent_date)` + ON DELETE CASCADE FK to `users.id`); `email_log_service` (`record_send` + `was_sent_today`, caller-supplied `sent_date` per OQ-G); route Pro-tier guard via `Subscription.plan IN ('pro','enterprise')` returning 403 per OQ-B with admin bypass per OQ-H; FE `<EmailPreferences />` Pro-gated digest toggle via `useUsage().canUsePro` per OQ-J.
+2. 2026-05-01 — **Phase 6 slice 6.13 shipped at `d020f4d` — B-087 ✅.** Pro daily digest opt-out + `email_log` dedup table per spec `docs/specs/phase-6/13-pro-digest-opt-out.md`. Migration `f1a2b3c4d5e6` adds additive `email_preferences.daily_digest_opt_out` (server-default false) + new `email_log` (UNIQUE `(user_id, email_type, sent_date)` + composite index + CASCADE FK). New `email_log_service.record_send`/`was_sent_today` (caller-supplied date per OQ-G). Route Pro-tier guard returning 403 per OQ-B + admin bypass per OQ-H; FE `<EmailPreferences />` Pro-gated digest toggle.
 
-Tests: **CI-canonical (R13 — `-m "not integration"`): BE 745 → 766 passed (+21; my +18 + 3 from concurrent slices since B-088 baseline), 1 skipped, 16 deselected (+1 from my new alembic-roundtrip integration test).** All 18 my-new BE unit tests + 1 integration pass when run in isolation (verified). FE 446 → 451 (+5, at floor of +6..+10 envelope per JC #3).
+Tests: BE **745 → 766 (+21**; +18 mine + 3 concurrent); FE **446 → 451 (+5**, at floor).
 
-**Cascade discovery (D-028 expansion — see drift entry update):** under FULL-SUITE non-CI runs, BE shows 753 passed / 29 failed (vs baseline 759 / 4). 25 cascade fails on top of D-028's pre-existing 4: my new migration extends the alembic chain so existing alembic-roundtrip tests' `downgrade -1` now drops MY migration's stuff cleanly (vs prior head's downgrade which would fail on missing `ix_tracker_apps_jd_hash`); test exits before re-upgrading; downstream tests blow up on missing `email_log` / `daily_digest_opt_out`. Cascade hits `test_wall.py` (10) + `test_email.py` (3) + my own `test_email_preference_model.py` (2) + `test_email_prefs_route.py` (9) = 24 + my own integration test (1) = 25.
+**D-028 cascade:** non-CI 25 fails on top of pre-existing 4 — chain extension lets alembic-roundtrip `downgrade -1` drop my artifacts cleanly, mid-suite schema corruption breaks downstream tests. D-028 row updated; CI-canonical clean per R13.
 
-**JCs (4, info-only):** **JC #1** spec §12 still empty placeholder on disk; treated §14 12 OQ author hints as the decision set per chat-Claude triage logged in spec-author SS entry (no separate §12 amendment slice). **JC #2** spec §6.4 names `user.is_admin` but disk reality is `user.role == "admin"` (no `is_admin` property on `User` — pattern matches `study_service.py:193` / `usage_service.py:288`); admin bypass implemented via `(user.role or "user") == "admin"`. **JC #3** FE +5 lands at the floor of +6..+10 envelope; spec §10.3 5 cases all covered (3 visibility + 1 event + 1 persist + 1 error), type-guard smoke implicit via TypeScript compile gate — Q1 simplicity, no ballast. **JC #4** R10 fired at 3 fix attempts for the cascade (revision-pin + create_all-restore + alembic-upgrade-head-restore) — all reverted; cascade documented as expanded D-028 with sharpened close-shape; ship per CI-canonical baseline per R13 since cascade is non-CI manifestation of pre-existing brittleness.
+**JCs (4, info-only):** #1 §12 empty on disk — chat-Claude authorised treating §14 OQ author hints as the lock set. #2 §6.4 `user.is_admin` shorthand; used `(user.role or "user") == "admin"` (study_service precedent). #3 FE +5 at floor — Q1 simplicity, no ballast. #4 R10 fired at 3 cascade-fix attempts; reverted, documented in D-028.
 
-**Companion fix (Q2-bounded):** `.agent/skills/analytics.md` `email_preferences_viewed` source-path corrected (`pages/EmailPreferences.tsx` → `components/settings/EmailPreferences.tsx`) — same row I touched for `_saved` payload extension; leaving one stale and fixing the other would create a contradiction in the catalog.
+**Companion fix (Q2):** analytics.md `email_preferences_viewed` source-path corrected `pages/` → `components/settings/EmailPreferences.tsx`.
 
-**R15(c):** B-087 🔴 → ✅ + Closed-table row appended (most-recent-first). **D-028 updated** with slice-6.13 cascade extension + sharpened close-shape (per JC #4). **R17 watermark unchanged:** B-092 highest in-use, B-093 next-free.
+**R15(c):** B-087 ✅. **R17:** B-092 highest, B-093 next-free.
 
-**Files:** 7 NEW (alembic migration `f1a2b3c4d5e6_*`, `app/models/email_log.py`, `app/services/email_log_service.py`, `tests/test_email_preference_model.py`, `tests/services/test_email_log_service.py`, `tests/test_email_prefs_route.py`, `tests/test_phase6_slice613_migration.py`, `tests/components/settings/EmailPreferences.test.tsx`) + 7 MODIFIED (`app/models/email_preference.py` + `app/models/__init__.py` + `app/api/v1/routes/email_prefs.py` + `tests/conftest.py` + `src/types/index.ts` + `src/components/settings/EmailPreferences.tsx` + `.agent/skills/analytics.md` + BACKLOG + SESSION-STATE).
+Prior HEAD: `d5602c3` — 2026-05-01 B-092 process compaction.
 
-Prior HEAD: `d5602c3` — 2026-05-01 B-092 process compaction bundle shipped.
+2. 2026-05-01 — **B-092 process compaction bundle shipped at `d5602c3`** — three concerns bundled: (a) SS Recently Completed entries 5–40 cut at LIGHT MODE inflection `b85bfd1` → `docs/archive/session-state-history.md` §6; BACKLOG closed-table pre-2026-04-29 rows (44) → NEW `docs/archive/backlog-closed.md`; live closed-table keeps ~10 most-recent + B-092. (b) `scripts/process-health-check.sh` pilot — 5 caps (SS 400/600 + worst RC 200/250 + BACKLOG 200/300 + active rows 50/75 + CLAUDE.md 600/700); portable bash 3.2+; `--quiet`; exit 1 on fail. (c) CLAUDE.md R15(d) hard-ceiling 250 = health-check fail + new LIGHT MODE §340 SOP-gate-narration rule + revision-history line.
 
-**Awaiting CODEX review per Rule 11.**
+Pre/post: SS 794 → 525 lines; BACKLOG 260 → 220; RC entries 40 → 5; worst RC 1792 → 326 → <250 words. Three remaining warns acceptable margin.
 
-2. 2026-05-01 — **B-092 process compaction bundle shipped at `d5602c3`** — three concerns bundled per H1 prompt: (a) SS Recently Completed entries 5–40 cut at LIGHT MODE inflection `b85bfd1` → `docs/archive/session-state-history.md` §6; BACKLOG closed-table pre-2026-04-29 rows (44) → NEW `docs/archive/backlog-closed.md`; live closed-table keeps ~10 most-recent + B-092. (b) `scripts/process-health-check.sh` pilot — 5 caps (SS 400/600 + worst RC 200/250 + BACKLOG 200/300 + active rows 50/75 + CLAUDE.md 600/700); portable bash 3.2+; `--quiet` flag; exit 1 on fail. (c) CLAUDE.md R15(d) backstops sharpened (RC hard-ceiling 250 = health-check fail) + new LIGHT MODE §340 SOP-gate-narration rule + revision history line. Mode 1 (audit-and-implement, bundled).
+**JC #1:** awk active-row column was $5 (Priority) on first draft; fixed to $6 (Status). Lesson: inspect header before indexing.
 
-Pre/post measurements: SS 794 → 525 lines; BACKLOG 260 → 220; RC entries 40 → 5; worst RC entry 1792 → 326 words → compressed to <250 (this rewrite). Health-check post-compaction: SS warn / worst RC ✓ post-rewrite / BACKLOG warn / active rows warn / CLAUDE.md ✓. Three remaining warns are acceptable margin (not fails).
+**R15(c):** B-092 filed + closed in same slice (B-091 precedent). **R17:** B-092 claimed + closed; B-093 next-free.
 
-**JC #1:** awk active-row column was $5 (Priority) on first draft instead of $6 (Status); silently returned 0 rows. Self-debugged via field-print; fixed to $6 + verified count=55. Lesson: always inspect table header before indexing.
-
-**R15(c):** B-092 filed + closed in same slice (single-slice lifecycle, B-091 precedent). **R17 watermark advances:** B-092 claimed + closed; B-093 next-free.
-
-Prior HEAD: `6ad5bb7` — 2026-05-01 SHA backfill for B-089 baseline-row backfill (`2cf7c89`).
-
-**Awaiting CODEX review per Rule 11.**
+Prior HEAD: `6ad5bb7` — 2026-05-01 SHA backfill for B-089.
 
 2. 2026-05-01 — **Phase 5 spec #63 §16.6 R-5 baseline-row backfill shipped at `2cf7c89` — B-089 ✅; cascade-closes D-029 ✅ (Slice 2 of 2; B-088 shipped Slice 1 at `2c92f11`). `/analyze` now writes a `tracker_application_scores` row for the auto-created tracker so the first `/rescan` lands `history.length=2` and HomeScoreDeltaWidget renders without two rescans; `rescan_completed` payload's `ats_score_before` + 5 `*_delta` fields all non-null on first rescan.** Mode 2 (impl-to-spec).
 
