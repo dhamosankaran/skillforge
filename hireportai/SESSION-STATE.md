@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|-------|
-| **HEAD commit** | `4bf5220` — 2026-05-01 Phase 6 slice 6.13.5 §12 amendment — D-1..D-14 locked from §14 OQ-A..OQ-N (1:1 author-hint dispositions). Mirrors slice 6.0/6.4.5/6.5/6.6/6.7/6.8/6.10/6.11 §12 amendment precedent. §14 rewritten to RESOLVED form; ~26 body cross-refs flipped `§14 OQ-X` → `§12 D-N`. Spec 1714 → 1681 lines. R15(c): B-095 🔴 → ✅ (single-slice file+close); B-094 stays 🔴 (impl-pickup ready post-amendment). R17 watermark advances: B-095 claimed; B-096 next-free. Prior HEAD: `b93beb8` — 2026-05-01 Phase 6 slice 6.13.5 spec authored (B-093 ✅). |
+| **HEAD commit** | `<this-slice>` — 2026-05-02 Phase 6 slice 6.13.5a impl shipped (B-094a ✅). Foundation half of split slice — `card_quality_signals` table per LD J2 (NULLS NOT DISTINCT 5-tuple UNIQUE) + critique-consumer write-time hook in `ingestion_worker` Stage 2.5 + per-quiz_item user-aggregate writeback (IS DISTINCT FROM-gated) + admin dashboard read-side join. 12/20 ACs satisfied; thumbs route + FE UI deferred to B-094b 🔴 forward-filed. Mirrors slice 6.10a/6.10b precedent. Tests: BE 766 → 786 (+20); FE 451 → 455 (+4); +1 integration. Prior HEAD: `61cb6c0` — 2026-05-01 SHA backfill for B-095. |
 | **Branch** | `main` (pushed to `origin/main` at `9834abe` on 2026-04-30; 5 commits fast-forwarded from `3b1aa93` — `3683677` post-push watermark + `691934a` CR targeted regen + `7b82603` CR-regen SHA backfill + `da14c01` E-043 spec-author + `9834abe` E-043 SHA backfill) |
 | **CODE-REALITY.md sha (repo)** | **Stale ❌** at anchor `1ca046f` (last full regen 2026-04-30); 1 code-touching commit since (this slice — `95104d2` Phase 6 slice 6.11 adds new service `admin_content_quality_service.py` + new schemas + new route + new admin page `AdminContentQuality.tsx` + 3 components + types + hook + analytics catalog row + curriculum.md §7 update). Sharpened LD-1 code-touching gap = 1 from this commit (below ~10-commit threshold per LD-2; defer regen to next staleness threshold trip). |
 | **CODE-REALITY.md in chat Project** | Stale ❌ — Dhamo to re-upload `hireportai/CODE-REALITY.md` to the chat Project before the next planning-level conversation (full regen at this slice; B-086a + B-086b absorbed). |
@@ -174,7 +174,21 @@ User-visible bugs with dedicated fix slices. Cross-reference: BACKLOG.md.
 
 ## Recently Completed (last 5)
 
-1. 2026-05-01 — **Phase 6 slice 6.13.5 §12 amendment shipped at `4bf5220` — B-095 ✅.** Locks D-1..D-14 from §14 OQ-A..OQ-N 1:1 (Dhamo single-admin disposition; zero ambiguous hints triggered STOP). Mirrors slice 6.0/6.4.5/6.5/6.6/6.7/6.8/6.10/6.11 §12 amendment-slice precedent. **Notable locks:** D-1 one table (LD J2 verbatim); D-2 per-quiz_item row-only (saves alembic migration); D-3 critique-consumer write-time hook in `ingestion_worker`; D-4 lesson-level keeps `lessons.quality_score`; D-5 user-thumbs per-(user,target) via 5-tuple UNIQUE; D-6 sync-on-read v1 (LD G2 / B-078 re-evaluation triggers when this slice ships); **D-7 `<QuizItemThumbsControl />` + per-quiz_item POST + per-quiz_item event + test files DROPPED v1** (lesson-level only); D-11 sticky thumbs v1; D-14 alembic head verified at impl Step 0.
+1. 2026-05-02 — **Phase 6 slice 6.13.5a impl shipped at `<this-slice>` — B-094a ✅.** Foundation half per Step 2 SCOPE GATE split (file-count + AC-seam triggered; B-083a/B-083b naming precedent). B-094 row restructured: 6.13.5a closes here; B-094b (thumbs route + FE UI) forward-filed 🔴.
+
+Ships alembic `c2b8a4d9e6f1` (raw-DDL ALTER ADD for NULLS NOT DISTINCT 5-tuple UNIQUE) + `card_quality_signal` ORM + schemas + service (UPSERT w/ read-after-write `populate_existing=True` + 3 readers) + `critique_signal_consumer` (score=`raw/5.0`) + `ingestion_worker` Stage 2.5 hook + new BE event `lesson_critique_signal_persisted` + `admin_content_quality_service` per-quiz_item writeback (IS DISTINCT FROM-gated) + critique read-side join + admin schema/FE-table extensions + `analytics.md` / `curriculum.md` §7 layer-2/-3 refresh.
+
+**JCs (3, info-only):** **#1** spec §4.2.1 places critique hook between Stage 2 and 3, but `lesson_ids=job.generated_lesson_ids` populated by `_persist_drafts:263`; placed hook AFTER persist — still write-time per §12 D-3 intent. **#2** spec §5.1 "(NULLS-distinct)" nomenclature slip; Postgres default re-INSERTs on NULL keys, flipped to NULLS NOT DISTINCT (PG 15+). **#3** slice 6.11 tests asserted `writebacks_applied == 1`; per-quiz_item per §6.5 makes contract `== 2`; assertions updated same commit.
+
+**Tests:** CI-canonical BE **766 → 786 (+20**, in +15..+25); FE **451 → 455 (+4**, slightly above conservative +1..+3 — 2 critique + 2 persisted-cell tests). +1 marker-gated alembic round-trip. **D-028 cascade delta:** 10 vs B-087 baseline 25 (no investigation per R10).
+
+**R15(c):** B-094 → B-094a ✅ + B-094b 🔴. **R17 unchanged:** a/b doesn't advance (B-095 highest, B-096 next-free).
+
+Prior HEAD: `61cb6c0` — 2026-05-01 SHA backfill for B-095.
+
+**Awaiting CODEX review per Rule 11.**
+
+2. 2026-05-01 — **Phase 6 slice 6.13.5 §12 amendment shipped at `4bf5220` — B-095 ✅.** Locks D-1..D-14 from §14 OQ-A..OQ-N 1:1 (Dhamo single-admin disposition; zero ambiguous hints triggered STOP). Mirrors slice 6.0/6.4.5/6.5/6.6/6.7/6.8/6.10/6.11 §12 amendment-slice precedent. **Notable locks:** D-1 one table (LD J2 verbatim); D-2 per-quiz_item row-only (saves alembic migration); D-3 critique-consumer write-time hook in `ingestion_worker`; D-4 lesson-level keeps `lessons.quality_score`; D-5 user-thumbs per-(user,target) via 5-tuple UNIQUE; D-6 sync-on-read v1 (LD G2 / B-078 re-evaluation triggers when this slice ships); **D-7 `<QuizItemThumbsControl />` + per-quiz_item POST + per-quiz_item event + test files DROPPED v1** (lesson-level only); D-11 sticky thumbs v1; D-14 alembic head verified at impl Step 0.
 
 §14 rewritten to RESOLVED form (heading + first-sentence question preserved). ~26 body cross-refs flipped `§14 OQ-X` → `§12 D-N` across §1.1/§2/§4/§5/§6/§8/§9/§10/§13/§15. Spec body **1714 → 1681 lines (-33 net)**. §1 status line + §15 dependency-1 + footer attribution flipped to post-lock state.
 

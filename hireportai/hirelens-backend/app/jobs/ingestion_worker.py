@@ -44,6 +44,7 @@ from app.schemas.ingestion import CritiqueSchema, GeneratedQuizItem, LessonGenSc
 from app.schemas.lesson import LessonCreateRequest
 from app.schemas.quiz_item import QuizItemCreateRequest
 from app.services import (
+    critique_signal_consumer,
     deck_admin_service,
     lesson_admin_service,
     quiz_item_admin_service,
@@ -444,6 +445,41 @@ async def _run_ingestion_async(job_id: str) -> None:
                 admin_id=admin_id, started_at=started_at,
             )
             return
+
+        # ── Stage 2.5 — critique-signal persistence (§12 D-3 / B-094a).
+        # Spec §4.2.1 sketches this between Stage 2 and Stage 3, but
+        # `job.generated_lesson_ids` is populated by `_persist_drafts`,
+        # so the hook fires post-persist. Still write-time during the
+        # ingestion run (§12 D-3 intent — not read-time at dashboard load).
+        try:
+            lesson_ids = list(job.generated_lesson_ids or [])
+            persisted = await critique_signal_consumer.persist_critique_signals(
+                lesson_ids=lesson_ids,
+                critique=critique,
+                job_id=job.id,
+                db=db,
+            )
+            await db.commit()
+            if persisted > 0:
+                analytics_track(
+                    admin_id,
+                    "lesson_critique_signal_persisted",
+                    {
+                        "admin_id": admin_id,
+                        "job_id": job.id,
+                        "lesson_count": len(lesson_ids),
+                        "dimension_count": len(critique.dimensions),
+                        "rows_written": persisted,
+                        "internal": True,
+                    },
+                )
+        except Exception as exc:  # noqa: BLE001 — non-fatal: ingestion succeeded
+            await db.rollback()
+            logger.warning(
+                "critique signal persistence failed for job %s (non-fatal): %s",
+                job.id,
+                exc,
+            )
 
         # ── Success.
         await _set_status(db, job, "completed")

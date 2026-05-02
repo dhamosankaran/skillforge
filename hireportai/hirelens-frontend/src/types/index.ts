@@ -766,6 +766,13 @@ export interface LessonQualityRow {
   low_volume: boolean
   archived: boolean
   published_at: string | null // ISO datetime
+  // Slice 6.13.5a — populated from card_quality_signals.
+  // Keys ⊆ {'accuracy','clarity','completeness','cohesion'}.
+  critique_scores: Record<string, number> | null
+  // Slice 6.13.5b populates these via thumbs_service; always null / 0
+  // in 6.13.5a.
+  thumbs_aggregate: number | null
+  thumbs_count: number
 }
 
 export interface QuizItemQualityRow {
@@ -778,6 +785,11 @@ export interface QuizItemQualityRow {
   lapse_rate: number | null
   low_volume: boolean
   retired: boolean
+  // Slice 6.13.5a — `pass_rate_persisted` is the user_review pass_rate
+  // currently in card_quality_signals (`null` until threshold crossed).
+  pass_rate_persisted: number | null
+  thumbs_aggregate: number | null
+  thumbs_count: number
 }
 
 export interface AdminContentQualityResponse {

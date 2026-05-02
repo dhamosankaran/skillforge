@@ -62,6 +62,13 @@ class LessonQualityRow(BaseModel):
     low_volume: bool
     archived: bool
     published_at: Optional[datetime]
+    # Slice 6.13.5a additions per §5.3 — populated from card_quality_signals.
+    # `critique_scores` keys ⊆ {'accuracy','clarity','completeness','cohesion'}.
+    # `thumbs_aggregate` + `thumbs_count` always None / 0 in 6.13.5a (no
+    # thumbs route yet); 6.13.5b populates them via the same field shape.
+    critique_scores: Optional[dict[str, float]] = None
+    thumbs_aggregate: Optional[float] = None
+    thumbs_count: int = 0
 
 
 class QuizItemQualityRow(BaseModel):
@@ -85,6 +92,14 @@ class QuizItemQualityRow(BaseModel):
     lapse_rate: Optional[float]
     low_volume: bool
     retired: bool
+    # Slice 6.13.5a additions per §5.3 — per-quiz_item user-aggregate
+    # writeback now persists when ``review_count_window >=
+    # MIN_REVIEW_THRESHOLD`` so the dashboard surfaces what was
+    # actually written to ``card_quality_signals``. ``thumbs_aggregate``
+    # + ``thumbs_count`` always None / 0 in 6.13.5a (no thumbs route yet).
+    pass_rate_persisted: Optional[float] = None
+    thumbs_aggregate: Optional[float] = None
+    thumbs_count: int = 0
 
 
 class AdminContentQualityResponse(BaseModel):

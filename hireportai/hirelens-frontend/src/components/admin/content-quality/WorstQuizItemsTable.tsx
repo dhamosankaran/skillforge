@@ -10,6 +10,11 @@ function fmtPct(value: number | null): string {
   return `${(value * 100).toFixed(1)}%`
 }
 
+function fmtScore(value: number | null): string {
+  if (value === null) return '—'
+  return value.toFixed(2)
+}
+
 export function WorstQuizItemsTable({ items }: Props) {
   const navigate = useNavigate()
   if (items.length === 0) {
@@ -30,7 +35,8 @@ export function WorstQuizItemsTable({ items }: Props) {
             <th className="py-2 pr-3 font-medium">Question</th>
             <th className="py-2 px-3 font-medium text-right">Reviews</th>
             <th className="py-2 px-3 font-medium text-right">Pass rate</th>
-            <th className="py-2 pl-3 font-medium text-right">Lapse rate</th>
+            <th className="py-2 px-3 font-medium text-right">Lapse rate</th>
+            <th className="py-2 pl-3 font-medium text-right">Persisted</th>
           </tr>
         </thead>
         <tbody>
@@ -65,8 +71,14 @@ export function WorstQuizItemsTable({ items }: Props) {
               <td className="py-2 px-3 text-right text-text-primary">
                 {fmtPct(row.pass_rate)}
               </td>
-              <td className="py-2 pl-3 text-right text-text-primary">
+              <td className="py-2 px-3 text-right text-text-primary">
                 {fmtPct(row.lapse_rate)}
+              </td>
+              <td
+                className="py-2 pl-3 text-right text-text-primary"
+                data-testid={`pass-rate-persisted-${row.quiz_item_id}`}
+              >
+                {fmtScore(row.pass_rate_persisted)}
               </td>
             </tr>
           ))}

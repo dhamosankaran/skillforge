@@ -15,6 +15,17 @@ function fmtScore(value: number | null): string {
   return value.toFixed(2)
 }
 
+function fmtCritiqueScores(
+  scores: Record<string, number> | null,
+): string {
+  if (!scores) return '—'
+  // Stable ordering on the four canonical critique dimensions.
+  const ORDER = ['accuracy', 'clarity', 'completeness', 'cohesion']
+  return ORDER.filter((d) => d in scores)
+    .map((d) => `${d[0].toUpperCase()} ${scores[d].toFixed(2)}`)
+    .join(' · ')
+}
+
 export function WorstLessonsTable({ lessons }: Props) {
   const navigate = useNavigate()
   if (lessons.length === 0) {
@@ -38,7 +49,8 @@ export function WorstLessonsTable({ lessons }: Props) {
             <th className="py-2 px-3 font-medium text-right">Views</th>
             <th className="py-2 px-3 font-medium text-right">Pass rate</th>
             <th className="py-2 px-3 font-medium text-right">Smoothed</th>
-            <th className="py-2 pl-3 font-medium text-right">Persisted</th>
+            <th className="py-2 px-3 font-medium text-right">Persisted</th>
+            <th className="py-2 pl-3 font-medium text-right">Critique</th>
           </tr>
         </thead>
         <tbody>
@@ -88,8 +100,14 @@ export function WorstLessonsTable({ lessons }: Props) {
               <td className="py-2 px-3 text-right text-text-primary">
                 {fmtScore(row.smoothed_quality_score)}
               </td>
-              <td className="py-2 pl-3 text-right text-text-primary">
+              <td className="py-2 px-3 text-right text-text-primary">
                 {fmtScore(row.persisted_quality_score)}
+              </td>
+              <td
+                className="py-2 pl-3 text-right text-text-secondary text-xs"
+                data-testid={`critique-scores-${row.lesson_slug}`}
+              >
+                {fmtCritiqueScores(row.critique_scores)}
               </td>
             </tr>
           ))}

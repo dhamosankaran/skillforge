@@ -228,7 +228,9 @@ async def test_writeback_fires_when_review_count_meets_threshold(db_session):
         db_session, window_days=30
     )
 
-    assert response.writebacks_applied == 1
+    # Slice 6.13.5a: writebacks_applied = 1 lesson-level + 1 per-quiz_item
+    # user-aggregate (signal_source='user_review', card_quality_signals).
+    assert response.writebacks_applied == 2
     refreshed = (
         await db_session.execute(select(Lesson).where(Lesson.id == lesson.id))
     ).scalar_one()
@@ -292,7 +294,9 @@ async def test_writeback_is_idempotent_on_repeated_aggregation(db_session):
         db_session, window_days=30
     )
 
-    assert first.writebacks_applied == 1
+    # Slice 6.13.5a: 1 lesson + 1 per-quiz_item user_review row first run;
+    # both IS DISTINCT FROM-gated so the second run is a clean no-op.
+    assert first.writebacks_applied == 2
     assert second.writebacks_applied == 0
 
 

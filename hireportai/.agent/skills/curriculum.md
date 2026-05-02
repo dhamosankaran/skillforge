@@ -242,30 +242,36 @@ the layers are:
 1. **Generation** — Gemini-assisted lesson + quiz_item authoring
    (slice 6.10 / 6.11). Writes through admin authoring routes (§4
    classifier still applies).
-2. **Critique** — Cross-model review against a golden set. Layer-1
-   storage shape lands with slice 6.13.5's `card_quality_signals`
-   table (LD J2); slice 6.11 does NOT consume the critique payload
-   for writeback (the slice 6.10 ingestion pipeline already produces
-   `CritiqueSchema` payloads but they're not yet persisted as
-   per-(lesson, dimension) signals).
-3. **User signal — layer 3 (active, slice 6.11).** First non-NULL
-   emitter of `lessons.quality_score`: the admin content-quality
-   service (`app/services/admin_content_quality_service.py`)
-   computes a Bayesian-smoothed pass_rate over `quiz_review_events`
-   on every admin dashboard load (`GET /api/v1/admin/content-quality`)
-   and writes back idempotently when `review_count >= 10`
-   (`MIN_REVIEW_THRESHOLD`). Below threshold the column stays NULL
-   so the ranker keeps the 0.5 fallback (§8). Future user-thumbs
-   feedback is layer-3 too but lands on `card_quality_signals` when
-   slice 6.13.5 ships — slice 6.11's lesson-level writeback then
-   migrates to read the unified table.
+2. **Critique — layer 2 (active, slice 6.13.5a).** The cross-model
+   `CritiqueSchema` payload from slice 6.10 (Anthropic critique stage)
+   now persists as `signal_source='critique'` rows on
+   `card_quality_signals` (LD J2). One row per
+   (`lesson_id`, `dimension`) tuple where `dimension ∈ {'accuracy',
+   'clarity', 'completeness', 'cohesion'}` and `score = raw / 5.0`.
+   Write-time hook fires from `app/jobs/ingestion_worker.py` Stage 2.5
+   (`critique_signal_consumer.persist_critique_signals`) after Stage 3
+   persist succeeds, so the consumer always has stable `lesson_id`s.
+   The R2 critique.json blob remains the audit trail (slice 6.10
+   forever-retention) — `card_quality_signals` is the queryable
+   denormalisation. Admin content-quality dashboard exposes the
+   per-dimension scores via `LessonQualityRow.critique_scores`.
+3. **User signal — layer 3 (active, slice 6.11 + slice 6.13.5a).**
+   Two homes: **(a)** Lesson-level Bayesian-smoothed pass_rate writes
+   to `lessons.quality_score` from `admin_content_quality_service`
+   when `review_count >= 10` (slice 6.11 D-1 / D-4). Below threshold
+   the column stays NULL so the ranker (§8) keeps the 0.5 fallback.
+   **(b)** Per-quiz_item Bayesian-smoothed pass_rate now writes to
+   `card_quality_signals` (`signal_source='user_review'`,
+   `dimension='pass_rate'`, `quiz_item_id IS NOT NULL`,
+   `recorded_by_user_id IS NULL`) — same threshold + smoothing
+   formula, IS DISTINCT FROM-gated for idempotency (slice 6.13.5a /
+   §6.5). User-thumbs feedback (the third layer-3 source) lands as
+   `signal_source='user_thumbs'` rows in slice 6.13.5b (per-user
+   distinct via the 5-tuple UNIQUE; aggregate at read-time).
 
 When `lessons.quality_score IS NULL` the ranker (§8) coerces it to
 0.5 (neutral) per spec #07 §12 D-2 so unscored lessons aren't ranked
 worst-by-default.
-
-This section is a forward-looking skeleton; future slices will add
-detail here as each layer ships.
 
 ## 8. Ranker contract (slice 6.6)
 

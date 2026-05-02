@@ -15,8 +15,8 @@ Reads (G-2 read-only over user data):
 Writes:
   - ``Lesson.quality_score`` (idempotent IS DISTINCT FROM gate; D-1)
 
-# layer-3 user-signal v1; merges with layer-1 critique signal in slice
-# 6.13.5 via card_quality_signals table per LD J2 (D-16 breadcrumb).
+# layer-3 user-signal v1; layer-1 critique signal joined via
+# card_quality_signals table per LD J2 (slice 6.13.5a / B-094a).
 """
 from __future__ import annotations
 
@@ -39,6 +39,8 @@ from app.schemas.admin_content_quality import (
     LessonQualityRow,
     QuizItemQualityRow,
 )
+from app.schemas.card_quality_signal import CardQualitySignalWrite
+from app.services import card_quality_signal_service
 
 logger = logging.getLogger(__name__)
 
@@ -112,18 +114,52 @@ async def aggregate_dashboard(
         db, lessons_by_id=lessons_by_id, lesson_stats=lesson_stats
     )
 
+    # Slice 6.13.5a — per-quiz_item user-aggregate writeback to
+    # ``card_quality_signals``. Mirrors lesson-level Bayesian-smoothing /
+    # threshold / IS DISTINCT FROM idempotency from slice 6.11 D-2 / D-4 /
+    # finding #14, but writes to ``card_quality_signals`` rows rather than
+    # a denormalised column on ``quiz_items`` (per §12 D-2).
+    quiz_item_writebacks = await _writeback_quiz_item_user_review_signals(
+        db,
+        quiz_item_stats=quiz_item_stats,
+        quiz_items_by_id=quiz_items_by_id,
+    )
+    writebacks_applied += quiz_item_writebacks
+
     # Re-read persisted scores so the response reflects the post-writeback
     # state visible to the ranker (idempotent + observable per AC-7).
     persisted_scores = {
         lid: lessons_by_id[lid].quality_score for lid in lessons_by_id
     }
 
+    # Slice 6.13.5a — read-side join: critique scores per lesson +
+    # per-quiz_item persisted user_review pass_rate. Both come from
+    # ``card_quality_signals`` and are tolerant of empty / cold-start state
+    # (return {} when no rows match).
+    critique_scores_by_lesson = (
+        await card_quality_signal_service.get_critique_scores_for_lessons(
+            list(lessons_by_id.keys()), db
+        )
+    )
+    quiz_item_persisted_pass_rates = (
+        await card_quality_signal_service.get_persisted_user_review_scores_for_quiz_items(
+            list(quiz_items_by_id.keys()), db
+        )
+    )
+
     deck_rows = _build_deck_rows(decks_by_id, lessons_by_id, lesson_stats)
     lesson_rows = _build_lesson_rows(
-        lessons_by_id, decks_by_id, lesson_stats, persisted_scores
+        lessons_by_id,
+        decks_by_id,
+        lesson_stats,
+        persisted_scores,
+        critique_scores_by_lesson=critique_scores_by_lesson,
     )
     quiz_item_rows = _build_quiz_item_rows(
-        quiz_items_by_id, quiz_item_stats, lessons_by_id
+        quiz_items_by_id,
+        quiz_item_stats,
+        lessons_by_id,
+        persisted_pass_rates=quiz_item_persisted_pass_rates,
     )
 
     is_cold_start = sum(s["review_count"] for s in lesson_stats.values()) == 0
@@ -331,6 +367,73 @@ async def _writeback_quality_scores(
     return applied
 
 
+async def _writeback_quiz_item_user_review_signals(
+    db: AsyncSession,
+    *,
+    quiz_item_stats: dict[str, dict],
+    quiz_items_by_id: dict[str, QuizItem],
+) -> int:
+    """Per-quiz_item user-aggregate writeback to ``card_quality_signals``.
+
+    Per §12 D-2 (writeback target = card_quality_signals row only) +
+    §6.5 (mirror slice 6.11 D-1 / D-4 / finding #14 IS DISTINCT FROM
+    idempotency gate). Writes one
+    ``signal_source='user_review', dimension='pass_rate'`` row per
+    quiz_item that has crossed ``MIN_REVIEW_THRESHOLD`` reviews in the
+    window AND whose smoothed score has changed since last writeback
+    (matches the lesson-level idempotency that slice 6.11's tests
+    encode).
+
+    Returns the count of UPSERTs that actually flipped the score —
+    unchanged scores are skipped entirely so re-runs of
+    ``aggregate_dashboard`` produce ``writebacks_applied=0`` mirroring
+    the lesson-level path.
+    """
+    candidate_ids = [
+        qid
+        for qid, stats in quiz_item_stats.items()
+        if stats.get("review_count", 0) >= MIN_REVIEW_THRESHOLD
+        and qid in quiz_items_by_id
+    ]
+    if not candidate_ids:
+        return 0
+    persisted = (
+        await card_quality_signal_service.get_persisted_user_review_scores_for_quiz_items(
+            candidate_ids, db
+        )
+    )
+
+    written = 0
+    for quiz_item_id in candidate_ids:
+        stats = quiz_item_stats[quiz_item_id]
+        smoothed = round(_smooth(stats["passes"], stats["review_count"]), 2)
+        existing = persisted.get(quiz_item_id)
+        if existing is not None and round(existing, 2) == smoothed:
+            continue
+        try:
+            await card_quality_signal_service.upsert_signal(
+                CardQualitySignalWrite(
+                    lesson_id=quiz_items_by_id[quiz_item_id].lesson_id,
+                    quiz_item_id=quiz_item_id,
+                    signal_source="user_review",
+                    dimension="pass_rate",
+                    score=smoothed,
+                    source_ref=None,
+                    recorded_by_user_id=None,
+                ),
+                db,
+            )
+            written += 1
+        except SQLAlchemyError:  # pragma: no cover — defensive
+            logger.warning(
+                "admin_content_quality_service: per-quiz_item UPSERT "
+                "failed for quiz_item=%s; skipping",
+                quiz_item_id,
+            )
+            continue
+    return written
+
+
 # ── Row builders ────────────────────────────────────────────────────────────
 
 
@@ -396,6 +499,8 @@ def _build_lesson_rows(
     decks_by_id: dict[str, Deck],
     lesson_stats: dict[str, dict],
     persisted_scores: dict[str, Optional[Decimal]],
+    *,
+    critique_scores_by_lesson: Optional[dict[str, dict[str, float]]] = None,
 ) -> list[LessonQualityRow]:
     """Worst-first lessons sorted by smoothed_quality_score ASC NULLS LAST.
 
@@ -414,6 +519,9 @@ def _build_lesson_rows(
         smoothed = None if low_volume else round(_smooth(passes, rc), 4)
         persisted = persisted_scores.get(lesson_id)
         deck = decks_by_id.get(lesson.deck_id)
+        critique_for_lesson = (
+            (critique_scores_by_lesson or {}).get(lesson.id) or None
+        )
         rows.append(
             LessonQualityRow(
                 lesson_id=lesson.id,
@@ -431,6 +539,10 @@ def _build_lesson_rows(
                 low_volume=low_volume,
                 archived=lesson.archived_at is not None,
                 published_at=lesson.published_at,
+                critique_scores=critique_for_lesson,
+                # Slice 6.13.5b populates these via thumbs_service.
+                thumbs_aggregate=None,
+                thumbs_count=0,
             )
         )
     # ASC NULLS LAST — non-NULL worst-first; NULL low-volume rows tail.
@@ -450,6 +562,8 @@ def _build_quiz_item_rows(
     quiz_items_by_id: dict[str, QuizItem],
     quiz_item_stats: dict[str, dict],
     lessons_by_id: dict[str, Lesson],
+    *,
+    persisted_pass_rates: Optional[dict[str, float]] = None,
 ) -> list[QuizItemQualityRow]:
     """Worst-first quiz_items sorted by pass_rate ASC NULLS LAST.
 
@@ -481,6 +595,10 @@ def _build_quiz_item_rows(
                 lapse_rate=lapse_rate,
                 low_volume=rc < MIN_REVIEW_THRESHOLD,
                 retired=qi.retired_at is not None,
+                pass_rate_persisted=(persisted_pass_rates or {}).get(qi.id),
+                # Slice 6.13.5b populates these via thumbs_service.
+                thumbs_aggregate=None,
+                thumbs_count=0,
             )
         )
     rows.sort(

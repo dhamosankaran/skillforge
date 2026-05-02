@@ -15,6 +15,10 @@ function row(overrides: Partial<QuizItemQualityRow> = {}): QuizItemQualityRow {
     lapse_rate: 0.3,
     low_volume: false,
     retired: false,
+    // Slice 6.13.5a additions — default empty.
+    pass_rate_persisted: null,
+    thumbs_aggregate: null,
+    thumbs_count: 0,
     ...overrides,
   }
 }
@@ -52,5 +56,33 @@ describe('WorstQuizItemsTable', () => {
     expect(
       screen.getByText('Custom question text?'),
     ).toBeInTheDocument()
+  })
+
+  // ── Slice 6.13.5a — pass_rate_persisted column ──────────────────────────
+
+  it('renders the persisted pass_rate when present', () => {
+    render(
+      <MemoryRouter>
+        <WorstQuizItemsTable
+          items={[
+            row({ quiz_item_id: 'qi-persisted', pass_rate_persisted: 0.62 }),
+          ]}
+        />
+      </MemoryRouter>,
+    )
+    expect(
+      screen.getByTestId('pass-rate-persisted-qi-persisted'),
+    ).toHaveTextContent('0.62')
+  })
+
+  it('renders an em-dash when pass_rate_persisted is null', () => {
+    render(
+      <MemoryRouter>
+        <WorstQuizItemsTable items={[row({ quiz_item_id: 'qi-cold' })]} />
+      </MemoryRouter>,
+    )
+    expect(
+      screen.getByTestId('pass-rate-persisted-qi-cold'),
+    ).toHaveTextContent('—')
   })
 })

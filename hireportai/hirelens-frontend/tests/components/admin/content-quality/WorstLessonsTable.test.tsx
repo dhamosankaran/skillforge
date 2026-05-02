@@ -19,6 +19,10 @@ function row(overrides: Partial<LessonQualityRow> = {}): LessonQualityRow {
     low_volume: false,
     archived: false,
     published_at: '2026-04-01T00:00:00Z',
+    // Slice 6.13.5a additions — default to empty per AC-13 / AC-14.
+    critique_scores: null,
+    thumbs_aggregate: null,
+    thumbs_count: 0,
     ...overrides,
   }
 }
@@ -72,5 +76,44 @@ describe('WorstLessonsTable', () => {
     const rows = screen.getAllByRole('button')
     expect(rows[0]).toHaveTextContent('First')
     expect(rows[1]).toHaveTextContent('Second')
+  })
+
+  // ── Slice 6.13.5a — critique_scores column (AC-13) ──────────────────────
+
+  it('renders the critique_scores column when scores are present', () => {
+    render(
+      <MemoryRouter>
+        <WorstLessonsTable
+          lessons={[
+            row({
+              lesson_slug: 'with-critique',
+              critique_scores: {
+                accuracy: 0.8,
+                clarity: 0.6,
+              },
+            }),
+          ]}
+        />
+      </MemoryRouter>,
+    )
+    const cell = screen.getByTestId('critique-scores-with-critique')
+    expect(cell).toHaveTextContent('A 0.80')
+    expect(cell).toHaveTextContent('C 0.60')
+  })
+
+  it('renders an em-dash when critique_scores is null', () => {
+    render(
+      <MemoryRouter>
+        <WorstLessonsTable
+          lessons={[
+            row({
+              lesson_slug: 'cold',
+              critique_scores: null,
+            }),
+          ]}
+        />
+      </MemoryRouter>,
+    )
+    expect(screen.getByTestId('critique-scores-cold')).toHaveTextContent('—')
   })
 })
