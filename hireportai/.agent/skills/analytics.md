@@ -43,7 +43,6 @@ PostHog is instrumented from Phase 1 and runs on both tiers:
 | `checkout_started` | `components/PaywallModal.tsx` | `{trigger, plan, price, currency}` |
 | `payment_completed` | `pages/Pricing.tsx` | `{plan, price, currency, source: 'stripe_checkout_return'}` |
 | `theme_changed` | `context/ThemeContext.tsx` | `{from_theme, to_theme}` |
-| `study_dashboard_viewed` | `pages/StudyDashboard.tsx` | `{category_count, locked_count}` |
 | `category_tile_clicked` | `pages/StudyDashboard.tsx` | `{category_id, category_name}` |
 | `locked_tile_clicked` | `pages/StudyDashboard.tsx` | `{category_id, category_name}` |
 | `category_detail_viewed` | `pages/CategoryDetail.tsx` | `{category_id, category_name, cards_count}` |

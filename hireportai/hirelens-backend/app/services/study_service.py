@@ -19,7 +19,7 @@ Fields tracked by us (not available on py-fsrs v6 Card):
 """
 import logging
 import uuid
-from datetime import datetime, time, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any, Optional
 from zoneinfo import ZoneInfo
 
@@ -34,8 +34,10 @@ from app.models.card import Card
 from app.models.card_progress import CardProgress
 from app.models.category import Category
 from app.models.user import User
-from app.schemas.study import DailyCardItem, DailyReviewResponse, DailyStatus, ReviewResponse, StudyProgressResponse
+from app.schemas.daily_status import DailyStatus
+from app.schemas.study import DailyCardItem, DailyReviewResponse, ReviewResponse, StudyProgressResponse
 from app.services import gamification_service, home_state_service
+from app.utils.local_time import next_local_midnight
 from app.utils.timezone import get_user_timezone
 
 logger = logging.getLogger(__name__)
@@ -165,13 +167,6 @@ def _get_redis() -> Optional[redis.Redis]:
         return None
 
 
-def _next_local_midnight(now_utc: datetime, tz: ZoneInfo) -> datetime:
-    """Next user-local midnight as a tz-aware datetime in the user's tz."""
-    local_now = now_utc.astimezone(tz)
-    tomorrow = (local_now + timedelta(days=1)).date()
-    return datetime.combine(tomorrow, time(0, 0, 0), tzinfo=tz)
-
-
 async def _check_daily_wall(user: User, db: AsyncSession) -> None:
     """Enforce the free-tier 10-card-per-day review wall (spec #50).
 
@@ -243,7 +238,7 @@ async def _check_daily_wall(user: User, db: AsyncSession) -> None:
         return
 
     if count_after > cap:
-        resets_at = _next_local_midnight(now_utc, tz)
+        resets_at = next_local_midnight(now_utc, tz)
         analytics_track(
             user_id=user.id,
             event="daily_card_submit",
@@ -291,7 +286,7 @@ async def _compute_daily_status(user: User, db: AsyncSession) -> DailyStatus:
     """
     now_utc = _utcnow()
     tz = await get_user_timezone(user.id, db)
-    resets_at = _next_local_midnight(now_utc, tz)
+    resets_at = next_local_midnight(now_utc, tz)
 
     if (user.role or "user") == "admin":
         return DailyStatus(

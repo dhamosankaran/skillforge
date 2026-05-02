@@ -4,6 +4,10 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+# Slice 6.15 / B-102: lifted to its own module. Re-exported here for
+# back-compat per §12 D-1 until spec 16 retires `schemas/study.py`.
+from app.schemas.daily_status import DailyStatus
+
 
 class DailyCardItem(BaseModel):
     """A single card in the daily review queue.
@@ -25,24 +29,6 @@ class DailyCardItem(BaseModel):
     lapses: int
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class DailyStatus(BaseModel):
-    """Free-tier daily-review wall state (spec #63 / B-059).
-
-    Read-side mirror of the same Redis counter `_check_daily_wall` writes
-    on submit. Side-effect-free — the queue handler never INCRs.
-
-    `cards_limit == -1` is the unlimited sentinel for Pro / Enterprise /
-    admin (matches the `-1` convention from `usage_service` /
-    `UsageContext`). `can_review` is the gate `DailyReview.tsx` reads to
-    decide whether to render the pre-flight upsell.
-    """
-
-    cards_consumed: int
-    cards_limit: int
-    can_review: bool
-    resets_at: datetime
 
 
 class DailyReviewResponse(BaseModel):

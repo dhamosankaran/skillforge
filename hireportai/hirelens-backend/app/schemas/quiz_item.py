@@ -11,7 +11,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.schemas.study import DailyStatus  # re-imported per spec §6.2
+from app.schemas.daily_status import DailyStatus
 
 QuizQuestionType = Literal["mcq", "free_text", "code_completion"]
 QuizDifficulty = Literal["easy", "medium", "hard"]

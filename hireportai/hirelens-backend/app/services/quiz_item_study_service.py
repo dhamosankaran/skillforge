@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, time, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any, Optional
 from zoneinfo import ZoneInfo
 
@@ -49,7 +49,7 @@ from app.schemas.quiz_item import (
     QuizProgressResponse,
     QuizReviewResponse,
 )
-from app.schemas.study import DailyStatus
+from app.schemas.daily_status import DailyStatus
 from app.services import analytics_event_service
 from app.services.curriculum_visibility import (
     _allowed_tiers_for_user,
@@ -57,6 +57,7 @@ from app.services.curriculum_visibility import (
     _resolve_plan,
     _visible_persona_set,
 )
+from app.utils.local_time import next_local_midnight
 from app.utils.timezone import get_user_timezone
 
 logger = logging.getLogger(__name__)
@@ -83,18 +84,6 @@ _FSRS_TO_STATE: dict[State, str] = {v: k for k, v in _STATE_TO_FSRS.items()}
 def _utcnow() -> datetime:
     """Module-level seam for time-mocking in tests."""
     return datetime.now(timezone.utc)
-
-
-def _next_local_midnight(now_utc: datetime, tz: ZoneInfo) -> datetime:
-    """Next user-local midnight as a tz-aware datetime in the user's tz.
-
-    Duplicated from `study_service.py:168` per OQ-3 — kept local so
-    slice 6.15 cleanup can `git rm` this file without touching
-    `study_service`.
-    """
-    local_now = now_utc.astimezone(tz)
-    tomorrow = (local_now + timedelta(days=1)).date()
-    return datetime.combine(tomorrow, time(0, 0, 0), tzinfo=tz)
 
 
 # ── FSRS Card reconstruction (byte-equivalent to study_service) ─────────────
@@ -219,7 +208,7 @@ async def _compute_daily_quiz_status(user: User, db: AsyncSession) -> DailyStatu
     """
     now_utc = _utcnow()
     tz = await get_user_timezone(user.id, db)
-    resets_at = _next_local_midnight(now_utc, tz)
+    resets_at = next_local_midnight(now_utc, tz)
     return DailyStatus(
         cards_consumed=0,
         cards_limit=-1,
