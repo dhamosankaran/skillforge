@@ -177,6 +177,14 @@ the template in the playbook §3.2. Exceptions: (a) retrofits / backfills,
 (b) pure bug fixes with no design surface, (c) explicit user override.
 Default = spec first.
 
+*Spec length governance* (added 2026-05-02): target ≤800 lines. Specs
+exceeding 1200 lines trigger a JC explaining why the feature can't
+split into sub-specs (one per independently-shippable surface) linked
+by a parent spec. Existing specs are not retroactively split. This is
+a guideline, not a gate — CC logs the JC and proceeds. Rationale:
+1700-line specs drove multi-slice §12 amendment chains and slowed CC
+parsing; 992-line specs (slice 6.14) proved more efficient.
+
 **R15 Backlog-first (closure + filing in one rule)**.
 
 (a) Reference required: every implementation prompt must reference the
@@ -519,6 +527,10 @@ source-of-truth.
   unmentioned (SOP-4 holding)
 
 ## Revision history
+- 2026-05-02: B-106 R14 amendment — added "Spec length governance"
+  paragraph (≤800 target / 1200 JC trigger; guideline not gate).
+  R14 exception (b) — pure rule refinement, no design surface, no
+  tests run.
 - 2026-05-01: B-092 process compaction bundle — SESSION-STATE entries
   5+ archived to `docs/archive/session-state-history.md` §6; BACKLOG
   closed-table rows pre-2026-04-29 archived to NEW
