@@ -153,7 +153,7 @@ restatement-when-status-unchanged.
 - **Per-item density:** average ~25 lines (Gap paragraph + Locked
   paragraph + cross-ref + "Slice X implements; closes IFD-Y" line).
 - **Section size:** §16 spans lines 913-972 = 60 lines (excluding
-  preamble blockquote). Plus 1-line `<this-slice>` footer entry at
+  preamble blockquote). Plus 1-line `3d03861` footer entry at
   line 979.
 - **Cross-ref count:** §4.2 (×2), §4.3 (×1), §6.2 (×1), §6.3 (×2),
   §9 (×3), §12 D-11 (×1), §12 D-12 (×3), §14 (×0 — post-impl
@@ -272,7 +272,7 @@ A `sha-backfill.sh` script could:
    template.
 
 The grep-then-sed approach is **agnostic to slice type** — it just
-finds and replaces `<this-slice>` wherever it appears. The slice-type
+finds and replaces `3d03861` wherever it appears. The slice-type
 classification is needed only for the commit subject's `<slice-name>`
 field (which a script could derive from the impl commit's subject).
 
@@ -344,7 +344,7 @@ shape is known.
    the most recent commit lacking a SHA-backfill successor?** The
    second option is more ergonomic but more error-prone (what
    constitutes "successor" — title prefix match, branch HEAD, no
-   newer commit since `<this-slice>` placeholders disappeared?).
+   newer commit since `3d03861` placeholders disappeared?).
 
 5. **Is the 6-item §16 density an intrinsic feature of validation-
    probe-driven amendments, or specific to E-043's surface?**
@@ -398,11 +398,11 @@ workflow. A pilot script would calibrate.
 Footer:
 
 - **HEAD at slice start:** `f124fde` (B-088 SHA-backfill).
-- **HEAD at slice end:** `<this-slice>` (replaced in commit-2 SHA
+- **HEAD at slice end:** `3d03861` (replaced in commit-2 SHA
   backfill).
-- **Slice commit (audit doc + SESSION-STATE entry):** `<this-slice>`
+- **Slice commit (audit doc + SESSION-STATE entry):** `3d03861`
 - **SHA-backfill commit:** `<this-slice-backfill>` (this SHA-backfill
-  commit replaces `<this-slice>` placeholders with the slice-1 SHA
+  commit replaces `3d03861` placeholders with the slice-1 SHA
   across audit footer + SESSION-STATE Session Header HEAD field +
   Recently Completed entry's HEAD references).
 
