@@ -214,6 +214,111 @@ async def test_checkout_respects_client_currency_without_geo_lookup(
     ]
 
 
+# ── F-1 Pro short-circuit (audit 2026-05) ────────────────────────────────────
+
+
+async def test_checkout_409_when_user_already_active_pro(
+    client, test_user, db_session
+):
+    """Active Pro subscriber gets 409 instead of a second Stripe subscription.
+
+    Audit finding F-1: without this guard, Stripe permits multiple active
+    subscriptions per Customer on the same Price, so a Pro user re-clicking
+    Upgrade was previously double-charged.
+    """
+    sub = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == test_user.id)
+        )
+    ).scalar_one()
+    sub.plan = "pro"
+    sub.status = "active"
+    sub.stripe_customer_id = "cus_already_pro"
+    sub.stripe_subscription_id = "sub_already_pro"
+    await db_session.flush()
+
+    with patch(
+        "app.services.payment_service.stripe.Customer.create"
+    ) as customer_mock, patch(
+        "app.services.payment_service.stripe.checkout.Session.create"
+    ) as session_mock:
+        resp = await client.post(
+            "/api/v1/payments/checkout", headers=_auth_header(test_user)
+        )
+
+    assert resp.status_code == 409, resp.text
+    assert resp.json() == {"detail": "Already subscribed to Pro plan"}
+    # Guard fires before Stripe API touch.
+    customer_mock.assert_not_called()
+    session_mock.assert_not_called()
+
+
+async def test_checkout_200_for_free_user_regression(
+    client, test_user, db_session, monkeypatch
+):
+    """Free user still gets 200 + checkout URL — F-1 must not regress baseline."""
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+    settings = get_settings()
+    settings.stripe_pro_price_id = "price_test_free_path"
+    settings.stripe_secret_key = "sk_test_dummy"
+
+    fake_customer = SimpleNamespace(id="cus_free_path")
+    fake_session = SimpleNamespace(
+        id="cs_free_path",
+        url="https://checkout.stripe.com/c/pay/cs_free_path",
+    )
+
+    with patch(
+        "app.services.payment_service.stripe.Customer.create",
+        return_value=fake_customer,
+    ), patch(
+        "app.services.payment_service.stripe.checkout.Session.create",
+        return_value=fake_session,
+    ):
+        resp = await client.post(
+            "/api/v1/payments/checkout", headers=_auth_header(test_user)
+        )
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"url": fake_session.url}
+
+
+async def test_checkout_409_for_admin_who_is_pro(
+    client, test_user, db_session
+):
+    """Admin role does NOT bypass the F-1 guard — admin-Pro re-checkout still 409.
+
+    Admin bypass exists for paywall walls (rate-limit / wall-hit short-
+    circuits) but not for double-subscription. An admin who legitimately
+    upgraded via Stripe and re-clicks Upgrade should still hit 409 — the
+    guard protects against double-charging the admin too.
+    """
+    test_user.role = "admin"
+    sub = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == test_user.id)
+        )
+    ).scalar_one()
+    sub.plan = "pro"
+    sub.status = "active"
+    sub.stripe_customer_id = "cus_admin_pro"
+    sub.stripe_subscription_id = "sub_admin_pro"
+    await db_session.flush()
+
+    with patch(
+        "app.services.payment_service.stripe.checkout.Session.create"
+    ) as session_mock:
+        resp = await client.post(
+            "/api/v1/payments/checkout", headers=_auth_header(test_user)
+        )
+
+    assert resp.status_code == 409, resp.text
+    assert resp.json() == {"detail": "Already subscribed to Pro plan"}
+    session_mock.assert_not_called()
+
+
 # ── POST /payments/webhook ──────────────────────────────────────────────────
 
 

@@ -53,6 +53,20 @@ class NotProSubscriberError(PaymentError):
     """
 
 
+class AlreadyProError(PaymentError):
+    """Caller is already an active Pro subscriber on Stripe.
+
+    Raised by ``create_checkout_session`` when the user's Subscription
+    row has ``plan == "pro"``, ``status == "active"``, and a
+    ``stripe_subscription_id`` set — i.e., a real Stripe-backed Pro
+    subscription. Without this guard, re-clicking Upgrade creates a
+    second active subscription on the same Stripe Customer (Stripe
+    permits multi-sub by default). Admin-manual flips that lack a
+    ``stripe_subscription_id`` are intentionally allowed through so
+    the admin can complete a real checkout. Mapped to HTTP 409.
+    """
+
+
 def _init_stripe() -> None:
     stripe.api_key = get_settings().stripe_secret_key
 
@@ -96,6 +110,14 @@ async def create_checkout_session(
     sub = (
         await db.execute(select(Subscription).where(Subscription.user_id == user.id))
     ).scalar_one_or_none()
+
+    if (
+        sub is not None
+        and sub.plan == "pro"
+        and sub.status == "active"
+        and sub.stripe_subscription_id
+    ):
+        raise AlreadyProError(user.id)
 
     customer_id = sub.stripe_customer_id if sub else None
     if not customer_id:

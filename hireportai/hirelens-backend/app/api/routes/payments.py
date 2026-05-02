@@ -17,6 +17,7 @@ from app.services import paywall_service
 from app.services.geo_pricing_service import get_pricing
 from app.services.usage_service import get_usage_snapshot
 from app.services.payment_service import (
+    AlreadyProError,
     InvalidSignatureError,
     NotProSubscriberError,
     PaymentError,
@@ -82,6 +83,11 @@ async def create_checkout(
         currency = get_pricing(_client_ip(request))["currency"]
     try:
         url = await create_checkout_session(user.id, db, currency=currency)
+    except AlreadyProError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Already subscribed to Pro plan",
+        )
     except UserNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
