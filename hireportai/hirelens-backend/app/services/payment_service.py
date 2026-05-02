@@ -71,6 +71,19 @@ def _init_stripe() -> None:
     stripe.api_key = get_settings().stripe_secret_key
 
 
+def _field(obj, key, default=None):
+    """Read a field from a Stripe ``StripeObject`` or a plain dict.
+
+    Stripe SDK v14+ returns ``StripeObject`` from ``construct_event`` —
+    it supports bracket access and ``__contains__`` but NOT ``.get(...)``.
+    Test fixtures pass plain ``dict`` payloads. This shim unifies both
+    so handler code can read optional fields without branching on type.
+    """
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
+
+
 # ── Checkout ────────────────────────────────────────────────────────────────
 
 
@@ -248,7 +261,11 @@ async def handle_webhook(
     except ValueError as exc:
         raise InvalidSignatureError(f"Malformed payload: {exc}") from exc
 
-    event_id = event.get("id", "")
+    # NOTE: `event` is a `stripe.Event` (StripeObject) — supports bracket
+    # and attribute access, NOT `.get()`. SDK v14+ stopped subclassing dict.
+    # Tests mock construct_event with a dict, so `.get()` worked there but
+    # crashed in production with `AttributeError: get`.
+    event_id = event["id"]
     event_type = event["type"]
     data = event["data"]["object"]
 
@@ -281,13 +298,16 @@ async def handle_webhook(
     return {"received": True, "event_type": event_type}
 
 
-async def _handle_checkout_completed(data: dict, db: AsyncSession) -> None:
-    """Activate Pro for the user referenced by the Checkout Session."""
-    user_id = data.get("client_reference_id") or (
-        data.get("metadata") or {}
-    ).get("user_id")
-    customer_id = data.get("customer")
-    stripe_sub_id = data.get("subscription")
+async def _handle_checkout_completed(data, db: AsyncSession) -> None:
+    """Activate Pro for the user referenced by the Checkout Session.
+
+    ``data`` may be a Stripe ``StripeObject`` (production) or a plain
+    ``dict`` (test fixtures). Use ``_field`` for safe optional reads.
+    """
+    metadata = _field(data, "metadata") or {}
+    user_id = _field(data, "client_reference_id") or _field(metadata, "user_id")
+    customer_id = _field(data, "customer")
+    stripe_sub_id = _field(data, "subscription")
 
     sub = await _find_subscription(db, user_id=user_id, customer_id=customer_id)
     if sub is None:
@@ -311,16 +331,16 @@ async def _handle_checkout_completed(data: dict, db: AsyncSession) -> None:
         event="payment_completed",
         properties={
             "plan": "pro",
-            "amount_total": data.get("amount_total"),
-            "currency": data.get("currency"),
+            "amount_total": _field(data, "amount_total"),
+            "currency": _field(data, "currency"),
         },
     )
     home_state_service.invalidate(sub.user_id)
 
 
-async def _handle_subscription_deleted(data: dict, db: AsyncSession) -> None:
+async def _handle_subscription_deleted(data, db: AsyncSession) -> None:
     """Revert to Free when a Stripe subscription is fully cancelled."""
-    customer_id = data.get("customer")
+    customer_id = _field(data, "customer")
     sub = await _find_subscription(db, user_id=None, customer_id=customer_id)
     if sub is None:
         logger.warning(

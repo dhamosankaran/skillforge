@@ -335,6 +335,7 @@ async def test_webhook_activates_pro(client, test_user, db_session):
     await db_session.flush()
 
     fake_event = {
+        "id": "evt_activates_pro_001",
         "type": "checkout.session.completed",
         "data": {
             "object": {
@@ -390,6 +391,7 @@ async def test_webhook_cancels_pro(client, test_user, db_session):
     await db_session.flush()
 
     fake_event = {
+        "id": "evt_cancels_pro_001",
         "type": "customer.subscription.deleted",
         "data": {
             "object": {
@@ -438,6 +440,7 @@ async def test_subscription_deleted_sets_downgraded_at(
     assert test_user.downgraded_at is None
 
     fake_event = {
+        "id": "evt_downgraded_at_001",
         "type": "customer.subscription.deleted",
         "data": {
             "object": {
@@ -489,6 +492,7 @@ async def test_subscription_deleted_existing_logic_still_works(
     await db_session.flush()
 
     fake_event = {
+        "id": "evt_deleted_regression_001",
         "type": "customer.subscription.deleted",
         "data": {
             "object": {"id": "sub_regression", "customer": "cus_regression"}
@@ -764,6 +768,126 @@ async def test_portal_session_401_for_unauth(client):
 
     assert resp.status_code == 401
     portal_mock.assert_not_called()
+
+
+async def test_webhook_handles_real_stripe_event_object(
+    client, test_user, db_session
+):
+    """Regression: production receives a `stripe.Event` (StripeObject), not a dict.
+
+    Before this test, every webhook test mocked `construct_event` with a
+    bare ``dict`` and `.get()` worked. Production receives a real
+    `stripe.Event` from the SDK — `event.get("id", "")` raises
+    ``AttributeError: get`` because StripeObject (Stripe SDK v14+) is no
+    longer a dict subclass. Every live webhook 500'd silently while every
+    test passed; the gap is closed by exercising `stripe.Event.construct_from`
+    on the same code path the SDK uses internally.
+
+    The handler must use bracket access (``event["id"]``), not `.get`.
+    """
+    import stripe
+
+    sub = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == test_user.id)
+        )
+    ).scalar_one()
+    sub.stripe_customer_id = "cus_real_event_obj"
+    await db_session.flush()
+
+    raw_event = {
+        "id": "evt_real_object_001",
+        "object": "event",
+        "type": "checkout.session.completed",
+        "data": {
+            "object": {
+                "object": "checkout.session",
+                "id": "cs_test_real",
+                "client_reference_id": test_user.id,
+                "customer": "cus_real_event_obj",
+                "subscription": "sub_real_event_obj",
+                "amount_total": 4900,
+                "currency": "usd",
+                "metadata": {"user_id": test_user.id, "plan": "pro"},
+            }
+        },
+    }
+    # Build the same shape the Stripe SDK returns from construct_event —
+    # NOT a plain dict. construct_from is the SDK's internal hydrator.
+    stripe_event = stripe.Event.construct_from(raw_event, "sk_test_dummy")
+
+    with patch(
+        "app.services.payment_service.stripe.Webhook.construct_event",
+        return_value=stripe_event,
+    ):
+        resp = await client.post(
+            "/api/v1/payments/webhook",
+            content=json.dumps(raw_event).encode(),
+            headers={"stripe-signature": "t=1,v1=fake"},
+        )
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["received"] is True
+    assert body["event_type"] == "checkout.session.completed"
+
+    sub_after = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == test_user.id)
+        )
+    ).scalar_one()
+    assert sub_after.plan == "pro"
+    assert sub_after.stripe_subscription_id == "sub_real_event_obj"
+
+
+async def test_webhook_handles_unhandled_event_type_with_real_object(
+    client, test_user, db_session
+):
+    """Regression: the silent-ignore branch must also work with a real Event.
+
+    Before the bracket-access fix, even unhandled event types (`invoice.paid`,
+    `invoice.finalized`, `invoice_payment.paid`) 500'd because the crash was
+    on `event.get("id", "")` BEFORE the dispatcher branch. This test asserts
+    that an unhandled event type now returns 200 and writes an idempotency
+    row, matching production behavior under the live SDK.
+    """
+    import stripe
+
+    raw_event = {
+        "id": "evt_real_object_unhandled_001",
+        "object": "event",
+        "type": "invoice.finalized",
+        "data": {
+            "object": {
+                "object": "invoice",
+                "id": "in_test_unhandled",
+                "customer": "cus_test_unhandled",
+            }
+        },
+    }
+    stripe_event = stripe.Event.construct_from(raw_event, "sk_test_dummy")
+
+    with patch(
+        "app.services.payment_service.stripe.Webhook.construct_event",
+        return_value=stripe_event,
+    ):
+        resp = await client.post(
+            "/api/v1/payments/webhook",
+            content=json.dumps(raw_event).encode(),
+            headers={"stripe-signature": "t=1,v1=fake"},
+        )
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["event_type"] == "invoice.finalized"
+
+    # Idempotency row must persist even for unhandled types.
+    row = (
+        await db_session.execute(
+            select(StripeEvent).where(StripeEvent.id == "evt_real_object_unhandled_001")
+        )
+    ).scalar_one_or_none()
+    assert row is not None
+    assert row.event_type == "invoice.finalized"
 
 
 async def test_webhook_rejects_invalid_signature(client):
