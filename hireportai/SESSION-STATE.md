@@ -175,25 +175,29 @@ User-visible bugs with dedicated fix slices. Cross-reference: BACKLOG.md.
 
 ## Recently Completed (last 5)
 
-1. 2026-05-02 — **Phase 6 cleanup triage shipped at `5291d9e` — B-100 ✅.** Mode-3 scout audit producing per-item retire/migrate/defer verdicts for slice-15 scope.
+1. 2026-05-02 — **Phase 6 slice 6.15 spec authored at `<this-slice>` — B-101 ✅ (spec-author) + B-102 🔴 (forward-filed impl).** Single-slice spec-author file+close per B-091/B-092/B-093/B-097 precedent.
 
-New `docs/audits/phase-6-cleanup-triage.md` enumerates ~25 deferred-cleanup items across 8 themes (FE legacy routes, FE legacy components, BE legacy services, BE dual-read collapses, BE legacy routes, DB table drops, helper consolidation, telemetry deprecation). Each item carries a verdict bucket + R16 consumer count + rationale.
+New `docs/specs/phase-6/15-legacy-retirement-easy-wins.md` (~430 lines, 15 numbered sections + Status). **Scope = Option C from triage B-100** — 3 mechanical cleanups: T7.1 lift `DailyStatus` from `schemas/study.py` to new `schemas/daily_status.py` (3 import-flip sites); T7.2 dedupe `_next_local_midnight` to new `app/utils/local_time.py` with public rename (4 callsite renames); T8.1 `git rm` `study_dashboard_viewed` row at `analytics.md:46` (zero code emitters confirmed). Zero new tables, zero migrations, zero FE surface. §12 empty placeholder; §14 carries 7 OQs (A..G) with author hints.
 
-**Bucket counts:** 4 RETIRE-NOW + 18 RETIRE-WITH-MIGRATION + 9 DEFER + 1 DONE + 1 PROCESS.
+**JC #1 (info-only):** Triage's T1.3 + T7.4 excluded — gated on spec-16 retirements. Final scope = 3 items (vs triage's "4-5 with T7.4 contingent"). Refinement, not contradiction.
 
-**Stop-condition tripped:** 18 RETIRE-WITH-MIGRATION items > prompt's 15-item threshold. Surfaced in §Summary; doc is the artifact, not blocking. Recommendation = Option C: split slice-15 into two specs — `15-legacy-retirement-easy-wins.md` (4-5 items, 1 impl slice) + `16-legacy-cards-schema-retirement.md` (4 cascading impl slices, gated on slice 6.16 FSRS retention dashboard re-platform for `card_progress` drop).
+**Co-shipped SS hygiene:** Step-0 health-check caught B-100 RC entry at 282 words > 250 ceiling (my prior-slice miss). Compacted inline (~120 words). Same file/domain — bundled per C3 at concern level.
 
-**Drift surfaced (info-only):** B-010 row claims `Navbar.tsx` is dead code, but disk shows 2 live importers (`LandingPage.tsx`, `LoginPage.tsx`). Triage doc flags as DEFER + needs B-010 row review (separate slice).
+**R15(c):** B-101 ✅ + B-102 🔴 forward-filed. **R17:** B-101 + B-102 claimed; B-103 next-free. R14 exception (b). BE 842 / FE 456 carry-forward.
 
-**R16 consumer counts verified at HEAD `c6415a2`:** `gap_mapping_service` → 1 live route (`onboarding.py`); `/learn/category` → live nav source `Learn.tsx:133`; `card_progress` → 11 service consumers; `card_feedback` → 1 live route (`feedback.py`, gated on B-094b); `study_dashboard_viewed` → zero emitters (catalog cleanup only); `study_dashboard_source_hint_shown` → live emitter `Learn.tsx:302` (slice 6.7 preserved).
-
-**R15(c):** B-100 filed + closed in same slice (single-slice scout file+close, B-091/B-092/B-093/B-095/B-096/B-099 precedent). **R17 watermark advances:** B-100 claimed; B-101 next-free.
-
-**Test counts unchanged** (Mode-3 scout, R14 exception (b)): BE 842 / FE 456 carry-forward. No code touched. Two-commit pattern (audit + BACKLOG + SS in commit 1; SHA backfill in commit 2 replacing `5291d9e` placeholders).
-
-Prior HEAD: `c6415a2` — 2026-05-02 SHA backfill for B-098.
+Prior HEAD: `9ee8281` — 2026-05-02 SHA backfill for B-100.
 
 **Awaiting CODEX review per Rule 11.**
+
+2. 2026-05-02 — **Phase 6 cleanup triage shipped at `5291d9e` — B-100 ✅.** Mode-3 scout audit producing per-item retire/migrate/defer verdicts for slice-15 scope. New `docs/audits/phase-6-cleanup-triage.md` enumerates ~25 deferred-cleanup items across 8 themes with R16 consumer counts.
+
+**Bucket counts:** 4 RETIRE-NOW + 18 RETIRE-WITH-MIGRATION + 9 DEFER + 1 DONE + 1 PROCESS. **Stop-condition tripped:** 18 RETIRE-WITH-MIGRATION items > 15-item threshold. Recommendation = Option C: split slice-15 into easy-wins spec (1 impl slice) + cards-schema-retirement umbrella (4 cascading impl slices, gated on slice 6.16 FSRS retention re-platform for `card_progress` drop).
+
+**Drift surfaced:** B-010 row claims `Navbar.tsx` is dead code, but disk shows 2 live importers (`LandingPage.tsx`, `LoginPage.tsx`) — flagged for separate review slice.
+
+R14 exception (b). BE 842 / FE 456 carry-forward. Single-slice scout file+close. R17 advanced B-100; B-101 next-free.
+
+Prior HEAD: `c6415a2` — 2026-05-02 SHA backfill for B-098.
 
 2. 2026-05-02 — **Phase 6 slice 6.14 impl shipped at `bcd89ce` — B-098 ✅.** Ships first scheduled job in codebase per LD G2 = Railway cron. **20/20 ACs satisfied.**
 
