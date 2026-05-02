@@ -206,10 +206,18 @@ shape:
   dependencies + `see spec <path>` if the spec exists. DO NOT inline
   scope detail that belongs in the spec body.
 
-Backstops (soft, R19-trigger if exceeded):
+Backstops (sharpened 2026-05-01 for B-092 process compaction bundle —
+measured via `./scripts/process-health-check.sh`):
 
-- Closed row notes: ~200 words.
-- Forward-filed row notes: ~300 words.
+- Recently Completed entries: target 150 words, **hard ceiling 250
+  words** (matches the health-check `fail` threshold). CC measures via
+  `wc -w` on its own entry before commit; if over 250, rewrite. Heavy
+  slices (CR regen, multi-file refactor) may exceed 250 if explicitly
+  justified in a JC.
+- BACKLOG row scope blocks: target 200 words, hard ceiling 400.
+- Closure trails: target 100 words, no hard ceiling (audit signal earns
+  its length).
+- Forward-filed row notes: target 200 words, hard ceiling 300.
 
 Slice details (file inventory, JCs, drift surfacing, R-rule fires, audit
 findings, working-tree state, SOP gates) live in `SESSION-STATE.md`
@@ -374,6 +382,13 @@ above reclaims that surface. Sidecar rows that mirror compacted
 content (e.g., a "prior, kept for archaeology" row alongside a
 compact form) are themselves bloat — git history is the archaeology.
 
+**SOP gate confirmations are not narrated unless they tripped.**
+Saying "SOP-1 ✓ HEAD matched" restates that SOP-1 ran (which is
+default) and adds zero signal. Saying "SOP-1 STOP — HEAD was X
+not Y, paused for re-verification" is signal. The rule generalizes
+to every SOP-N: silence on default-met, narrate only on trip.
+Added 2026-05-01 for B-092 process compaction bundle.
+
 ## Things That Are NEVER Okay
 
 **N1** Naming a BACKLOG ID in a commit message or spec citation that
@@ -504,6 +519,15 @@ source-of-truth.
   unmentioned (SOP-4 holding)
 
 ## Revision history
+- 2026-05-01: B-092 process compaction bundle — SESSION-STATE entries
+  5+ archived to `docs/archive/session-state-history.md` §6; BACKLOG
+  closed-table rows pre-2026-04-29 archived to NEW
+  `docs/archive/backlog-closed.md`; `scripts/process-health-check.sh`
+  pilot (5 caps measured against locked thresholds); R15(d) backstops
+  sharpened (Recently Completed hard-ceiling 250 words measured by
+  health-check); SOP gate-narration rule added to LIGHT MODE section.
+  R14 exception (b) — pure process tooling + rule codification, no
+  test surface. Closes B-092.
 - 2026-05-01: Added LIGHT MODE reporting discipline subsection
   per docs/specs/process/01-light-mode-reporting.md (B-090). Codifies
   the "default-silent / report-deviations" rule + one-prior-HEAD-only
