@@ -111,4 +111,18 @@ describe('HomeScoreDeltaWidget — spec #63 §8.2', () => {
     expect(screen.getByText(/\+24 pts/)).toBeInTheDocument()
     expect(screen.getByText(/Stripe/)).toBeInTheDocument()
   })
+
+  it('B-089 / §16.6 R-5 — renders after a single rescan (baseline + 1 rescan)', async () => {
+    // Spec #63 §16.6 R-5: /analyze writes the baseline score row, so the
+    // first /rescan lands history.length=2. Before B-089 this took two
+    // rescans; this regression test pins the post-B-089 contract.
+    fetchScoreHistory.mockResolvedValue(deltaHistory(64, 78))
+    renderWidget({ trackerId: TRACKER_ID, company: 'Acme' })
+    await waitFor(() =>
+      expect(screen.getByTestId('widget-home-score-delta')).toBeInTheDocument(),
+    )
+    expect(screen.getByText('64')).toBeInTheDocument()
+    expect(screen.getByText('78')).toBeInTheDocument()
+    expect(screen.getByText(/\+14 pts/)).toBeInTheDocument()
+  })
 })

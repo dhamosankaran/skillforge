@@ -162,7 +162,7 @@ async def analyze_resume(
                 status="Applied",
                 scan_id=response.scan_id,
             )
-            await create_application(
+            new_tracker = await create_application(
                 tracker_data,
                 db,
                 user_id=current_user.id,
@@ -171,6 +171,19 @@ async def analyze_resume(
                 analysis_payload=response.model_dump(mode="json"),
                 jd_text=job_description,
                 jd_hash=hash_jd(job_description),
+            )
+            # Spec #63 §16.6 R-5 / §6.3 — REQUIRED baseline write so the first
+            # /rescan after /analyze lands history.length=2 (delta envelope
+            # non-degenerate; HomeScoreDeltaWidget renders without two
+            # rescans).
+            await tracker_application_score_service.write_score_row(
+                tracker_application_id=new_tracker.id,
+                user_id=current_user.id,
+                response=response,
+                scan_id=response.scan_id,
+                jd_hash=hash_jd(job_description),
+                resume_hash=hash_jd(resume_text),
+                db=db,
             )
             analytics_track(
                 user_id=current_user.id,
