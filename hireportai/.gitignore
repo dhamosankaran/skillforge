@@ -84,3 +84,6 @@ Thumbs.db
 *.swo
 archive/
 !docs/archive/
+
+# Local-only chat-sync sentinel (used by scripts/chat-sync-check.sh)
+.chat-sync-sha
