@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|-------|
-| **HEAD commit** | `e0e9b29` — 2026-05-01 LIGHT MODE reporting discipline applied to `CLAUDE.md` per spec `docs/specs/process/01-light-mode-reporting.md` (B-090 ✅). §4's "Reporting discipline (LIGHT MODE)" subsection appended verbatim under "Final Report (Every Slice)"; §4 addendum (sidecar-rows-are-bloat sentence) appended per impl-prompt Step 2(b); revision history line added. R15(c): B-090 🔴 → ✅. R14 exception (b) — BE 761 / FE 445 carry-forward. Prior HEAD: `401e0e3` — 2026-05-01 SHA backfill for the LIGHT MODE spec-author slice (`b85bfd1`). |
+| **HEAD commit** | `<this-slice>` — 2026-05-01 `scripts/sha-backfill.sh` pilot shipped (B-091 ✅) — automates slice-SHA placeholder substitution across BACKLOG.md + SESSION-STATE.md + docs/specs/ per audit `docs/audits/process-bloat-2026-05-01.md` §5 (Thread B optimization sprint). Portable macOS bash 3.2 + Linux bash 4+; smoke test 6/6 pass; commit-2 ate own dogfood (ran the pilot against this slice's commit-1 SHA for end-to-end validation). R15(c): B-091 🔴 → ✅ (single-slice lifecycle). R17 watermark advance: B-091 claimed + closed; B-092 next-free numeric ID. R14 exception (b) — BE 761 / FE 445 carry-forward. Prior HEAD: `c9d1f21` — 2026-05-01 SHA backfill for the LIGHT MODE impl slice (`e0e9b29` — B-090). |
 | **Branch** | `main` (pushed to `origin/main` at `9834abe` on 2026-04-30; 5 commits fast-forwarded from `3b1aa93` — `3683677` post-push watermark + `691934a` CR targeted regen + `7b82603` CR-regen SHA backfill + `da14c01` E-043 spec-author + `9834abe` E-043 SHA backfill) |
 | **CODE-REALITY.md sha (repo)** | **Stale ❌** at anchor `1ca046f` (last full regen 2026-04-30); 1 code-touching commit since (this slice — `95104d2` Phase 6 slice 6.11 adds new service `admin_content_quality_service.py` + new schemas + new route + new admin page `AdminContentQuality.tsx` + 3 components + types + hook + analytics catalog row + curriculum.md §7 update). Sharpened LD-1 code-touching gap = 1 from this commit (below ~10-commit threshold per LD-2; defer regen to next staleness threshold trip). |
 | **CODE-REALITY.md in chat Project** | Stale ❌ — Dhamo to re-upload `hireportai/CODE-REALITY.md` to the chat Project before the next planning-level conversation (full regen at this slice; B-086a + B-086b absorbed). |
@@ -172,7 +172,21 @@ User-visible bugs with dedicated fix slices. Cross-reference: BACKLOG.md.
 
 ## Recently Completed (last 5)
 
-1. 2026-05-01 — **LIGHT MODE reporting discipline applied to `CLAUDE.md` at `e0e9b29` — B-090 ✅. §4's "Reporting discipline (LIGHT MODE)" subsection appended verbatim under "Final Report (Every Slice)" per spec `docs/specs/process/01-light-mode-reporting.md` AC-1; revision history line added per AC-2; this entry is the second canonical compact-shape example (after the spec-author slice at `b85bfd1`) per AC-3 + AC-4.** Mode 2 (impl-to-spec).
+1. 2026-05-01 — **`scripts/sha-backfill.sh` pilot shipped at `<this-slice>` — B-091 ✅. Closes Thread B optimization sprint by translating audit `docs/audits/process-bloat-2026-05-01.md` §5 into a working pilot (~60-90 min/month savings estimate). ~72-line bash; scope = BACKLOG.md + SESSION-STATE.md + docs/specs/; `--dry-run` preview + idempotent re-run; portable macOS bash 3.2 + Linux bash 4+.** Mode 1 (audit-and-implement, single-slice tooling).
+
+**Smoke test 6/6 pass** (no-args, invalid-SHA, clean-tree, dry-run-preview, real-run, idempotent-rerun). **Eat-own-dogfood:** commit-2's backfill ran the pilot against itself with commit-1's SHA — end-to-end validation. Per-step detail in BACKLOG B-091 row.
+
+**JCs (2, info-only):** **JC #1** `mapfile -t` (bash 4+) failed on macOS bash 3.2 at first smoke run; fixed with `while IFS= read` loop + `+=()`; trap documented in script body. **JC #2** the literal marker collides with prose describing the marker (`automate <marker> substitution`); reworded such prose to "slice-SHA placeholder" so the script's grep matches only true placeholder sites. Forward note: slices documenting the marker by name should use the same descriptive form.
+
+**R15(c):** B-091 🔴 → ✅ in this commit (single-slice lifecycle). **R17 watermark advances:** B-091 claimed + closed; B-092 next-free.
+
+**Files:** 1 NEW (`scripts/sha-backfill.sh`, +x) + 2 MODIFIED (`BACKLOG.md` B-091 rows; `SESSION-STATE.md` Session Header HEAD + this entry).
+
+Prior HEAD: `c9d1f21` — 2026-05-01 SHA backfill for the LIGHT MODE impl slice (`e0e9b29` — B-090).
+
+**Awaiting CODEX review per Rule 11.**
+
+2. 2026-05-01 — **LIGHT MODE reporting discipline applied to `CLAUDE.md` at `e0e9b29` — B-090 ✅. §4's "Reporting discipline (LIGHT MODE)" subsection appended verbatim under "Final Report (Every Slice)" per spec `docs/specs/process/01-light-mode-reporting.md` AC-1; revision history line added per AC-2; this entry is the second canonical compact-shape example (after the spec-author slice at `b85bfd1`) per AC-3 + AC-4.** Mode 2 (impl-to-spec).
 
 §4 addendum (per impl-prompt Step 2(b)): one sentence appended to the "When in doubt, drop" paragraph codifying that sidecar rows mirroring compacted content are themselves bloat — captures the lesson from the spec-author slice's experimental "(prior, kept for archaeology)" Session Header row that was removed before commit. Codified now so future slices don't re-litigate the instinct.
 
