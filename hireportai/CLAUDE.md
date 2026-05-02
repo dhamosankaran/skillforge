@@ -246,8 +246,13 @@ change type:
 - Service change → audit dependents + tests + LLM task names if
   `llm_router` is involved
 
-Reference `CODE-REALITY.md` for the live state. If `CODE-REALITY.md` is
-older than the current HEAD, regenerate it before drafting the audit.
+For orientation queries (what exists, rough structure), reference
+`CODE-REALITY.md`. For precision queries (who calls X, which
+components consume type Y, does route Z exist), prefer live
+`rg`/`grep` at Step 0 over CR reads — live disk is always fresher
+than any snapshot. This reduces CR regen frequency without sacrificing
+audit accuracy. CR regen is still valuable before heavy multi-file
+slices where orientation matters more than precision.
 
 **R17 Live BACKLOG ID check before filing new rows**: Before drafting a
 commit message that references a new `B-###` or filing a new BACKLOG
@@ -527,6 +532,10 @@ source-of-truth.
   unmentioned (SOP-4 holding)
 
 ## Revision history
+- 2026-05-02: B-107 R16 amendment — closing paragraph rewritten from
+  "regenerate CR before audit" to scout-first preference (live
+  `rg`/`grep` for precision; CR for orientation). Reduces CR regen
+  frequency. R14 exception (b) — pure rule refinement.
 - 2026-05-02: B-106 R14 amendment — added "Spec length governance"
   paragraph (≤800 target / 1200 JC trigger; guideline not gate).
   R14 exception (b) — pure rule refinement, no design surface, no
