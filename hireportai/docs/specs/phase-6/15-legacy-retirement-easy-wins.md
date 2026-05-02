@@ -1,6 +1,6 @@
 # Phase 6 / Slice 6.15 — Legacy retirement easy-wins
 
-## Status: Drafted (spec-author) — closes B-101. Impl forward-filed at B-102.
+## Status: Drafted, §12 amended — D-1..D-7 locked at `<this-slice>` from §14 OQ-A..OQ-G (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 / 6.13.5 / 6.14 §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc` / `4bf5220` / `b5bec37`); B-101 ✅ (spec-author) + B-102 🔴 (impl-pickup ready post-amendment) + B-103 ✅ (this §12 amendment) + B-104 🟦 (B-010 review row, filed per D-7).
 
 > **Scope precedent.** This spec implements the "Option C / spec 15"
 > recommendation from the cleanup triage at
@@ -352,12 +352,80 @@ touched.
 
 ## 12. LOCKED DECISIONS (D-N)
 
-> Empty placeholder — locked at the §12 amendment slice (mirrors slice
-> 6.0 `e8eecdd` / 6.4.5 `df58eaf` / 6.5 `acba7ed` / 6.6 `fb92396` /
-> 6.7 `0c21223` / 6.8 `ab07168` / 6.10 `be7d59a` / 6.11 `d9bfcfc` /
-> 6.13.5 `4bf5220` / 6.14 `b5bec37` precedent). Once Dhamo locks each
-> §14 OQ to one of its options + author hints, this section will carry
-> the resolved decisions. Until then, §14 is the source of truth.
+> Locked at `<this-slice>` (2026-05-02). D-1..D-7 resolve §14
+> OQ-A..OQ-G 1:1 (verbatim author-hint dispositions, all 7 confirmed
+> by Dhamo single-admin disposition). Mirrors slice 6.0 / 6.4.5 / 6.5
+> / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 / 6.13.5 / 6.14 §12 amendment
+> pattern at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` /
+> `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc` / `4bf5220` /
+> `b5bec37`.
+
+- **D-1** (resolves OQ-A) — **`schemas/study.py` keeps a thin
+  re-export of `DailyStatus`** for back-compat. Concretely, after
+  T7.1 the file body holds `from app.schemas.daily_status import
+  DailyStatus  # back-compat re-export pending spec 16` in place of
+  the original `class DailyStatus(BaseModel): ...` definition.
+  Spec 16 will eventually delete or rewrite `schemas/study.py`
+  itself; until then the re-export shields any importer outside the
+  verified consumer list (`schemas/quiz_item.py`,
+  `services/study_service.py`, `services/quiz_item_study_service.py`).
+  Tests in §10.1 #2 + §11 AC-2 pin this contract. See §4 manifest +
+  §5 schema definitions.
+
+- **D-2** (resolves OQ-B) — **`next_local_midnight` lives in a new
+  file `app/utils/local_time.py`** (NOT in an existing util module
+  and NOT in a service-internal `_fsrs_helpers.py`). The helper is
+  general (date/tz arithmetic) and not service- or FSRS-specific.
+  Codebase precedent for cross-cutting helpers: `app/utils/anonymizer.py`,
+  `app/utils/uuid.py`. Impl Step 0 verifies whether
+  `app/utils/datetime_util.py` exists; if it does NOT (expected per
+  triage spot-check), proceed with new-file creation. If it DOES,
+  flag as a §12 minor amendment for re-pick (D-2 amend-on-disk).
+  See §4 manifest + §6.1 helper relocation + §11 AC-4.
+
+- **D-3** (resolves OQ-C) — **Helper renames `_next_local_midnight`
+  → `next_local_midnight`** when it moves to the shared util.
+  Leading underscore drops because the helper is now part of a
+  shared module's public surface, not a service-private. All 4
+  callsites (3 in `study_service.py` at `:246` / `:294` / inside
+  `_compute_daily_status`; 1 in `quiz_item_study_service.py:222`)
+  flip to the public name. See §6.1 + §11 AC-5 + AC-6.
+
+- **D-4** (resolves OQ-D) — **Two flat test files**:
+  `tests/test_daily_status_relocation.py` + `tests/test_local_time_util.py`
+  (NOT one bundled `test_slice_6_15_easy_wins.py`). The two
+  changes are technically unrelated (Pydantic-model relocation vs
+  pure-helper extraction); bundling by slice ID couples them
+  artificially. Mirrors codebase's existing flat-`tests/`
+  convention (cf. `test_phase6_schema.py`,
+  `test_quiz_items_api.py`). See §10.1 + §11 AC-8.
+
+- **D-5** (resolves OQ-E) — **Hard-delete the
+  `study_dashboard_viewed` row** at `.agent/skills/analytics.md:46`
+  (NOT strikethrough with deprecation annotation). Catalog
+  reflects on-disk reality; strikethrough creates "deprecated
+  zombie" rows that accumulate over time. PR description + git
+  history preserve provenance. See §9.1 + §11 AC-7.
+
+- **D-6** (resolves OQ-F) — **No automatic spec-16 trigger**.
+  Spec 16 is recommended-but-not-mandated by the triage doc; if
+  Dhamo decides Phase-7 is the right home for the `cards`-schema
+  retirement, spec 16 may never exist. The triage doc at
+  `docs/audits/phase-6-cleanup-triage.md` already serves the
+  thread-tracking role; a 🟦 BACKLOG row would duplicate. No row
+  filed for spec 16 authoring. See §13 out-of-scope.
+
+- **D-7** (resolves OQ-G) — **File a separate B-### at 🟦** in
+  this §12 amendment slice's close to track the B-010 ("Navbar
+  orphan") row review (Navbar is NOT orphan — live in
+  `LandingPage.tsx` + `LoginPage.tsx`; B-010 row says "Dead code.
+  Delete after confirming zero imports."). The 🟦 row converts
+  the triage's flag into a queueable item. Inline-editing B-010's
+  Notes field would be borderline per R15(b) ("status updates are
+  the only edits CC may make autonomously"); a new row is cleaner.
+  Concretely: this slice files **B-104** at 🟦 with title "B-010
+  follow-up — Navbar.tsx is NOT orphan; row needs update-or-close
+  decision". See §13 out-of-scope.
 
 ---
 
@@ -386,114 +454,42 @@ Mirrors the cleanup triage's verdict buckets:
 
 ## 14. Open questions for chat-Claude / Dhamo
 
-> **Per amendment cadence:** §12 stays empty until a chat-Claude /
-> Dhamo §12 amendment slice locks each OQ below to one of its options.
-> Until then, §14 is the source of truth.
+> **RESOLVED at `<this-slice>` (2026-05-02).** All 7 OQs locked at the
+> §12 amendment slice — see §12 D-1..D-7 for the lock rationale.
+> Headings + first-sentence questions retained for cross-ref
+> stability; option bodies + author hints removed (the locks
+> supersede them).
 
 ### OQ-A — `DailyStatus` post-relocation home in `schemas/study.py`
 
-**Author hint:** (a) keep thin re-export `from app.schemas.daily_status
-import DailyStatus`. Spec 16 will eventually delete or rewrite
-`schemas/study.py` itself; until then, the re-export shields any
-external test fixture or downstream consumer that imports from the old
-path.
-
-**Options:**
-- (a) Keep `schemas/study.py` re-export of `DailyStatus` for
-  back-compat. (Author hint.)
-- (b) Delete the `DailyStatus` class from `schemas/study.py` entirely;
-  no re-export. Forces every importer to flip to the new home in this
-  slice. Risk: any importer outside the verified consumer list
-  (`schemas/quiz_item.py`, `services/study_service.py`,
-  `services/quiz_item_study_service.py`) breaks.
+**RESOLVED — see §12 D-1.** Keep thin re-export.
 
 ### OQ-B — Home for `next_local_midnight` shared helper
 
-**Author hint:** (a) `app/utils/local_time.py` (new file). The helper
-is general (date/tz arithmetic) and not service- or FSRS-specific. A
-new `app/utils/` module is conventional for cross-cutting helpers in
-this codebase (cf. `app/utils/anonymizer.py`, `app/utils/uuid.py`).
-
-**Options:**
-- (a) New file `app/utils/local_time.py`. (Author hint.)
-- (b) Add to existing `app/utils/datetime_util.py` — IF it exists.
-  (Verify at impl Step 0.)
-- (c) Add to a new module-private util inside
-  `app/services/_fsrs_helpers.py`. Keeps the helper in the FSRS
-  neighbourhood. Risk: future non-FSRS callers have to depend on a
-  service-internal module.
+**RESOLVED — see §12 D-2.** New file `app/utils/local_time.py`.
 
 ### OQ-C — Helper rename: drop leading underscore?
 
-**Author hint:** (a) Yes, rename `_next_local_midnight` →
-`next_local_midnight`. Once the helper lives in a shared util, the
-leading underscore (Python convention for module-private) is
-inconsistent with its now-public role.
-
-**Options:**
-- (a) Rename to `next_local_midnight`. (Author hint.)
-- (b) Keep `_next_local_midnight` even in the shared util. Pro:
-  fewer callsite edits. Con: convention violation.
+**RESOLVED — see §12 D-3.** Rename to public `next_local_midnight`.
 
 ### OQ-D — Test file naming
 
-**Author hint:** (a) `tests/test_daily_status_relocation.py` +
-`tests/test_local_time_util.py`. Mirrors the codebase's existing flat-
-tests/ convention (cf. `test_phase6_schema.py`,
-`test_quiz_items_api.py`).
-
-**Options:**
-- (a) Two flat files per the names above. (Author hint.)
-- (b) One bundled file `tests/test_slice_6_15_easy_wins.py`. Pro:
-  one slice = one test file. Con: not topical-coherent (the two
-  changes are unrelated technically; bundling by slice ID couples
-  them artificially).
+**RESOLVED — see §12 D-4.** Two flat test files
+(`tests/test_daily_status_relocation.py` + `tests/test_local_time_util.py`).
 
 ### OQ-E — `analytics.md` row deletion vs strikethrough
 
-**Author hint:** (a) Hard delete the row. The catalog is supposed to
-reflect on-disk reality; a strikethrough creates "deprecated zombie"
-rows that accumulate over time. The slice's git diff is the historical
-record.
-
-**Options:**
-- (a) Hard delete. (Author hint.)
-- (b) Strikethrough with `**(DELETED slice 6.15 — emitter
-  `pages/StudyDashboard.tsx` removed in B-077)**` annotation. Pro:
-  preserves "this used to fire" awareness for someone diffing PostHog
-  funnels against the catalog. Con: catalog clutter; PR description
-  + git history already preserve provenance.
+**RESOLVED — see §12 D-5.** Hard delete.
 
 ### OQ-F — Spec 16 follow-up triggering
 
-**Author hint:** (a) Spec 16 authoring is a separate slice; this slice
-does NOT block on it. Spec 16 is itself recommended-but-not-mandated
-by the triage doc; if Dhamo decides Phase-7 is the right home for
-the `cards`-schema retirement, spec 16 may never exist.
-
-**Options:**
-- (a) No automatic trigger. Spec 16 is a Dhamo decision. (Author hint.)
-- (b) File a 🟦 BACKLOG row at this slice's close pointing at "Spec 16
-  authoring — author when slice 6.16 (FSRS retention dashboard)
-  ships, since 16d gates on it". Pro: prevents dropping the thread.
-  Con: the triage doc itself already serves that role (it lives at
-  `docs/audits/`); a 🟦 row duplicates.
+**RESOLVED — see §12 D-6.** No automatic trigger; triage doc serves
+the thread-tracking role.
 
 ### OQ-G — B-010 ("Navbar orphan") row review timing
 
-**Author hint:** (a) File a separate B-### at 🟦 in this slice's close
-to track the B-010 review (Navbar is NOT orphan, row needs
-update-or-close decision). The triage doc flagged the staleness;
-filing a row converts the flag into a queueable item.
-
-**Options:**
-- (a) File a 🟦 row at this slice's close. (Author hint.)
-- (b) Inline-edit B-010's Notes field in this slice ("disk shows 2
-  live importers; row may be stale"). Pro: zero new BACKLOG ID. Con:
-  R15(b) "status updates are the only edits CC may make autonomously"
-  — touching the Notes field is borderline.
-- (c) Defer entirely; chat-Claude / Dhamo handles in a separate
-  cohort triage. Pro: cleanest scope. Con: drops the thread.
+**RESOLVED — see §12 D-7.** Filed as **B-104** at 🟦 in this §12
+amendment slice's close.
 
 ---
 
@@ -520,13 +516,19 @@ filing a row converts the flag into a queueable item.
 
 ### Status
 
-- **Spec authored:** B-101 (this slice).
-- **Implementation:** B-102 (forward-filed at 🔴, ready for impl
-  pickup post-§12 amendment).
-- **§12 amendment:** filed by chat-Claude when Dhamo locks §14 OQs.
+- **Spec authored:** B-101 ✅ (`b50a592`).
+- **§12 amendment:** B-103 ✅ (`<this-slice>`) — D-1..D-7 locked from
+  §14 OQ-A..OQ-G 1:1 (Dhamo single-admin disposition; zero ambiguous
+  hints).
+- **Implementation:** B-102 🔴 (forward-filed; ready for impl pickup
+  post-§12 amendment, which is now shipped).
+- **D-7 follow-up:** B-104 🟦 (B-010 review row, filed at this §12
+  amendment slice's close per D-7).
 
 ---
 
-*Spec authored 2026-05-02 by Claude Code at HEAD `9ee8281`. Closes
-B-101 (spec-author). Forward-files B-102 (impl, 🔴). Closes triage
-recommendation Option C from B-100 (`5291d9e`).*
+*Spec authored 2026-05-02 by Claude Code at HEAD `9ee8281`
+(`b50a592`). §12 amended 2026-05-02 at HEAD `8f6ef8b`
+(`<this-slice>`). Closes B-101 (spec-author) + B-103 (§12 amendment).
+Forward-files B-102 (impl, 🔴) + B-104 (D-7 follow-up, 🟦). Closes
+triage recommendation Option C from B-100 (`5291d9e`).*
