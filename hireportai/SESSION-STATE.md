@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|-------|
-| **HEAD commit** | `<this-slice>` — 2026-05-02 Phase 6 slice 6.14 impl shipped (B-098 ✅). Ships first scheduled job in codebase per LD G2 = Railway cron — `[[cron]]` config + CLI script + 304-line composer/orchestrator service + Pydantic schemas + HTML template + 4 PostHog events. 20/20 ACs satisfied. Tests: BE 802 → 824 (+22); FE 466 unchanged. Zero new migrations. 3 JCs (info-only) — commit-location for test isolation + 2 model-shape adjustments at test fixture layer. R14 default. Prior HEAD: `a746dac` — 2026-05-02 SHA backfill for B-099. |
+| **HEAD commit** | `bcd89ce` — 2026-05-02 Phase 6 slice 6.14 impl shipped (B-098 ✅). Ships first scheduled job in codebase per LD G2 = Railway cron — `[[cron]]` config + CLI script + 304-line composer/orchestrator service + Pydantic schemas + HTML template + 4 PostHog events. 20/20 ACs satisfied. Tests: BE 802 → 824 (+22); FE 466 unchanged. Zero new migrations. 3 JCs (info-only) — commit-location for test isolation + 2 model-shape adjustments at test fixture layer. R14 default. Prior HEAD: `a746dac` — 2026-05-02 SHA backfill for B-099. |
 | **Branch** | `main` (pushed to `origin/main` at `9834abe` on 2026-04-30; 5 commits fast-forwarded from `3b1aa93` — `3683677` post-push watermark + `691934a` CR targeted regen + `7b82603` CR-regen SHA backfill + `da14c01` E-043 spec-author + `9834abe` E-043 SHA backfill) |
 | **CODE-REALITY.md sha (repo)** | ✅ Fresh at `d6fab75` — targeted §1 + §2 + §5 + §11 + §13 regen at HEAD `246b4ec` (B-096). Detail sections §3 / §4 / §6 / §7 / §8 / §10 carry-forward at the prior anchor `1ca046f` per LIGHT scope; chat-Claude consults the §1 slice-absorption log + on-disk files for fresh detail until next full-scope regen. |
 | **CODE-REALITY.md in chat Project** | Stale ❌ — Dhamo to re-upload `hireportai/CODE-REALITY.md` to the chat Project before the next planning-level conversation (full regen at this slice; B-086a + B-086b absorbed). |
@@ -175,7 +175,7 @@ User-visible bugs with dedicated fix slices. Cross-reference: BACKLOG.md.
 
 ## Recently Completed (last 5)
 
-1. 2026-05-02 — **Phase 6 slice 6.14 impl shipped at `<this-slice>` — B-098 ✅.** Ships first scheduled job in codebase per LD G2 = Railway cron. **20/20 ACs satisfied.**
+1. 2026-05-02 — **Phase 6 slice 6.14 impl shipped at `bcd89ce` — B-098 ✅.** Ships first scheduled job in codebase per LD G2 = Railway cron. **20/20 ACs satisfied.**
 
 Ships `[[cron]]` in `railway.toml` (`schedule = "0 14 * * *"` per D-1; `command = "python -m app.scripts.send_pro_digest"` per D-2) + `app/scripts/send_pro_digest.py` (43-line CLI mirroring `seed_phase6.py` boot pattern; CLI commits post-orchestrator) + `app/services/pro_digest_service.py` (304-line: selector Pro-tier+opt-out per D-6, composer with strict empty-rule per D-7, orchestrator with `was_sent_today` short-circuit + IntegrityError concurrent-tick handling + 4-event telemetry per D-10 + sequential loop per D-11) + `app/schemas/pro_digest.py` (61-line `DigestPayload` + `SendSummary`) + `app/templates/pro_digest.html` (45-line inline-style HTML per D-4 with CSS-driven `display:none` empty-section visibility) + `analytics.md` 4 new event rows.
 
