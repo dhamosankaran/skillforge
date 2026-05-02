@@ -175,7 +175,7 @@ User-visible bugs with dedicated fix slices. Cross-reference: BACKLOG.md.
 
 ## Recently Completed (last 5)
 
-1. 2026-05-02 — **Phase 6 cleanup triage shipped at `<this-slice>` — B-100 ✅.** Mode-3 scout audit producing per-item retire/migrate/defer verdicts for slice-15 scope.
+1. 2026-05-02 — **Phase 6 cleanup triage shipped at `5291d9e` — B-100 ✅.** Mode-3 scout audit producing per-item retire/migrate/defer verdicts for slice-15 scope.
 
 New `docs/audits/phase-6-cleanup-triage.md` enumerates ~25 deferred-cleanup items across 8 themes (FE legacy routes, FE legacy components, BE legacy services, BE dual-read collapses, BE legacy routes, DB table drops, helper consolidation, telemetry deprecation). Each item carries a verdict bucket + R16 consumer count + rationale.
 
@@ -189,7 +189,7 @@ New `docs/audits/phase-6-cleanup-triage.md` enumerates ~25 deferred-cleanup item
 
 **R15(c):** B-100 filed + closed in same slice (single-slice scout file+close, B-091/B-092/B-093/B-095/B-096/B-099 precedent). **R17 watermark advances:** B-100 claimed; B-101 next-free.
 
-**Test counts unchanged** (Mode-3 scout, R14 exception (b)): BE 842 / FE 456 carry-forward. No code touched. Two-commit pattern (audit + BACKLOG + SS in commit 1; SHA backfill in commit 2 replacing `<this-slice>` placeholders).
+**Test counts unchanged** (Mode-3 scout, R14 exception (b)): BE 842 / FE 456 carry-forward. No code touched. Two-commit pattern (audit + BACKLOG + SS in commit 1; SHA backfill in commit 2 replacing `5291d9e` placeholders).
 
 Prior HEAD: `c6415a2` — 2026-05-02 SHA backfill for B-098.
 
