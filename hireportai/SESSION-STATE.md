@@ -239,85 +239,8 @@ Prior HEAD: `d020f4d` — 2026-05-01 Phase 6 slice 6.13 shipped (B-087 ✅).
 
 **Awaiting CODEX review per Rule 11.**
 
-2. 2026-05-01 — **Phase 6 slice 6.13 shipped at `d020f4d` — B-087 ✅.** Pro daily digest opt-out + `email_log` dedup table per spec `docs/specs/phase-6/13-pro-digest-opt-out.md`. Migration `f1a2b3c4d5e6` adds additive `email_preferences.daily_digest_opt_out` (server-default false) + new `email_log` (UNIQUE `(user_id, email_type, sent_date)` + composite index + CASCADE FK). New `email_log_service.record_send`/`was_sent_today` (caller-supplied date per OQ-G). Route Pro-tier guard returning 403 per OQ-B + admin bypass per OQ-H; FE `<EmailPreferences />` Pro-gated digest toggle.
 
-Tests: BE **745 → 766 (+21**; +18 mine + 3 concurrent); FE **446 → 451 (+5**, at floor).
-
-**D-028 cascade:** non-CI 25 fails on top of pre-existing 4 — chain extension lets alembic-roundtrip `downgrade -1` drop my artifacts cleanly, mid-suite schema corruption breaks downstream tests. D-028 row updated; CI-canonical clean per R13.
-
-**JCs (4, info-only):** #1 §12 empty on disk — chat-Claude authorised treating §14 OQ author hints as the lock set. #2 §6.4 `user.is_admin` shorthand; used `(user.role or "user") == "admin"` (study_service precedent). #3 FE +5 at floor — Q1 simplicity, no ballast. #4 R10 fired at 3 cascade-fix attempts; reverted, documented in D-028.
-
-**Companion fix (Q2):** analytics.md `email_preferences_viewed` source-path corrected `pages/` → `components/settings/EmailPreferences.tsx`.
-
-**R15(c):** B-087 ✅. **R17:** B-092 highest, B-093 next-free.
-
-Prior HEAD: `d5602c3` — 2026-05-01 B-092 process compaction.
-
-2. 2026-05-01 — **B-092 process compaction bundle shipped at `d5602c3`** — three concerns bundled: (a) SS Recently Completed entries 5–40 cut at LIGHT MODE inflection `b85bfd1` → `docs/archive/session-state-history.md` §6; BACKLOG closed-table pre-2026-04-29 rows (44) → NEW `docs/archive/backlog-closed.md`; live closed-table keeps ~10 most-recent + B-092. (b) `scripts/process-health-check.sh` pilot — 5 caps (SS 400/600 + worst RC 200/250 + BACKLOG 200/300 + active rows 50/75 + CLAUDE.md 600/700); portable bash 3.2+; `--quiet`; exit 1 on fail. (c) CLAUDE.md R15(d) hard-ceiling 250 = health-check fail + new LIGHT MODE §340 SOP-gate-narration rule + revision-history line.
-
-Pre/post: SS 794 → 525 lines; BACKLOG 260 → 220; RC entries 40 → 5; worst RC 1792 → 326 → <250 words. Three remaining warns acceptable margin.
-
-**JC #1:** awk active-row column was $5 (Priority) on first draft; fixed to $6 (Status). Lesson: inspect header before indexing.
-
-**R15(c):** B-092 filed + closed in same slice (B-091 precedent). **R17:** B-092 claimed + closed; B-093 next-free.
-
-Prior HEAD: `6ad5bb7` — 2026-05-01 SHA backfill for B-089.
-
-2. 2026-05-01 — **Phase 5 spec #63 §16.6 R-5 baseline-row backfill shipped at `2cf7c89` — B-089 ✅; cascade-closes D-029 ✅ (Slice 2 of 2; B-088 shipped Slice 1 at `2c92f11`). `/analyze` now writes a `tracker_application_scores` row for the auto-created tracker so the first `/rescan` lands `history.length=2` and HomeScoreDeltaWidget renders without two rescans; `rescan_completed` payload's `ats_score_before` + 5 `*_delta` fields all non-null on first rescan.** Mode 2 (impl-to-spec).
-
-Tests: BE 761 → 764 (+3, within +2..+4 forecast); FE 445 → 446 (+1, at floor). 3 new BE tests in `tests/test_analyze_baseline_score.py` (happy-path baseline write / first-rescan two-row history+non-null delta / per-scan_id idempotency); 1 new FE test in `tests/home/widgets/HomeScoreDeltaWidget.test.tsx` naming the §16.6 R-5 contract.
-
-**JC #1 (info-only, no STOP):** FE test envelope reduced from forecast +1..+2 to +1. Existing `'renders the delta envelope when history.length >= 2'` test (mocked 2-row history) already covers the rendering path; adding more would duplicate it. Added one explicit B-089 regression test that names the §16.6 R-5 contract from the FE perspective. Q1 simplicity / no ballast.
-
-**R15(c):** B-089 🔴 → ✅ + Closed-table row appended (most-recent-first). **D-029 cascade-close ✅** with closure trail citing both Slice 1 (`2c92f11`) and Slice 2 (this slice). **R17 watermark unchanged:** B-091 highest in-use, B-092 next-free.
-
-**Files:** 1 NEW (`tests/test_analyze_baseline_score.py`) + 4 MODIFIED (analyze.py route + HomeScoreDeltaWidget test + BACKLOG + SESSION-STATE).
-
-Prior HEAD: `c77861f` — 2026-05-01 `scripts/sha-backfill.sh` pilot shipped (B-091 ✅).
-
-**Awaiting CODEX review per Rule 11.**
-
-2. 2026-05-01 — **`scripts/sha-backfill.sh` pilot shipped at `c77861f` — B-091 ✅. Closes Thread B optimization sprint by translating audit `docs/audits/process-bloat-2026-05-01.md` §5 into a working pilot (~60-90 min/month savings estimate). ~72-line bash; scope = BACKLOG.md + SESSION-STATE.md + docs/specs/; `--dry-run` preview + idempotent re-run; portable macOS bash 3.2 + Linux bash 4+.** Mode 1 (audit-and-implement, single-slice tooling).
-
-**Smoke test 6/6 pass** (no-args, invalid-SHA, clean-tree, dry-run-preview, real-run, idempotent-rerun). **Eat-own-dogfood:** commit-2's backfill ran the pilot against itself with commit-1's SHA — end-to-end validation. Per-step detail in BACKLOG B-091 row.
-
-**JCs (2, info-only):** **JC #1** `mapfile -t` (bash 4+) failed on macOS bash 3.2 at first smoke run; fixed with `while IFS= read` loop + `+=()`; trap documented in script body. **JC #2** the literal marker collides with prose describing the marker (`automate <marker> substitution`); reworded such prose to "slice-SHA placeholder" so the script's grep matches only true placeholder sites. Forward note: slices documenting the marker by name should use the same descriptive form.
-
-**R15(c):** B-091 🔴 → ✅ in this commit (single-slice lifecycle). **R17 watermark advances:** B-091 claimed + closed; B-092 next-free.
-
-**Files:** 1 NEW (`scripts/sha-backfill.sh`, +x) + 2 MODIFIED (`BACKLOG.md` B-091 rows; `SESSION-STATE.md` Session Header HEAD + this entry).
-
-Prior HEAD: `c9d1f21` — 2026-05-01 SHA backfill for the LIGHT MODE impl slice (`e0e9b29` — B-090).
-
-**Awaiting CODEX review per Rule 11.**
-
-2. 2026-05-01 — **LIGHT MODE reporting discipline applied to `CLAUDE.md` at `e0e9b29` — B-090 ✅. §4's "Reporting discipline (LIGHT MODE)" subsection appended verbatim under "Final Report (Every Slice)" per spec `docs/specs/process/01-light-mode-reporting.md` AC-1; revision history line added per AC-2; this entry is the second canonical compact-shape example (after the spec-author slice at `b85bfd1`) per AC-3 + AC-4.** Mode 2 (impl-to-spec).
-
-§4 addendum (per impl-prompt Step 2(b)): one sentence appended to the "When in doubt, drop" paragraph codifying that sidecar rows mirroring compacted content are themselves bloat — captures the lesson from the spec-author slice's experimental "(prior, kept for archaeology)" Session Header row that was removed before commit. Codified now so future slices don't re-litigate the instinct.
-
-**R15(c):** B-090 🔴 → ✅ in this commit + Closed-table row appended at top.
-
-**Files:** 0 NEW + 3 MODIFIED (`CLAUDE.md` Final Report subsection + revision history line; `BACKLOG.md` B-090 status flip + Closed-table row; `SESSION-STATE.md` Session Header HEAD + this entry) = 3 net touches.
-
-Prior HEAD: `401e0e3` — 2026-05-01 SHA backfill for the LIGHT MODE spec-author slice (`b85bfd1`); spec body shipped at that pair.
-
-**Awaiting CODEX review per Rule 11.**
-
-2. 2026-05-01 — **LIGHT MODE reporting discipline spec authored at `b85bfd1` — `docs/specs/process/01-light-mode-reporting.md` codifies D-1..D-7 from `docs/audits/process-bloat-2026-05-01.md` (`3d03861`) scout inputs. New `docs/specs/process/` phase directory for cross-phase workflow specs (first spec under it). B-090 🔴 forward-filed for impl pickup — applies §4's CLAUDE.md amendment text verbatim + writes one canonical compact Recently Completed entry as the AC-3 example.** Mode 4 (spec-author + decision-locking).
-
-This entry is itself the canonical compact shape per spec AC-3 — no SOP-1..9 enumeration; N8 allowlist unchanged from prior slice; one prior HEAD only. The LIGHT MODE rule (drafted in §4 here, applied to `CLAUDE.md` by B-090) treats default-case SOP / N8 / C1 / R15(c) / R17 / two-commit lines as silent and reports only deviations and status changes.
-
-**R17 watermark advances:** B-090 claimed by this slice (forward-file for impl); B-091 next-free numeric ID post-slice.
-
-**Files:** 1 NEW (`docs/specs/process/01-light-mode-reporting.md`) + 2 MODIFIED (`BACKLOG.md` B-090 forward-file row + `SESSION-STATE.md` Session Header HEAD field + this Recently Completed entry) = 3 net touches.
-
-Two-commit pattern (spec + BACKLOG + SESSION-STATE in commit 1; SHA backfill in commit 2 replacing `b85bfd1` placeholders in spec §1 + spec §10 + spec footer + BACKLOG B-090 source-slice column + SESSION-STATE Session Header HEAD field + this entry's HEAD reference).
-
-Prior HEAD: `880171e` — 2026-05-01 SHA backfill for process bloat scout (the scout audit `3d03861` that produced this spec's inputs).
-
-**Awaiting CODEX review per Rule 11.**
-
-> Recently Completed entries 5+ (36 entries spanning 2026-04-28..2026-05-01) archived to [`docs/archive/session-state-history.md`](docs/archive/session-state-history.md) §6 on 2026-05-01 by B-092 process compaction bundle. The §5 cut from B-076 (2026-04-28) preserved chain-of-archive auditability.
+> Recently Completed entries 6+ archived to [`docs/archive/session-state-history.md`](docs/archive/session-state-history.md): §6 cut on 2026-05-01 by B-092 (36 entries spanning 2026-04-28..2026-05-01) + §7 cut on 2026-05-02 by B-096 (6 entries B-087..B-090 shipped 2026-05-01). The §5 cut from B-076 (2026-04-28) preserved chain-of-archive auditability.
 
 ## Open Decisions Awaiting Dhamo
 
