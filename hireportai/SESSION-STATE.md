@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|-------|
-| **HEAD commit** | `b85bfd1` — 2026-05-01 LIGHT MODE reporting discipline spec authored — `docs/specs/process/01-light-mode-reporting.md` codifies D-1..D-7 from `docs/audits/process-bloat-2026-05-01.md` (`3d03861`) scout inputs (new `docs/specs/process/` phase directory for cross-phase workflow specs; first spec under it). B-090 🔴 forward-filed for impl pickup (CLAUDE.md amendment + canonical compact-entry example per AC-1..AC-6). R17 watermark advance: B-090 claimed; B-091 next-free numeric ID. R14 exception (b) — pure spec, no test runs (BE 761 / FE 445 carry-forward). Two-commit pattern. Prior HEAD: `880171e` — 2026-05-01 SHA backfill for process bloat scout. |
+| **HEAD commit** | `<this-slice>` — 2026-05-01 LIGHT MODE reporting discipline applied to `CLAUDE.md` per spec `docs/specs/process/01-light-mode-reporting.md` (B-090 ✅). §4's "Reporting discipline (LIGHT MODE)" subsection appended verbatim under "Final Report (Every Slice)"; §4 addendum (sidecar-rows-are-bloat sentence) appended per impl-prompt Step 2(b); revision history line added. R15(c): B-090 🔴 → ✅. R14 exception (b) — BE 761 / FE 445 carry-forward. Prior HEAD: `401e0e3` — 2026-05-01 SHA backfill for the LIGHT MODE spec-author slice (`b85bfd1`). |
 | **Branch** | `main` (pushed to `origin/main` at `9834abe` on 2026-04-30; 5 commits fast-forwarded from `3b1aa93` — `3683677` post-push watermark + `691934a` CR targeted regen + `7b82603` CR-regen SHA backfill + `da14c01` E-043 spec-author + `9834abe` E-043 SHA backfill) |
 | **CODE-REALITY.md sha (repo)** | **Stale ❌** at anchor `1ca046f` (last full regen 2026-04-30); 1 code-touching commit since (this slice — `95104d2` Phase 6 slice 6.11 adds new service `admin_content_quality_service.py` + new schemas + new route + new admin page `AdminContentQuality.tsx` + 3 components + types + hook + analytics catalog row + curriculum.md §7 update). Sharpened LD-1 code-touching gap = 1 from this commit (below ~10-commit threshold per LD-2; defer regen to next staleness threshold trip). |
 | **CODE-REALITY.md in chat Project** | Stale ❌ — Dhamo to re-upload `hireportai/CODE-REALITY.md` to the chat Project before the next planning-level conversation (full regen at this slice; B-086a + B-086b absorbed). |
@@ -172,7 +172,19 @@ User-visible bugs with dedicated fix slices. Cross-reference: BACKLOG.md.
 
 ## Recently Completed (last 5)
 
-1. 2026-05-01 — **LIGHT MODE reporting discipline spec authored at `b85bfd1` — `docs/specs/process/01-light-mode-reporting.md` codifies D-1..D-7 from `docs/audits/process-bloat-2026-05-01.md` (`3d03861`) scout inputs. New `docs/specs/process/` phase directory for cross-phase workflow specs (first spec under it). B-090 🔴 forward-filed for impl pickup — applies §4's CLAUDE.md amendment text verbatim + writes one canonical compact Recently Completed entry as the AC-3 example.** Mode 4 (spec-author + decision-locking).
+1. 2026-05-01 — **LIGHT MODE reporting discipline applied to `CLAUDE.md` at `<this-slice>` — B-090 ✅. §4's "Reporting discipline (LIGHT MODE)" subsection appended verbatim under "Final Report (Every Slice)" per spec `docs/specs/process/01-light-mode-reporting.md` AC-1; revision history line added per AC-2; this entry is the second canonical compact-shape example (after the spec-author slice at `b85bfd1`) per AC-3 + AC-4.** Mode 2 (impl-to-spec).
+
+§4 addendum (per impl-prompt Step 2(b)): one sentence appended to the "When in doubt, drop" paragraph codifying that sidecar rows mirroring compacted content are themselves bloat — captures the lesson from the spec-author slice's experimental "(prior, kept for archaeology)" Session Header row that was removed before commit. Codified now so future slices don't re-litigate the instinct.
+
+**R15(c):** B-090 🔴 → ✅ in this commit + Closed-table row appended at top.
+
+**Files:** 0 NEW + 3 MODIFIED (`CLAUDE.md` Final Report subsection + revision history line; `BACKLOG.md` B-090 status flip + Closed-table row; `SESSION-STATE.md` Session Header HEAD + this entry) = 3 net touches.
+
+Prior HEAD: `401e0e3` — 2026-05-01 SHA backfill for the LIGHT MODE spec-author slice (`b85bfd1`); spec body shipped at that pair.
+
+**Awaiting CODEX review per Rule 11.**
+
+2. 2026-05-01 — **LIGHT MODE reporting discipline spec authored at `b85bfd1` — `docs/specs/process/01-light-mode-reporting.md` codifies D-1..D-7 from `docs/audits/process-bloat-2026-05-01.md` (`3d03861`) scout inputs. New `docs/specs/process/` phase directory for cross-phase workflow specs (first spec under it). B-090 🔴 forward-filed for impl pickup — applies §4's CLAUDE.md amendment text verbatim + writes one canonical compact Recently Completed entry as the AC-3 example.** Mode 4 (spec-author + decision-locking).
 
 This entry is itself the canonical compact shape per spec AC-3 — no SOP-1..9 enumeration; N8 allowlist unchanged from prior slice; one prior HEAD only. The LIGHT MODE rule (drafted in §4 here, applied to `CLAUDE.md` by B-090) treats default-case SOP / N8 / C1 / R15(c) / R17 / two-commit lines as silent and reports only deviations and status changes.
 

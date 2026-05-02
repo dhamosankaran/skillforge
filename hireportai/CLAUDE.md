@@ -265,6 +265,33 @@ Examples of "genuine surprise" that warrant STOP:
 (Formerly the second R3; renamed to R19 on 2026-04-26 to resolve ID
 collision with R3 "Never skip auth".)
 
+## Code Quality
+
+**Q1 Simplicity first**: Minimum code that solves the slice goal. No
+speculative abstractions, no configurability that wasn't asked for, no
+error handling for impossible scenarios. If you wrote 200 lines and it
+could be 50, rewrite. Test: "would a senior engineer say this is
+overcomplicated?" If yes, simplify before commit.
+
+**Q2 Surgical changes**: Touch only what the slice requires. Don't
+"improve" adjacent code, comments, or formatting. Match existing style
+even when you'd write it differently. Pre-existing dead code → log in
+`SESSION-STATE.md` drift ledger and file a BACKLOG row if appropriate;
+don't delete in the current commit. (Pairs with C3 single-concern.)
+
+**Q3 State assumptions, don't pick silently**: If the prompt has
+multiple valid interpretations, name them and ask before Step 1.
+Surfacing ambiguity up-front is cheaper than a re-roll. Distinct from
+R19 (which fires on prompt-vs-disk conflict) and N7 (which fires on
+silent reconciliation): Q3 fires on prompt ambiguity *before* code is
+written.
+
+**Q4 Verifiable goal before code**: Restate the slice's success
+condition as a check you can run (a test passing, a route returning the
+expected status, output matching a shape). Weak goals ("make it work")
+require constant clarification; strong goals let R10's loop-breaker fire
+cleanly. (Pairs with R1 test-first.)
+
 ## Commit Hygiene
 
 **C1 Never `git add -A` from above `hireportai/`**: The git root is
@@ -309,6 +336,43 @@ Your final output at the end of a slice MUST include, in one scannable block:
   workarounds) with a one-sentence rationale each
 - Any new drift flags logged in `SESSION-STATE.md`
 - Any BACKLOG IDs touched (closed or newly created)
+
+### Reporting discipline (LIGHT MODE)
+
+The Final Report bullet list above is the MAXIMUM scope of what to
+include. The MINIMUM is silence on every default-case item.
+
+**Default cases — DO NOT report:**
+- SOP-1..9 each ran clean (silence implies all 9 ran clean).
+- N8 allowlist unchanged from prior slice.
+- C1 explicit-path staging only (default; deviation is bundled
+  `git add -A`, which itself violates N8).
+- R15(c) no closures (default; deviation is closures, which
+  require the closure trail anyway).
+- R17 watermark unchanged (default; deviation is new IDs claimed).
+- Two-commit pattern followed (default; deviation is single-commit
+  or three-commit, which require explanation anyway).
+
+**Deviations and status changes — DO report:**
+- SOP step that caught something (mismatch, conflict, drift).
+- N8 allowlist delta (file added/removed from pre-existing-dirty
+  set).
+- BACKLOG status flips (with the B-### + new status).
+- R17 watermark advances (new IDs claimed with rationale).
+- JCs surfaced (info-only is fine; STOP-trigger is mandatory).
+- Skill-inventory gaps (SOP-4 close-loop).
+- CR staleness verdict change.
+
+**Prior-HEAD chain — keep the immediate predecessor only.** One
+line: "Prior HEAD: `<sha>` — <one-sentence summary>." Deeper
+history is `git log` away.
+
+When in doubt, drop. The audit at
+`docs/audits/process-bloat-2026-05-01.md` (`3d03861`) found
+~20-25% of recent-entry text is structural duplicate. The rule
+above reclaims that surface. Sidecar rows that mirror compacted
+content (e.g., a "prior, kept for archaeology" row alongside a
+compact form) are themselves bloat — git history is the archaeology.
 
 ## Things That Are NEVER Okay
 
@@ -427,7 +491,25 @@ source-of-truth.
 - Deploy: Vercel + Railway (continuous from Phase 0)
 - DB URL: `postgresql+asyncpg://hireport:dev_password@localhost:5432/hireport`
 
+## This file is working if
+
+- Diffs touch fewer files than the slice strictly requires (C3 + Q2
+  holding)
+- Clarifying questions arrive before Step 1, not after the first
+  failed test (Q3 holding)
+- 3-strike halts (R10) are rare; surprise-STOPs (R19) are common and
+  resolve quickly
+- No commit re-runs a shipped slice (N5 holding)
+- Skill-inventory gaps surface in final reports rather than going
+  unmentioned (SOP-4 holding)
+
 ## Revision history
+- 2026-05-01: Added LIGHT MODE reporting discipline subsection
+  per docs/specs/process/01-light-mode-reporting.md (B-090). Codifies
+  the "default-silent / report-deviations" rule + one-prior-HEAD-only
+  + sidecar-rows-are-bloat addendum (Step 2(b) — captures the
+  spec-author slice's experimental sidecar JC). R14 exception (b) —
+  pure rule codification, no design surface, no tests run.
 - 2026-04-28: Added R15(d) BACKLOG row note budget (close/forward-filed
   shape + ~200/~300-word backstops). Appended SOP-4 skill-gap
   close-loop (auto-file 🟦 on flag #2 within last-5 Recently Completed
@@ -436,6 +518,9 @@ source-of-truth.
   `docs/drift-archive.md`). R14 exception (b) — pure SOP codification,
   no design surface, no tests run. Reference: B-073 cohort item 2
   (closed by `b468025`).
+- 2026-04-27: Added Code Quality section (Q1–Q4) and "This file is
+  working if" self-check block. R14 exception (b) — pure rule
+  codification, no design surface. Reference: B-### (this slice).
 - 2026-04-26: R18 (filed by B-039 on 2026-04-25) merged into R15(c).
   R3 "Push-back rule" renamed to R19 to resolve ID collision with R3
   "Never skip auth". Added Chat-Claude ↔ CC Handoff section (H1–H4)
