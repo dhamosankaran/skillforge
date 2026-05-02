@@ -12,6 +12,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.card_quality_signal import ThumbsResponse
 from app.schemas.quiz_item import QuizItemResponse
 
 LessonVersionType = Literal["initial", "minor_edit", "substantive_edit"]
@@ -62,6 +63,10 @@ class LessonWithQuizzesResponse(BaseModel):
     deck_id: str
     deck_slug: str
     deck_title: str
+    # Slice 6.13.5b §12 D-12 — single-fetch user-thumbs initial state.
+    # Null when the requesting user has not submitted a thumbs for this
+    # lesson (FE renders ``<ThumbsControl />`` in unselected state).
+    viewer_thumbs: Optional[ThumbsResponse] = None
 
     model_config = ConfigDict(from_attributes=True)
 

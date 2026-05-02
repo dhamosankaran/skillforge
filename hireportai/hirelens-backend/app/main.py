@@ -48,6 +48,7 @@ from app.api.v1.routes import (
     resume as v1_resume,
     rewrite as v1_rewrite,
     study as v1_study,
+    thumbs as v1_thumbs,
     tracker as v1_tracker,
     users as v1_users,
 )
@@ -169,6 +170,7 @@ def create_app() -> FastAPI:
     app.include_router(
         v1_lesson_view_events.router, prefix="/api/v1", tags=["v1 Lesson View Events"]
     )
+    app.include_router(v1_thumbs.router, prefix="/api/v1", tags=["v1 Thumbs"])
     app.include_router(v1_decks.router, prefix="/api/v1", tags=["v1 Decks"])
     app.include_router(v1_ranker.router, prefix="/api/v1", tags=["v1 Ranker"])
     app.include_router(v1_dashboard.router, prefix="/api/v1", tags=["v1 Dashboard"])

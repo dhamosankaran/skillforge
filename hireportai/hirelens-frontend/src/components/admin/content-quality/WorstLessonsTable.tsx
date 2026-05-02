@@ -50,7 +50,8 @@ export function WorstLessonsTable({ lessons }: Props) {
             <th className="py-2 px-3 font-medium text-right">Pass rate</th>
             <th className="py-2 px-3 font-medium text-right">Smoothed</th>
             <th className="py-2 px-3 font-medium text-right">Persisted</th>
-            <th className="py-2 pl-3 font-medium text-right">Critique</th>
+            <th className="py-2 px-3 font-medium text-right">Critique</th>
+            <th className="py-2 pl-3 font-medium text-right">Thumbs</th>
           </tr>
         </thead>
         <tbody>
@@ -104,10 +105,18 @@ export function WorstLessonsTable({ lessons }: Props) {
                 {fmtScore(row.persisted_quality_score)}
               </td>
               <td
-                className="py-2 pl-3 text-right text-text-secondary text-xs"
+                className="py-2 px-3 text-right text-text-secondary text-xs"
                 data-testid={`critique-scores-${row.lesson_slug}`}
               >
                 {fmtCritiqueScores(row.critique_scores)}
+              </td>
+              <td
+                className="py-2 pl-3 text-right text-text-secondary text-xs"
+                data-testid={`thumbs-${row.lesson_slug}`}
+              >
+                {row.thumbs_count > 0 && row.thumbs_aggregate !== null
+                  ? `${row.thumbs_aggregate >= 0 ? '+' : ''}${row.thumbs_aggregate.toFixed(2)} · ${row.thumbs_count}`
+                  : '—'}
               </td>
             </tr>
           ))}

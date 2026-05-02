@@ -147,6 +147,15 @@ async def aggregate_dashboard(
         )
     )
 
+    # Slice 6.13.5b — lesson-level thumbs aggregates populate the
+    # admin dashboard columns (per-quiz_item thumbs UI dropped per
+    # §12 D-7, so quiz_item_rows.thumbs_aggregate stays None / 0).
+    thumbs_aggregates_by_lesson = (
+        await card_quality_signal_service.get_thumbs_aggregates_by_lesson(
+            list(lessons_by_id.keys()), db
+        )
+    )
+
     deck_rows = _build_deck_rows(decks_by_id, lessons_by_id, lesson_stats)
     lesson_rows = _build_lesson_rows(
         lessons_by_id,
@@ -154,6 +163,7 @@ async def aggregate_dashboard(
         lesson_stats,
         persisted_scores,
         critique_scores_by_lesson=critique_scores_by_lesson,
+        thumbs_aggregates_by_lesson=thumbs_aggregates_by_lesson,
     )
     quiz_item_rows = _build_quiz_item_rows(
         quiz_items_by_id,
@@ -501,6 +511,7 @@ def _build_lesson_rows(
     persisted_scores: dict[str, Optional[Decimal]],
     *,
     critique_scores_by_lesson: Optional[dict[str, dict[str, float]]] = None,
+    thumbs_aggregates_by_lesson: Optional[dict[str, tuple[float, int]]] = None,
 ) -> list[LessonQualityRow]:
     """Worst-first lessons sorted by smoothed_quality_score ASC NULLS LAST.
 
@@ -522,6 +533,7 @@ def _build_lesson_rows(
         critique_for_lesson = (
             (critique_scores_by_lesson or {}).get(lesson.id) or None
         )
+        thumbs_agg = (thumbs_aggregates_by_lesson or {}).get(lesson.id)
         rows.append(
             LessonQualityRow(
                 lesson_id=lesson.id,
@@ -540,9 +552,8 @@ def _build_lesson_rows(
                 archived=lesson.archived_at is not None,
                 published_at=lesson.published_at,
                 critique_scores=critique_for_lesson,
-                # Slice 6.13.5b populates these via thumbs_service.
-                thumbs_aggregate=None,
-                thumbs_count=0,
+                thumbs_aggregate=thumbs_agg[0] if thumbs_agg else None,
+                thumbs_count=thumbs_agg[1] if thumbs_agg else 0,
             )
         )
     # ASC NULLS LAST — non-NULL worst-first; NULL low-volume rows tail.

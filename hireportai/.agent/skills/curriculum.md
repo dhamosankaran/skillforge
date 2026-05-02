@@ -255,19 +255,26 @@ the layers are:
    forever-retention) — `card_quality_signals` is the queryable
    denormalisation. Admin content-quality dashboard exposes the
    per-dimension scores via `LessonQualityRow.critique_scores`.
-3. **User signal — layer 3 (active, slice 6.11 + slice 6.13.5a).**
-   Two homes: **(a)** Lesson-level Bayesian-smoothed pass_rate writes
-   to `lessons.quality_score` from `admin_content_quality_service`
-   when `review_count >= 10` (slice 6.11 D-1 / D-4). Below threshold
-   the column stays NULL so the ranker (§8) keeps the 0.5 fallback.
-   **(b)** Per-quiz_item Bayesian-smoothed pass_rate now writes to
-   `card_quality_signals` (`signal_source='user_review'`,
-   `dimension='pass_rate'`, `quiz_item_id IS NOT NULL`,
-   `recorded_by_user_id IS NULL`) — same threshold + smoothing
-   formula, IS DISTINCT FROM-gated for idempotency (slice 6.13.5a /
-   §6.5). User-thumbs feedback (the third layer-3 source) lands as
-   `signal_source='user_thumbs'` rows in slice 6.13.5b (per-user
-   distinct via the 5-tuple UNIQUE; aggregate at read-time).
+3. **User signal — layer 3 (active, slice 6.11 + slice 6.13.5a + slice 6.13.5b).**
+   Three homes: **(a)** Lesson-level Bayesian-smoothed pass_rate
+   writes to `lessons.quality_score` from
+   `admin_content_quality_service` when `review_count >= 10` (slice
+   6.11 D-1 / D-4). Below threshold the column stays NULL so the
+   ranker (§8) keeps the 0.5 fallback. **(b)** Per-quiz_item
+   Bayesian-smoothed pass_rate writes to `card_quality_signals`
+   (`signal_source='user_review'`, `dimension='pass_rate'`,
+   `quiz_item_id IS NOT NULL`, `recorded_by_user_id IS NULL`) —
+   same threshold + smoothing formula, IS DISTINCT FROM-gated for
+   idempotency (slice 6.13.5a / §6.5). **(c)** User-thumbs feedback
+   writes to `card_quality_signals` as
+   `signal_source='user_thumbs', dimension='helpful',
+   score ∈ {-1.0, +1.0}` rows via `thumbs_service.submit_thumbs` from
+   `POST /api/v1/lessons/:id/thumbs` (slice 6.13.5b §6.3-6.4). Per-user
+   distinct via the 5-tuple UNIQUE NULLS NOT DISTINCT
+   (`recorded_by_user_id` is the 5th key column); aggregate is a
+   read-time AVG / SUM. Lesson detail GET seeds
+   `<ThumbsControl />` initial state via the additive
+   `LessonWithQuizzesResponse.viewer_thumbs` field (§12 D-12).
 
 When `lessons.quality_score IS NULL` the ranker (§8) coerces it to
 0.5 (neutral) per spec #07 §12 D-2 so unscored lessons aren't ranked

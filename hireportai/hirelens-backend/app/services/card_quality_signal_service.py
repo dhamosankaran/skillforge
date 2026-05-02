@@ -169,3 +169,86 @@ async def get_persisted_user_review_scores_for_quiz_items(
     for row in rows:
         out[row.quiz_item_id] = float(row.score)
     return out
+
+
+# ── Slice 6.13.5b — thumbs aggregate readers (§6.1) ──────────────────────────
+
+
+async def get_thumbs_aggregate(
+    lesson_id: str,
+    db: AsyncSession,
+    *,
+    quiz_item_id: Optional[str] = None,
+) -> tuple[Optional[float], int]:
+    """Mean user-thumbs score + count for ``(lesson_id, quiz_item_id)``.
+
+    Aggregates only ``signal_source='user_thumbs'`` rows where
+    ``dimension='helpful'``. Returns ``(None, 0)`` when no thumbs
+    rows exist (mirrors the cold-start contract on the FE).
+    """
+    stmt = select(CardQualitySignal.score).where(
+        CardQualitySignal.lesson_id == lesson_id,
+        CardQualitySignal.signal_source == "user_thumbs",
+        CardQualitySignal.dimension == "helpful",
+    )
+    if quiz_item_id is None:
+        stmt = stmt.where(CardQualitySignal.quiz_item_id.is_(None))
+    else:
+        stmt = stmt.where(CardQualitySignal.quiz_item_id == quiz_item_id)
+    rows = (await db.execute(stmt)).scalars().all()
+    if not rows:
+        return None, 0
+    floats = [float(r) for r in rows]
+    return sum(floats) / len(floats), len(floats)
+
+
+async def get_thumbs_aggregates_by_lesson(
+    lesson_ids: Iterable[str],
+    db: AsyncSession,
+) -> dict[str, tuple[float, int]]:
+    """Batch helper — per-lesson thumbs aggregate keyed by lesson_id.
+
+    Used by the admin dashboard to populate
+    ``LessonQualityRow.thumbs_aggregate`` + ``thumbs_count`` without
+    N+1 round-trips. Lesson-level rows only (``quiz_item_id IS NULL``).
+    """
+    ids = [lid for lid in lesson_ids if lid]
+    if not ids:
+        return {}
+    stmt = select(
+        CardQualitySignal.lesson_id, CardQualitySignal.score
+    ).where(
+        CardQualitySignal.lesson_id.in_(ids),
+        CardQualitySignal.signal_source == "user_thumbs",
+        CardQualitySignal.dimension == "helpful",
+        CardQualitySignal.quiz_item_id.is_(None),
+    )
+    grouped: dict[str, list[float]] = {}
+    for lesson_id, score in (await db.execute(stmt)).all():
+        grouped.setdefault(lesson_id, []).append(float(score))
+    return {
+        lid: (sum(scores) / len(scores), len(scores))
+        for lid, scores in grouped.items()
+    }
+
+
+async def get_user_thumbs_for_lesson(
+    *,
+    user_id: str,
+    lesson_id: str,
+    db: AsyncSession,
+) -> Optional[CardQualitySignal]:
+    """The given user's thumbs row for ``lesson_id`` (lesson-level only).
+
+    Returns ``None`` when the user has not submitted thumbs. Used by
+    ``lesson_service.get_lesson_with_quizzes`` to seed
+    ``LessonWithQuizzesResponse.viewer_thumbs`` per §12 D-12.
+    """
+    stmt = select(CardQualitySignal).where(
+        CardQualitySignal.lesson_id == lesson_id,
+        CardQualitySignal.recorded_by_user_id == user_id,
+        CardQualitySignal.signal_source == "user_thumbs",
+        CardQualitySignal.dimension == "helpful",
+        CardQualitySignal.quiz_item_id.is_(None),
+    )
+    return (await db.execute(stmt)).scalar_one_or_none()

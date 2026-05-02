@@ -47,6 +47,8 @@ import type {
   ReviewResponse,
   RewriteResponse,
   RewriteSection,
+  ThumbsRequest,
+  ThumbsResponse,
   TrackerApplication,
 } from '@/types'
 import {
@@ -416,6 +418,20 @@ export async function recordLessonView(
   } catch {
     // best-effort: see spec §6.4 + D-7
   }
+}
+
+// Slice 6.13.5b — user-thumbs submit. Surfaces non-2xx as exceptions so
+// callers (`useThumbs.mutate`) can revert optimistic state. Lesson-level
+// only v1 per spec #12 §12 D-7.
+export async function submitThumbs(
+  lessonId: string,
+  body: ThumbsRequest,
+): Promise<ThumbsResponse> {
+  const response = await api.post<ThumbsResponse>(
+    `/api/v1/lessons/${encodeURIComponent(lessonId)}/thumbs`,
+    body,
+  )
+  return response.data
 }
 
 export async function fetchDeck(deckId: string): Promise<Deck> {

@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useUsage } from '@/context/UsageContext'
 import { useLesson } from '@/hooks/useLesson'
 import { LessonRenderer } from '@/components/lesson/LessonRenderer'
+import { ThumbsControl } from '@/components/lesson/ThumbsControl'
 import { recordLessonView } from '@/services/api'
 import { capture } from '@/utils/posthog'
 
@@ -105,5 +106,17 @@ export default function LessonPage() {
     )
   }
 
-  return <LessonRenderer lesson={lesson} sessionId={sessionId} />
+  return (
+    <>
+      <LessonRenderer lesson={lesson} sessionId={sessionId} />
+      <div className="max-w-3xl mx-auto px-4">
+        <ThumbsControl
+          lessonId={lesson.lesson.id}
+          initialThumbs={lesson.viewer_thumbs}
+          persona={user?.persona ?? null}
+          plan={usage.plan}
+        />
+      </div>
+    </>
+  )
 }

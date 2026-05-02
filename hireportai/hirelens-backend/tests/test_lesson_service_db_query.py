@@ -163,6 +163,39 @@ async def test_get_lesson_returns_db_lesson_with_quizzes(client, db_session):
     assert body["deck_title"] == deck.title
     assert len(body["quiz_items"]) == 3
     assert [qi["display_order"] for qi in body["quiz_items"]] == [0, 1, 2]
+    # Slice 6.13.5b §12 D-12 — viewer_thumbs is null when the user has
+    # not submitted thumbs for this lesson.
+    assert body.get("viewer_thumbs") is None
+
+
+async def test_get_lesson_seeds_viewer_thumbs_after_submission(client, db_session):
+    """Slice 6.13.5b §12 D-12 — lesson detail GET returns the user's
+    prior thumbs in `viewer_thumbs` so the FE seeds <ThumbsControl />
+    initial state without a second round-trip."""
+    token = await _sign_in(client)
+    deck = await _seed_deck(db_session)
+    lesson = await _seed_lesson(db_session, deck)
+    await _seed_quiz_item(db_session, lesson, display_order=0)
+
+    submit = await client.post(
+        f"/api/v1/lessons/{lesson.id}/thumbs",
+        json={"score": 1},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert submit.status_code == 200, submit.text
+
+    resp = await client.get(
+        f"/api/v1/lessons/{lesson.id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    viewer = body.get("viewer_thumbs")
+    assert viewer is not None
+    assert viewer["accepted"] is True
+    assert viewer["score"] == 1
+    assert viewer["aggregate_score"] == 1.0
+    assert viewer["aggregate_count"] == 1
 
 
 async def test_get_lesson_excludes_unpublished(client, db_session):

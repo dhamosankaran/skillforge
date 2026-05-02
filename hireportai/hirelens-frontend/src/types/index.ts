@@ -504,12 +504,28 @@ export interface QuizItem {
   updated_at: string
 }
 
+// Slice 6.13.5b — user-thumbs HTTP shapes (mirrors
+// `app/schemas/card_quality_signal.py::ThumbsRequest`/`ThumbsResponse`).
+export interface ThumbsRequest {
+  score: -1 | 1
+}
+
+export interface ThumbsResponse {
+  accepted: boolean
+  score: -1 | 1
+  aggregate_score: number | null
+  aggregate_count: number
+}
+
 export interface LessonWithQuizzes {
   lesson: Lesson
   quiz_items: QuizItem[]
   deck_id: string
   deck_slug: string
   deck_title: string
+  // Slice 6.13.5b §12 D-12 — single-fetch initial state for
+  // <ThumbsControl />. Null when the user has not submitted thumbs.
+  viewer_thumbs: ThumbsResponse | null
 }
 
 export interface DeckWithLessons {

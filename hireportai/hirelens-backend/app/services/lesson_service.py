@@ -25,12 +25,14 @@ from app.models.deck import Deck
 from app.models.lesson import Lesson
 from app.models.quiz_item import QuizItem
 from app.models.user import User
+from app.schemas.card_quality_signal import ThumbsResponse
 from app.schemas.deck import DeckLessonsResponse, DeckResponse
 from app.schemas.lesson import (
     LessonResponse,
     LessonWithQuizzesResponse,
 )
 from app.schemas.quiz_item import QuizItemResponse
+from app.services import card_quality_signal_service
 from app.services.curriculum_visibility import (
     _allowed_tiers_for_user,
     _persona_visible_to,
@@ -84,12 +86,39 @@ async def get_lesson_with_quizzes(
     quiz_items = sorted(
         lesson.quiz_items, key=lambda qi: (qi.display_order, qi.created_at)
     )
+
+    # Slice 6.13.5b §12 D-12 — seed `<ThumbsControl />` initial state
+    # via `viewer_thumbs` on the same payload, avoiding a follow-up
+    # GET. Stays None for unauthenticated callers (no `user`) since
+    # `recorded_by_user_id` is required for the per-user lookup.
+    viewer_thumbs: ThumbsResponse | None = None
+    if user is not None:
+        existing = await card_quality_signal_service.get_user_thumbs_for_lesson(
+            user_id=user.id, lesson_id=lesson_id, db=db
+        )
+        if existing is not None:
+            agg, count = await card_quality_signal_service.get_thumbs_aggregate(
+                lesson_id, db, quiz_item_id=None
+            )
+            score = int(round(float(existing.score)))
+            if score not in (-1, 1):
+                # Defensive — schema guarantees {-1, +1}; coerce
+                # accidental drift to the nearest valid value.
+                score = 1 if score > 0 else -1
+            viewer_thumbs = ThumbsResponse(
+                accepted=True,
+                score=score,
+                aggregate_score=agg,
+                aggregate_count=count,
+            )
+
     return LessonWithQuizzesResponse(
         lesson=LessonResponse.model_validate(lesson),
         quiz_items=[QuizItemResponse.model_validate(qi) for qi in quiz_items],
         deck_id=deck.id,
         deck_slug=deck.slug,
         deck_title=deck.title,
+        viewer_thumbs=viewer_thumbs,
     )
 
 

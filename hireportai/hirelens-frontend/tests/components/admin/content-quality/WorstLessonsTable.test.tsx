@@ -116,4 +116,42 @@ describe('WorstLessonsTable', () => {
     )
     expect(screen.getByTestId('critique-scores-cold')).toHaveTextContent('—')
   })
+
+  // ── Slice 6.13.5b — thumbs aggregate column ─────────────────────────────
+
+  it('renders thumbs aggregate + count when present', () => {
+    render(
+      <MemoryRouter>
+        <WorstLessonsTable
+          lessons={[
+            row({
+              lesson_slug: 'with-thumbs',
+              thumbs_aggregate: 0.5,
+              thumbs_count: 4,
+            }),
+          ]}
+        />
+      </MemoryRouter>,
+    )
+    expect(screen.getByTestId('thumbs-with-thumbs')).toHaveTextContent(
+      '+0.50 · 4',
+    )
+  })
+
+  it('renders an em-dash when thumbs_count is zero', () => {
+    render(
+      <MemoryRouter>
+        <WorstLessonsTable
+          lessons={[
+            row({
+              lesson_slug: 'no-thumbs',
+              thumbs_aggregate: null,
+              thumbs_count: 0,
+            }),
+          ]}
+        />
+      </MemoryRouter>,
+    )
+    expect(screen.getByTestId('thumbs-no-thumbs')).toHaveTextContent('—')
+  })
 })
