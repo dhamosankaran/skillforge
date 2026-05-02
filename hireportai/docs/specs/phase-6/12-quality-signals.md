@@ -7,7 +7,7 @@
 | **Slice** | 6.13.5 (Track D — quality-signal foundation; LD J2 home; closes the four §13 deferrals from slice 6.11) |
 | **Phase** | 6 (Curriculum Platform) |
 | **Mode** | Mode 4 spec-author → followed by §12 amendment → impl |
-| **Filed at** | `<spec-author-sha>` (this slice) |
+| **Filed at** | `b93beb8` (this slice) |
 | **BACKLOG row (spec-author)** | **B-093** ✅ (filed + closed in this slice per single-slice spec-author lifecycle; mirrors slice 6.10 / 6.11 / 6.13 spec-author rows) |
 | **BACKLOG row (impl, forward-filed)** | **B-094** 🔴 (filed at status 🔴 by this slice for the future implementation slice per R15(c)) |
 | **Depends on** | spec #00 (`docs/specs/phase-6/00-analytics-tables.md` — `quiz_review_events` + `lesson_view_events` source tables; shipped `e7a0044`) ▪ spec #01 (`docs/specs/phase-6/01-foundation-schema.md` — `decks` / `lessons` / `quiz_items` FK targets, `lessons.quality_score Numeric(3,2) NULLABLE`; shipped `a989539`) ▪ spec #04 (`docs/specs/phase-6/04-admin-authoring.md` — admin auth chain, `audit_admin_request`; shipped `d6bda3b` BE + `634f633` FE) ▪ spec #10 (`docs/specs/phase-6/10-ai-ingestion-pipeline.md` — `CritiqueSchema` per-dimension layer-2 payload + R2 `critique.json` artifact + `ingestion_jobs.critique_r2_key` column; shipped `8735373`) ▪ spec #11 (`docs/specs/phase-6/11-content-quality-retention.md` — first non-NULL `lessons.quality_score` emitter at `admin_content_quality_service.py`; D-16 breadcrumb at line 19 names this slice as the migration target; shipped `95104d2`) ▪ existing `Depends(require_admin)` + `audit_admin_request` chain (`app/core/deps.py`) ▪ existing `Depends(get_current_user)` for user-side thumbs route ▪ existing `slowapi` rate limiter (`app/core/rate_limit.py`). |
@@ -123,7 +123,7 @@ honest — see §8.
 
 ### 1.1 Step 0 audit findings
 
-Audit reads at HEAD `<spec-author-head>` (post-slice-6.13 SHA-backfill,
+Audit reads at HEAD `a7145a7` (post-slice-6.13 SHA-backfill,
 post-D-030 drift log):
 
 1. **`card_quality_signals` table absent on disk** — confirmed by
@@ -1706,7 +1706,7 @@ Dhamo own the re-evaluation; not this slice's scope.
 
 ---
 
-*Spec authored at `<spec-author-sha>` against HEAD `<spec-author-head>`.
+*Spec authored at `b93beb8` against HEAD `a7145a7`.
 All on-disk citations verified at audit time per SOP-5; phantom
 citations zero. Forward-filed B-094 at status 🔴 per R15(c).
 §12 LOCKED DECISIONS empty placeholder; §14 OQ-A..OQ-N carry
