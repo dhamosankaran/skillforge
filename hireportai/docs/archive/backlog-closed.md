@@ -12,7 +12,7 @@ Append-only. Future compactions add new dated headings; never edit or
 remove archived content.
 
 
-## Cut 2026-05-01 from `<this-slice>` — B-092 process compaction bundle
+## Cut 2026-05-01 from `d5602c3` — B-092 process compaction bundle
 
 ### Archived closed rows (44 entries spanning 2026-04-18..2026-04-28)
 

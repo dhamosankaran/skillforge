@@ -12,7 +12,7 @@ Append-only. Future compactions add new dated headings; never edit or
 remove archived content.
 
 
-## Cut 2026-04-28 from `<this-slice>` — SESSION-STATE compaction
+## Cut 2026-04-28 from `d5602c3` — SESSION-STATE compaction
 
 ### 1. Archived Recently Completed (lines 99–1055 of pre-compaction SESSION-STATE.md)
 
@@ -1108,7 +1108,7 @@ Entries 6+ from Recently Completed at compaction time. The 5 most recent entries
 
 ---
 
-## Cut 2026-05-01 from `<this-slice>` — B-092 process compaction bundle
+## Cut 2026-05-01 from `d5602c3` — B-092 process compaction bundle
 
 ### 6. Archived Recently Completed (entries 5–40 of pre-compaction SESSION-STATE.md)
 
