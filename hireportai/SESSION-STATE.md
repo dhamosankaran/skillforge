@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|-------|
-| **HEAD commit** | `<this-slice>` — 2026-05-02 Phase 6 slice 6.13.5b impl shipped (B-094b ✅). UI/route half of split slice — `<ThumbsControl />` + `useThumbs` + `POST /api/v1/lessons/:id/thumbs` + `viewer_thumbs` on lesson detail GET + admin thumbs columns populated. Brings 6.13.5 to 20/20 ACs satisfied. Zero new migrations. Tests: BE 786 → 802 (+16); FE 455 → 466 (+11). Prior HEAD: `3981560` — 2026-05-02 D-032 drift log. |
+| **HEAD commit** | `85860d5` — 2026-05-02 Phase 6 slice 6.13.5b impl shipped (B-094b ✅). UI/route half of split slice — `<ThumbsControl />` + `useThumbs` + `POST /api/v1/lessons/:id/thumbs` + `viewer_thumbs` on lesson detail GET + admin thumbs columns populated. Brings 6.13.5 to 20/20 ACs satisfied. Zero new migrations. Tests: BE 786 → 802 (+16); FE 455 → 466 (+11). Prior HEAD: `3981560` — 2026-05-02 D-032 drift log. |
 | **Branch** | `main` (pushed to `origin/main` at `9834abe` on 2026-04-30; 5 commits fast-forwarded from `3b1aa93` — `3683677` post-push watermark + `691934a` CR targeted regen + `7b82603` CR-regen SHA backfill + `da14c01` E-043 spec-author + `9834abe` E-043 SHA backfill) |
 | **CODE-REALITY.md sha (repo)** | **Stale ❌** at anchor `1ca046f` (last full regen 2026-04-30); 1 code-touching commit since (this slice — `95104d2` Phase 6 slice 6.11 adds new service `admin_content_quality_service.py` + new schemas + new route + new admin page `AdminContentQuality.tsx` + 3 components + types + hook + analytics catalog row + curriculum.md §7 update). Sharpened LD-1 code-touching gap = 1 from this commit (below ~10-commit threshold per LD-2; defer regen to next staleness threshold trip). |
 | **CODE-REALITY.md in chat Project** | Stale ❌ — Dhamo to re-upload `hireportai/CODE-REALITY.md` to the chat Project before the next planning-level conversation (full regen at this slice; B-086a + B-086b absorbed). |
@@ -175,7 +175,7 @@ User-visible bugs with dedicated fix slices. Cross-reference: BACKLOG.md.
 
 ## Recently Completed (last 5)
 
-1. 2026-05-02 — **Phase 6 slice 6.13.5b impl shipped at `<this-slice>` — B-094b ✅.** UI/route half of slice 6.13.5 (foundation: B-094a `91be54f`); brings 6.13.5 to 20/20 ACs.
+1. 2026-05-02 — **Phase 6 slice 6.13.5b impl shipped at `85860d5` — B-094b ✅.** UI/route half of slice 6.13.5 (foundation: B-094a `91be54f`); brings 6.13.5 to 20/20 ACs.
 
 Ships `ThumbsRequest`/`ThumbsResponse` (Literal[-1,1] — schema-level reject of score=0 per §12 D-11) + `LessonWithQuizzesResponse.viewer_thumbs` per §12 D-12 + 3 new `card_quality_signal_service` thumbs readers + `thumbs_service.submit_thumbs` (re-uses slice 6.5 visibility via `lesson_service.get_lesson_with_quizzes`; 404 / 403 mapping) + `POST /api/v1/lessons/{id}/thumbs` route + main.py mount + `admin_content_quality_service` thumbs-aggregate wire + FE `useThumbs` (custom-hook idiom matching `useLesson`; optimistic + revert) + `<ThumbsControl />` (R12 tokens, `aria-pressed`) mounted in `pages/Lesson.tsx` after `<LessonRenderer />` (page-wrapper per JC #1) + `WorstLessonsTable.tsx` Thumbs column + FE event `lesson_thumbs_submitted` + analytics + curriculum §7 layer-3 (c) flip.
 
