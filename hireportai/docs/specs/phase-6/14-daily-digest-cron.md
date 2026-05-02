@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.14: Daily Pro Digest Cron (Railway-cron-driven)
 
-## Status: 🔴 Drafted, §12 amendment pending — locks D-1..D-N from §14 OQ-A..OQ-N (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 / 6.13.5 §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc` / `4bf5220`); B-097 ✅ (this slice) + B-098 🔴 (forward-filed for impl).
+## Status: 🔴 Drafted, §12 amended — D-1..D-14 locked at `<this-slice>` from §14 OQ-A..OQ-N (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 / 6.13.5 §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc` / `4bf5220`); B-097 ✅ (spec-author) + B-098 🔴 (impl-pickup ready post-amendment).
 
 | Field | Value |
 |-------|-------|
@@ -763,15 +763,121 @@ Zero FE surface this slice.
 
 ## 12. Decisions
 
-> Locked at §12 amendment slice — empty placeholder per slice 6.0 /
-> 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 / 6.13.5 amendment-
-> slice precedent at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` /
-> `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc` / `4bf5220`. The
-> §12 amendment slice will lock D-1..D-N from §14 OQ-A..OQ-N per
-> 1:1 author-hint dispositions.
+> Locked at `<this-slice>` (2026-05-02). D-1..D-14 resolve §14
+> OQ-A..OQ-N 1:1 (verbatim author-hint dispositions, all 14
+> confirmed by Dhamo single-admin disposition). Mirrors slice 6.0
+> / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 / 6.13.5 §12
+> amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` /
+> `fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc` /
+> `4bf5220`.
 
-(Locked decisions land at the §12 amendment slice; the impl slice
-picks up post-amendment.)
+- **D-1** (resolves OQ-A) — **Cron schedule = daily once at
+  14:00 UTC** (≈10am ET / 7am PT / 7:30pm IST — hits all major
+  time zones during waking hours). v1 doesn't have
+  `preferred_hour` per §1.1 #4; hourly + per-user-tz match would
+  need that column + extra cron infra cost. cron expression:
+  `0 14 * * *`. See §1.1 #1 + §6.6 + AC-1.
+
+- **D-2** (resolves OQ-B) — **Cron entry point = CLI script**
+  `python -m app.scripts.send_pro_digest` per §1.1 #9. CLI is
+  simpler — no auth surface, no shared-secret header to design,
+  no HTTP timeout concerns. The cron command runs in a separate
+  process spawned from the same Docker image (§1.1 #1). See §6.6
+  + AC-1 + AC-2 + AC-18.
+
+- **D-3** (resolves OQ-C) — **Digest body fields v1 = the four
+  core fields only**: `cards_due`, `streak`, `mission_days_left`
+  (when `mission_active`), `last_scan_score` + `last_scan_delta`
+  (when ≥2 history rows). Optional richer content (top-rated
+  lesson last week / critique highlights / category mastery) is
+  OQ-C-followup amendable in a future slice; v1 ships the four
+  fields. See §5.1 + §6.3.
+
+- **D-4** (resolves OQ-D) — **HTML template = new file**
+  `app/templates/pro_digest.html`. The Pro digest's audience +
+  content + visual emphasis differ from the Phase-2 reminder;
+  extending `daily_reminder.html` would force conditional bloat.
+  Template uses inline-style hex per email-client compatibility
+  (R12 N/A for email templates). See §6.4 + AC-15.
+
+- **D-5** (resolves OQ-E) — **`today` definition = UTC at
+  fire-time** (cron fires at fixed UTC; "today" = UTC date).
+  Per-user-tz needs hourly cron + per-user-tz match — adds infra
+  without proportional value at v1 scale. `EmailPreference.timezone`
+  exists but is unused by the cron in v1. See §6.1 + §6.2 + AC-11.
+
+- **D-6** (resolves OQ-F) — **Subscription join filter =
+  `plan IN ('pro', 'enterprise') AND status == 'active'`**
+  (active-only; trialing users excluded v1). Trialing users are
+  pre-paying; product can layer "digest preview" for them in a
+  future slice if conversion data warrants. See §6.1 + AC-3 + AC-4.
+
+- **D-7** (resolves OQ-G) — **Engagement-signal filter = strict
+  empty-rule.** `compose_digest` returns `None` when ALL of
+  (`cards_due == 0`, `!mission_active`, `last_scan_score is None`).
+  At least one signal must be present for the digest to fire.
+  `recent_review_count_window > 0` is NOT added as a fourth
+  signal — `cards_due` already proxies recent activity. Zero
+  noise to dormant Pro users. See §6.3 + AC-7 + §9.1
+  `pro_digest_skipped_empty` event.
+
+- **D-8** (resolves OQ-H) — **Resend permanent-error contract =
+  no `email_log` write on failure.** Cron logs the error +
+  fires `pro_digest_failed` + skips the user + continues. NO
+  `record_send` write so the next tick retries naturally. spec
+  #13 §6.5 contract honored. See §4.3 + §6.5 + AC-9 + §9.1
+  `pro_digest_failed` event.
+
+- **D-9** (resolves OQ-I) — **Backfill / first-time Pro users =
+  accept (no special onboarding).** Pro users created before
+  slice 6.14 ships get their first digest on the next cron tick
+  after deploy. No "Welcome to your first digest" sequence. A
+  future onboarding spec can layer the welcome variant if data
+  warrants. See §13 + §15.
+
+- **D-10** (resolves OQ-J) — **Telemetry event split = 4 events**:
+  `pro_digest_sent` / `pro_digest_skipped_dedup` /
+  `pro_digest_skipped_empty` / `pro_digest_failed`. NO separate
+  `pro_digest_skipped_optout` event — opt-out happens at the
+  selector layer (§6.1) so opted-out users never reach the
+  compose loop. Selector-layer opt-out counter visible via INFO
+  log of `SendSummary.candidates_total - sent - skipped_dedup -
+  skipped_empty - failed`. See §9.1 + AC-16 + AC-20.
+
+- **D-11** (resolves OQ-K) — **Per-user concurrency = sequential
+  loop.** Simple Python `for user in candidates:` — no
+  `asyncio.gather` chunking v1. v1 corpus < 1000 Pro users keeps
+  whole-tick wall time <60s with built-in Resend retry latency.
+  Future scaling spec can introduce concurrent batches if Pro
+  user count + per-user latency push tick duration past Railway's
+  cron-window. See §6.5 + §6.8.
+
+- **D-12** (resolves OQ-L) — **Observability = INFO log of
+  `SendSummary` at run end + WARNING per-user failure.** No new
+  structured-metrics surface this slice; PostHog events are the
+  ops dashboard. Future scaling spec can layer Prometheus /
+  Datadog metrics if cron-tick health needs monitoring beyond
+  PostHog. See §6.5 (orchestrator return) + §6.6 (script
+  `print(summary.model_dump_json())`).
+
+- **D-13** (resolves OQ-M) — **Missed-tick catch-up sweep =
+  none v1.** Railway-cron downtime / config drift / deploy
+  windows that span the 14:00 UTC tick result in users missing
+  one digest; recovery is the next-day tick. No catch-up logic,
+  no `--since=YYYY-MM-DD` flag on the script. Future SLA spec
+  can layer a 24h-window catch-up flag if engagement metrics
+  show measurable retention loss from missed ticks. See §4.3
+  first bullet + §13.
+
+- **D-14** (resolves OQ-N) — **Migration `down_revision` = N/A.**
+  This slice ships zero new alembic migrations — G-1 is
+  config-only (`railway.toml [[cron]]`); all schema artifacts
+  (`email_log` table + `email_preferences.daily_digest_opt_out`)
+  shipped at slice 6.13 (`f1a2b3c4d5e6`). If impl Step 0 audit
+  surfaces a need for a column (e.g., `EmailPreference.preferred_hour`
+  to enable D-1 alternative behaviour later), the impl slice
+  STOPs and files a sub-slice. v1 alembic chain head stays at
+  `c2b8a4d9e6f1` (slice 6.13.5a). See §7.
 
 ---
 
@@ -801,98 +907,55 @@ picks up post-amendment.)
 
 ## 14. Open Questions
 
-> All OQs RESOLVED at §12 amendment slice (TBD per slice 6.0 /
-> 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 / 6.13.5 precedent at
-> `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` /
-> `ab07168` / `be7d59a` / `d9bfcfc` / `4bf5220`). Each OQ carries an
-> author hint to minimize amendment churn.
+> All 14 OQs RESOLVED at §12 amendment slice (`<this-slice>`)
+> per author-hint dispositions. Headings + first-sentence
+> questions preserved for historical reference; option bodies
+> + author hints removed (locked dispositions live in §12 D-N).
 
 - **OQ-A — Cron schedule cadence + UTC time.** Daily once at fixed
-  UTC, or hourly with per-user-tz match? Author hint: **daily
-  once at 14:00 UTC** (≈10am ET / 7am PT / 7:30pm IST — hits all
-  major time zones during waking hours). v1 doesn't have
-  `preferred_hour` per §1.1 #4. Hourly + per-user-tz needs a
-  `preferred_hour` column + the hourly cron extra cost.
+  UTC, or hourly with per-user-tz match?
+  **RESOLVED:** locked at §12 D-1 (`<this-slice>`).
 
 - **OQ-B — Cron entry point: CLI script vs FastAPI endpoint.**
-  Author hint: **CLI script** (`python -m app.scripts.send_pro_digest`)
-  per §1.1 #9. CLI is simpler — no auth surface, no shared-secret
-  header to design, no HTTP timeout concerns.
+  **RESOLVED:** locked at §12 D-2 (`<this-slice>`).
 
-- **OQ-C — Digest body content fields.** Default lock: cards_due,
-  streak, mission_days_left (when active), last_scan_score +
-  last_scan_delta. Optional (§12 may lock IN or OUT): top-rated
-  lesson last week (slice 6.13.5b thumbs aggregate), critique
-  highlights for content the user studied (slice 6.13.5a critique
-  signals), category mastery summary. **Author hint: ship v1 with
-  the four core fields only**; richer content is OQ-C-followup
-  amendable.
+- **OQ-C — Digest body content fields v1 scope.**
+  **RESOLVED:** locked at §12 D-3 (`<this-slice>`).
 
 - **OQ-D — HTML template: new `pro_digest.html` vs extend
-  `daily_reminder.html`.** Author hint: **new file**. The two
-  emails have different audiences + content + visual emphasis;
-  extending the existing template would force conditional bloat.
+  `daily_reminder.html`?**
+  **RESOLVED:** locked at §12 D-4 (`<this-slice>`).
 
-- **OQ-E — `today` definition: UTC vs per-user-tz.** Default:
-  **UTC** (cron fires at fixed UTC; "today" is the UTC date at
-  fire-time). Per-user-tz needs the cron to fire hourly + filter
-  per-user-tz match — adds infra without proportional value at v1
-  scale. EmailPreference.timezone exists but is unused for the
-  cron in v1.
+- **OQ-E — `today` definition: UTC vs per-user-tz?**
+  **RESOLVED:** locked at §12 D-5 (`<this-slice>`).
 
-- **OQ-F — Subscription join filter.**
-  `Subscription.plan IN ('pro', 'enterprise') AND
-  Subscription.status == 'active'` per `admin_analytics_service`
-  precedent. Should `status='trialing'` Pro users also get the
-  digest? Default: **no** (active-only; trialing users are
-  pre-paying and product can layer "digest preview" later).
+- **OQ-F — Subscription join filter — active-only or include
+  `trialing`?**
+  **RESOLVED:** locked at §12 D-6 (`<this-slice>`).
 
 - **OQ-G — Engagement-signal filter (compose-time empty rule).**
-  Compose returns None when ALL of (cards_due == 0,
-  !mission_active, last_scan_score is None). Author hint:
-  **strict empty-rule** (zero noise to dormant Pro users). Open-
-  ended question: include `recent_review_count_window > 0` as a
-  fourth signal? Author hint: **no** (cards_due already proxies
-  recent activity).
+  **RESOLVED:** locked at §12 D-7 (`<this-slice>`).
 
 - **OQ-H — Failure-mode contract on Resend permanent errors.**
-  Default: log + fire `pro_digest_failed` + skip + continue
-  (next tick retries). Alternative: write a "failed" row to
-  `email_log` to suppress retries. Author hint: **no failure-row
-  write** — cron retry is the recovery; spec #13 §6.5 contract
-  honored.
+  **RESOLVED:** locked at §12 D-8 (`<this-slice>`).
 
-- **OQ-I — Backfill / first-time Pro users.** Pro users created
-  before slice 6.14 ships get their first digest on the next cron
-  tick after deploy (no special onboarding sequence). Author hint:
-  **accept** — no backfill. Future onboarding spec can layer
-  "Welcome to your first digest" copy.
+- **OQ-I — Backfill / first-time Pro users.**
+  **RESOLVED:** locked at §12 D-9 (`<this-slice>`).
 
-- **OQ-J — Telemetry event split.** Default: 4 events (sent /
-  skipped_dedup / skipped_empty / failed). NOT a separate
-  `pro_digest_skipped_optout` (opt-out happens at selector layer,
-  never reaches loop). Author hint: **4 events as default**;
-  selector-layer counter exposed via INFO log.
+- **OQ-J — Telemetry event split.**
+  **RESOLVED:** locked at §12 D-10 (`<this-slice>`).
 
-- **OQ-K — Per-user concurrency.** Author hint: **sequential**
-  (simple Python loop; v1 corpus < 1000 Pro users; whole tick
-  <60s). Future scaling spec can introduce `asyncio.gather` chunks.
+- **OQ-K — Per-user concurrency.**
+  **RESOLVED:** locked at §12 D-11 (`<this-slice>`).
 
-- **OQ-L — Observability + log level.** INFO log of `SendSummary`
-  at end of run; WARNING on per-user failures. Default. No new
-  structured-metrics surface this slice.
+- **OQ-L — Observability + log level.**
+  **RESOLVED:** locked at §12 D-12 (`<this-slice>`).
 
-- **OQ-M — Catch-up sweep on missed cron ticks.** Author hint:
-  **none** — v1 accepts missed-tick gaps; users get the next-day
-  digest. Future SLA spec can layer a "catch up the last 24h"
-  flag on the script.
+- **OQ-M — Catch-up sweep on missed cron ticks.**
+  **RESOLVED:** locked at §12 D-13 (`<this-slice>`).
 
-- **OQ-N — Migration `down_revision` for any new alembic.** Not
-  applicable — this slice ships **zero new migrations** (G-1 is
-  config-only, no DB schema changes). If the §12 amendment slice
-  surfaces a need for a column (e.g., extends `EmailPreference`
-  with `preferred_hour`), the impl slice's Step 0 verifies head;
-  spec #14 §7 says zero — flag at amendment time only.
+- **OQ-N — Migration `down_revision` for any new alembic.**
+  **RESOLVED:** locked at §12 D-14 (`<this-slice>`).
 
 ---
 
@@ -984,9 +1047,13 @@ CLAUDE.md SOP-4 sharpening).
 
 ---
 
-*Spec authored at `86bc442` against HEAD `aa4e9e4`. §12 will
-amend at follow-up amendment slice locking D-1..D-N from §14
-OQ-A..OQ-N per author-hint dispositions. All on-disk citations
-verified at audit time per SOP-5; phantom citations zero. B-097 ✅
-(this slice); B-078 ✅ (Dhamo-locked decision row resolved); B-098
-🔴 (impl-pickup ready post-amendment).*
+*Spec authored at `86bc442` against HEAD `aa4e9e4`. §12 amended
+at `<this-slice>` locking D-1..D-14 from §14 OQ-A..OQ-N per
+author-hint dispositions (Dhamo single-admin disposition; mirrors
+slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 / 6.13.5
+§12 amendment precedent at `e8eecdd` / `df58eaf` / `acba7ed` /
+`fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc` /
+`4bf5220`). All on-disk citations verified at audit time per
+SOP-5; phantom citations zero. B-097 ✅ (spec-author); B-078 ✅
+(Dhamo-locked decision row resolved); B-098 🔴 (impl-pickup ready
+post-amendment).*

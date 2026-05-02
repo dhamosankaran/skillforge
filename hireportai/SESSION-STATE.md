@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|-------|
-| **HEAD commit** | `86bc442` — 2026-05-02 Phase 6 slice 6.14 spec authored (B-097 ✅; B-078 ✅ Dhamo-locked at LD G2 = Railway cron; B-098 🔴 forward-filed for impl). New `docs/specs/phase-6/14-daily-digest-cron.md` (992 lines, 15 sections, 14 OQs A..N). Consumes slice 6.13 `email_log` + `daily_digest_opt_out` + Phase-2 `email_service`; ships first scheduled job in codebase. Zero new migrations. R14 exception (b). Prior HEAD: `aa4e9e4` — 2026-05-02 RC archive cut (B-096 follow-up). |
+| **HEAD commit** | `<this-slice>` — 2026-05-02 Phase 6 slice 6.14 §12 amendment (B-099 ✅). Locks D-1..D-14 from §14 OQ-A..OQ-N 1:1 (Dhamo single-admin disposition; zero ambiguous hints triggered STOP). §14 rewritten to RESOLVED form; spec 992 → 1059 lines (+67 net). B-098 stays 🔴 (impl-pickup ready post-amendment). R14 exception (b). Prior HEAD: `d1c1108` — 2026-05-02 SHA backfill for B-097. |
 | **Branch** | `main` (pushed to `origin/main` at `9834abe` on 2026-04-30; 5 commits fast-forwarded from `3b1aa93` — `3683677` post-push watermark + `691934a` CR targeted regen + `7b82603` CR-regen SHA backfill + `da14c01` E-043 spec-author + `9834abe` E-043 SHA backfill) |
 | **CODE-REALITY.md sha (repo)** | ✅ Fresh at `d6fab75` — targeted §1 + §2 + §5 + §11 + §13 regen at HEAD `246b4ec` (B-096). Detail sections §3 / §4 / §6 / §7 / §8 / §10 carry-forward at the prior anchor `1ca046f` per LIGHT scope; chat-Claude consults the §1 slice-absorption log + on-disk files for fresh detail until next full-scope regen. |
 | **CODE-REALITY.md in chat Project** | Stale ❌ — Dhamo to re-upload `hireportai/CODE-REALITY.md` to the chat Project before the next planning-level conversation (full regen at this slice; B-086a + B-086b absorbed). |
@@ -175,7 +175,19 @@ User-visible bugs with dedicated fix slices. Cross-reference: BACKLOG.md.
 
 ## Recently Completed (last 5)
 
-1. 2026-05-02 — **Phase 6 slice 6.14 spec authored at `86bc442` — B-097 ✅ (spec-author) + B-078 ✅ (Dhamo-locked decision row resolved) + B-098 🔴 (forward-filed impl).** Single-slice spec-author file+close (B-091/B-092/B-093 precedent).
+1. 2026-05-02 — **Phase 6 slice 6.14 §12 amendment shipped at `<this-slice>` — B-099 ✅.** Locks D-1..D-14 from §14 OQ-A..OQ-N 1:1 (Dhamo single-admin disposition; zero ambiguous hints triggered STOP). Mirrors slice 6.0/6.4.5/6.5/6.6/6.7/6.8/6.10/6.11/6.13.5 §12 amendment-slice precedent at `e8eecdd`/`df58eaf`/`acba7ed`/`fb92396`/`0c21223`/`ab07168`/`be7d59a`/`d9bfcfc`/`4bf5220`. **Notable locks:** D-1 daily 14:00 UTC (cron expr `0 14 * * *`); D-2 CLI script `python -m app.scripts.send_pro_digest` (no FastAPI endpoint); D-3 4-core-fields v1 (cards_due / streak / mission_days_left / last_scan_score+delta); D-4 new `pro_digest.html` template; D-5 UTC `today`; D-6 active-only sub filter; D-7 strict empty-rule (compose returns None on all-three-signals empty); D-8 no failure-row write on Resend permanent error; D-9 zero backfill; D-10 4 events only (no `_skipped_optout`); D-11 sequential loop; D-12 INFO summary log only; D-13 no missed-tick catch-up; D-14 zero new migrations.
+
+§14 rewritten to RESOLVED form (heading + first-sentence question preserved; option bodies + author hints removed). Spec body **992 → 1059 lines (+67 net)** — §12 grew (multi-paragraph rationale per D-N), §14 shrunk to one-line-per-OQ. §1 status line + footer attribution flipped to post-lock state.
+
+**R15(c):** B-099 🔴 → ✅ + Closed-table row appended (single-slice file+close, B-091/B-092/B-093/B-095 precedent); B-098 stays 🔴 (impl-pickup ready post-amendment). **R17 watermark advances:** B-099 claimed; B-100 next-free.
+
+R14 exception (b) — pure spec amendment, no test surface (BE 802 / FE 466 carry-forward).
+
+Prior HEAD: `d1c1108` — 2026-05-02 SHA backfill for B-097.
+
+**Awaiting CODEX review per Rule 11.**
+
+2. 2026-05-02 — **Phase 6 slice 6.14 spec authored at `86bc442` — B-097 ✅ (spec-author) + B-078 ✅ (Dhamo-locked decision row resolved) + B-098 🔴 (forward-filed impl).** Single-slice spec-author file+close (B-091/B-092/B-093 precedent).
 
 New `docs/specs/phase-6/14-daily-digest-cron.md` (**992 lines, 15 numbered sections, 14 OQs A..N**) consuming slice 6.13's `email_log` dedup + `daily_digest_opt_out` + Phase-2's `email_service` Resend wrapper to ship the first scheduled job in the codebase. **LD G2 = Railway cron (Dhamo-confirmed at filing)** codified in §4.1 architecture (Railway cron → CLI script `app/scripts/send_pro_digest.py` → composer service `pro_digest_service` → `email_service.send_email` → `email_log_service.record_send`). Zero new migrations (all schema upstream); zero FE this slice.
 
