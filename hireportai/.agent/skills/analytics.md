@@ -64,8 +64,8 @@ PostHog is instrumented from Phase 1 and runs on both tiers:
 | `checklist_step_clicked` | `components/home/widgets/InterviewPrepperChecklist.tsx` | `{step_id}` — fires on each step row click (spec #41). |
 | `checklist_completed` | `components/home/widgets/InterviewPrepperChecklist.tsx` | `{completed_at}` — fires once when all 5 steps flip to complete (spec #41). |
 | `checklist_skipped` | `components/home/widgets/InterviewPrepperChecklist.tsx` | `{complete_count}` — fires on "Skip checklist" click (spec #41). |
-| `email_preferences_viewed` | `pages/EmailPreferences.tsx` | — |
-| `email_preferences_saved` | `pages/EmailPreferences.tsx` | `{daily_reminder}` / `{timezone}` |
+| `email_preferences_viewed` | `components/settings/EmailPreferences.tsx` | — |
+| `email_preferences_saved` | `components/settings/EmailPreferences.tsx` | `{daily_reminder}` / `{daily_digest_opt_out}` / `{timezone}` — payload contains the saved field only; slice 6.13 added `daily_digest_opt_out` (Pro / Enterprise / admin only). |
 | `nav_clicked` | `components/layout/TopNav.tsx`, `components/layout/MobileNav.tsx` | `{namespace: 'home'\|'learn'\|'prep'\|'profile'\|'admin', from_path, to_path}` |
 | `sign_out_clicked` | `components/layout/UserMenu.tsx`, `pages/Profile.tsx` | `{source: 'topnav_avatar' \| 'profile_page'}` — fires before `AuthContext.signOut()` runs so the event still captures even though `signOut` redirects to `/` on completion (B-028). |
 | `home_dashboard_viewed` | `pages/HomeDashboard.tsx` | `{persona: 'interview_prepper'\|'career_climber'\|'team_lead'}` — fires once on mount via `useRef` idempotency guard so Strict Mode's double-invoked effect captures once (P5-S18). |

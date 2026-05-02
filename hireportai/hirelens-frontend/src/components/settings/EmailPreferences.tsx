@@ -1,14 +1,17 @@
 /**
- * Email Preferences card — daily reminder toggle + timezone picker.
+ * Email Preferences card — daily reminder toggle + timezone picker
+ * + (Pro / Enterprise / admin only) Pro daily digest opt-out toggle.
  *
- * Loads current prefs on mount, lets the user toggle daily_reminder
- * and choose a timezone, then saves via PUT /api/v1/email-preferences.
+ * Loads current prefs on mount, lets the user toggle daily_reminder,
+ * Pro digest opt-out (when canUsePro), and timezone, then saves via
+ * PUT /api/v1/email-preferences.
  */
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Mail, Check } from 'lucide-react'
 import { fetchEmailPreferences, updateEmailPreferences } from '@/services/api'
 import { capture } from '@/utils/posthog'
+import { useUsage } from '@/context/UsageContext'
 import type { EmailPreference } from '@/types'
 
 const COMMON_TIMEZONES = [
@@ -28,6 +31,7 @@ const COMMON_TIMEZONES = [
 ]
 
 export function EmailPreferences() {
+  const { canUsePro } = useUsage()
   const [prefs, setPrefs] = useState<EmailPreference | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -53,6 +57,24 @@ export function EmailPreferences() {
       flashSaved()
     } catch {
       setError('Failed to update preferences')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDigestToggle() {
+    if (!prefs) return
+    const newVal = !prefs.daily_digest_opt_out
+    setSaving(true)
+    try {
+      const updated = await updateEmailPreferences({
+        daily_digest_opt_out: newVal,
+      })
+      setPrefs(updated)
+      capture('email_preferences_saved', { daily_digest_opt_out: newVal })
+      flashSaved()
+    } catch {
+      setError('Failed to update digest preference')
     } finally {
       setSaving(false)
     }
@@ -143,6 +165,36 @@ export function EmailPreferences() {
           />
         </button>
       </div>
+
+      {/* Pro daily digest opt-out (Pro / Enterprise / admin only) */}
+      {canUsePro && prefs && (
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-text-primary">Pro Daily Digest</p>
+            <p className="text-[11px] text-text-muted">
+              Skip the morning digest of your career-prep activity
+            </p>
+          </div>
+          <button
+            onClick={handleDigestToggle}
+            disabled={saving}
+            className={
+              'relative w-11 h-6 rounded-full transition-colors duration-200 ' +
+              (prefs.daily_digest_opt_out
+                ? 'bg-accent-primary'
+                : 'bg-contrast/[0.12]')
+            }
+            aria-label="Toggle Pro daily digest opt-out"
+          >
+            <span
+              className={
+                'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200 ' +
+                (prefs.daily_digest_opt_out ? 'translate-x-5' : 'translate-x-0')
+              }
+            />
+          </button>
+        </div>
+      )}
 
       {/* Timezone picker (only shown when reminders are on) */}
       {prefs?.daily_reminder && (

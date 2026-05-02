@@ -363,11 +363,13 @@ export interface GamificationStats {
 export interface EmailPreference {
   user_id: string
   daily_reminder: boolean
+  daily_digest_opt_out: boolean
   timezone: string
 }
 
 export interface EmailPreferenceUpdate {
   daily_reminder?: boolean
+  daily_digest_opt_out?: boolean
   timezone?: string
 }
 

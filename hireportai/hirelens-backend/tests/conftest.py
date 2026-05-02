@@ -94,6 +94,7 @@ async def engine():
     import app.models.gamification       # noqa: F401
     import app.models.mission            # noqa: F401
     import app.models.email_preference   # noqa: F401
+    import app.models.email_log          # noqa: F401
     import app.models.card_feedback      # noqa: F401
     import app.models.stripe_event       # noqa: F401
     import app.models.registration_log   # noqa: F401

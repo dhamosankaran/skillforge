@@ -2,7 +2,7 @@
 import secrets
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -21,6 +21,12 @@ class EmailPreference(Base):
     )
     daily_reminder: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True
+    )
+    daily_digest_opt_out: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=text("false"),
     )
     timezone: Mapped[str] = mapped_column(
         String(50), nullable=False, default="UTC"
