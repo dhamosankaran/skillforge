@@ -1,6 +1,6 @@
 # Phase 6 / Slice 6.15 — Legacy retirement easy-wins
 
-## Status: Drafted, §12 amended — D-1..D-7 locked at `<this-slice>` from §14 OQ-A..OQ-G (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 / 6.13.5 / 6.14 §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc` / `4bf5220` / `b5bec37`); B-101 ✅ (spec-author) + B-102 🔴 (impl-pickup ready post-amendment) + B-103 ✅ (this §12 amendment) + B-104 🟦 (B-010 review row, filed per D-7).
+## Status: Drafted, §12 amended — D-1..D-7 locked at `174e479` from §14 OQ-A..OQ-G (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 / 6.13.5 / 6.14 §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc` / `4bf5220` / `b5bec37`); B-101 ✅ (spec-author) + B-102 🔴 (impl-pickup ready post-amendment) + B-103 ✅ (this §12 amendment) + B-104 🟦 (B-010 review row, filed per D-7).
 
 > **Scope precedent.** This spec implements the "Option C / spec 15"
 > recommendation from the cleanup triage at
@@ -352,7 +352,7 @@ touched.
 
 ## 12. LOCKED DECISIONS (D-N)
 
-> Locked at `<this-slice>` (2026-05-02). D-1..D-7 resolve §14
+> Locked at `174e479` (2026-05-02). D-1..D-7 resolve §14
 > OQ-A..OQ-G 1:1 (verbatim author-hint dispositions, all 7 confirmed
 > by Dhamo single-admin disposition). Mirrors slice 6.0 / 6.4.5 / 6.5
 > / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 / 6.13.5 / 6.14 §12 amendment
@@ -454,7 +454,7 @@ Mirrors the cleanup triage's verdict buckets:
 
 ## 14. Open questions for chat-Claude / Dhamo
 
-> **RESOLVED at `<this-slice>` (2026-05-02).** All 7 OQs locked at the
+> **RESOLVED at `174e479` (2026-05-02).** All 7 OQs locked at the
 > §12 amendment slice — see §12 D-1..D-7 for the lock rationale.
 > Headings + first-sentence questions retained for cross-ref
 > stability; option bodies + author hints removed (the locks
@@ -517,7 +517,7 @@ amendment slice's close.
 ### Status
 
 - **Spec authored:** B-101 ✅ (`b50a592`).
-- **§12 amendment:** B-103 ✅ (`<this-slice>`) — D-1..D-7 locked from
+- **§12 amendment:** B-103 ✅ (`174e479`) — D-1..D-7 locked from
   §14 OQ-A..OQ-G 1:1 (Dhamo single-admin disposition; zero ambiguous
   hints).
 - **Implementation:** B-102 🔴 (forward-filed; ready for impl pickup
@@ -529,6 +529,6 @@ amendment slice's close.
 
 *Spec authored 2026-05-02 by Claude Code at HEAD `9ee8281`
 (`b50a592`). §12 amended 2026-05-02 at HEAD `8f6ef8b`
-(`<this-slice>`). Closes B-101 (spec-author) + B-103 (§12 amendment).
+(`174e479`). Closes B-101 (spec-author) + B-103 (§12 amendment).
 Forward-files B-102 (impl, 🔴) + B-104 (D-7 follow-up, 🟦). Closes
 triage recommendation Option C from B-100 (`5291d9e`).*
