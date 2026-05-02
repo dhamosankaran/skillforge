@@ -175,7 +175,7 @@ User-visible bugs with dedicated fix slices. Cross-reference: BACKLOG.md.
 
 ## Recently Completed (last 5)
 
-1. 2026-05-02 — **Phase 6 slice 6.15 spec authored at `<this-slice>` — B-101 ✅ (spec-author) + B-102 🔴 (forward-filed impl).** Single-slice spec-author file+close per B-091/B-092/B-093/B-097 precedent.
+1. 2026-05-02 — **Phase 6 slice 6.15 spec authored at `b50a592` — B-101 ✅ (spec-author) + B-102 🔴 (forward-filed impl).** Single-slice spec-author file+close per B-091/B-092/B-093/B-097 precedent.
 
 New `docs/specs/phase-6/15-legacy-retirement-easy-wins.md` (~430 lines, 15 numbered sections + Status). **Scope = Option C from triage B-100** — 3 mechanical cleanups: T7.1 lift `DailyStatus` from `schemas/study.py` to new `schemas/daily_status.py` (3 import-flip sites); T7.2 dedupe `_next_local_midnight` to new `app/utils/local_time.py` with public rename (4 callsite renames); T8.1 `git rm` `study_dashboard_viewed` row at `analytics.md:46` (zero code emitters confirmed). Zero new tables, zero migrations, zero FE surface. §12 empty placeholder; §14 carries 7 OQs (A..G) with author hints.
 
