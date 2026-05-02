@@ -121,10 +121,51 @@ check_backlog_active_rows() {
   emit "$v" "BACKLOG active rows" "$count" 50 75 "rows"
 }
 
+check_process_tax_ratio() {
+  # Sample the last 15 ✅ rows in the active BACKLOG table; count how many
+  # carry process/non-feature markers ("R14 exception", "(no spec", or area
+  # column "tooling"/"process"). Warn if >30%, fail if >45%.
+  #
+  # Note: the active table is NOT strictly chronological (recent rows are
+  # inserted near the top of their sub-section), so `tail -15` returns a
+  # consistent recent-but-not-literal-newest window. Trend signal, not
+  # snapshot accuracy.
+  local file="BACKLOG.md"
+  if [ ! -f "$file" ]; then
+    echo "✗ Process tax ratio                          (missing $file)"
+    FAILED=1
+    return
+  fi
+  local sampled total process pct v suffix
+  sampled=$(grep -E "^\| [BE]-[0-9a-z]+ .*\| ✅ \|" "$file" | tail -15)
+  total=$(printf '%s\n' "$sampled" | grep -c . || true)
+  if [ "$total" -eq 0 ]; then
+    if [ "$QUIET" -eq 0 ]; then
+      printf '%s %-44s %s\n' "✓" "Process tax (last closures)" "0/0 — no ✅ rows"
+    fi
+    return
+  fi
+  process=$(printf '%s\n' "$sampled" | grep -cE "R14 exception|\(no spec|tooling|process" || true)
+  pct=$(( process * 100 / total ))
+  # Strict ">" per spec: warn if pct > 30, fail if pct > 45.
+  # verdict_for uses -ge, so pass warn=31/fail=46.
+  v=$(verdict_for "$pct" 31 46)
+  [ "$v" = "✗" ] && FAILED=1
+  if [ "$v" = "✓" ] && [ "$QUIET" -eq 1 ]; then
+    return
+  fi
+  suffix=""
+  [ "$total" -lt 10 ] && suffix=" ($total rows sampled)"
+  printf '%s %-44s %s/%s (%s%%)%s (warn >30%% / fail >45%%)\n' \
+    "$v" "Process tax (last 15 closures)" \
+    "$process" "$total" "$pct" "$suffix"
+}
+
 check_lines               "SESSION-STATE.md" "SESSION-STATE total lines"     400 600
 check_session_state_worst_rc_words
 check_lines               "BACKLOG.md"       "BACKLOG total lines"           200 300
 check_backlog_active_rows
 check_lines               "CLAUDE.md"        "CLAUDE.md total lines"         600 700
+check_process_tax_ratio
 
 exit "$FAILED"
