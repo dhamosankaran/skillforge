@@ -175,7 +175,9 @@ User-visible bugs with dedicated fix slices. Cross-reference: BACKLOG.md.
 
 ## Recently Completed (last 5)
 
-1. 2026-05-02 — **`process-health-check.sh` process-tax metric shipped at `6d39980` — B-108 ✅ (filed + closed same slice).** Single-slice file+close per B-091/B-092/B-100/B-101/B-103/B-105/B-106/B-107 precedent. Added 6th metric `check_process_tax_ratio` to `scripts/process-health-check.sh` after the existing 5 caps: greps `^\| [BE]-[0-9a-z]+ .*\| ✅ \|` rows, takes `tail -15`, counts those matching `R14 exception|\(no spec|tooling|process` keywords, prints `N/M (XX%) (warn >30% / fail >45%)` via reused `verdict_for` (thresholds 31/46 for strict `>` against integer pct). Edge case: `($total rows sampled)` suffix when fewer than 10 sampled rows. **First-run output: 7/15 (46%) → ✗ FAIL** — correctly picks up the recent process-slice cluster (B-090..B-096 + B-105..B-108 lineage). **JC #1 (info-only):** the active BACKLOG table is not strictly chronological — recent rows B-097..B-107 sit at lines 112-122 while `tail -15` samples lines 184-200 (B-087..B-096 + 4 E-rows from late April). The metric is a "recent-but-not-literal-newest" window; trend signal still useful but absolute-snapshot accuracy is approximate. Documented as inline function-header comment. Followed prompt's `tail -15` mechanism verbatim per stated intent ("trend not snapshot"). **JC #2 (info-only carry-forward):** SESSION-STATE.md 603 lines (still over 600 fail from B-106 cycle); RC archive cut is the standard fix per B-076/B-092/B-096 — not bundled per C3. R14 exception (b) — process tooling extension, no design surface, no test runs (BE 824 / FE 466 carry-forward). R15(c): B-108 🔴 → ✅ same slice. **R17 watermark advances:** B-108 claimed; B-109 next-free numeric ID. Two-commit pattern (impl + SHA backfill replacing `6d39980` placeholders). Prior HEAD: `44a828f` — 2026-05-02 SHA backfill for B-107.
+1. 2026-05-02 — **Doc compaction bundle shipped at `<this-slice>` — B-109 ✅ (filed + closed same slice).** Single-slice file+close per B-091/B-092/B-100/B-101/B-103/B-105..B-108 precedent; bundled per B-092 process-compaction class. **Task 1 (CLAUDE.md revision history):** all 7 entries fall within the 30-day window (oldest 2026-04-26 vs 2026-04-02 cutoff) → **no-op, zero compactable entries.** CLAUDE.md unchanged at 575 lines. **Task 2 (SESSION-STATE RC archive cut):** cut entries 6-16 (11 entries B-103/B-101/B-100/B-098/B-099/B-097/B-096/B-094b/B-094a/B-095/B-093, span 2026-05-01..02) verbatim to new §8 in `docs/archive/session-state-history.md` (1489 → 1629). SESSION-STATE.md **605 → 472 lines (-133)** — cleared 600-line fail. Footer note updated (§8 added alongside §5/§6/§7). Top-5 kept: B-108 / B-107 / B-106 / B-105 / B-102. **Health check post-cut:** SESSION-STATE ✗ → ⚠️ (fail cleared), CLAUDE.md ✓ unchanged, process-tax 7/15 → 8/15 (53% ✗) — meta-fail unchanged in direction; cut moved more process rows into the `tail -15` window. **JC #1 (info-only):** Task 1 no-op surfaced rather than silently skipped. **JC #2 (info-only):** process-tax delta is a sample-window artifact — trend signal still useful; not directly comparable to pre-cut reading. R14 exception (b) — pure doc compaction, no design surface, no tests run (BE 824 / FE 466 carry-forward). R15(c): B-109 🔴 → ✅. R17: B-109 claimed; B-110 next-free. Two-commit pattern. Prior HEAD: `04f1c69` — 2026-05-02 SHA backfill for B-108.
+
+2. 2026-05-02 — **`process-health-check.sh` process-tax metric shipped at `6d39980` — B-108 ✅ (filed + closed same slice).** Single-slice file+close per B-091/B-092/B-100/B-101/B-103/B-105/B-106/B-107 precedent. Added 6th metric `check_process_tax_ratio` to `scripts/process-health-check.sh` after the existing 5 caps: greps `^\| [BE]-[0-9a-z]+ .*\| ✅ \|` rows, takes `tail -15`, counts those matching `R14 exception|\(no spec|tooling|process` keywords, prints `N/M (XX%) (warn >30% / fail >45%)` via reused `verdict_for` (thresholds 31/46 for strict `>` against integer pct). Edge case: `($total rows sampled)` suffix when fewer than 10 sampled rows. **First-run output: 7/15 (46%) → ✗ FAIL** — correctly picks up the recent process-slice cluster (B-090..B-096 + B-105..B-108 lineage). **JC #1 (info-only):** the active BACKLOG table is not strictly chronological — recent rows B-097..B-107 sit at lines 112-122 while `tail -15` samples lines 184-200 (B-087..B-096 + 4 E-rows from late April). The metric is a "recent-but-not-literal-newest" window; trend signal still useful but absolute-snapshot accuracy is approximate. Documented as inline function-header comment. Followed prompt's `tail -15` mechanism verbatim per stated intent ("trend not snapshot"). **JC #2 (info-only carry-forward):** SESSION-STATE.md 603 lines (still over 600 fail from B-106 cycle); RC archive cut is the standard fix per B-076/B-092/B-096 — not bundled per C3. R14 exception (b) — process tooling extension, no design surface, no test runs (BE 824 / FE 466 carry-forward). R15(c): B-108 🔴 → ✅ same slice. **R17 watermark advances:** B-108 claimed; B-109 next-free numeric ID. Two-commit pattern (impl + SHA backfill replacing `6d39980` placeholders). Prior HEAD: `44a828f` — 2026-05-02 SHA backfill for B-107.
 
 2. 2026-05-02 — **R16 scout-first amendment shipped at `24c3122` — B-107 ✅ (filed + closed same slice).** Single-slice file+close per B-091/B-092/B-100/B-101/B-103/B-105/B-106 precedent. Replaced R16's closing paragraph (was: "Reference `CODE-REALITY.md` for the live state. If `CODE-REALITY.md` is older than the current HEAD, regenerate it before drafting the audit.") with a scout-first split: orientation queries (what exists, rough structure) → CR; precision queries (who calls X, which components consume type Y, does route Z exist) → live `rg`/`grep` at Step 0; CR regen still valuable before heavy multi-file slices where orientation matters more than precision. Rationale: live disk is always fresher than any snapshot — reduces CR regen frequency without sacrificing audit accuracy. Revision-history entry added (2026-05-02 dated). CLAUDE.md 566 → 571 lines (+5). **JC #1 (info-only):** replacement text is 7 lines vs original 2 → +5 net, exceeds prompt Step-3 ≤+2 cap; used verbatim per amendment intent; CLAUDE.md still well under 600 warn. **JC #2 (info-only carry-forward):** SESSION-STATE.md crossed 600-line health-check fail at B-106 close (601 lines); my entry pushes it further. RC archive cut is the standard fix per B-076/B-092/B-096 precedent — not bundled per C3. R14 exception (b) — pure rule refinement, no design surface, no tests run (BE 824 / FE 466 carry-forward). R15(c): B-107 🔴 → ✅ same slice. **R17 watermark advances:** B-107 claimed; B-108 next-free numeric ID. Two-commit pattern (amendment + SHA backfill replacing `24c3122` placeholders). Prior HEAD: `0661c6f` — 2026-05-02 SHA backfill for B-106.
 
@@ -185,140 +187,7 @@ User-visible bugs with dedicated fix slices. Cross-reference: BACKLOG.md.
 
 2. 2026-05-02 — **Phase 6 slice 6.15 impl shipped at `e36902c` — B-102 ✅.** Ships D-1..D-7 verbatim. AC-1..AC-10 all green. Pure refactor — zero new feature surface. **What shipped:** new `app/schemas/daily_status.py` (`DailyStatus` lifted byte-identically per D-1) + `schemas/study.py` back-compat re-export + 3 import-flip sites (`schemas/quiz_item.py:14` + `services/study_service.py` + `services/quiz_item_study_service.py`); new `app/utils/local_time.py` (`next_local_midnight` public per D-2 + D-3) + 3 callsite renames + helper deletions in both services + unused `time`/`timedelta` import cleanup; `study_dashboard_viewed` row hard-deleted from `analytics.md:46` per D-5; 7 new BE tests across 2 flat files per D-4. **JC #1 (info-only):** spec said 4 callsites of `_next_local_midnight`; disk had 3 (spec-author double-counted `_compute_daily_status` body line + `study_service.py:294/295` as separate). Rename matches AC-5/AC-6. Tests: **BE 842 → 849 (+7, in +5..+8 envelope)** under prod-default env (`FREE_DAILY_REVIEW_LIMIT=10 FREE_LIFETIME_SCAN_LIMIT=1 FREE_MONTHLY_INTERVIEW_LIMIT=3`); **FE 466 unchanged.** Zero alembic; chain head stays `c2b8a4d9e6f1`. 10 first-run failures with `.env` dev-tuned 5/1/1 limits = pre-existing env-config issue, not regressions. R14 default. R15(c): B-102 🔴 → ✅. R17 unchanged: B-104 highest, B-105 next-free. Two-commit pattern. Prior HEAD: `e769c19` — 2026-05-02 SHA backfill for B-103. **Awaiting CODEX review per Rule 11.**
 
-2. 2026-05-02 — **Phase 6 slice 6.15 §12 amendment shipped at `174e479` — B-103 ✅ + B-104 🟦 (D-7 follow-up).** Single-slice file+close per B-095/B-099 precedent. Locks **D-1..D-7** from §14 OQ-A..OQ-G 1:1 (Dhamo single-admin; zero ambiguous hints). Mirrors slice 6.0/6.4.5/6.5/6.6/6.7/6.8/6.10/6.11/6.13.5/6.14 amendment-pattern at `e8eecdd`/`df58eaf`/`acba7ed`/`fb92396`/`0c21223`/`ab07168`/`be7d59a`/`d9bfcfc`/`4bf5220`/`b5bec37`. **Notable locks:** D-1 keep `DailyStatus` re-export; D-2 new `app/utils/local_time.py`; D-3 public rename; D-4 two flat tests; D-5 hard-delete `study_dashboard_viewed`; D-6 no auto spec-16 trigger; D-7 file B-104 🟦 for B-010 follow-up. §14 rewritten to RESOLVED form. R14 exception (b). BE 842 / FE 456 carry-forward. Prior HEAD: `8f6ef8b` — 2026-05-02 SHA backfill for B-101.
-
-2. 2026-05-02 — **Phase 6 slice 6.15 spec authored at `b50a592` — B-101 ✅ (spec-author) + B-102 🔴 (forward-filed impl).** Single-slice spec-author file+close per B-091/B-092/B-093/B-097 precedent.
-
-New `docs/specs/phase-6/15-legacy-retirement-easy-wins.md` (~430 lines, 15 numbered sections + Status). **Scope = Option C from triage B-100** — 3 mechanical cleanups: T7.1 lift `DailyStatus` from `schemas/study.py` to new `schemas/daily_status.py` (3 import-flip sites); T7.2 dedupe `_next_local_midnight` to new `app/utils/local_time.py` with public rename (4 callsite renames); T8.1 `git rm` `study_dashboard_viewed` row at `analytics.md:46` (zero code emitters confirmed). Zero new tables, zero migrations, zero FE surface. §12 empty placeholder; §14 carries 7 OQs (A..G) with author hints.
-
-**JC #1 (info-only):** Triage's T1.3 + T7.4 excluded — gated on spec-16 retirements. Final scope = 3 items (vs triage's "4-5 with T7.4 contingent"). Refinement, not contradiction.
-
-**Co-shipped SS hygiene:** Step-0 health-check caught B-100 RC entry at 282 words > 250 ceiling (my prior-slice miss). Compacted inline (~120 words). Same file/domain — bundled per C3 at concern level.
-
-**R15(c):** B-101 ✅ + B-102 🔴 forward-filed. **R17:** B-101 + B-102 claimed; B-103 next-free. R14 exception (b). BE 842 / FE 456 carry-forward.
-
-Prior HEAD: `9ee8281` — 2026-05-02 SHA backfill for B-100.
-
-**Awaiting CODEX review per Rule 11.**
-
-2. 2026-05-02 — **Phase 6 cleanup triage shipped at `5291d9e` — B-100 ✅.** Mode-3 scout audit producing per-item retire/migrate/defer verdicts for slice-15 scope. New `docs/audits/phase-6-cleanup-triage.md` enumerates ~25 deferred-cleanup items across 8 themes with R16 consumer counts.
-
-**Bucket counts:** 4 RETIRE-NOW + 18 RETIRE-WITH-MIGRATION + 9 DEFER + 1 DONE + 1 PROCESS. **Stop-condition tripped:** 18 RETIRE-WITH-MIGRATION items > 15-item threshold. Recommendation = Option C: split slice-15 into easy-wins spec (1 impl slice) + cards-schema-retirement umbrella (4 cascading impl slices, gated on slice 6.16 FSRS retention re-platform for `card_progress` drop).
-
-**Drift surfaced:** B-010 row claims `Navbar.tsx` is dead code, but disk shows 2 live importers (`LandingPage.tsx`, `LoginPage.tsx`) — flagged for separate review slice.
-
-R14 exception (b). BE 842 / FE 456 carry-forward. Single-slice scout file+close. R17 advanced B-100; B-101 next-free.
-
-Prior HEAD: `c6415a2` — 2026-05-02 SHA backfill for B-098.
-
-2. 2026-05-02 — **Phase 6 slice 6.14 impl shipped at `bcd89ce` — B-098 ✅.** Ships first scheduled job in codebase per LD G2 = Railway cron. **20/20 ACs satisfied.**
-
-Ships `[[cron]]` in `railway.toml` (`schedule = "0 14 * * *"` per D-1; `command = "python -m app.scripts.send_pro_digest"` per D-2) + `app/scripts/send_pro_digest.py` (43-line CLI mirroring `seed_phase6.py` boot pattern; CLI commits post-orchestrator) + `app/services/pro_digest_service.py` (304-line: selector Pro-tier+opt-out per D-6, composer with strict empty-rule per D-7, orchestrator with `was_sent_today` short-circuit + IntegrityError concurrent-tick handling + 4-event telemetry per D-10 + sequential loop per D-11) + `app/schemas/pro_digest.py` (61-line `DigestPayload` + `SendSummary`) + `app/templates/pro_digest.html` (45-line inline-style HTML per D-4 with CSS-driven `display:none` empty-section visibility) + `analytics.md` 4 new event rows.
-
-**JCs (3, info-only):** **#1** spec §6.5 said orchestrator commits at end of run; conftest `db_session` rolls back per-test → moved commit to CLI (mirrors slice 6.0 / 6.13 write-only convention). **#2** test seed `tracker.date_applied` is `String(20)` not `Date` per Phase-3 legacy shape — fixed at fixture. **#3** test seed `TrackerApplicationScore` columns use `_score` suffix + `jd_hash`/`resume_hash` NOT-NULL per E-043 — fixed at fixture.
-
-**Tests:** CI-canonical BE **802 → 824 (+22**, in +15..+28; 14 service + 5 template + 3 script). FE **466 unchanged** (zero FE surface). Zero new migrations per D-14 (chain head `c2b8a4d9e6f1`). **D-028 cascade:** 15, unchanged from B-094b baseline (no migration growth as expected).
-
-**R15(c):** B-098 🔴 → ✅. **R17 unchanged:** B-099 highest, B-100 next-free.
-
-Prior HEAD: `a746dac` — 2026-05-02 SHA backfill for B-099.
-
-**Awaiting CODEX review per Rule 11.**
-
-2. 2026-05-02 — **Phase 6 slice 6.14 §12 amendment shipped at `b5bec37` — B-099 ✅.** Locks D-1..D-14 from §14 OQ-A..OQ-N 1:1 (Dhamo single-admin disposition; zero ambiguous hints triggered STOP). Mirrors slice 6.0/6.4.5/6.5/6.6/6.7/6.8/6.10/6.11/6.13.5 §12 amendment-slice precedent at `e8eecdd`/`df58eaf`/`acba7ed`/`fb92396`/`0c21223`/`ab07168`/`be7d59a`/`d9bfcfc`/`4bf5220`. **Notable locks:** D-1 daily 14:00 UTC (cron expr `0 14 * * *`); D-2 CLI script `python -m app.scripts.send_pro_digest` (no FastAPI endpoint); D-3 4-core-fields v1 (cards_due / streak / mission_days_left / last_scan_score+delta); D-4 new `pro_digest.html` template; D-5 UTC `today`; D-6 active-only sub filter; D-7 strict empty-rule (compose returns None on all-three-signals empty); D-8 no failure-row write on Resend permanent error; D-9 zero backfill; D-10 4 events only (no `_skipped_optout`); D-11 sequential loop; D-12 INFO summary log only; D-13 no missed-tick catch-up; D-14 zero new migrations.
-
-§14 rewritten to RESOLVED form (heading + first-sentence question preserved; option bodies + author hints removed). Spec body **992 → 1059 lines (+67 net)** — §12 grew (multi-paragraph rationale per D-N), §14 shrunk to one-line-per-OQ. §1 status line + footer attribution flipped to post-lock state.
-
-**R15(c):** B-099 🔴 → ✅ + Closed-table row appended (single-slice file+close, B-091/B-092/B-093/B-095 precedent); B-098 stays 🔴 (impl-pickup ready post-amendment). **R17 watermark advances:** B-099 claimed; B-100 next-free.
-
-R14 exception (b) — pure spec amendment, no test surface (BE 802 / FE 466 carry-forward).
-
-Prior HEAD: `d1c1108` — 2026-05-02 SHA backfill for B-097.
-
-**Awaiting CODEX review per Rule 11.**
-
-2. 2026-05-02 — **Phase 6 slice 6.14 spec authored at `86bc442` — B-097 ✅ (spec-author) + B-078 ✅ (Dhamo-locked decision row resolved) + B-098 🔴 (forward-filed impl).** Single-slice spec-author file+close (B-091/B-092/B-093 precedent).
-
-New `docs/specs/phase-6/14-daily-digest-cron.md` (**992 lines, 15 numbered sections, 14 OQs A..N**) consuming slice 6.13's `email_log` dedup + `daily_digest_opt_out` + Phase-2's `email_service` Resend wrapper to ship the first scheduled job in the codebase. **LD G2 = Railway cron (Dhamo-confirmed at filing)** codified in §4.1 architecture (Railway cron → CLI script `app/scripts/send_pro_digest.py` → composer service `pro_digest_service` → `email_service.send_email` → `email_log_service.record_send`). Zero new migrations (all schema upstream); zero FE this slice.
-
-**B-078 status flip 🟦 → ✅ in same commit:** decision row resolves — work product = the locked decision now codified in spec body. R17: B-078 status flip only; does NOT advance the watermark.
-
-**JCs (2, info-only):** **#1** Phase-2 spec #15 `EmailPreference.preferred_hour` + `frequency` columns listed in spec but never built on disk; carry-forward Phase-2 drift, NOT a 6.14 concern (flagged in §13 awareness). **#2** spec line count 992 — between slice 6.10 (1336) and slice 6.13 (~600); single impl slice viable, no split-warranted scope.
-
-**Test envelope (impl):** BE +15..+28 across 3 new test files (`test_pro_digest_service.py` + `test_send_pro_digest_script.py` + `test_pro_digest_template.py`); FE 0; +0 integration.
-
-**R15(c):** B-097 ✅ (single-slice file+close) + B-098 🔴 forward-filed + B-078 ✅ status-flip. **R17:** B-097 + B-098 claimed; B-078 flip-only; B-099 next-free numeric.
-
-Prior HEAD: `aa4e9e4` — 2026-05-02 RC archive cut (B-096 follow-up).
-
-**Awaiting CODEX review per Rule 11.**
-
-2. 2026-05-02 — **CR targeted regen + SS RC compaction shipped at `d6fab75` — B-096 ✅.** Single-slice file+close (B-091 / B-092 precedent).
-
-CR §1 fully refreshed at anchor `246b4ec` (slice absorption B-084 + B-087 + B-088 + B-089 + B-090 + B-091 + B-092 + B-093 + B-094a + B-094b + B-095 — 8 code-touching slice closes since prior anchor `1ca046f`); §2 appends model rows for `EmailLog` (B-087) + `CardQualitySignal` (B-094a); §5 alembic head flipped `e043a1b2c3d4` → `c2b8a4d9e6f1` (+2 revisions); §11 drift table appends D-028 (alembic-roundtrip cascade) + D-030 (spec `user.is_admin` shorthand) + D-032 (spec `(NULLS-distinct)` parenthetical vs migration `NULLS NOT DISTINCT`); §13 specs 93→97 (phase-6 +2 + new `process/` directory +2). Detail sections §3 / §4 / §6 / §7 / §8 / §10 carry-forward per LIGHT scope.
-
-**RC compaction (R15(d) backstop):** B-087 entry **518 → 199 words**; B-092 entry **285 → 145 words**. Health-check worst-RC **517 → 246 words** (now under 250 hard ceiling). No new caps tripped.
-
-**Prompt-vs-disk drift (info-only):** prompt predicted the 517-word offender was the B-095 §12 amendment entry; on-disk reality is the B-087 slice 6.13 entry at 518w. Resolved by acting on the disk truth.
-
-**No drift discovered during regen** (next-free drift ID stays D-033). R14 exception (b). R15(c): B-096 single-slice file+close. R17: B-096 claimed + closed; B-097 next-free.
-
-Prior HEAD: `246b4ec` — 2026-05-02 SHA backfill for B-094b.
-
-**Awaiting CODEX review per Rule 11.**
-
-2. 2026-05-02 — **Phase 6 slice 6.13.5b impl shipped at `85860d5` — B-094b ✅.** UI/route half of slice 6.13.5 (foundation: B-094a `91be54f`); brings 6.13.5 to 20/20 ACs.
-
-Ships `ThumbsRequest`/`ThumbsResponse` (Literal[-1,1] — schema-level reject of score=0 per §12 D-11) + `LessonWithQuizzesResponse.viewer_thumbs` per §12 D-12 + 3 new `card_quality_signal_service` thumbs readers + `thumbs_service.submit_thumbs` (re-uses slice 6.5 visibility via `lesson_service.get_lesson_with_quizzes`; 404 / 403 mapping) + `POST /api/v1/lessons/{id}/thumbs` route + main.py mount + `admin_content_quality_service` thumbs-aggregate wire + FE `useThumbs` (custom-hook idiom matching `useLesson`; optimistic + revert) + `<ThumbsControl />` (R12 tokens, `aria-pressed`) mounted in `pages/Lesson.tsx` after `<LessonRenderer />` (page-wrapper per JC #1) + `WorstLessonsTable.tsx` Thumbs column + FE event `lesson_thumbs_submitted` + analytics + curriculum §7 layer-3 (c) flip.
-
-**JC #1 (info-only):** spec §8.4 says control mounts "in `pages/Lesson.tsx` footer"; page returns `<LessonRenderer />` directly. Chose page-wrapper insertion (Fragment + max-w-3xl after LessonRenderer) over editing LessonRenderer's internal sections — Q2 surgical, preserves its test surface.
-
-**Tests:** CI-canonical BE **786 → 802 (+16**, in +7..+17); FE **455 → 466 (+11**, at floor of +10..+21). Zero migrations (chain unchanged at `c2b8a4d9e6f1`). **D-028 cascade:** 15 vs B-094a's 10 (+5; my route happy-path is one cascade victim — passes in isolation 8/8). No investigation per R10.
-
-**R15(c):** B-094b 🔴 → ✅. **R17 unchanged:** a/b doesn't advance numeric (B-095 highest, B-096 next-free).
-
-Prior HEAD: `3981560` — 2026-05-02 D-032 drift log.
-
-**Awaiting CODEX review per Rule 11.**
-
-2. 2026-05-02 — **Phase 6 slice 6.13.5a impl shipped at `91be54f` — B-094a ✅.** Foundation half per Step 2 SCOPE GATE split (file-count + AC-seam triggered; B-083a/B-083b naming precedent). B-094 row restructured: 6.13.5a closes here; B-094b (thumbs route + FE UI) forward-filed 🔴.
-
-Ships alembic `c2b8a4d9e6f1` (raw-DDL ALTER ADD for NULLS NOT DISTINCT 5-tuple UNIQUE) + `card_quality_signal` ORM + schemas + service (UPSERT w/ read-after-write `populate_existing=True` + 3 readers) + `critique_signal_consumer` (score=`raw/5.0`) + `ingestion_worker` Stage 2.5 hook + new BE event `lesson_critique_signal_persisted` + `admin_content_quality_service` per-quiz_item writeback (IS DISTINCT FROM-gated) + critique read-side join + admin schema/FE-table extensions + `analytics.md` / `curriculum.md` §7 layer-2/-3 refresh.
-
-**JCs (3, info-only):** **#1** spec §4.2.1 places critique hook between Stage 2 and 3, but `lesson_ids=job.generated_lesson_ids` populated by `_persist_drafts:263`; placed hook AFTER persist — still write-time per §12 D-3 intent. **#2** spec §5.1 "(NULLS-distinct)" nomenclature slip; Postgres default re-INSERTs on NULL keys, flipped to NULLS NOT DISTINCT (PG 15+). **#3** slice 6.11 tests asserted `writebacks_applied == 1`; per-quiz_item per §6.5 makes contract `== 2`; assertions updated same commit.
-
-**Tests:** CI-canonical BE **766 → 786 (+20**, in +15..+25); FE **451 → 455 (+4**, slightly above conservative +1..+3 — 2 critique + 2 persisted-cell tests). +1 marker-gated alembic round-trip. **D-028 cascade delta:** 10 vs B-087 baseline 25 (no investigation per R10).
-
-**R15(c):** B-094 → B-094a ✅ + B-094b 🔴. **R17 unchanged:** a/b doesn't advance (B-095 highest, B-096 next-free).
-
-Prior HEAD: `61cb6c0` — 2026-05-01 SHA backfill for B-095.
-
-**Awaiting CODEX review per Rule 11.**
-
-2. 2026-05-01 — **Phase 6 slice 6.13.5 §12 amendment shipped at `4bf5220` — B-095 ✅.** Locks D-1..D-14 from §14 OQ-A..OQ-N 1:1 (Dhamo single-admin disposition; zero ambiguous hints triggered STOP). Mirrors slice 6.0/6.4.5/6.5/6.6/6.7/6.8/6.10/6.11 §12 amendment-slice precedent. **Notable locks:** D-1 one table (LD J2 verbatim); D-2 per-quiz_item row-only (saves alembic migration); D-3 critique-consumer write-time hook in `ingestion_worker`; D-4 lesson-level keeps `lessons.quality_score`; D-5 user-thumbs per-(user,target) via 5-tuple UNIQUE; D-6 sync-on-read v1 (LD G2 / B-078 re-evaluation triggers when this slice ships); **D-7 `<QuizItemThumbsControl />` + per-quiz_item POST + per-quiz_item event + test files DROPPED v1** (lesson-level only); D-11 sticky thumbs v1; D-14 alembic head verified at impl Step 0.
-
-§14 rewritten to RESOLVED form (heading + first-sentence question preserved). ~26 body cross-refs flipped `§14 OQ-X` → `§12 D-N` across §1.1/§2/§4/§5/§6/§8/§9/§10/§13/§15. Spec body **1714 → 1681 lines (-33 net)**. §1 status line + §15 dependency-1 + footer attribution flipped to post-lock state.
-
-**R15(c):** B-095 🔴 → ✅ + Closed-table row appended (single-slice file+close, B-091/B-092/B-093 precedent); B-094 stays 🔴 (impl-pickup ready post-amendment). **R17 watermark advances:** B-095 claimed; B-096 next-free.
-
-R14 exception (b) — pure spec amendment, no test surface. Test envelope unchanged except FE delta from D-7 drop tightens lower end.
-
-Prior HEAD: `b93beb8` — 2026-05-01 Phase 6 slice 6.13.5 spec authored (B-093 ✅).
-
-2. 2026-05-01 — **Phase 6 slice 6.13.5 spec authored at `b93beb8` — B-093 ✅ (spec-author).** New `docs/specs/phase-6/12-quality-signals.md` (1714 lines, 15 numbered sections + Status). Closes the 4 §13 deferrals from slice 6.11: `card_quality_signals` table per LD J2 + critique-score consumption from R2 critique.json blobs + per-quiz_item user-aggregate writeback (extends slice 6.11 D-2 Bayesian-smoothed pattern via `signal_source='user_review'` rows) + user-thumbs ingestion (new BE route + new FE `<ThumbsControl />`). §12 LOCKED DECISIONS empty placeholder per slice 6.0..6.11 §12 amendment-slice precedent; §14 carries 14 OQs (A..N) with author hints.
-
-**JCs (3, info-only):** **JC #1** layer-numbering vocabulary drift (curriculum.md skill canonical L1/L2/L3 = Generation/Critique/User-signal; spec #11 D-16 breadcrumb calls Critique=L1) — resolved using descriptive names in §1.1 audit finding #9. **JC #2** spec 1714 lines vs slice 6.11 (1471) — 4 feature surfaces share §4-§6-§8 treatment; considered 6.13.5a+b split per chat-Claude prompt STOP condition; chose single spec since features share `card_quality_signals` foundation; impl may still split. **JC #3** 2-row spec-author/impl pattern (B-093 ✅ + B-094 🔴) deviates from slice 6.10/6.11/6.13 single-row pattern; followed prompt's explicit Step 3+4 instruction.
-
-**LD G2 cron decision (B-078 🟦)** re-evaluation triggers when this slice's impl ships per `CODE-REALITY.md:848` — chat-Claude / Dhamo own re-evaluation; not this slice's scope.
-
-**R15(c):** B-093 🔴 → ✅ in this commit + Closed-table row appended; B-094 🔴 forward-filed for impl. **R17 watermark advances:** B-093 + B-094 claimed; B-095 next-free.
-
-Prior HEAD: `d020f4d` — 2026-05-01 Phase 6 slice 6.13 shipped (B-087 ✅).
-
-**Awaiting CODEX review per Rule 11.**
-
-
-> Recently Completed entries 6+ archived to [`docs/archive/session-state-history.md`](docs/archive/session-state-history.md): §6 cut on 2026-05-01 by B-092 (36 entries spanning 2026-04-28..2026-05-01) + §7 cut on 2026-05-02 by B-096 (6 entries B-087..B-090 shipped 2026-05-01). The §5 cut from B-076 (2026-04-28) preserved chain-of-archive auditability.
+> Recently Completed entries 6+ archived to [`docs/archive/session-state-history.md`](docs/archive/session-state-history.md): §6 cut on 2026-05-01 by B-092 (36 entries spanning 2026-04-28..2026-05-01) + §7 cut on 2026-05-02 by B-096 (6 entries B-087..B-090 shipped 2026-05-01) + §8 cut on 2026-05-02 by B-109 (11 entries B-093..B-103 shipped 2026-05-01..02). The §5 cut from B-076 (2026-04-28) preserved chain-of-archive auditability.
 
 ## Open Decisions Awaiting Dhamo
 
