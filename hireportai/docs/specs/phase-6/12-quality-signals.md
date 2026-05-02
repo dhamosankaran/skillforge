@@ -1,6 +1,6 @@
 # Phase 6 — Slice 6.13.5: Quality Signals (`card_quality_signals` Table + Critique-Score Consumption + Per-Quiz_Item Writeback + User-Thumbs Ingestion)
 
-## Status: 🔴 Drafted — §12 LOCKED DECISIONS empty placeholder; §14 Open Questions carry author hints for the §12 amendment slice; B-094 forward-filed at status 🔴 for the impl slice.
+## Status: 🔴 Drafted, §12 amended — D-1..D-14 locked at `<this-slice>` from §14 OQ-A..OQ-N (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 §12 amendment pattern at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc`); B-094 🔴 unchanged (impl not shipped).
 
 | Field | Value |
 |-------|-------|
@@ -113,7 +113,7 @@ ranker enhancement, future "explain my recommendation" surface)
 reads this table. It **subsumes the slice 6.11 lesson-level
 writeback** as a special case (lesson-level user-review aggregate
 becomes a `signal_source='user_review'` row with `quiz_item_id IS
-NULL`) per **§12 D-?? lock pending** — see §14 OQ-A.
+NULL`) per **§12 D-1** lock.
 
 The thumbs UI is the **first user-facing quality surface** in the
 codebase. Slice 6.11 was admin-only (G-1); this slice introduces a
@@ -161,7 +161,7 @@ post-D-030 drift log):
    lesson-level user-aggregate to a
    `signal_source='user_review', quiz_item_id IS NULL` row on
    `card_quality_signals` and treats `lessons.quality_score` as a
-   denormalized read-cache. See **§14 OQ-A** lock.
+   denormalized read-cache. See **§12 D-1** + **D-4** lock.
 
 4. **`quiz_items.quality_score` does NOT exist on disk** at
    `app/models/quiz_item.py:32-93`. No corresponding column, no
@@ -172,7 +172,7 @@ post-D-030 drift log):
    `card_quality_signals` with
    `quiz_item_id IS NOT NULL` rows. The LD J2 key shape was
    designed for option (b) — no schema change to `quiz_items`. See
-   **§14 OQ-B** lock.
+   **§12 D-2** lock.
 
 5. **Slice 6.10 critique-score persistence shape on disk:**
    - `CritiqueSchema` defined at `app/schemas/ingestion.py:121`
@@ -190,7 +190,7 @@ post-D-030 drift log):
      `ingestion/<job_id>/critique.json` per
      `app/services/ingestion_service.py:82-83` (`def critique_r2_key`).
    - Critique-score consumption (this slice) reads from R2 (the
-     authoritative payload) — see **§14 OQ-C** lock for write-time
+     authoritative payload) — see **§12 D-3** lock for write-time
      vs read-time approach.
 
 6. **Slice 6.11 admin-content-quality service has the consumer
@@ -203,7 +203,7 @@ post-D-030 drift log):
    extend `LessonQualityRow` with optional `critique_scores:
    dict[str, float] | None` field** populated from
    `card_quality_signals` rows where
-   `signal_source='critique'`. See **§14 OQ-D** lock.
+   `signal_source='critique'`. See **§12 D-4** lock.
 
 7. **No on-disk thumbs UI surface** — `grep -rn "thumb"
    hirelens-frontend/src/components/lesson/` returns zero hits;
@@ -213,7 +213,7 @@ post-D-030 drift log):
    `pages/Lesson.tsx` (footer area, after content); for
    quiz-item-level thumbs the natural mount is the answer-flow
    surface inside `components/study/` (audit at impl Step 1
-   determines exact site). See **§14 OQ-G** lock.
+   determines exact site). See **§12 D-7** lock.
 
 8. **B-078 cron decision LD G2 carry-forward.** Per
    `CODE-REALITY.md:848`: "G2 cron decision is also tracked at
@@ -222,7 +222,7 @@ post-D-030 drift log):
    informs the LD G2 re-evaluation. **Default proposal: sync-on-
    read for v1** (mirrors slice 6.11 D-1 sync-on-read writeback;
    no new infra; idempotency makes concurrent admins safe). Cron
-   recompute deferred to slice 6.14 / future. See **§14 OQ-F**
+   recompute deferred to slice 6.14 / future. See **§12 D-6**
    lock + §13.
 
 9. **Layer-numbering vocabulary drift across precedent specs +
@@ -261,7 +261,7 @@ post-D-030 drift log):
     per-route `Depends(require_admin)`. Slice 6.11
     `admin_content_quality.py` follows this pattern verbatim;
     slice 6.13.5's admin-side critique-consumer route (if
-    introduced — see **§14 OQ-D** lock) follows the same pattern.
+    introduced — see **§12 D-4** lock) follows the same pattern.
     **No new admin auth surface needed.**
 
 11. **`Depends(get_current_user)` chain for user-side writes is
@@ -275,12 +275,12 @@ post-D-030 drift log):
     `app/core/rate_limit.py:12` — global default 100/min;
     per-route override via `@limiter.limit("N/period")`. Thumbs
     submissions are low-volume per-user (one thumbs per
-    lesson per user per day at most — see **§14 OQ-E** lock for
+    lesson per user per day at most — see **§12 D-5** lock for
     duplicate-prevention semantics). **Default proposal: rely on
     the global 100/min default; no per-route override.** A
     dedicated thumbs-rate-limit-with-Redis-counter is unneeded for
     v1 abuse-bounded by the per-(user, lesson, quiz_item)
-    UPSERT semantics under **§14 OQ-E** lock = (b) UPSERT on
+    UPSERT semantics under **§12 D-5** lock = UPSERT on
     `(user_id, lesson_id, quiz_item_id)` so re-submission
     overwrites rather than appends.
 
@@ -301,7 +301,7 @@ post-D-030 drift log):
     trail lives in R2 critique.json artifacts (slice 6.10
     forever-retention per §12 D-11) and in
     `quiz_review_events` (which IS append-only and feeds the
-    user-review aggregate signal). See **§14 OQ-H** lock.
+    user-review aggregate signal). See **§12 D-8** lock.
 
 14. **`recorded_by_user_id` provenance column.** For
     `signal_source='user_thumbs'` the recording user is the
@@ -361,12 +361,12 @@ post-D-030 drift log):
 | # | Goal |
 |---|------|
 | **G-1** | **Build `card_quality_signals` per LD J2.** New ORM model `app/models/card_quality_signal.py` + new alembic migration adding the table with PK `id` + FK `lesson_id` + nullable FK `quiz_item_id` + `signal_source: String(20) NOT NULL` + `dimension: String(30) NOT NULL` + `score: Numeric(4,2) NOT NULL` (range depends on dimension; see §5.1) + provenance columns (`source_ref`, `recorded_by_user_id`, `recorded_at`) + UNIQUE constraint on `(lesson_id, quiz_item_id, signal_source, dimension)` (Postgres NULLS-distinct semantics — see §5.1) + indexes for hot-path reads. |
-| **G-2** | **Critique-score consumer.** New service `app/services/critique_signal_consumer.py` (or worker hook in `app/jobs/ingestion_worker.py`; see **§14 OQ-C**) that lifts `_CritiqueDimension` rows from each successful ingestion's `critique.json` R2 blob and writes one `signal_source='critique'` row per dimension per lesson via UPSERT on the LD J2 key. |
-| **G-3** | **Per-quiz_item user-aggregate writeback.** Extend the slice 6.11 `aggregate_dashboard` flow (or a new sibling service; see **§14 OQ-D**) so that per-quiz_item Bayesian-smoothed pass_rates ≥ MIN_REVIEW_THRESHOLD persist as `signal_source='user_review', quiz_item_id IS NOT NULL, dimension='pass_rate'` rows on `card_quality_signals`. Mirror slice 6.11 D-2 formula + D-4 threshold + D-13 rating semantics + D-14 IS DISTINCT FROM idempotency gate. |
-| **G-4** | **User-thumbs ingestion.** New BE route `POST /api/v1/lessons/:lesson_id/thumbs` + (optional, per **§14 OQ-G**) `POST /api/v1/quiz-items/:quiz_item_id/thumbs` writing `signal_source='user_thumbs'` rows with `dimension='helpful'` and `score ∈ {-1.0, +1.0}` (thumbs-down / thumbs-up). UPSERT-on-(user, target) so re-submission overwrites. New FE component `<ThumbsControl />` mounted on `pages/Lesson.tsx` (lesson-level) + per-quiz_item answer-flow surface (per **§14 OQ-G** scope). |
-| **G-5** | **Read-only over user-review data.** Zero writes to `quiz_review_events`, `lesson_view_events`, or any user-owned table. Writes are scoped to `card_quality_signals` (G-1, G-2, G-3, G-4) + `lessons.quality_score` denormalized cache update (per **§14 OQ-A** lock if path (b) chosen). |
+| **G-2** | **Critique-score consumer.** New service `app/services/critique_signal_consumer.py` (write-time worker hook per **§12 D-3**) that lifts `_CritiqueDimension` rows from each successful ingestion's `critique.json` R2 blob and writes one `signal_source='critique'` row per dimension per lesson via UPSERT on the LD J2 key. |
+| **G-3** | **Per-quiz_item user-aggregate writeback.** Extend the slice 6.11 `aggregate_dashboard` flow (per **§12 D-4** lesson-level home stays in `lessons.quality_score`) so that per-quiz_item Bayesian-smoothed pass_rates ≥ MIN_REVIEW_THRESHOLD persist as `signal_source='user_review', quiz_item_id IS NOT NULL, dimension='pass_rate'` rows on `card_quality_signals`. Mirror slice 6.11 D-2 formula + D-4 threshold + D-13 rating semantics + D-14 IS DISTINCT FROM idempotency gate. |
+| **G-4** | **User-thumbs ingestion.** New BE route `POST /api/v1/lessons/:lesson_id/thumbs` (per **§12 D-7** lock = lesson-level only v1) writing `signal_source='user_thumbs'` rows with `dimension='helpful'` and `score ∈ {-1.0, +1.0}` (thumbs-down / thumbs-up). UPSERT-on-(user, target) so re-submission overwrites. New FE component `<ThumbsControl />` mounted on `pages/Lesson.tsx` (lesson-level only). |
+| **G-5** | **Read-only over user-review data.** Zero writes to `quiz_review_events`, `lesson_view_events`, or any user-owned table. Writes are scoped to `card_quality_signals` (G-1, G-2, G-3, G-4); `lessons.quality_score` continues per slice 6.11 path (per **§12 D-4** — no migration to `card_quality_signals` v1). |
 | **G-6** | **Reuses existing auth chains.** Admin-side reads via `Depends(require_admin)` + `audit_admin_request`; user-side thumbs writes via `Depends(get_current_user)`. Mirrors slice 6.11 G-6. No new auth primitive. |
-| **G-7** | **Synchronous on-read writeback (v1).** Mirror slice 6.11 D-1 — critique-consumer + per-quiz_item user-aggregate writeback fire synchronously as side-effects of the slice 6.11 admin dashboard GET (or, per **§14 OQ-C** option, write-time during ingestion-worker for critique-only). User-thumbs writes are direct (synchronous on the user's POST). No background job in v1. Cron deferred to LD G2 / B-078 / slice 6.14. |
+| **G-7** | **Synchronous on-read writeback (v1).** Mirror slice 6.11 D-1 — per-quiz_item user-aggregate writeback fires synchronously as a side-effect of the slice 6.11 admin dashboard GET; critique-consumer is write-time during ingestion-worker (per **§12 D-3** lock); user-thumbs writes are direct (synchronous on the user's POST). No background job in v1. Cron deferred to LD G2 / B-078 / slice 6.14 per **§12 D-6**. |
 | **G-8** | **Idempotent UPSERT semantics.** UNIQUE constraint on `(lesson_id, quiz_item_id, signal_source, dimension)` (NULLS-distinct) + Postgres `INSERT ... ON CONFLICT DO UPDATE SET score=EXCLUDED.score, recorded_at=NOW()`. Re-running any consumer with unchanged inputs produces the same end-state. Mirrors slice 6.11 finding #14 IS DISTINCT FROM idempotency floor. |
 
 ---
@@ -404,7 +404,8 @@ post-D-030 drift log):
 - **Multi-source thumbs aggregation in the same row.** Each user's
   thumbs is one row keyed on `(lesson_id, quiz_item_id, user_id)`
   via `recorded_by_user_id` distinguishing rows OR a sibling
-  `card_quality_thumbs` table (per **§14 OQ-E** lock). Aggregate
+  `card_quality_thumbs` table (per **§12 D-5** lock = per-user
+  rows on `card_quality_signals`, no sibling table). Aggregate
   thumbs-score = average of `score` across rows for the same
   (lesson_id, quiz_item_id, signal_source='user_thumbs',
   dimension='helpful') tuple is a *read-time* computation, not a
@@ -442,8 +443,8 @@ post-D-030 drift log):
 
 - **Persona-gating on thumbs eligibility.** Whether free-tier
   users can submit thumbs vs Pro-only is a product decision — see
-  **§14 OQ-I** lock; default proposal = all authed users (no
-  paywall on feedback submission).
+  **§12 D-9** lock = all authed users (no paywall on feedback
+  submission).
 
 - **Per-deck rollups in the table.** `card_quality_signals` keys
   on `(lesson_id, quiz_item_id, signal_source, dimension)`; deck-
@@ -482,13 +483,13 @@ hirelens-backend/
       card_quality_signal.py          ← NEW (~80-120 lines, Pydantic write + read schemas)
     services/
       card_quality_signal_service.py  ← NEW (~150-200 lines, UPSERT helper + per-source readers)
-      critique_signal_consumer.py     ← NEW (~80-130 lines; per §14 OQ-C may be folded into worker)
+      critique_signal_consumer.py     ← NEW (~80-130 lines; per §12 D-3 = write-time worker hook)
       thumbs_service.py               ← NEW (~80-130 lines, user-thumbs ingestion + read)
       admin_content_quality_service.py ← MODIFIED (extend to write per-quiz_item + read critique signals; ~50-80 lines added)
     api/v1/routes/
       thumbs.py                       ← NEW (~60-100 lines, POST /lessons/:id/thumbs + optional quiz_item variant)
     jobs/
-      ingestion_worker.py             ← MODIFIED (per §14 OQ-C if write-time; ~10-20 lines added)
+      ingestion_worker.py             ← MODIFIED (per §12 D-3 write-time hook; ~10-20 lines added)
     schemas/
       admin_content_quality.py        ← MODIFIED (extend LessonQualityRow + QuizItemQualityRow with critique_scores field)
     main.py                           ← MODIFIED (mount thumbs router under /api/v1)
@@ -501,7 +502,7 @@ hirelens-frontend/
       lesson/
         ThumbsControl.tsx             ← NEW (~80-120 lines, lesson-level thumbs UI)
       study/
-        QuizItemThumbsControl.tsx     ← NEW (~80-120 lines; per §14 OQ-G if quiz_item-level included)
+        (QuizItemThumbsControl.tsx — DROPPED v1 per §12 D-7 = lesson-level only)
     hooks/
       useThumbs.ts                    ← NEW (~50-80 lines, useMutation wrapper)
     pages/
@@ -517,13 +518,15 @@ hirelens-frontend/
 Two adjacent edits to existing services:
 - `admin_content_quality_service.py` — extends per slice 6.11 D-16
   breadcrumb; the per-quiz_item writeback path is the natural
-  extension point (per §14 OQ-D may live in a sibling service).
-- `ingestion_worker.py` — possibly extended per **§14 OQ-C** if
+  extension point (per §12 D-4 = lesson-level lessons.quality_score
+  path stays in slice 6.11 service; per-quiz_item path is the
+  natural extension point in this service).
+- `ingestion_worker.py` — extended per **§12 D-3** at
   critique-consumer is write-time; otherwise unchanged.
 
 ### 4.2 Data flows
 
-#### 4.2.1 Critique-score consumer (write-time variant — §14 OQ-C path A)
+#### 4.2.1 Critique-score consumer (write-time per §12 D-3 lock)
 
 ```
 ingestion_worker.run_ingestion_job(job_id)
@@ -544,7 +547,7 @@ ingestion_worker.run_ingestion_job(job_id)
   └─ emit ingestion_job_completed (existing)
 ```
 
-#### 4.2.2 Critique-score consumer (read-time variant — §14 OQ-C path B)
+#### 4.2.2 Critique-score consumer (read-time variant — REJECTED per §12 D-3, retained for historical context)
 
 ```
 admin opens /admin/content-quality
@@ -559,7 +562,7 @@ admin opens /admin/content-quality
 Default proposal: **Path A (write-time)** — happens once at
 ingestion completion, no per-dashboard-load R2 reads. Cleaner
 separation; admin dashboard doesn't depend on R2 availability for
-critique signals. See **§14 OQ-C** lock.
+critique signals. **Locked at §12 D-3.**
 
 #### 4.2.3 Per-quiz_item user-aggregate writeback (extends slice 6.11)
 
@@ -601,13 +604,14 @@ user clicks 👍 / 👎 on /learn/lesson/:id
   └─ HTTP 200 ThumbsResponse {accepted: true, score}
 ```
 
-Per **§14 OQ-E** lock: UPSERT-on-(user, lesson) so re-clicking
-overwrites. The UNIQUE constraint on `card_quality_signals` does
-NOT include `recorded_by_user_id` — see **§14 OQ-E** for whether
-per-user thumbs are stored as separate rows (one row per user)
-or a single aggregated row. **Default proposal: separate rows
-keyed on `(lesson_id, quiz_item_id, signal_source, dimension,
-recorded_by_user_id)` UNIQUE + read-time AVG aggregation.**
+Per **§12 D-5** lock: UPSERT-on-(user, lesson) so re-clicking
+overwrites. The UNIQUE constraint on `card_quality_signals`
+**includes `recorded_by_user_id` as the 5th key column** (NULLS-
+distinct), so per-user thumbs are stored as separate rows + the
+aggregate is a read-time AVG / SUM. The 5-tuple key is intentionally
+distinct from LD J2's 4-tuple — the 4-tuple still applies to
+`signal_source='critique'` / `'user_review'` rows where
+`recorded_by_user_id IS NULL`. See §5.1 + §6.3.
 
 ### 4.3 Failure modes + recovery
 
@@ -649,7 +653,7 @@ recorded_by_user_id)` UNIQUE + read-time AVG aggregation.**
 - **R5 Pydantic:** all I/O via Pydantic schemas (§5).
 - **R6 Alembic:** one new migration (§7).
 - **R8 PostHog:** one new FE event (`lesson_thumbs_submitted`) +
-  one BE event (per **§14 OQ-K**) — see §9.
+  one BE event (`lesson_critique_signal_persisted`, info-only) — see §9.
 - **R11 LLM router:** zero new LLM calls; critique-consumer reads
   pre-existing `CritiqueSchema` payloads from R2 / DB. Not load-
   bearing.
@@ -672,8 +676,9 @@ recorded_by_user_id)` UNIQUE + read-time AVG aggregation.**
   consumer beyond admin dashboard**); (b) FE consumer-graph for
   the new shared `ThumbsRequest` / `ThumbsResponse` types
   (predicted consumers: `useThumbs`, `<ThumbsControl />`,
-  `<QuizItemThumbsControl />` if per **§14 OQ-G**; **no external
-  consumer**); (c) navigation-graph audit if any new route is
+  (per §12 D-7 `<QuizItemThumbsControl />` is OUT of v1 scope —
+  removed from consumer set); **no external consumer**);
+  (c) navigation-graph audit if any new route is
   added — none planned (thumbs is an in-page action, not a route).
 - **R17 watermark:** B-093 claimed by this slice for spec-author;
   B-094 claimed for forward-filed impl row; B-095 next-free
@@ -698,14 +703,14 @@ key shape verbatim:
 | `dimension` | `String(30)` | NOT NULL | — | Per-source dimension vocab: critique → `'accuracy'\|'clarity'\|'completeness'\|'cohesion'`; user_review → `'pass_rate'` (extensible to `'lapse_rate'`); user_thumbs → `'helpful'` (extensible). |
 | `score` | `Numeric(4, 2)` | NOT NULL | — | Range depends on dimension: critique scores normalized to [0.00, 1.00] from raw 1-5 input (`raw / 5.0`); user_review scores in [0.00, 1.00] (smoothed pass_rate); user_thumbs scores in {-1.00, +1.00}. **Numeric(4,2)** chosen over Numeric(3,2) so user_thumbs `-1.00` fits (Numeric(3,2) max abs value < 10 — `-1.00` works at Numeric(3,2) but Numeric(4,2) leaves headroom for future dimensions like a 0..10 quality grade). |
 | `source_ref` | `String(36)` | NULLABLE | — | Provenance pointer. For `signal_source='critique'`, contains `ingestion_jobs.id`; for `'user_thumbs'` and `'user_review'`, NULL (provenance lives in `recorded_by_user_id`). No FK constraint (loose pointer; ingestion job may be deleted before signal is). |
-| `recorded_by_user_id` | `String(36)` | NULLABLE | — | FK `users.id` `ON DELETE SET NULL`. Anonymizes if user deletes account. NULL for `'critique'` (no human author) or for `'user_review'` if cron-triggered (per **§14 OQ-F**); non-NULL for `'user_thumbs'`. |
+| `recorded_by_user_id` | `String(36)` | NULLABLE | — | FK `users.id` `ON DELETE SET NULL`. Anonymizes if user deletes account. NULL for `'critique'` (no human author) or for `'user_review'` (sync-on-read writeback runs in admin dashboard request context — recording user is the admin per slice 6.11 D-1, but spec records it as NULL because the signal is derived not authored — see §1.1 finding #14); non-NULL for `'user_thumbs'`. |
 | `recorded_at` | `DateTime(timezone=True)` | NOT NULL | `func.now()` | Server-set; updates on UPSERT. |
 
 **Indexes:**
 
 | Name | Columns | Use |
 |------|---------|-----|
-| `ux_card_quality_signals_key` | UNIQUE `(lesson_id, quiz_item_id, signal_source, dimension, recorded_by_user_id)` (NULLS-distinct) | UPSERT target; per-user thumbs rows distinct via `recorded_by_user_id`. **Distinct from LD J2 4-tuple** — see §14 OQ-E. |
+| `ux_card_quality_signals_key` | UNIQUE `(lesson_id, quiz_item_id, signal_source, dimension, recorded_by_user_id)` (NULLS-distinct) | UPSERT target; per-user thumbs rows distinct via `recorded_by_user_id`. **Distinct from LD J2 4-tuple** per §12 D-5 lock — the 5-tuple includes `recorded_by_user_id` so per-user `user_thumbs` rows do not collide; the 4-tuple still applies to `critique` / `user_review` rows where `recorded_by_user_id IS NULL`. |
 | `ix_card_quality_signals_lesson_source` | `(lesson_id, signal_source, recorded_at DESC)` | Per-lesson per-source rollup (slice 6.11 dashboard extension). |
 | `ix_card_quality_signals_quiz_item_source` | `(quiz_item_id, signal_source, recorded_at DESC)` WHERE `quiz_item_id IS NOT NULL` | Per-quiz_item per-source rollup. Partial index since most rows are lesson-level. |
 | `ix_card_quality_signals_user` | `(recorded_by_user_id, signal_source, recorded_at DESC)` WHERE `recorded_by_user_id IS NOT NULL` | "Has this user thumbed this lesson?" lookup for FE pre-fill. Partial index since critique/user_review rows have NULL. |
@@ -752,7 +757,7 @@ class ThumbsRequest(BaseModel):
     """User-side thumbs route input.
 
     Lesson-level: POST /api/v1/lessons/:lesson_id/thumbs
-    Quiz-item-level: POST /api/v1/quiz-items/:quiz_item_id/thumbs (per §14 OQ-G)
+    (Quiz-item-level POST DROPPED v1 per §12 D-7 = lesson-level only)
     """
     score: Literal[-1, 1]  # int at HTTP boundary; service normalizes to -1.0 / 1.0
 
@@ -855,7 +860,7 @@ async def get_thumbs_aggregate(
 
 ### 6.2 New service — `app/services/critique_signal_consumer.py`
 
-Per **§14 OQ-C** lock = path A (write-time, default proposal):
+Per **§12 D-3** lock = write-time worker hook:
 
 ```python
 async def persist_critique_signals(
@@ -894,17 +899,18 @@ async def submit_thumbs(
     2. UPSERT card_quality_signals via card_quality_signal_service.
     3. Read aggregate via card_quality_signal_service.get_thumbs_aggregate.
     4. Emit posthog event lesson_thumbs_submitted (or
-       quiz_item_thumbs_submitted per §14 OQ-G).
+       quiz_item_thumbs_submitted DROPPED v1 per §12 D-7).
     5. Return ThumbsResponse.
     """
 
 
 async def clear_thumbs(...):
-    """Optional: future surface for retracting a thumbs (per §14 OQ-K).
+    """Future surface for retracting a thumbs (out of v1 scope per §12 D-11).
 
-    DELETE the prior row; emit cleared event. Not in v1 per §14 OQ-K
-    default = no clear surface (UPSERT to zero-score is the v1 way to
-    clear via the same POST endpoint).
+    Not implemented v1 — sticky thumbs (§12 D-11) means user can change
+    direction (👍 → 👎) but cannot unsubmit. POST with score=0 is rejected
+    by the validator (§5.2 ThumbsRequest.score: Literal[-1, 1] + AC-8).
+    Follow-up slice if user complaints arrive.
     """
 ```
 
@@ -930,16 +936,9 @@ async def submit_lesson_thumbs(
     )
 
 
-# Optional per §14 OQ-G:
-@router.post("/quiz-items/{quiz_item_id}/thumbs", response_model=ThumbsResponse)
-async def submit_quiz_item_thumbs(
-    quiz_item_id: str,
-    payload: ThumbsRequest,
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-) -> ThumbsResponse:
-    # service derives lesson_id from quiz_item_id
-    ...
+# Per-quiz_item thumbs route DROPPED v1 per §12 D-7 (lesson-level only).
+# Schema supports per-quiz_item via nullable quiz_item_id; sibling
+# slice can add this route later when warranted.
 ```
 
 ### 6.5 Modified service — `admin_content_quality_service.py`
@@ -972,7 +971,7 @@ IS DISTINCT FROM gate.
 
 ### 6.6 Modified worker — `app/jobs/ingestion_worker.py`
 
-Per **§14 OQ-C** path A: after Stage 2 critique succeeds + before
+Per **§12 D-3**: after Stage 2 critique succeeds + before
 Stage 3 persist, call
 `critique_signal_consumer.persist_critique_signals(lesson_ids,
 critique, job_id, session)`.
@@ -980,8 +979,9 @@ critique, job_id, session)`.
 Stage labeling extends from `'pending → running → generating →
 critiquing → publishing → completed | failed'` to insert a
 `'persisting_critique'` step between `critiquing` and `publishing`
-(per **§14 OQ-C** sub-question — alternatively the persist step
-runs inside `critiquing` and no new status label is needed).
+(per §12 D-3 — locked at write-time hook; impl decides whether
+to add a new status label or fold the persist step inside the
+existing `'critiquing'` step — Q1 simplicity favors no new label).
 
 ### 6.7 Reuse of existing services
 
@@ -1041,8 +1041,8 @@ Mounts in `pages/Lesson.tsx` footer area, after the lesson body
 + before any quiz panel. Two icon buttons (👍 / 👎); one is active
 at a time based on the user's prior submission. Click toggles —
 clicking the same icon a second time clears (resubmits with score=0
-which the service treats as DELETE per **§14 OQ-K** — or v1 ships
-without a clear path and the button is sticky).
+which the service rejects per validator + §12 D-11 lock — v1 ships
+sticky thumbs, no clear path).
 
 ```typescript
 interface ThumbsControlProps {
@@ -1057,12 +1057,12 @@ R12 compliance: uses `text-text-primary` for inactive icon,
 `text-accent-primary` for active state, `text-text-secondary` for
 the aggregate count text. No hardcoded hex.
 
-### 8.2 New component (per §14 OQ-G) — `src/components/study/QuizItemThumbsControl.tsx`
+### 8.2 `<QuizItemThumbsControl />` — DROPPED v1 per §12 D-7
 
-If **§14 OQ-G** locks per-quiz_item thumbs IN scope, this component
-mounts in the answer-flow surface inside `components/study/`.
-Shape mirrors `<ThumbsControl />` but keys on `quizItemId` and
-calls `POST /api/v1/quiz-items/:id/thumbs`.
+Per-quiz_item thumbs UI is OUT of v1 scope. The component is named
+here only to mark the future home if a sibling slice adds it
+post-v1; impl does NOT create the file. The lesson-level
+`<ThumbsControl />` is the only thumbs surface v1.
 
 ### 8.3 New hook — `src/hooks/useThumbs.ts`
 
@@ -1083,9 +1083,9 @@ export function useThumbs(opts: { lessonId: string; quizItemId?: string }) {
 - `pages/Lesson.tsx` — mount `<ThumbsControl />` in footer; wire
   `lessonId` from existing route param. Initial score / aggregate
   fetched via the existing lesson detail route (which returns the
-  user's prior thumbs row in the response body — see **§14 OQ-L**
-  for whether to extend the lesson detail response or add a
-  separate read endpoint).
+  user's prior thumbs row in the response body per **§12 D-12**
+  lock = extend lesson detail response with `viewer_thumbs:
+  ThumbsResponse | null` field).
 - `pages/admin/AdminContentQuality.tsx` — render
   `critique_scores` per dimension as a small inline column on
   `<WorstLessonsTable />`; render `thumbs_aggregate +
@@ -1094,8 +1094,8 @@ export function useThumbs(opts: { lessonId: string; quizItemId?: string }) {
 ### 8.5 Modified files
 
 - `src/services/api.ts` — `+1` helper:
-  `submitThumbs(lessonId, payload)` (per **§14 OQ-G** + a sibling
-  `submitQuizItemThumbs` if scope includes quiz-item thumbs).
+  `submitThumbs(lessonId, payload)` (per §12 D-7 = lesson-level
+  only v1; no `submitQuizItemThumbs` v1).
 - `src/types/index.ts` — `+2` types: `ThumbsRequest`,
   `ThumbsResponse` (matches §5.4).
 
@@ -1116,8 +1116,10 @@ export function useThumbs(opts: { lessonId: string; quizItemId?: string }) {
 | Event | Source | Properties |
 |-------|--------|-----------|
 | `lesson_thumbs_submitted` | `components/lesson/ThumbsControl.tsx` (FE) — fires on click via `useMutation.onSuccess` | `{lesson_id, score: -1\|+1, persona, plan, was_clearing: bool}` |
-| `quiz_item_thumbs_submitted` (per §14 OQ-G) | `components/study/QuizItemThumbsControl.tsx` (FE) | `{quiz_item_id, lesson_id, score, persona, plan, was_clearing}` |
-| `lesson_critique_signal_persisted` (per §14 OQ-K — info-only, BE) | `app/services/critique_signal_consumer.py` (BE) — fires once per ingestion job | `{job_id, lesson_id, dimension_count, internal: true}` |
+| `lesson_critique_signal_persisted` (info-only, BE; `internal: true`) | `app/services/critique_signal_consumer.py` (BE) — fires once per ingestion job | `{job_id, lesson_id, dimension_count, internal: true}` |
+
+(`quiz_item_thumbs_submitted` DROPPED v1 per §12 D-7 = lesson-level
+only.)
 
 `internal: true` discriminator on the BE event keeps it out of
 user-facing PostHog dashboards (slice 6.10 D-13 / slice 6.11 D-11
@@ -1129,12 +1131,11 @@ None. `quiz_item_reviewed` / `lesson_viewed` shapes unchanged.
 
 ### 9.3 Catalog discipline
 
-`.agent/skills/analytics.md` — append two new rows in the FE
-catalog (`lesson_thumbs_submitted` + per-§14-OQ-G
-`quiz_item_thumbs_submitted`) and one in the BE catalog
-(`lesson_critique_signal_persisted` if **§14 OQ-K** locks it ON).
-Lock-step update in the impl commit per slice 6.10 / 6.11
-precedent.
+`.agent/skills/analytics.md` — append one new row in the FE
+catalog (`lesson_thumbs_submitted`) and one in the BE catalog
+(`lesson_critique_signal_persisted`). `quiz_item_thumbs_submitted`
+DROPPED v1 per §12 D-7. Lock-step update in the impl commit per
+slice 6.10 / 6.11 precedent.
 
 ---
 
@@ -1151,11 +1152,11 @@ Test envelope locked at impl. Estimates below.
 - `test_critique_signal_consumer.py` (~4-6 tests): persist 4
   dimensions for one lesson / persist for multi-lesson ingestion
   job / re-run no-op / partial-failure-skip per §4.3.
-- `test_thumbs_service.py` (~6-8 tests): submit lesson-level
-  thumbs / submit quiz-item-level thumbs (per §14 OQ-G) / re-submit
-  same direction (UPSERT no-op) / re-submit reverse (UPSERT
-  overwrite) / 404 on archived lesson / aggregate computation
-  cross-user.
+- `test_thumbs_service.py` (~5-7 tests): submit lesson-level
+  thumbs / re-submit same direction (UPSERT no-op) / re-submit
+  reverse (UPSERT overwrite) / 404 on archived lesson / aggregate
+  computation cross-user. (Quiz-item-level test DROPPED v1 per
+  §12 D-7.)
 - `test_admin_content_quality_service_phase2.py` (~4-6 tests):
   per-quiz_item user-aggregate writeback / critique read-side
   surfacing / thumbs aggregate join.
@@ -1180,7 +1181,7 @@ Test envelope locked at impl. Estimates below.
 - `ThumbsControl.test.tsx` (~5-8 tests): initial render /
   click-to-submit / re-click-to-clear / aggregate display /
   loading state / error state / a11y label correctness.
-- `QuizItemThumbsControl.test.tsx` (per §14 OQ-G) (~4-6 tests).
+- `QuizItemThumbsControl.test.tsx` — DROPPED v1 per §12 D-7.
 
 ### 10.5 FE — `tests/hooks/useThumbs.test.ts` (~3-4 tests)
 
@@ -1258,35 +1259,179 @@ mutation success / mutation error / cache invalidation.
 
 ## 12. Decisions
 
-> **LOCKED DECISIONS — empty placeholder.**
->
-> Per the slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11
-> §12 amendment-slice precedent, this section is left empty in the
-> spec-author commit. A follow-up §12 amendment slice will
-> resolve §14 OQ-A..OQ-N (with author-hint dispositions per
-> Dhamo) and lock D-1..D-N here.
->
-> Cross-ref the amendment commits at:
-> - Slice 6.0 amendment `e8eecdd` (D-1..D-10)
-> - Slice 6.4.5 amendment `df58eaf` (D-1..D-10)
-> - Slice 6.5 amendment `acba7ed` (D-1..D-9)
-> - Slice 6.6 amendment `fb92396`
-> - Slice 6.7 amendment `0c21223`
-> - Slice 6.8 amendment `ab07168`
-> - Slice 6.10 amendment `be7d59a` (D-1..D-16)
-> - Slice 6.11 amendment `d9bfcfc` (D-1..D-16)
-> - Slice 6.13 amendment (pending — separate from this slice)
->
-> The §12 amendment slice for slice 6.13.5 will follow the same
-> Mode 2 (impl-to-spec) shape: read §14 OQ-A..OQ-N, lock D-1..D-N
-> from author-hint dispositions, rewrite §14 to RESOLVED form
-> (heading + first-sentence question preserved, option bodies
-> + author hints removed), update §1 status line + §15 forward-
-> link, and bump test counts (no test surface change — pure
-> spec amendment).
->
-> Until the amendment slice ships, B-094 stays at status 🔴 and
-> impl is blocked on amendment closure.
+> Locked at `<this-slice>` (2026-05-01). D-1..D-14 resolve §14
+> OQ-A..OQ-N 1:1 (verbatim author-hint dispositions, all 14
+> confirmed by Dhamo single-admin disposition). Mirrors slice 6.0
+> / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11 §12 amendment
+> pattern at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` /
+> `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc`.
+
+- **D-1** (resolves OQ-A) — **`card_quality_signals` is one
+  table with `signal_source` discriminator column.** LD J2
+  explicitly names ONE table; splitting into three would require
+  amending LD J2 (chat-Claude scope, not impl-slice scope). One
+  table also serves the admin "show me all signals for this
+  lesson" query better — `WHERE lesson_id = X` hits one table,
+  not three. Storage / index cost bounded by v1 corpus size.
+  See §5.1.
+
+- **D-2** (resolves OQ-B) — **Per-quiz_item writeback target =
+  `card_quality_signals` row only; `quiz_items.quality_score`
+  column NOT added.** LD J2's whole point is per-quiz_item
+  granularity in the unified table. Adding the column
+  duplicates state across two tables. The ranker (slice 6.6)
+  doesn't read per-quiz_item scores today; when it does, it
+  can read from `card_quality_signals` directly. Skips one
+  alembic migration. Per-quiz_item rows carry
+  `quiz_item_id IS NOT NULL, signal_source='user_review',
+  dimension='pass_rate'`. See §5.1 + §6.5.
+
+- **D-3** (resolves OQ-C) — **Critique-score consumption is
+  write-time during ingestion.** `ingestion_worker.run_ingestion_job`
+  calls `critique_signal_consumer.persist_critique_signals`
+  after Stage 2 critique succeeds, before Stage 3 persist
+  (adds a `'persisting_critique'` status step between
+  `'critiquing'` and `'publishing'`). Decouples admin
+  dashboard from R2 availability. One write per ingestion
+  (the natural batch unit). Cleaner code-locality — the
+  ingestion worker owns critique creation; persisting it is a
+  one-line service call. Read-time would require R2 reads on
+  every dashboard load + fragile cache key (R2 blob mutation
+  possible if reprocessed). See §4.2.1 + §6.2 + §6.6.
+
+- **D-4** (resolves OQ-D) — **Lesson-level user-aggregate keeps
+  `lessons.quality_score` as canonical home; v1 does NOT migrate
+  it to `card_quality_signals`.** Slice 6.11 ships
+  `lessons.quality_score` as the lesson-level layer-3 home + the
+  ranker reads it directly. Migrating to a
+  `card_quality_signals` row + read-cache repopulation pattern
+  is more refactor than feature for v1. Reversible — a future
+  slice can land option (b) when cron consumer (LD G2 / B-078
+  re-evaluation) needs the unified shape. v1 keeps slice 6.11
+  service code unchanged for the lesson-level path; only the
+  per-quiz_item extension touches new code. See §6.5.
+
+- **D-5** (resolves OQ-E) — **User-thumbs row identity =
+  per-(user, target) rows.** UNIQUE constraint on
+  `(lesson_id, quiz_item_id, signal_source, dimension,
+  recorded_by_user_id)` (NULLS-distinct). Each user's thumbs is
+  a row; aggregate is a read-time AVG / SUM via
+  `card_quality_signal_service.get_thumbs_aggregate`. Preserves
+  audit trail (admin can see who thumbed what), prevents
+  gaming (a single user can't replay thumbs to inflate
+  aggregate), enables future per-user features ("what lessons
+  has this user marked helpful?"). Storage cost bounded by
+  user count × lesson count; v1 corpus stays under 100K rows
+  even at high engagement. UNIQUE-constraint shape is
+  intentionally **distinct from LD J2's 4-tuple key** — the
+  5-tuple includes `recorded_by_user_id` so per-user
+  `signal_source='user_thumbs'` rows do not collide; LD J2's
+  4-tuple still applies for `signal_source='critique'` /
+  `'user_review'` rows where `recorded_by_user_id IS NULL`.
+  See §5.1.
+
+- **D-6** (resolves OQ-F) — **Recompute cadence = sync-on-read
+  only for v1; no cron.** Critique-consumer is write-time
+  (per D-3); per-quiz_item user-aggregate fires on slice 6.11
+  admin dashboard load (mirrors slice 6.11 D-1 sync-on-read
+  precedent). Closing this slice triggers LD G2 cron-decision
+  re-evaluation at B-078 per `CODE-REALITY.md:848` —
+  chat-Claude / Dhamo own the cron architecture decision
+  there. v1 ships forward-compatible:
+  `card_quality_signals` UPSERT semantics are idempotent so a
+  future cron can reuse the same writers without code change.
+  See §13 + §15.
+
+- **D-7** (resolves OQ-G) — **Per-quiz_item thumbs UI is OUT
+  of v1 scope; lesson-level only.** `<ThumbsControl />` mounts
+  on `pages/Lesson.tsx`; no `<QuizItemThumbsControl />` v1.
+  Lesson-level is enough to validate the thumbs surface + the
+  admin signal mix. Per-quiz_item adds a second mount-point +
+  UX design surface (where exactly does the thumbs go in the
+  answer flow? during, after, on review?) without
+  proportionate signal value. The schema supports
+  per-quiz_item via nullable `quiz_item_id`; the FE component
+  is a sibling slice if needed. Removes
+  `<QuizItemThumbsControl />` + per-quiz_item POST route +
+  per-quiz_item analytics event from impl scope. See §6.4 +
+  §8.2 + §9.1.
+
+- **D-8** (resolves OQ-H) — **UPSERT-on-tuple semantics; no
+  version history table.** `INSERT ... ON CONFLICT
+  (lesson_id, quiz_item_id, signal_source, dimension,
+  recorded_by_user_id) DO UPDATE SET score=EXCLUDED.score,
+  recorded_at=NOW()`. Prior values overwritten; no history.
+  UPSERT matches the snapshot semantics of
+  `card_quality_signals` (current signal per tuple, not event
+  stream). Append-mode would bloat storage (every dashboard
+  load adds rows) and shift complexity to read paths. R2
+  critique.json (slice 6.10 forever-retention per §12 D-11) +
+  `quiz_review_events` (slice 6.0 append-only) are the audit
+  trails for the underlying inputs; the signals table is a
+  derived snapshot. See §5.1 + §6.1.
+
+- **D-9** (resolves OQ-I) — **Persona/tier gating on thumbs =
+  all authed users (no paywall).** Thumbs is feedback
+  infrastructure, not a billable feature. Restricting to Pro
+  inverts the product signal — we want maximum feedback
+  volume, including from free-tier users (the cohort most
+  likely to identify confusing content). Slowapi 100/min
+  global default covers abuse cases; no per-route override.
+  No `check_and_increment` call, no usage-quota counter, no
+  402 path on thumbs POST. See §3 + §6.3.
+
+- **D-10** (resolves OQ-J) — **Anonymous (logged-out) thumbs
+  NOT supported; auth-gated only.** `Depends(get_current_user)`
+  is required on the thumbs route.
+  `recorded_by_user_id` is required for per-user UPSERT
+  semantics (D-5) and audit trail. Anonymous thumbs would
+  require a separate cookie/IP identity scheme + abuse
+  mitigation, which is its own design. Not v1 scope. See §3
+  + §6.4.
+
+- **D-11** (resolves OQ-K) — **Thumbs-clearing UX = no clear
+  surface in v1; thumbs is sticky.** User can change
+  direction (👍 → 👎) but cannot unsubmit. POST with `score=0`
+  is NOT supported (validator rejects values outside {-1, +1}
+  per §5.2 `ThumbsRequest.score: Literal[-1, 1]` + AC-8). If
+  users complain about wanting to unsubmit, ship POST-with-zero
+  semantics as a follow-up slice (cheap fix; service-layer
+  DELETE). Separate DELETE route is over-engineered. See §3
+  + §13.
+
+- **D-12** (resolves OQ-L) — **Initial-state read for
+  `<ThumbsControl />` extends `GET /api/v1/lessons/:id`
+  response with `viewer_thumbs: ThumbsResponse | null`
+  field.** One fetch is cleaner than waterfall; matches slice
+  6.11 D-6 single-envelope precedent. Adds one field to
+  existing response (additive, non-breaking). FE reads the
+  field on mount and seeds `<ThumbsControl />` initial state.
+  Impl-side: extend the existing lesson-detail Pydantic
+  response schema with the optional field; thread
+  `viewer_thumbs` resolution through the lesson detail
+  service via
+  `card_quality_signal_service.get_user_thumbs_for_lesson(user, lesson_id)`
+  helper. See §8.4 + §6.7.
+
+- **D-13** (resolves OQ-M) — **`recorded_at` updates on every
+  UPSERT** (default per §5.1 — `DO UPDATE SET ...,
+  recorded_at=NOW()`). Reflects "most recent recording" — when
+  did this signal last change. Adding a separate `updated_at`
+  column doubles the timestamp cost without proportionate
+  value; R2 critique.json + events tables track historical
+  drift. Read paths that need "first-recorded-at" can
+  reconstruct from R2 / events. See §5.1.
+
+- **D-14** (resolves OQ-N) — **Migration `down_revision` is
+  verified at impl Step 0, not locked in spec body.** Slice
+  6.10 + slice 6.13 precedent: alembic head verified by
+  `alembic heads` + concurrent-session check (SOP-8) at the
+  start of the impl slice, before drafting the migration.
+  Locking a specific revision in spec body would hard-code
+  drift if a concurrent slice ships between spec amendment and
+  impl pickup. Spec body §7 says "confirm at impl time" —
+  authoritative; impl Step 0 audit verifies the actual head
+  and chains the new migration onto it. See §7.
 
 ---
 
@@ -1312,262 +1457,78 @@ mutation success / mutation error / cache invalidation.
   are the audit trail. No history table.
 - **Real-time / SSE updates of admin dashboard** — slice 6.11
   D-12 precedent; page reload triggers recompute.
-- **Anonymous (logged-out) thumbs** — auth-gated per **§14
-  OQ-J** default = no.
-- **Persona / tier paywall on thumbs submission** — per **§14
-  OQ-I** default = all authed users; no paywall on feedback.
+- **Anonymous (logged-out) thumbs** — auth-gated per **§12 D-10**.
+- **Persona / tier paywall on thumbs submission** — per **§12 D-9**
+  = all authed users; no paywall on feedback.
 - **Per-deck rollups stored in the table** — read-time
   aggregation only (mirrors slice 6.11).
-- **Thumbs-clearing endpoint** — UPSERT to score=0 (per **§14
-  OQ-K**) is the v1 way to clear; no separate DELETE route.
+- **Thumbs-clearing endpoint** — sticky thumbs v1 per **§12 D-11**;
+  validator rejects score=0 (only `{-1, +1}` accepted); no separate
+  DELETE route. Follow-up slice can ship POST-with-zero semantics.
 
 ---
 
 ## 14. Open questions
 
-> All OQs below carry author hints (per slice 6.10 / 6.11
-> author-hint precedent). The §12 amendment slice will lock
-> D-1..D-N from these dispositions.
+> All 14 OQs RESOLVED at §12 amendment slice (`<this-slice>`)
+> per author-hint dispositions. Headings + first-sentence
+> questions preserved for historical reference; option bodies
+> + author hints removed (locked dispositions live in §12 D-N).
 
 - **OQ-A — `card_quality_signals`: one table or per-source
-  split?** (resolves G-1)
-
-  Option (a): one table with `signal_source` column (current
-  default in §5.1 — matches LD J2 lock verbatim).
-  Option (b): three tables (`critique_signals`, `user_review_signals`,
-  `user_thumbs_signals`) with shared schema fragments. Each
-  source has its own UPSERT semantics + index strategy.
-
-  **Author hint: (a).** LD J2 explicitly names ONE table with
-  `signal_source` column. Splitting into three would require an
-  amendment to LD J2 (chat-Claude scope, not impl-slice scope).
-  One table also matches the user-facing "show me all signals
-  for this lesson" admin query better — `WHERE lesson_id = X`
-  hits one table, not three. Storage / index cost is bounded by
-  v1 corpus size.
+  split?**
+  **RESOLVED:** locked at §12 D-1 (`<this-slice>`).
 
 - **OQ-B — Per-quiz_item writeback target: `quiz_items.quality_score`
-  column or `card_quality_signals` row only?** (resolves G-3)
-
-  Option (a): add `quiz_items.quality_score: Numeric(3,2) NULLABLE`
-  column mirroring `lessons.quality_score` shape. Slice 6.11 §13
-  bullet 1 explicitly defers this column-add to "slice 6.13.5 +
-  LD J2's `card_quality_signals` table". Option (b) below was
-  the slice 6.11 D-5 lock direction.
-  Option (b): `card_quality_signals` row only with
-  `quiz_item_id IS NOT NULL, signal_source='user_review',
-  dimension='pass_rate'`.
-
-  **Author hint: (b).** LD J2's whole point is per-quiz_item
-  granularity in the unified table. Adding the column duplicates
-  state across two tables (column + row). The ranker (slice 6.6)
-  doesn't read per-quiz_item scores today (`_avg_quality_score`
-  is a lesson-level field); when it does, it can read from
-  `card_quality_signals` directly. Skipping the column also
-  saves one alembic migration.
+  column or `card_quality_signals` row only?**
+  **RESOLVED:** locked at §12 D-2 (`<this-slice>`).
 
 - **OQ-C — Critique-score consumption: write-time during
-  ingestion or read-time via aggregator service?** (resolves G-2)
-
-  Option (a): write-time. `ingestion_worker.run_ingestion_job`
-  calls `critique_signal_consumer.persist_critique_signals`
-  after Stage 2 critique succeeds, before Stage 3 persist.
-  Adds a `'persisting_critique'` status step.
-  Option (b): read-time. Slice 6.11 admin dashboard service
-  reads R2 critique.json blobs lazily on dashboard load and
-  UPSERTs `card_quality_signals` rows. Cached check skips
-  re-read if signals already present + `recorded_at >
-  ingestion_jobs.completed_at`.
-
-  **Author hint: (a).** Write-time decouples admin dashboard
-  from R2 availability. One write per ingestion (already the
-  natural batch unit). Cleaner code-locality — the ingestion
-  worker owns critique creation; persisting it is a one-line
-  service call. Read-time would require R2 reads on every
-  dashboard load (or sophisticated caching), and the cache key
-  is fragile (R2 blob mutation possible if we ever reprocess).
+  ingestion or read-time via aggregator service?**
+  **RESOLVED:** locked at §12 D-3 (`<this-slice>`).
 
 - **OQ-D — Lesson-level user-aggregate: keep
   `lessons.quality_score` denormalized cache or move to
-  `card_quality_signals`?** (resolves G-3 + closes slice 6.11
-  D-5 / D-9 superseding question)
-
-  Option (a): keep `lessons.quality_score` as the canonical
-  lesson-level home (slice 6.11's writeback path stays
-  unchanged); use `card_quality_signals` only for per-quiz_item
-  + critique + user-thumbs.
-  Option (b): move lesson-level user-aggregate to
-  `card_quality_signals` row with `quiz_item_id IS NULL,
-  signal_source='user_review', dimension='pass_rate'`. Treat
-  `lessons.quality_score` as a denormalized read-cache
-  populated post-write for ranker consumption (slice 6.6
-  reads `lessons.quality_score` directly).
-
-  **Author hint: (a) for v1.** Slice 6.11 ships `lessons.quality_score`
-  as the lesson-level layer-3 home + ranker reads it directly.
-  Migrating that to a `card_quality_signals` row + read-cache
-  re-population pattern is more refactor than feature for v1.
-  The pattern is reversible — option (b) can land as a
-  follow-up slice if cron consumer (LD G2) needs the unified
-  shape. Keeping (a) means the slice 6.11 service code stays
-  unchanged for the lesson-level path; only the per-quiz_item
-  extension touches new code.
+  `card_quality_signals`?**
+  **RESOLVED:** locked at §12 D-4 (`<this-slice>`).
 
 - **OQ-E — User-thumbs row identity: per-(user, target) or
-  aggregated single row?** (resolves G-4)
-
-  Option (a): per-user rows. UNIQUE on
-  `(lesson_id, quiz_item_id, signal_source, dimension,
-  recorded_by_user_id)` (NULLS-distinct). Each user's thumbs is
-  a row; aggregate is a read-time AVG / SUM.
-  Option (b): aggregated single row per (lesson_id,
-  quiz_item_id, signal_source='user_thumbs', dimension='helpful').
-  Score = running average; count column tracks N. Re-submission
-  recomputes the average.
-
-  **Author hint: (a).** Per-user rows preserve audit trail
-  (admin can see who thumbed what), prevent gaming (a single
-  user can't replay thumbs to inflate aggregate), and let us
-  later add per-user features (e.g., "what lessons has this
-  user marked helpful?"). Storage cost is bounded by user
-  count × lesson count; v1 corpus stays under 100K rows even
-  with high engagement. Option (b) would complicate the UNIQUE
-  constraint design (LD J2 4-tuple key conflicts with per-user
-  storage) and lose audit trail.
+  aggregated single row?**
+  **RESOLVED:** locked at §12 D-5 (`<this-slice>`).
 
 - **OQ-F — Recompute cadence: sync-on-read only or also cron?**
-  (cross-refs LD G2 / B-078 re-evaluation)
-
-  Option (a): sync-on-read only (slice 6.11 D-1 precedent).
-  Critique-consumer is write-time (per OQ-C); per-quiz_item
-  user-aggregate fires on admin dashboard load.
-  Option (b): add cron consumer that recomputes signals
-  nightly. Rejected reason: LD G2 cron decision is not yet
-  re-evaluated; this slice triggers the re-evaluation per
-  `CODE-REALITY.md:848`. Spec author hint should not pre-empt
-  product decision.
-
-  **Author hint: (a) for v1.** No cron. Closing this slice
-  triggers LD G2 re-evaluation at B-078 — chat-Claude /
-  Dhamo decide cron architecture there. v1 ships forward-
-  compatible: `card_quality_signals` UPSERT semantics are
-  idempotent so a future cron can reuse the same writers.
+  **RESOLVED:** locked at §12 D-6 (`<this-slice>`).
 
 - **OQ-G — Per-quiz_item thumbs UI: in scope or lesson-level
-  only?** (resolves G-4 scope)
-
-  Option (a): lesson-level only v1. `<ThumbsControl />` mounts
-  on `pages/Lesson.tsx` only; no per-quiz_item surface.
-  Option (b): both lesson-level + per-quiz_item.
-  `<QuizItemThumbsControl />` mounts in the answer-flow
-  surface inside `components/study/`.
-
-  **Author hint: (a) for v1.** Lesson-level is enough to
-  validate the thumbs surface + the admin signal mix. Per-
-  quiz_item adds a second mount-point + UX design surface
-  (where exactly does the thumbs go in the answer flow?
-  during, after, on review?) without proportionate signal
-  value. The schema supports per-quiz_item via nullable
-  `quiz_item_id`; the FE component is a sibling slice if
-  needed.
+  only?**
+  **RESOLVED:** locked at §12 D-7 (`<this-slice>`).
 
 - **OQ-H — UPSERT semantics: row-level overwrite or version
-  history?** (resolves G-8)
-
-  Option (a): UPSERT-on-tuple. `INSERT ... ON CONFLICT DO
-  UPDATE SET score=EXCLUDED.score, recorded_at=NOW()`. Prior
-  values overwritten; no history.
-  Option (b): append + view-on-latest. Insert every signal as
-  a new row; reads MAX(recorded_at) per tuple.
-
-  **Author hint: (a).** UPSERT matches the snapshot semantics
-  of `card_quality_signals` (current signal per tuple, not
-  event stream). Append-mode bloats storage (every dashboard
-  load adds rows) and shifts complexity to read paths. R2
-  critique.json + `quiz_review_events` are the audit trails
-  for the underlying inputs; the signals table is a derived
-  snapshot.
+  history?**
+  **RESOLVED:** locked at §12 D-8 (`<this-slice>`).
 
 - **OQ-I — Persona/tier gating on thumbs submission: free vs
   Pro vs all?**
-
-  Option (a): all authed users (no paywall).
-  Option (b): Pro-only (mirrors slice 6.13 daily-digest opt-out).
-  Option (c): free-tier rate-limited.
-
-  **Author hint: (a).** Thumbs is feedback infrastructure, not
-  billable feature. Restricting to Pro inverts the product
-  signal — we want maximum feedback volume, including from
-  free-tier users (the cohort most likely to identify
-  confusing content). Slowapi 100/min global default covers
-  abuse cases.
+  **RESOLVED:** locked at §12 D-9 (`<this-slice>`).
 
 - **OQ-J — Anonymous (logged-out) thumbs?**
-
-  Option (a): no — `Depends(get_current_user)` required.
-  Option (b): yes — accept anonymous via session cookie or
-  IP hash.
-
-  **Author hint: (a).** `recorded_by_user_id` is required for
-  per-user UPSERT semantics (OQ-E option (a)) and audit
-  trail. Anonymous thumbs would require a separate cookie/IP
-  identity scheme + abuse mitigation. Not v1 scope.
+  **RESOLVED:** locked at §12 D-10 (`<this-slice>`).
 
 - **OQ-K — Thumbs-clearing UX: separate DELETE route or
   POST-with-zero?**
-
-  Option (a): no clear surface in v1 — thumbs is sticky after
-  first submission; user can change direction (👍 → 👎) but
-  not unsubmit.
-  Option (b): POST with `score=0` clears the row (DELETE
-  semantics in service layer).
-  Option (c): separate DELETE route.
-
-  **Author hint: (a) for v1.** Sticky thumbs is the simplest
-  UX + matches user mental model ("I rated this lesson"). If
-  users complain about wanting to unsubmit, ship (b) as a
-  follow-up. (c) is over-engineered.
+  **RESOLVED:** locked at §12 D-11 (`<this-slice>`).
 
 - **OQ-L — Initial-state read for `<ThumbsControl />`: extend
   lesson detail response or new endpoint?**
-
-  Option (a): extend `GET /api/v1/lessons/:id` response with
-  `viewer_thumbs: ThumbsResponse | null` field that the FE
-  reads on mount.
-  Option (b): separate `GET /api/v1/lessons/:id/thumbs` endpoint
-  the FE calls in parallel with the lesson detail GET.
-
-  **Author hint: (a).** One fetch is cleaner than waterfall;
-  matches slice 6.11 D-6 single-envelope precedent. Adds one
-  field to existing response (additive, non-breaking).
+  **RESOLVED:** locked at §12 D-12 (`<this-slice>`).
 
 - **OQ-M — `recorded_at` semantics on UPSERT: keep insertion
   time or update on every UPSERT?**
-
-  Option (a): update on every UPSERT (default in §5.1
-  `DO UPDATE SET ..., recorded_at=NOW()`). Reflects "most
-  recent recording".
-  Option (b): preserve original insert time; add separate
-  `updated_at` column.
-
-  **Author hint: (a).** One column captures "when did this
-  signal last change". Adding `updated_at` doubles the
-  timestamp cost without proportionate value. R2 / events
-  tables track historical drift.
+  **RESOLVED:** locked at §12 D-13 (`<this-slice>`).
 
 - **OQ-N — Migration `down_revision` choice — which slice's
   migration are we chaining onto?**
-
-  Option (a): `f1a2b3c4d5e6` (slice 6.13 `email_log` migration —
-  current head as of spec authoring time).
-  Option (b): later head if concurrent slices ship between
-  spec-author and impl pickup.
-
-  **Author hint: (b) — verify at impl time.** Slice 6.10 +
-  slice 6.13 precedent: `down_revision` is verified at impl
-  Step 0 by `alembic heads` + concurrent-session check (SOP-8).
-  Locking a specific revision in the spec body would hard-code
-  drift if a concurrent slice ships first.
+  **RESOLVED:** locked at §12 D-14 (`<this-slice>`).
 
 ---
 
@@ -1578,9 +1539,12 @@ happens in the impl commit per R15(c)).
 
 Forward dependencies before impl can start:
 
-1. **§12 amendment slice** — locks D-1..D-N from §14 OQ-A..OQ-N
-   per author-hint dispositions; mirrors slice 6.0 / 6.4.5 / 6.5 /
-   6.6 / 6.7 / 6.8 / 6.10 / 6.11 §12 amendment pattern.
+1. **§12 amendment slice** ✅ shipped at `<this-slice>` —
+   locked D-1..D-14 from §14 OQ-A..OQ-N (now §12 D-1..D-14)
+   mirroring slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 /
+   6.11 §12 amendment pattern at `e8eecdd` / `df58eaf` /
+   `acba7ed` / `fb92396` / `0c21223` / `ab07168` / `be7d59a` /
+   `d9bfcfc`.
 2. No BE primitive prerequisite — every existing data source is
    on disk:
    - `lessons` + `quiz_items` + `decks` (slice 6.1, `a989539`).
@@ -1608,8 +1572,8 @@ backend + §7 migrations + §8 frontend):
   lines).
 - New file `app/services/thumbs_service.py` (~80-130 lines).
 - New file `app/api/v1/routes/thumbs.py` (~60-100 lines).
-- Modify `app/jobs/ingestion_worker.py` (per §14 OQ-C lock; ~10-20
-  lines if path A).
+- Modify `app/jobs/ingestion_worker.py` (per §12 D-3 lock = write-time
+  hook; ~10-20 lines).
 - Modify `app/services/admin_content_quality_service.py` (extend
   per §6.5; ~50-80 lines).
 - Modify `app/schemas/admin_content_quality.py` (extend
@@ -1618,14 +1582,15 @@ backend + §7 migrations + §8 frontend):
 - New alembic migration `<hash>_phase6_card_quality_signals.py`.
 - New file `src/components/lesson/ThumbsControl.tsx` (~80-120
   lines).
-- New file `src/components/study/QuizItemThumbsControl.tsx`
-  (per §14 OQ-G; ~80-120 lines if in scope).
+- (`src/components/study/QuizItemThumbsControl.tsx` DROPPED v1
+  per §12 D-7 = lesson-level only.)
 - New file `src/hooks/useThumbs.ts` (~50-80 lines).
 - Modify `src/pages/Lesson.tsx` (mount `<ThumbsControl />`; ~5-10
   lines).
 - Modify `src/pages/admin/AdminContentQuality.tsx` (render
   critique_scores + thumbs columns; ~20-40 lines).
-- Modify `src/services/api.ts` (`+1` helper, `+1` per OQ-G).
+- Modify `src/services/api.ts` (`+1` helper; per §12 D-7 no
+  per-quiz_item helper v1).
 - Modify `src/types/index.ts` (`+2` types per §5.4).
 - 5-7 new BE/FE test files per §10 (~25-45 unit tests + 1
   integration).
@@ -1654,7 +1619,7 @@ R16 consumer-graph audit at impl Step 1:
   admin dashboard extension); no external consumer.
 - New shared FE types (`ThumbsRequest` / `ThumbsResponse`) —
   predicted consumers `useThumbs`, `<ThumbsControl />`,
-  `<QuizItemThumbsControl />` (per §14 OQ-G), admin dashboard
+  (`<QuizItemThumbsControl />` DROPPED v1 per §12 D-7), admin dashboard
   card row extension; no external consumer.
 - Navigation graph: NO new routes mounted; thumbs is in-page
   POST. `App.tsx` untouched.
@@ -1666,8 +1631,8 @@ load-bearing.
 R12 design-tokens compliance: new components use tokens only;
 pre-impl audit grep for hardcoded hex in
 `src/components/lesson/ThumbsControl.tsx` +
-`src/components/study/QuizItemThumbsControl.tsx` (per OQ-G) +
-admin dashboard extension diff.
+admin dashboard extension diff. (Per §12 D-7
+`QuizItemThumbsControl.tsx` DROPPED v1.)
 
 R13 integration tests: one alembic-roundtrip test gated by
 `@pytest.mark.integration` per slice 6.0 + slice 6.13 precedent;
@@ -1706,9 +1671,11 @@ Dhamo own the re-evaluation; not this slice's scope.
 
 ---
 
-*Spec authored at `b93beb8` against HEAD `a7145a7`.
-All on-disk citations verified at audit time per SOP-5; phantom
-citations zero. Forward-filed B-094 at status 🔴 per R15(c).
-§12 LOCKED DECISIONS empty placeholder; §14 OQ-A..OQ-N carry
-author hints; §12 amendment slice locks D-1..D-N before impl
-pickup.*
+*Spec authored at `b93beb8` against HEAD `a7145a7`. §12 amended
+at `<this-slice>` locking D-1..D-14 from §14 OQ-A..OQ-N per
+author-hint dispositions (Dhamo single-admin disposition; mirrors
+slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.8 / 6.10 / 6.11
+§12 amendment precedent at `e8eecdd` / `df58eaf` / `acba7ed` /
+`fb92396` / `0c21223` / `ab07168` / `be7d59a` / `d9bfcfc`). All
+on-disk citations verified at audit time per SOP-5; phantom
+citations zero. B-094 stays 🔴 (impl-pickup ready post-amendment).*
