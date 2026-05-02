@@ -10,7 +10,7 @@
 
 | Field | Value |
 |-------|-------|
-| **HEAD commit** | `<this-slice>` — 2026-05-01 LIGHT MODE reporting discipline spec authored — `docs/specs/process/01-light-mode-reporting.md` codifies D-1..D-7 from `docs/audits/process-bloat-2026-05-01.md` (`3d03861`) scout inputs (new `docs/specs/process/` phase directory for cross-phase workflow specs; first spec under it). B-090 🔴 forward-filed for impl pickup (CLAUDE.md amendment + canonical compact-entry example per AC-1..AC-6). R17 watermark advance: B-090 claimed; B-091 next-free numeric ID. R14 exception (b) — pure spec, no test runs (BE 761 / FE 445 carry-forward). Two-commit pattern. Prior HEAD: `880171e` — 2026-05-01 SHA backfill for process bloat scout. |
+| **HEAD commit** | `b85bfd1` — 2026-05-01 LIGHT MODE reporting discipline spec authored — `docs/specs/process/01-light-mode-reporting.md` codifies D-1..D-7 from `docs/audits/process-bloat-2026-05-01.md` (`3d03861`) scout inputs (new `docs/specs/process/` phase directory for cross-phase workflow specs; first spec under it). B-090 🔴 forward-filed for impl pickup (CLAUDE.md amendment + canonical compact-entry example per AC-1..AC-6). R17 watermark advance: B-090 claimed; B-091 next-free numeric ID. R14 exception (b) — pure spec, no test runs (BE 761 / FE 445 carry-forward). Two-commit pattern. Prior HEAD: `880171e` — 2026-05-01 SHA backfill for process bloat scout. |
 | **Branch** | `main` (pushed to `origin/main` at `9834abe` on 2026-04-30; 5 commits fast-forwarded from `3b1aa93` — `3683677` post-push watermark + `691934a` CR targeted regen + `7b82603` CR-regen SHA backfill + `da14c01` E-043 spec-author + `9834abe` E-043 SHA backfill) |
 | **CODE-REALITY.md sha (repo)** | **Stale ❌** at anchor `1ca046f` (last full regen 2026-04-30); 1 code-touching commit since (this slice — `95104d2` Phase 6 slice 6.11 adds new service `admin_content_quality_service.py` + new schemas + new route + new admin page `AdminContentQuality.tsx` + 3 components + types + hook + analytics catalog row + curriculum.md §7 update). Sharpened LD-1 code-touching gap = 1 from this commit (below ~10-commit threshold per LD-2; defer regen to next staleness threshold trip). |
 | **CODE-REALITY.md in chat Project** | Stale ❌ — Dhamo to re-upload `hireportai/CODE-REALITY.md` to the chat Project before the next planning-level conversation (full regen at this slice; B-086a + B-086b absorbed). |
@@ -172,7 +172,7 @@ User-visible bugs with dedicated fix slices. Cross-reference: BACKLOG.md.
 
 ## Recently Completed (last 5)
 
-1. 2026-05-01 — **LIGHT MODE reporting discipline spec authored at `<this-slice>` — `docs/specs/process/01-light-mode-reporting.md` codifies D-1..D-7 from `docs/audits/process-bloat-2026-05-01.md` (`3d03861`) scout inputs. New `docs/specs/process/` phase directory for cross-phase workflow specs (first spec under it). B-090 🔴 forward-filed for impl pickup — applies §4's CLAUDE.md amendment text verbatim + writes one canonical compact Recently Completed entry as the AC-3 example.** Mode 4 (spec-author + decision-locking).
+1. 2026-05-01 — **LIGHT MODE reporting discipline spec authored at `b85bfd1` — `docs/specs/process/01-light-mode-reporting.md` codifies D-1..D-7 from `docs/audits/process-bloat-2026-05-01.md` (`3d03861`) scout inputs. New `docs/specs/process/` phase directory for cross-phase workflow specs (first spec under it). B-090 🔴 forward-filed for impl pickup — applies §4's CLAUDE.md amendment text verbatim + writes one canonical compact Recently Completed entry as the AC-3 example.** Mode 4 (spec-author + decision-locking).
 
 This entry is itself the canonical compact shape per spec AC-3 — no SOP-1..9 enumeration; N8 allowlist unchanged from prior slice; one prior HEAD only. The LIGHT MODE rule (drafted in §4 here, applied to `CLAUDE.md` by B-090) treats default-case SOP / N8 / C1 / R15(c) / R17 / two-commit lines as silent and reports only deviations and status changes.
 
@@ -180,7 +180,7 @@ This entry is itself the canonical compact shape per spec AC-3 — no SOP-1..9 e
 
 **Files:** 1 NEW (`docs/specs/process/01-light-mode-reporting.md`) + 2 MODIFIED (`BACKLOG.md` B-090 forward-file row + `SESSION-STATE.md` Session Header HEAD field + this Recently Completed entry) = 3 net touches.
 
-Two-commit pattern (spec + BACKLOG + SESSION-STATE in commit 1; SHA backfill in commit 2 replacing `<this-slice>` placeholders in spec §1 + spec §10 + spec footer + BACKLOG B-090 source-slice column + SESSION-STATE Session Header HEAD field + this entry's HEAD reference).
+Two-commit pattern (spec + BACKLOG + SESSION-STATE in commit 1; SHA backfill in commit 2 replacing `b85bfd1` placeholders in spec §1 + spec §10 + spec footer + BACKLOG B-090 source-slice column + SESSION-STATE Session Header HEAD field + this entry's HEAD reference).
 
 Prior HEAD: `880171e` — 2026-05-01 SHA backfill for process bloat scout (the scout audit `3d03861` that produced this spec's inputs).
 

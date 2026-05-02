@@ -2,7 +2,7 @@
 
 ## §1 Status + scope
 
-- **Status:** drafted at `<this-slice>`. D-1..D-7 locked.
+- **Status:** drafted at `b85bfd1`. D-1..D-7 locked.
 - **Scope:** amends `CLAUDE.md` "Final Report (Every Slice)" section by
   appending a new "Reporting discipline (LIGHT MODE)" subsection. Does
   NOT change SOP-1..9, R-rules, N-rules, C-rules, or Q-rules. Changes
@@ -194,7 +194,7 @@ questions.
 
 **Footer**
 
-- Spec authored at: `<this-slice>` (replaced in commit 2 SHA backfill).
+- Spec authored at: `b85bfd1` (replaced in commit 2 SHA backfill).
 - HEAD at slice start: `880171e`.
 - Audit input SHA: `3d03861`.
 - Awaiting CODEX review per Rule 11.
