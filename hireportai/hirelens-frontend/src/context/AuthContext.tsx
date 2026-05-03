@@ -24,6 +24,15 @@ import axios from 'axios'
 
 export type Persona = 'interview_prepper' | 'career_climber' | 'team_lead'
 
+export interface AuthSubscription {
+  plan: 'free' | 'pro' | 'enterprise'
+  status: string
+  /** ISO-ish datetime string from BE; null when Stripe hasn't reported one yet. */
+  current_period_end: string | null
+  /** True after the user cancels via the billing portal — Pro until period end. */
+  cancel_at_period_end: boolean
+}
+
 export interface AuthUser {
   id: string
   email: string
@@ -46,6 +55,7 @@ export interface AuthUser {
    */
   interview_target_date?: string | null
   home_first_visit_seen_at?: string | null
+  subscription?: AuthSubscription
 }
 
 interface AuthContextValue {

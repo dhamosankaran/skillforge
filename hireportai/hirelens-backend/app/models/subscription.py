@@ -1,7 +1,7 @@
 """Subscription ORM model."""
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, UUIDPrimaryKeyMixin
@@ -27,6 +27,9 @@ class Subscription(Base, UUIDPrimaryKeyMixin):
     )
     current_period_end: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True
+    )
+    cancel_at_period_end: Mapped[bool] = mapped_column(
+        Boolean, server_default="false", default=False, nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False

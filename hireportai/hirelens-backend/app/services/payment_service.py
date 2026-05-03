@@ -242,6 +242,10 @@ async def handle_webhook(
     Supported events:
     - ``checkout.session.completed`` → flip plan to ``pro``, store
       ``stripe_subscription_id``, fire ``payment_completed`` analytics.
+    - ``customer.subscription.updated`` → reconcile
+      ``cancel_at_period_end`` / ``current_period_end`` / ``status``
+      (audit F-2 + F-4). Plan stays ``pro`` until the later
+      ``customer.subscription.deleted`` event arrives.
     - ``customer.subscription.deleted`` → flip plan to ``free``,
       fire ``subscription_cancelled`` analytics.
 
@@ -290,6 +294,8 @@ async def handle_webhook(
 
     if event_type == "checkout.session.completed":
         await _handle_checkout_completed(data, db)
+    elif event_type == "customer.subscription.updated":
+        await _handle_subscription_updated(data, db)
     elif event_type == "customer.subscription.deleted":
         await _handle_subscription_deleted(data, db)
     else:
@@ -338,6 +344,48 @@ async def _handle_checkout_completed(data, db: AsyncSession) -> None:
     home_state_service.invalidate(sub.user_id)
 
 
+async def _handle_subscription_updated(data, db: AsyncSession) -> None:
+    """Reconcile Subscription row with a Stripe ``customer.subscription.updated``.
+
+    Closes audit F-2 (event was silently ignored) + F-4 (``current_period_end``
+    only got cleared, never set). The Stripe billing portal cancels by sending
+    this event with ``cancel_at_period_end=true`` + the period-end timestamp,
+    so the user retains Pro until the period actually ends and the FE can
+    render "Pro plan — Cancels <date>".
+
+    Field-level reconciliation only — ``plan`` stays ``pro`` until the
+    later ``customer.subscription.deleted`` event flips it to free.
+    """
+    stripe_sub_id = _field(data, "id")
+    customer_id = _field(data, "customer")
+
+    sub = await _find_subscription_by_stripe_ids(
+        db,
+        stripe_sub_id=stripe_sub_id,
+        customer_id=customer_id,
+    )
+    if sub is None:
+        logger.warning(
+            "customer.subscription.updated: no subscription row for "
+            "stripe_sub_id=%s customer_id=%s",
+            stripe_sub_id,
+            customer_id,
+        )
+        return
+
+    sub.cancel_at_period_end = bool(_field(data, "cancel_at_period_end") or False)
+
+    period_end = _field(data, "current_period_end")
+    if period_end is not None:
+        sub.current_period_end = datetime.fromtimestamp(int(period_end), tz=timezone.utc).replace(tzinfo=None)
+
+    stripe_status = _field(data, "status")
+    if stripe_status:
+        sub.status = stripe_status
+
+    home_state_service.invalidate(sub.user_id)
+
+
 async def _handle_subscription_deleted(data, db: AsyncSession) -> None:
     """Revert to Free when a Stripe subscription is fully cancelled."""
     customer_id = _field(data, "customer")
@@ -354,6 +402,7 @@ async def _handle_subscription_deleted(data, db: AsyncSession) -> None:
     sub.status = "canceled"
     sub.stripe_subscription_id = None
     sub.current_period_end = None
+    sub.cancel_at_period_end = False
 
     # Churn timestamp (spec #42 LD-5) — dormant until the deferred win-back
     # slice reads it. Written here because after-the-fact backfill is
@@ -383,6 +432,39 @@ async def _find_subscription(
         sub = (
             await db.execute(
                 select(Subscription).where(Subscription.user_id == user_id)
+            )
+        ).scalar_one_or_none()
+        if sub is not None:
+            return sub
+    if customer_id:
+        return (
+            await db.execute(
+                select(Subscription).where(
+                    Subscription.stripe_customer_id == customer_id
+                )
+            )
+        ).scalar_one_or_none()
+    return None
+
+
+async def _find_subscription_by_stripe_ids(
+    db: AsyncSession,
+    *,
+    stripe_sub_id: str | None,
+    customer_id: str | None,
+) -> Subscription | None:
+    """Look up a Subscription by stripe_subscription_id, then customer_id.
+
+    ``customer.subscription.*`` events identify the subscription by its
+    Stripe id rather than our user id, so the lookup order differs from
+    ``_find_subscription``.
+    """
+    if stripe_sub_id:
+        sub = (
+            await db.execute(
+                select(Subscription).where(
+                    Subscription.stripe_subscription_id == stripe_sub_id
+                )
             )
         ).scalar_one_or_none()
         if sub is not None:

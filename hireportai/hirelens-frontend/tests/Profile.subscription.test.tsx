@@ -25,15 +25,20 @@ vi.mock('@/services/api', () => ({
   generateExperience: vi.fn(),
 }))
 
-let mockUser: AuthUser = {
-  id: 'u1',
-  email: 't@example.com',
-  name: 'Test',
-  avatar_url: null,
-  role: 'user',
-  persona: 'career_climber',
-  onboarding_completed: true,
+function makeUser(overrides: Partial<AuthUser> = {}): AuthUser {
+  return {
+    id: 'u1',
+    email: 't@example.com',
+    name: 'Test',
+    avatar_url: null,
+    role: 'user',
+    persona: 'career_climber',
+    onboarding_completed: true,
+    ...overrides,
+  }
 }
+
+let mockUser: AuthUser = makeUser()
 vi.mock('@/context/AuthContext', () => ({
   useAuth: () => ({ user: mockUser, isLoading: false, signIn: vi.fn(), signOut: vi.fn(), updateUser: vi.fn() }),
 }))
@@ -91,6 +96,7 @@ beforeEach(() => {
   capture.mockReset()
   createBillingPortalSession.mockReset()
   navigate.mockReset()
+  mockUser = makeUser()
 })
 
 describe('Profile — Subscription section', () => {
@@ -116,6 +122,38 @@ describe('Profile — Subscription section', () => {
     const upgradeBtn = screen.getByRole('button', { name: /upgrade to pro/i })
     await userEvent.click(upgradeBtn)
     expect(navigate).toHaveBeenCalledWith('/pricing')
+  })
+
+  it('shows "Cancels <date>" when cancel_at_period_end is true (F-2 + F-4)', () => {
+    mockPlan = 'pro'
+    mockUser = makeUser({
+      subscription: {
+        plan: 'pro',
+        status: 'active',
+        // 2026-04-22 UTC — display localizes; we assert the year/day to
+        // tolerate the test runner's timezone.
+        current_period_end: '2026-04-22 00:00:00',
+        cancel_at_period_end: true,
+      },
+    })
+    renderProfile()
+
+    const section = screen.getByTestId('subscription-section')
+    expect(section).toHaveTextContent(/cancels/i)
+    expect(section).toHaveTextContent(/2026/)
+    expect(section).not.toHaveTextContent(/^Active$/)
+    // Manage button stays — user can re-activate via the portal.
+    expect(screen.getByRole('button', { name: /manage subscription/i })).toBeInTheDocument()
+  })
+
+  it('still shows "Active" when subscription field is absent (BE not yet upgraded)', () => {
+    mockPlan = 'pro'
+    mockUser = makeUser()  // no subscription field
+    renderProfile()
+
+    const section = screen.getByTestId('subscription-section')
+    expect(section).toHaveTextContent('Active')
+    expect(section).not.toHaveTextContent(/cancels/i)
   })
 
   it('creates a portal session and redirects on Manage click (AC-2)', async () => {

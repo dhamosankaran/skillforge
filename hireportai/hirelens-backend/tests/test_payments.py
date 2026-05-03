@@ -520,6 +520,233 @@ async def test_subscription_deleted_existing_logic_still_works(
     assert sub_after.current_period_end is None
 
 
+async def test_subscription_updated_records_pending_cancellation(
+    client, test_user, db_session
+):
+    """customer.subscription.updated with cancel_at_period_end=true records
+    the pending-cancellation state without flipping plan off Pro (audit F-2).
+    """
+    sub = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == test_user.id)
+        )
+    ).scalar_one()
+    sub.plan = "pro"
+    sub.status = "active"
+    sub.stripe_customer_id = "cus_pending_cancel"
+    sub.stripe_subscription_id = "sub_pending_cancel"
+    sub.cancel_at_period_end = False
+    await db_session.flush()
+
+    period_end_unix = 1_777_000_000  # 2026-04-22 in UTC
+    fake_event = {
+        "id": "evt_sub_updated_cancel_pending_001",
+        "type": "customer.subscription.updated",
+        "data": {
+            "object": {
+                "id": "sub_pending_cancel",
+                "customer": "cus_pending_cancel",
+                "status": "active",
+                "cancel_at_period_end": True,
+                "current_period_end": period_end_unix,
+            }
+        },
+    }
+
+    with patch(
+        "app.services.payment_service.stripe.Webhook.construct_event",
+        return_value=fake_event,
+    ):
+        resp = await client.post(
+            "/api/v1/payments/webhook",
+            content=json.dumps(fake_event).encode(),
+            headers={"stripe-signature": "t=1,v1=fake"},
+        )
+
+    assert resp.status_code == 200, resp.text
+
+    sub_after = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == test_user.id)
+        )
+    ).scalar_one()
+    assert sub_after.plan == "pro"  # NOT downgraded yet
+    assert sub_after.cancel_at_period_end is True
+    assert sub_after.status == "active"
+    expected_dt = datetime.fromtimestamp(period_end_unix, tz=timezone.utc).replace(
+        tzinfo=None
+    )
+    assert sub_after.current_period_end == expected_dt
+
+
+async def test_subscription_updated_reactivation_clears_cancel(
+    client, test_user, db_session
+):
+    """customer.subscription.updated with cancel_at_period_end=false clears
+    the pending-cancellation flag on reactivation.
+    """
+    sub = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == test_user.id)
+        )
+    ).scalar_one()
+    sub.plan = "pro"
+    sub.status = "active"
+    sub.stripe_customer_id = "cus_reactivate"
+    sub.stripe_subscription_id = "sub_reactivate"
+    sub.cancel_at_period_end = True
+    sub.current_period_end = datetime(2026, 6, 1)
+    await db_session.flush()
+
+    fake_event = {
+        "id": "evt_sub_updated_reactivate_001",
+        "type": "customer.subscription.updated",
+        "data": {
+            "object": {
+                "id": "sub_reactivate",
+                "customer": "cus_reactivate",
+                "status": "active",
+                "cancel_at_period_end": False,
+                "current_period_end": 1_780_000_000,
+            }
+        },
+    }
+
+    with patch(
+        "app.services.payment_service.stripe.Webhook.construct_event",
+        return_value=fake_event,
+    ):
+        resp = await client.post(
+            "/api/v1/payments/webhook",
+            content=json.dumps(fake_event).encode(),
+            headers={"stripe-signature": "t=1,v1=fake"},
+        )
+
+    assert resp.status_code == 200, resp.text
+
+    sub_after = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == test_user.id)
+        )
+    ).scalar_one()
+    assert sub_after.cancel_at_period_end is False
+    assert sub_after.plan == "pro"
+
+
+async def test_subscription_updated_status_past_due_propagates(
+    client, test_user, db_session
+):
+    """customer.subscription.updated propagates status changes (past_due)."""
+    sub = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == test_user.id)
+        )
+    ).scalar_one()
+    sub.plan = "pro"
+    sub.status = "active"
+    sub.stripe_customer_id = "cus_past_due"
+    sub.stripe_subscription_id = "sub_past_due"
+    await db_session.flush()
+
+    fake_event = {
+        "id": "evt_sub_updated_past_due_001",
+        "type": "customer.subscription.updated",
+        "data": {
+            "object": {
+                "id": "sub_past_due",
+                "customer": "cus_past_due",
+                "status": "past_due",
+                "cancel_at_period_end": False,
+                "current_period_end": 1_780_000_000,
+            }
+        },
+    }
+
+    with patch(
+        "app.services.payment_service.stripe.Webhook.construct_event",
+        return_value=fake_event,
+    ):
+        resp = await client.post(
+            "/api/v1/payments/webhook",
+            content=json.dumps(fake_event).encode(),
+            headers={"stripe-signature": "t=1,v1=fake"},
+        )
+
+    assert resp.status_code == 200, resp.text
+
+    sub_after = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == test_user.id)
+        )
+    ).scalar_one()
+    assert sub_after.status == "past_due"
+
+
+async def test_subscription_updated_real_stripe_event_object(
+    client, test_user, db_session
+):
+    """SDK parity: the new handler must work against a real ``stripe.Event``
+    (StripeObject), not just the dict fixtures.
+
+    Mirrors ``test_webhook_handles_real_stripe_event_object`` for the new
+    ``customer.subscription.updated`` path. ``StripeObject`` does not
+    support ``.get()`` — the handler must use bracket access via
+    ``_field()`` (B-114 precedent).
+    """
+    import stripe
+
+    sub = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == test_user.id)
+        )
+    ).scalar_one()
+    sub.plan = "pro"
+    sub.status = "active"
+    sub.stripe_customer_id = "cus_real_sub_updated"
+    sub.stripe_subscription_id = "sub_real_sub_updated"
+    await db_session.flush()
+
+    period_end_unix = 1_780_000_000
+    raw_event = {
+        "id": "evt_sub_updated_real_001",
+        "object": "event",
+        "type": "customer.subscription.updated",
+        "data": {
+            "object": {
+                "object": "subscription",
+                "id": "sub_real_sub_updated",
+                "customer": "cus_real_sub_updated",
+                "status": "active",
+                "cancel_at_period_end": True,
+                "current_period_end": period_end_unix,
+            }
+        },
+    }
+    stripe_event = stripe.Event.construct_from(raw_event, "sk_test_dummy")
+
+    with patch(
+        "app.services.payment_service.stripe.Webhook.construct_event",
+        return_value=stripe_event,
+    ):
+        resp = await client.post(
+            "/api/v1/payments/webhook",
+            content=json.dumps(raw_event).encode(),
+            headers={"stripe-signature": "t=1,v1=fake"},
+        )
+
+    assert resp.status_code == 200, resp.text
+    sub_after = (
+        await db_session.execute(
+            select(Subscription).where(Subscription.user_id == test_user.id)
+        )
+    ).scalar_one()
+    assert sub_after.cancel_at_period_end is True
+    expected_dt = datetime.fromtimestamp(period_end_unix, tz=timezone.utc).replace(
+        tzinfo=None
+    )
+    assert sub_after.current_period_end == expected_dt
+
+
 async def test_duplicate_webhook_is_idempotent(client, test_user, db_session):
     """Sending the same Stripe event twice only changes user.plan once."""
     # Ensure user starts on free plan.

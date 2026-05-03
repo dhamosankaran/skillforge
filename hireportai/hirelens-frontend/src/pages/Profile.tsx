@@ -84,6 +84,20 @@ export default function Profile() {
   const [portalError, setPortalError] = useState<string | null>(null)
 
   const isPro = usage.plan === 'pro'
+  const cancelAtPeriodEnd = user?.subscription?.cancel_at_period_end ?? false
+  const periodEndIso = user?.subscription?.current_period_end ?? null
+  const periodEndLabel = periodEndIso
+    ? (() => {
+        const d = new Date(periodEndIso)
+        return Number.isNaN(d.getTime())
+          ? null
+          : d.toLocaleDateString(undefined, {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+            })
+      })()
+    : null
 
   async function handleManageSubscription() {
     setPortalLoading(true)
@@ -351,7 +365,13 @@ export default function Profile() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <p className="text-sm font-semibold text-text-primary">Pro plan</p>
-                  <p className="text-[11px] text-text-muted mt-1">Active</p>
+                  <p className="text-[11px] text-text-muted mt-1">
+                    {cancelAtPeriodEnd
+                      ? periodEndLabel
+                        ? `Cancels ${periodEndLabel}`
+                        : 'Cancellation pending'
+                      : 'Active'}
+                  </p>
                 </div>
                 <div className="flex flex-col items-start sm:items-end gap-1">
                   <button

@@ -271,5 +271,6 @@ async def get_me(request: Request, user: User = Depends(get_current_user), db: A
         "plan": sub.plan if sub else "free",
         "status": sub.status if sub else "active",
         "current_period_end": str(sub.current_period_end) if sub and sub.current_period_end else None,
+        "cancel_at_period_end": bool(sub.cancel_at_period_end) if sub else False,
     }
     return data
