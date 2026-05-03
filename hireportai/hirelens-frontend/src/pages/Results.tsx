@@ -24,10 +24,12 @@ import { FormattingIssues } from '@/components/dashboard/FormattingIssues'
 import { JobFitExplanation } from '@/components/dashboard/JobFitExplanation'
 import { ImprovementSuggestions } from '@/components/dashboard/ImprovementSuggestions'
 import { PanelSection } from '@/components/dashboard/PanelSection'
+import { LoopFrame } from '@/components/dashboard/LoopFrame'
 import { AnimatedCard, containerVariants, cardVariants } from '@/components/ui/AnimatedCard'
 import { GlowButton } from '@/components/ui/GlowButton'
 import { SkeletonDashboard } from '@/components/ui/SkeletonLoader'
 import { useAnalysisContext } from '@/context/AnalysisContext'
+import { useHomeState } from '@/hooks/useHomeState'
 import { capture } from '@/utils/posthog'
 
 /** Quick navigation anchors for the left sidebar */
@@ -56,6 +58,7 @@ export default function Results() {
   const navigate = useNavigate()
   const { canUsePro } = useUsage()
   const { user } = useAuth()
+  const homeState = useHomeState()
   const [searchParams] = useSearchParams()
   const { result, isLoading } = state
   const toastShownRef = useRef<string | null>(null)
@@ -272,6 +275,23 @@ export default function Results() {
             </GlowButton>
           </div>
         </motion.div>
+
+        {/* Spec #64 — static loop frame visualizing the closed loop
+            (Scanned → Studying → Re-scan → Interview). Mounted ABOVE the
+            dashboard grid (not as a 12th grid child) to avoid cascading
+            row-start shifts on the spec #21 / E-009 11-child placement
+            map; outcome ("frame above missing skills") is identical and
+            spec #21 / spec #22 regression set stays untouched. */}
+        {result.ats_score != null && (
+          <LoopFrame
+            surface="results"
+            currentStep={1}
+            score={result.ats_score}
+            gapCount={result.skill_gaps?.length ?? 0}
+            interviewDate={homeState.data?.context.next_interview?.date ?? null}
+            plan={missingSkillsPlan}
+          />
+        )}
 
         {/* Flattened grid: DOM order IS the mobile / tab order.
             Desktop layout reconstructed via explicit col-start / row-start.

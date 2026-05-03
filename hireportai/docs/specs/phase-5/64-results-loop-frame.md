@@ -493,11 +493,84 @@ BE unchanged. Final delta locked at impl Step 4 close-trail.
 
 ## 12. Locked Decisions
 
-*(Empty at spec-author. Populated by §12 amendment slice or by impl
-slice's Step 2 SCOPE GATE per Phase-6 amendment-slice precedent. The
-14 §14 OQs below carry author hints to guide the lock; if all hints
-are accepted as-is at impl Step 0, no separate amendment slice is
-needed.)*
+§12 locked at B-119 impl slice (mirrors slice 6.0 / 6.4.5 / 6.5 / 6.6
+/ 6.7 §12-amend-at-impl precedent). All 14 §14 OQs resolved per author
+hint, with two implementation-driven sharpenings (D-9 mount-position;
+D-1 deviation noted as JC).
+
+- **D-1 Mount position** — LoopFrame mounts as a sibling element
+  ABOVE the dashboard grid container (between page-header and the
+  grid `motion.div` at `Results.tsx:281-286`), NOT as a 12th direct
+  grid child. Rationale: making it a direct grid child would require
+  cascading row-start shifts on 11 existing children (per spec #21 /
+  E-009 explicit placement map) AND would break
+  `Results.layout.test.tsx::test_improvements_spans_two_rows_at_xl_to_decouple_row3_height`
+  by changing improvements' `xl:row-start-3 xl:row-end-5` →
+  `xl:row-start-4 xl:row-end-6`. Outside-the-grid mount preserves the
+  user-facing intent ("frame above missing skills") with zero touch
+  on existing grid placements; AC-9 regression set stays green
+  untouched. JC #1 (info-only) — deviation from §4.2 / OQ-1 hint
+  literal text; visual + DOM-ordering invariants identical.
+- **D-2 Step copy locked verbatim** — "Scanned" / "Studying" /
+  "Re-scan" / "Interview" (OQ-2 hint (a) accepted). E-051 inherits.
+- **D-3 Responsive layout** — vertical stack on `<md`, horizontal
+  strip on `md+` (OQ-3 hint (a) accepted; Tailwind breakpoint shifted
+  from spec body's `<lg` / `lg+` to `<md` / `md+` for tighter mobile
+  → tablet transition; outcome unchanged: stack vs strip).
+- **D-4 Component location** — `src/components/dashboard/LoopFrame.tsx`
+  (OQ-4 hint (a) accepted).
+- **D-5 `currentStep` value on Results** — hardcoded `1` ("Scanned")
+  at the Results mount point (OQ-11 hint (a) accepted; sharpened from
+  the original "always 'studying'" wording — the user has just
+  finished step 1 and is on the page to act on step 2; rendering with
+  step 1 active and step 2 upcoming is the cleaner visual semantic).
+  Note: indexed steps (1/2/3/4) replace the named-string union from
+  spec body §4.3 (`'scanned' | 'studying' | 'rescan' | 'interview'`)
+  because indexed steps simplify the `step.index < currentStep` "done
+  vs upcoming" predicate. Analytics payload `current_step` is
+  therefore numeric (1-4) not a string union; analytics catalog row
+  reflects this.
+- **D-6 Score source** — `result.ats_score` from
+  `useAnalysisContext()` (OQ confirmed at impl Step 0 — disk reality;
+  prompt body cited `overall_score` which does not exist on
+  `AnalysisResponse`; JC #2 (info-only)).
+- **D-7 Gap count source** — `result.skill_gaps.length` from
+  `useAnalysisContext()` (OQ confirmed at impl Step 0 — disk reality;
+  prompt body cited `missing_skills.length` which does not exist on
+  `AnalysisResponse`; JC #2 (info-only) — same as D-6 family).
+- **D-8 Interview-date source** — `homeState.data?.context.next_interview?.date`
+  via `useHomeState()`. Hook newly imported into `Results.tsx` this
+  slice. `homeState.error` / `homeState.isLoading` paths render with
+  `interviewDate=null` → step 4 reads "Set a date" (OQ-6 hint (a)
+  accepted).
+- **D-9 Grid span** — N/A. With D-1's outside-the-grid mount, span is
+  achieved via `w-full` on the LoopFrame's wrapper div instead of
+  `col-span-full`. OQ-9 superseded by D-1.
+- **D-10 Visual treatment** — design-token-only per R12. Steps render
+  as bordered pills with token-backed state classes: current
+  (`border-border-accent` + `bg-accent-primary/10`), done
+  (`border-border` + `bg-bg-elevated` + `text-text-secondary`),
+  upcoming (`border-border` + `bg-bg-elevated` + `text-text-muted`).
+  Connector lines use `border-l` (mobile vertical) / `border-t`
+  (desktop horizontal) on the `border` token. No hardcoded hex; no
+  inline color `style` — verified by R12 compliance test in
+  `LoopFrame.test.tsx`.
+- **D-11 Analytics `surface`** — `'results'`. E-051 widens to
+  `'appshell'` (OQ-13 hint (a) accepted).
+- **D-12 Test file location** — `tests/components/LoopFrame.test.tsx`
+  (OQ-14 hint (a) accepted).
+- **D-13 Empty-state render gate** — `result.ats_score != null` at
+  the Results mount point. The render-gate guards against the
+  `result === null` empty-state branch already handled at
+  `Results.tsx:187-237` (the LoopFrame mount sits below that empty
+  branch's early return so the gate is structurally redundant; it
+  remains as defense-in-depth + makes the intent explicit). OQ-7
+  hint (a) accepted (frame still renders when `skill_gaps.length === 0`
+  with sub-line "0 gaps").
+- **D-14 No interaction with E-011 CTA** — LoopFrame is a sibling
+  ABOVE `MissingSkillsPanel`, not a parent / child / wrapper.
+  `MissingSkillsPanel.tsx` and its three-state CTA are byte-untouched
+  this slice (OQ confirmed; E-011 territory).
 
 ---
 

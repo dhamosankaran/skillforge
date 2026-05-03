@@ -18,6 +18,10 @@ vi.mock('@/services/api', async (importOriginal) => {
   }
 })
 
+vi.mock('@/hooks/useHomeState', () => ({
+  useHomeState: () => ({ data: null, isLoading: false, error: null, refetch: vi.fn() }),
+}))
+
 vi.mock('@/context/UsageContext', () => ({
   useUsage: () => ({ canUsePro: false }),
   UsageProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -110,6 +114,16 @@ describe('Results page — P5-S20 section ordering', () => {
     renderResults()
     // "Skill Gaps" in the target order = Missing Skills panel.
     assertBefore('job-fit', 'missing-skills')
+  })
+
+  it('test_loop_frame_renders_above_missing_skills', () => {
+    // Spec #64 — LoopFrame mounts above the dashboard grid (above
+    // missing-skills) so the closed-loop visualization frames the
+    // upsell. Its own DOM position vs job-fit is not asserted (the
+    // mount sits above the grid, before all grid children) — only
+    // the user-facing invariant "loop frame above the upsell".
+    renderResults()
+    assertBefore('loop-frame', 'missing-skills')
   })
 
   it('test_job_fit_renders_above_keyword_frequency', () => {

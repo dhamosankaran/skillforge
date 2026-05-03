@@ -38,6 +38,10 @@ vi.mock('@/services/api', async (importOriginal) => {
   }
 })
 
+vi.mock('@/hooks/useHomeState', () => ({
+  useHomeState: () => ({ data: null, isLoading: false, error: null, refetch: vi.fn() }),
+}))
+
 let mockCanUsePro = false
 vi.mock('@/context/UsageContext', () => ({
   useUsage: () => ({

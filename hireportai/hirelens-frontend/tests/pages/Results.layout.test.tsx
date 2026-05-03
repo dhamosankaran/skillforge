@@ -17,6 +17,10 @@ vi.mock('@/services/api', async (importOriginal) => {
   }
 })
 
+vi.mock('@/hooks/useHomeState', () => ({
+  useHomeState: () => ({ data: null, isLoading: false, error: null, refetch: vi.fn() }),
+}))
+
 vi.mock('@/context/UsageContext', () => ({
   useUsage: () => ({ canUsePro: false }),
   UsageProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
