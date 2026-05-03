@@ -1,6 +1,13 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router-dom'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+// Capture PostHog events so we can assert deprecated_route_hit fires (B-008).
+const capture = vi.fn()
+vi.mock('@/utils/posthog', () => ({
+  capture: (...args: unknown[]) => capture(...args),
+  default: {},
+}))
 
 // ── Page component mocks ────────────────────────────────────────────────────
 // Stubs let us assert routing independent of page internals (API calls,
@@ -85,6 +92,10 @@ const cases: RedirectCase[] = [
   { oldPath: '/mission',              expectedTestId: 'page-mission-mode' },
 ]
 
+beforeEach(() => {
+  capture.mockReset()
+})
+
 describe('App transitional redirects', () => {
   it.each(cases)('redirects $oldPath to the new namespaced component', async ({ oldPath, expectedTestId }) => {
     render(
@@ -135,5 +146,41 @@ describe('App transitional redirects', () => {
       </MemoryRouter>,
     )
     expect(await screen.findByTestId('page-home-dashboard')).toBeInTheDocument()
+  })
+
+  it('fires deprecated_route_hit when a legacy /analyze URL hits the redirect block (B-008)', async () => {
+    render(
+      <MemoryRouter initialEntries={['/analyze']}>
+        <App />
+      </MemoryRouter>,
+    )
+    expect(await screen.findByTestId('page-analyze')).toBeInTheDocument()
+    expect(capture).toHaveBeenCalledWith('deprecated_route_hit', {
+      from_path: '/analyze',
+      to_path: '/prep/analyze',
+    })
+  })
+
+  it('fires deprecated_route_hit with resolved id on /study/card/:id (B-008)', async () => {
+    render(
+      <MemoryRouter initialEntries={['/study/card/xyz-789']}>
+        <App />
+      </MemoryRouter>,
+    )
+    expect(await screen.findByTestId('page-card-viewer')).toBeInTheDocument()
+    expect(capture).toHaveBeenCalledWith('deprecated_route_hit', {
+      from_path: '/study/card/xyz-789',
+      to_path: '/learn/card/xyz-789',
+    })
+  })
+
+  it('does NOT fire deprecated_route_hit on a non-deprecated route (B-008)', async () => {
+    render(
+      <MemoryRouter initialEntries={['/home']}>
+        <App />
+      </MemoryRouter>,
+    )
+    expect(await screen.findByTestId('page-home-dashboard')).toBeInTheDocument()
+    expect(capture).not.toHaveBeenCalledWith('deprecated_route_hit', expect.anything())
   })
 })

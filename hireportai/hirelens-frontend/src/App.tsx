@@ -1,8 +1,9 @@
 import { lazy, Suspense } from 'react'
-import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
 import { AppShell } from '@/components/layout/AppShell'
+import { DeprecatedRedirect } from '@/components/DeprecatedRedirect'
 import { PersonaGate } from '@/components/PersonaGate'
 import { AdminGate } from '@/components/auth/AdminGate'
 import { useAuth } from '@/context/AuthContext'
@@ -52,13 +53,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) return null
   if (!user) return <Navigate to="/" replace />
   return <PersonaGate>{children}</PersonaGate>
-}
-
-/** Redirect helper that substitutes dynamic segments into the target. `<Navigate to="/foo/:id">` would
- * redirect to the literal string "/foo/:id" — React Router does not thread params through Navigate. */
-function RedirectWithParam({ build }: { build: (params: Record<string, string>) => string }) {
-  const params = useParams()
-  return <Navigate to={build(params as Record<string, string>)} replace />
 }
 
 /** "/" shows landing page for guests; redirects logged-in users to /home. */
@@ -125,17 +119,17 @@ export default function App() {
             <Route path="content-quality"                 element={<AdminContentQuality />} />
           </Route>
 
-          {/* Transitional redirects — drop in Phase 6 once the old paths stop receiving hits. */}
-          <Route path="/analyze"            element={<Navigate to="/prep/analyze" replace />} />
-          <Route path="/results"            element={<Navigate to="/prep/results" replace />} />
-          <Route path="/rewrite"            element={<Navigate to="/prep/rewrite" replace />} />
-          <Route path="/interview"          element={<Navigate to="/prep/interview" replace />} />
-          <Route path="/tracker"            element={<Navigate to="/prep/tracker" replace />} />
-          <Route path="/study"              element={<Navigate to="/learn" replace />} />
-          <Route path="/study/daily"        element={<Navigate to="/learn/daily" replace />} />
-          <Route path="/study/category/:id" element={<RedirectWithParam build={(p) => `/learn/category/${p.id}`} />} />
-          <Route path="/study/card/:id"     element={<RedirectWithParam build={(p) => `/learn/card/${p.id}`} />} />
-          <Route path="/mission"            element={<Navigate to="/learn/mission" replace />} />
+          {/* Transitional redirects — drop in Phase 6 once `deprecated_route_hit` (B-008) shows zero hits over 30 days. */}
+          <Route path="/analyze"            element={<DeprecatedRedirect to="/prep/analyze" />} />
+          <Route path="/results"            element={<DeprecatedRedirect to="/prep/results" />} />
+          <Route path="/rewrite"            element={<DeprecatedRedirect to="/prep/rewrite" />} />
+          <Route path="/interview"          element={<DeprecatedRedirect to="/prep/interview" />} />
+          <Route path="/tracker"            element={<DeprecatedRedirect to="/prep/tracker" />} />
+          <Route path="/study"              element={<DeprecatedRedirect to="/learn" />} />
+          <Route path="/study/daily"        element={<DeprecatedRedirect to="/learn/daily" />} />
+          <Route path="/study/category/:id" element={<DeprecatedRedirect build={(p) => `/learn/category/${p.id}`} />} />
+          <Route path="/study/card/:id"     element={<DeprecatedRedirect build={(p) => `/learn/card/${p.id}`} />} />
+          <Route path="/mission"            element={<DeprecatedRedirect to="/learn/mission" />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
