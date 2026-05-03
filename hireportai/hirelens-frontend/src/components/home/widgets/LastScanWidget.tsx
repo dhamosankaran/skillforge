@@ -21,8 +21,6 @@ export function LastScanWidget({
   const [state, setState] = useState<WidgetState>('loading')
   const [latest, setLatest] = useState<TrackerApplication | null>(null)
 
-  if (suppressed) return null
-
   const load = useCallback(() => {
     setState('loading')
     fetchUserApplications()
@@ -45,6 +43,10 @@ export function LastScanWidget({
     if (suppressed) return
     load()
   }, [load, suppressed])
+
+  // Rules-of-Hooks: early returns must come AFTER all hook calls.
+  // Suppressed render path returns null but keeps the hook order stable.
+  if (suppressed) return null
 
   const action =
     state === 'data' && latest

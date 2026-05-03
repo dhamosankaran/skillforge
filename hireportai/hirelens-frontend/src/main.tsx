@@ -32,7 +32,17 @@ if (sentryDsn) {
   })
 }
 
-function SentryFallback() {
+function SentryFallback({
+  error,
+  componentStack,
+}: {
+  error: unknown
+  componentStack?: string | null
+}) {
+  const isDev = import.meta.env.DEV
+  const message =
+    error instanceof Error ? `${error.name}: ${error.message}` : String(error)
+  const stack = error instanceof Error ? error.stack : null
   return (
     <div style={{
       display: 'flex',
@@ -44,11 +54,38 @@ function SentryFallback() {
       color: 'var(--text-primary)',
       fontFamily: 'system-ui, sans-serif',
       gap: '16px',
+      padding: '32px',
     }}>
       <h1 style={{ fontSize: '24px', fontWeight: 600 }}>Something went wrong</h1>
       <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
         An unexpected error occurred. Please try reloading the page.
       </p>
+      {isDev && (
+        <details
+          open
+          style={{
+            maxWidth: '900px',
+            width: '100%',
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border)',
+            borderRadius: '10px',
+            padding: '16px',
+            fontFamily: 'var(--sf-font-mono, ui-monospace), monospace',
+            fontSize: '12px',
+            color: 'var(--text-primary)',
+          }}
+        >
+          <summary style={{ cursor: 'pointer', fontWeight: 600 }}>
+            {message}
+          </summary>
+          {stack && (
+            <pre style={{ marginTop: '12px', overflow: 'auto', whiteSpace: 'pre-wrap' }}>{stack}</pre>
+          )}
+          {componentStack && (
+            <pre style={{ marginTop: '12px', overflow: 'auto', whiteSpace: 'pre-wrap', color: 'var(--text-secondary)' }}>{componentStack}</pre>
+          )}
+        </details>
+      )}
       <button
         onClick={() => window.location.reload()}
         style={{
@@ -69,7 +106,11 @@ function SentryFallback() {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <Sentry.ErrorBoundary fallback={<SentryFallback />}>
+    <Sentry.ErrorBoundary
+      fallback={({ error, componentStack }) => (
+        <SentryFallback error={error} componentStack={componentStack} />
+      )}
+    >
     <GoogleOAuthProvider clientId={googleClientId}>
       <BrowserRouter>
         <ThemeProvider>
