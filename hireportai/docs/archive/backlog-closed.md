@@ -68,7 +68,7 @@ compaction is dropped during the cut (cosmetic; not a row).
 | B-007 | StudyDashboard PERSONA_CONFIG undefined for snake_case persona values | 2c01cc7 | 2026-04-18 | Closed alongside E-003. closed by 2c01cc7 on 2026-04-18 |
 
 
-## Cut 2026-05-03 from `<this-slice>` — Mode-1 light hygiene
+## Cut 2026-05-03 from `4e2e26f` — Mode-1 light hygiene
 
 ### Archived closed rows (14 entries spanning 2026-04-29..2026-05-01)
 
