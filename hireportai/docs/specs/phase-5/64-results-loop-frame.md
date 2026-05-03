@@ -6,8 +6,8 @@
 |-------|-------|
 | **Slice** | P5-S64 (FE-only; spec-author this slice) |
 | **Phase** | 5 |
-| **Mode** | Mode 4 spec-author → followed by impl slice (B-120 forward-filed) |
-| **Filed at** | `<this-slice>` (filing/spec-author commit) |
+| **Mode** | Mode 4 spec-author → followed by impl slice (B-119 forward-filed) |
+| **Filed at** | `8b70037` (filing/spec-author commit) |
 | **BACKLOG row (spec-author)** | this slice — closes E-049 spec-author half on commit; status flip happens at impl per R15(c) |
 | **BACKLOG row (impl, forward-filed)** | **B-119** 🔴 (filed at status 🔴 by this slice for the future implementation slice per R15(c)). R17 watermark verified at filing: B-118 highest in-use at slice start; B-119 claimed (next-free per disk). Prompt body originally cited B-120 — corrected per starter-line R19 STOP + H4 watermark-grep precedence. |
 | **Closes** | **E-049** part (b) on impl-merge. Part (a) (Pro upsell button on missing-skills) was already shipped as **E-011 ✅** (`fd4ca3d`, spec #22). |
