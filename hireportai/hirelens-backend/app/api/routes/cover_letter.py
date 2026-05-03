@@ -1,10 +1,11 @@
 """Cover letter generation endpoint."""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.analytics import track as analytics_track
 from app.core.config import get_settings
 from app.core.deps import get_current_user
+from app.core.rate_limit import limiter
 from app.db.session import get_db
 from app.models.request_models import CoverLetterRequest
 from app.models.response_models import CoverLetterResponse
@@ -20,7 +21,9 @@ router = APIRouter()
 
 
 @router.post("/cover-letter", response_model=CoverLetterResponse)
+@limiter.limit("10/minute")
 async def generate_cover_letter(
+    request: Request,
     body: CoverLetterRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

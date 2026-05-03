@@ -2,12 +2,13 @@
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.analytics import track as analytics_track
 from app.core.deps import get_current_user
+from app.core.rate_limit import limiter
 from app.db.session import get_db
 from app.models.request_models import RewriteRequest
 from app.models.response_models import RewriteResponse, RewriteSection
@@ -92,7 +93,9 @@ async def _enforce_rewrite_quota(
 
 
 @router.post("/rewrite", response_model=RewriteResponse)
+@limiter.limit("10/minute")
 async def rewrite_resume(
+    request: Request,
     body: RewriteRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -189,7 +192,9 @@ async def rewrite_resume(
 
 
 @router.post("/rewrite/section", response_model=SectionRewriteResponse)
+@limiter.limit("10/minute")
 async def rewrite_section(
+    request: Request,
     body: SectionRewriteRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
