@@ -46,6 +46,16 @@ next response so Dhamo can decide which side wins.
 - Deploy: Vercel (FE) + Railway (BE + PG + Redis)
 - CI/CD: GitHub Actions (push to main → test → deploy)
 
+## Repository layout
+
+The git root is `SkillForge/` (parent); the working directory for all
+agent sessions is `SkillForge/hireportai/`. Every relative path in
+specs, prompts, and skill files is rooted at `hireportai/`. The
+directory diagram below starts from `hireportai/` and intentionally
+elides the parent — but `git status` / `git add` operate against
+`SkillForge/`, so `git add -A` from that level can sweep in unrelated
+sibling files (see CLAUDE.md C1 for the staging footgun).
+
 ## Directory Structure
 hireportai/
 ├── AGENTS.md                    ← YOU ARE HERE
@@ -117,7 +127,9 @@ hireportai/
 - Test files mirror source structure
 - Every API endpoint needs at least: happy path, auth failure,
   validation error test
-- Coverage target: 80%+
+- Coverage tooling (`pytest-cov`) is deliberately NOT installed — see
+  CLAUDE.md R13. Don't add `--cov` flags without updating
+  `requirements-dev.txt` and getting sign-off.
 
 ### Git Conventions
 - Branch: `feature/<phase>-<number>-<name>`
