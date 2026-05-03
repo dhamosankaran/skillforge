@@ -374,6 +374,15 @@ export default function Profile() {
                   </p>
                 </div>
                 <div className="flex flex-col items-start sm:items-end gap-1">
+                  {cancelAtPeriodEnd && (
+                    <button
+                      onClick={handleManageSubscription}
+                      disabled={portalLoading}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-accent-primary/40 text-accent-primary text-sm font-semibold hover:bg-accent-primary/10 transition-colors disabled:opacity-40"
+                    >
+                      Reactivate Pro
+                    </button>
+                  )}
                   <button
                     onClick={handleManageSubscription}
                     disabled={portalLoading}

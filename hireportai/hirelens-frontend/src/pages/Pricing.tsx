@@ -5,10 +5,11 @@ import { Link, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import { PageWrapper } from '@/components/layout/PageWrapper'
+import { useAuth } from '@/context/AuthContext'
 import { useUsage } from '@/context/UsageContext'
 import type { PlanType } from '@/context/UsageContext'
 import { usePricing } from '@/hooks/usePricing'
-import { createCheckoutSession } from '@/services/api'
+import { createBillingPortalSession, createCheckoutSession } from '@/services/api'
 import { capture } from '@/utils/posthog'
 
 // ─── 3D Tilt Card ───
@@ -127,9 +128,25 @@ const cardVariants = {
 
 export default function Pricing() {
   const { usage, upgradePlan } = useUsage()
+  const { user } = useAuth()
   const { pricing } = usePricing()
   const [searchParams, setSearchParams] = useSearchParams()
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false)
+
+  const cancelAtPeriodEnd = user?.subscription?.cancel_at_period_end ?? false
+  const periodEndIso = user?.subscription?.current_period_end ?? null
+  const periodEndLabel = periodEndIso
+    ? (() => {
+        const d = new Date(periodEndIso)
+        return Number.isNaN(d.getTime())
+          ? null
+          : d.toLocaleDateString(undefined, {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+            })
+      })()
+    : null
 
   // Post-checkout return from Stripe. Backend webhook flips the
   // Subscription row asynchronously — we optimistically flip the local
@@ -158,8 +175,26 @@ export default function Pricing() {
 
   const handleCta = async (plan: PlanConfig) => {
     if (plan.planKey === 'free') return
-    if (usage.plan === plan.planKey) return
     if (isCheckoutLoading) return
+
+    // Cancel-pending Pro user clicking "Reactivate" — open billing
+    // portal instead of attempting checkout (B-113 AlreadyProError
+    // would otherwise 409). Stripe portal owns the un-cancel UX.
+    if (cancelAtPeriodEnd && plan.planKey === 'pro') {
+      setIsCheckoutLoading(true)
+      capture('subscription_portal_opened', { source: 'pricing_reactivate' })
+      try {
+        const { url } = await createBillingPortalSession()
+        window.location.href = url
+      } catch (err) {
+        setIsCheckoutLoading(false)
+        toast.error("Couldn't open the billing portal. Please try again.")
+        console.error('createBillingPortalSession failed', err)
+      }
+      return
+    }
+
+    if (usage.plan === plan.planKey) return
 
     setIsCheckoutLoading(true)
     capture('checkout_started', {
@@ -242,6 +277,7 @@ export default function Pricing() {
               ? { ...basePlan, price: pricing.price, period: '/mo' }
               : basePlan
             const isCurrentPlan = usage.plan === plan.planKey
+            const isCancelPendingPro = plan.planKey === 'pro' && isCurrentPlan && cancelAtPeriodEnd
             const priceSymbol = plan.planKey === 'pro' && pricing.currency === 'inr' ? '\u20b9' : '$'
             return (
               <motion.div key={plan.name} variants={cardVariants}>
@@ -298,7 +334,11 @@ export default function Pricing() {
                           }}
                         >
                           <CheckCircle2 size={10} />
-                          Current Plan
+                          {isCancelPendingPro
+                            ? periodEndLabel
+                              ? `Cancels ${periodEndLabel}`
+                              : 'Cancellation pending'
+                            : 'Current Plan'}
                         </div>
                       </div>
                     )}
@@ -354,26 +394,35 @@ export default function Pricing() {
                       ) : (
                         <button
                           onClick={() => handleCta(plan)}
-                          disabled={isCurrentPlan || isCheckoutLoading}
-                          className="relative block w-full text-center py-3 rounded-xl text-sm font-semibold transition-all duration-300 disabled:opacity-60 disabled:cursor-wait overflow-hidden text-white"
+                          disabled={(isCurrentPlan && !isCancelPendingPro) || isCheckoutLoading}
+                          className={clsx(
+                            'relative block w-full text-center py-3 rounded-xl text-sm font-semibold transition-all duration-300 disabled:opacity-60 overflow-hidden text-white',
+                            isCheckoutLoading
+                              ? 'cursor-wait'
+                              : isCurrentPlan && !isCancelPendingPro
+                              ? 'cursor-default'
+                              : '',
+                          )}
                           style={{
                             background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)',
                             boxShadow: '0 4px 20px var(--accent-glow)',
                           }}
                         >
                           <span className="relative z-10 inline-flex items-center justify-center gap-2">
-                            {isCurrentPlan ? (
-                              'Currently Active'
-                            ) : isCheckoutLoading ? (
+                            {isCheckoutLoading ? (
                               <>
                                 <Loader2 size={14} className="animate-spin" />
-                                Starting checkout…
+                                {isCancelPendingPro ? 'Opening portal…' : 'Starting checkout…'}
                               </>
+                            ) : isCancelPendingPro ? (
+                              'Reactivate'
+                            ) : isCurrentPlan ? (
+                              'Currently Active'
                             ) : (
                               plan.cta
                             )}
                           </span>
-                          {!isCurrentPlan && !isCheckoutLoading && (
+                          {(!isCurrentPlan || isCancelPendingPro) && !isCheckoutLoading && (
                             <div className="absolute inset-0 -translate-x-full hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-contrast/20 to-transparent" />
                           )}
                         </button>

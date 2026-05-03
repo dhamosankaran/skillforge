@@ -146,6 +146,56 @@ describe('Profile — Subscription section', () => {
     expect(screen.getByRole('button', { name: /manage subscription/i })).toBeInTheDocument()
   })
 
+  it('shows "Reactivate Pro" button when cancel_at_period_end is true (B-117)', async () => {
+    mockPlan = 'pro'
+    mockUser = makeUser({
+      subscription: {
+        plan: 'pro',
+        status: 'active',
+        current_period_end: '2026-04-22 00:00:00',
+        cancel_at_period_end: true,
+      },
+    })
+    createBillingPortalSession.mockResolvedValue({
+      url: 'https://billing.stripe.com/p/session/bps_reactivate',
+    })
+
+    const originalLocation = window.location
+    // @ts-expect-error — deleting for test override
+    delete window.location
+    // @ts-expect-error — assigning a plain object replacement
+    window.location = { href: '' } as Location
+
+    try {
+      renderProfile()
+      const reactivateBtn = screen.getByRole('button', { name: /reactivate pro/i })
+      expect(reactivateBtn).toBeInTheDocument()
+
+      await userEvent.click(reactivateBtn)
+      await waitFor(() => {
+        expect(createBillingPortalSession).toHaveBeenCalledTimes(1)
+      })
+      expect(window.location.href).toBe('https://billing.stripe.com/p/session/bps_reactivate')
+    } finally {
+      // @ts-expect-error — restoring original
+      window.location = originalLocation
+    }
+  })
+
+  it('hides "Reactivate Pro" when cancel_at_period_end is false (B-117)', () => {
+    mockPlan = 'pro'
+    mockUser = makeUser({
+      subscription: {
+        plan: 'pro',
+        status: 'active',
+        current_period_end: null,
+        cancel_at_period_end: false,
+      },
+    })
+    renderProfile()
+    expect(screen.queryByRole('button', { name: /reactivate pro/i })).not.toBeInTheDocument()
+  })
+
   it('still shows "Active" when subscription field is absent (BE not yet upgraded)', () => {
     mockPlan = 'pro'
     mockUser = makeUser()  // no subscription field
