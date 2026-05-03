@@ -12,6 +12,7 @@ import { CountdownWidget } from '@/components/home/widgets/CountdownWidget'
 import { HomeScoreDeltaWidget } from '@/components/home/widgets/HomeScoreDeltaWidget'
 import { TeamComingSoonWidget } from '@/components/home/widgets/TeamComingSoonWidget'
 import { StateAwareWidgets } from '@/components/home/StateAwareWidgets'
+import { HomeStatusHero } from '@/components/home/HomeStatusHero'
 import { InterviewPrepperChecklist } from '@/components/home/widgets/InterviewPrepperChecklist'
 import { StudyGapsPromptWidget } from '@/components/home/widgets/StudyGapsPromptWidget'
 import { useUsage } from '@/context/UsageContext'
@@ -213,6 +214,7 @@ export default function HomeDashboard() {
         <h1 className="font-display text-2xl sm:text-3xl font-bold text-text-primary mb-8">
           {greeting}
         </h1>
+        <HomeStatusHero />
         <StateAwareWidgets
           persona={user.persona}
           data={homeState.data}

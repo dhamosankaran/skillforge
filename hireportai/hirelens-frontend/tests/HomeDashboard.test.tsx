@@ -75,6 +75,14 @@ vi.mock('@/components/home/StateAwareWidgets', () => ({
 vi.mock('@/components/home/widgets/StudyGapsPromptWidget', () => ({
   StudyGapsPromptWidget: () => null,
 }))
+// Spec #65 §15 regression hook — HomeStatusHero has its own dedicated
+// test file (tests/components/home/HomeStatusHero.test.tsx). Stub here
+// so this shell test stays focused on persona-mode + widget-order
+// assertions (consistent with how StateAwareWidgets and
+// StudyGapsPromptWidget are stubbed above).
+vi.mock('@/components/home/HomeStatusHero', () => ({
+  HomeStatusHero: () => null,
+}))
 
 // Spec #61 — HomeDashboard now calls useUsage() (via useStudyPromptEligibility)
 // for the StudyGapsPrompt eligibility / LastScan suppression flag. Mock to a
