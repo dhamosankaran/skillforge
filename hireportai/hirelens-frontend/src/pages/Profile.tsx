@@ -70,7 +70,7 @@ async function fetchStudyProgress(): Promise<StudyProgress> {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Profile() {
-  const { user, signOut } = useAuth()
+  const { user, signOut, refreshUser } = useAuth()
   const { usage } = useUsage()
   const navigate = useNavigate()
   const { stats, isLoading, refresh } = useGamification()
@@ -115,6 +115,11 @@ export default function Profile() {
   useEffect(() => {
     capture('profile_viewed')
     void refresh()
+    // Refresh /auth/me on Profile mount so subscription state (plan,
+    // cancel_at_period_end, current_period_end) reflects any changes
+    // made via the Stripe billing portal — Profile is the portal
+    // return_url. B-118 / scout #17 + #18 + #20.
+    void refreshUser()
     fetchStudyProgress()
       .then(setProgress)
       .catch((e) => setProgressError(e instanceof Error ? e.message : 'Failed to load progress'))

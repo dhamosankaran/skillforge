@@ -18,6 +18,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useRef,
   type ReactNode,
 } from 'react'
 import axios from 'axios'
@@ -64,6 +65,12 @@ interface AuthContextValue {
   signIn: (credential: string) => Promise<void>
   signOut: () => Promise<void>
   updateUser: (patch: Partial<AuthUser>) => void
+  /**
+   * Re-fetch GET /auth/me and update the context user. Used after
+   * Stripe checkout / portal returns where the cached user is stale.
+   * Concurrent calls dedupe — second call returns the in-flight promise.
+   */
+  refreshUser: () => Promise<void>
 }
 
 export const STORAGE_KEY_ACCESS = 'skillforge_access_token'
@@ -83,6 +90,7 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const inflightRefresh = useRef<Promise<void> | null>(null)
 
   // Hydration: re-validate stored token on every page load.
   // Uses raw axios (not the intercepted api instance) so the refresh
@@ -103,6 +111,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => clearStorage())
       .finally(() => setIsLoading(false))
+  }, [])
+
+  const refreshUser = useCallback(async (): Promise<void> => {
+    if (inflightRefresh.current) return inflightRefresh.current
+    const token = localStorage.getItem(STORAGE_KEY_ACCESS)
+    if (!token) return
+    const promise = axios
+      .get<AuthUser>(`${BASE_URL}/api/v1/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        setUser(res.data)
+        localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(res.data))
+      })
+      .catch(() => {
+        // Stale-token path is owned by the api.ts refresh interceptor.
+        // Swallow here so callers can fire-and-forget post-redirect.
+      })
+      .finally(() => {
+        inflightRefresh.current = null
+      })
+    inflightRefresh.current = promise
+    return promise
   }, [])
 
   const signIn = useCallback(async (credential: string): Promise<void> => {
@@ -143,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, signIn, signOut, updateUser }}>
+    <AuthContext.Provider value={{ user, isLoading, signIn, signOut, updateUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )

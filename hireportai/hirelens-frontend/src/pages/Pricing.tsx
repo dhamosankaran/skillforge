@@ -128,7 +128,7 @@ const cardVariants = {
 
 export default function Pricing() {
   const { usage, upgradePlan } = useUsage()
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
   const { pricing } = usePricing()
   const [searchParams, setSearchParams] = useSearchParams()
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false)
@@ -158,6 +158,9 @@ export default function Pricing() {
     if (upgradeStatus !== 'success') return
 
     upgradePlan('pro')
+    // Re-fetch /auth/me so user.subscription reflects the new Pro state
+    // without a hard reload (B-118 — fixes scout #6 / #8 staleness).
+    void refreshUser()
     capture('payment_completed', {
       plan: 'pro',
       price: pricing.price,
@@ -171,7 +174,7 @@ export default function Pricing() {
     next.delete('upgrade')
     next.delete('session_id')
     setSearchParams(next, { replace: true })
-  }, [searchParams, setSearchParams, upgradePlan])
+  }, [searchParams, setSearchParams, upgradePlan, refreshUser])
 
   const handleCta = async (plan: PlanConfig) => {
     if (plan.planKey === 'free') return

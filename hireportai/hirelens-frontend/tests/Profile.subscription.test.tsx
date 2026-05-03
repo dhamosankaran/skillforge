@@ -39,8 +39,9 @@ function makeUser(overrides: Partial<AuthUser> = {}): AuthUser {
 }
 
 let mockUser: AuthUser = makeUser()
+const refreshUser = vi.fn()
 vi.mock('@/context/AuthContext', () => ({
-  useAuth: () => ({ user: mockUser, isLoading: false, signIn: vi.fn(), signOut: vi.fn(), updateUser: vi.fn() }),
+  useAuth: () => ({ user: mockUser, isLoading: false, signIn: vi.fn(), signOut: vi.fn(), updateUser: vi.fn(), refreshUser }),
 }))
 
 let mockPlan: 'pro' | 'free' = 'free'
@@ -96,6 +97,7 @@ beforeEach(() => {
   capture.mockReset()
   createBillingPortalSession.mockReset()
   navigate.mockReset()
+  refreshUser.mockReset()
   mockUser = makeUser()
 })
 
@@ -204,6 +206,12 @@ describe('Profile — Subscription section', () => {
     const section = screen.getByTestId('subscription-section')
     expect(section).toHaveTextContent('Active')
     expect(section).not.toHaveTextContent(/cancels/i)
+  })
+
+  it('fires refreshUser on Profile mount to clear stale subscription state (B-118)', async () => {
+    mockPlan = 'pro'
+    renderProfile()
+    await waitFor(() => expect(refreshUser).toHaveBeenCalledTimes(1))
   })
 
   it('creates a portal session and redirects on Manage click (AC-2)', async () => {

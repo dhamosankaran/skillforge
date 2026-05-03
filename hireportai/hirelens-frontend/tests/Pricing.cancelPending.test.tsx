@@ -39,8 +39,9 @@ function makeUser(overrides: Partial<AuthUser> = {}): AuthUser {
 }
 
 let mockUser: AuthUser = makeUser()
+const refreshUser = vi.fn()
 vi.mock('@/context/AuthContext', () => ({
-  useAuth: () => ({ user: mockUser, isLoading: false, signIn: vi.fn(), signOut: vi.fn(), updateUser: vi.fn() }),
+  useAuth: () => ({ user: mockUser, isLoading: false, signIn: vi.fn(), signOut: vi.fn(), updateUser: vi.fn(), refreshUser }),
 }))
 
 let mockPlan: 'pro' | 'free' = 'pro'
@@ -76,6 +77,7 @@ beforeEach(() => {
   capture.mockReset()
   createCheckoutSession.mockReset()
   createBillingPortalSession.mockReset()
+  refreshUser.mockReset()
   mockUser = makeUser()
   mockPlan = 'pro'
 })
@@ -115,6 +117,27 @@ describe('Pricing — cancel-pending Pro tile (B-117 #14)', () => {
 
     expect(screen.getByRole('button', { name: /currently active/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /reactivate/i })).not.toBeInTheDocument()
+  })
+})
+
+describe('Pricing — post-checkout return refreshes user (B-118)', () => {
+  it('fires refreshUser when ?upgrade=success lands from Stripe', async () => {
+    mockPlan = 'free'
+    mockUser = makeUser()
+    render(
+      <MemoryRouter initialEntries={['/pricing?upgrade=success&session_id=cs_test']}>
+        <Pricing />
+      </MemoryRouter>,
+    )
+    await waitFor(() => expect(refreshUser).toHaveBeenCalledTimes(1))
+  })
+
+  it('does NOT fire refreshUser on a plain /pricing visit', async () => {
+    renderPricing()
+    // Allow the post-mount effect a tick to run.
+    await waitFor(() => {
+      expect(refreshUser).not.toHaveBeenCalled()
+    })
   })
 })
 

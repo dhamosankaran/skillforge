@@ -28,7 +28,7 @@ let mockUser: AuthUser = {
   onboarding_completed: true,
 }
 vi.mock('@/context/AuthContext', () => ({
-  useAuth: () => ({ user: mockUser, isLoading: false, signIn: vi.fn(), signOut, updateUser: vi.fn() }),
+  useAuth: () => ({ user: mockUser, isLoading: false, signIn: vi.fn(), signOut, updateUser: vi.fn(), refreshUser: vi.fn() }),
 }))
 
 vi.mock('@/services/api', () => ({
