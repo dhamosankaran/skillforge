@@ -1629,7 +1629,7 @@ Prior HEAD: `d020f4d` — 2026-05-01 Phase 6 slice 6.13 shipped (B-087 ✅).
 
 
 
-## Cut 2026-05-03 from `<this-slice>` — RC entries 4+ (38 entries) + Ops-Log 2026-04-19/20 entries (18 entries)
+## Cut 2026-05-03 from `c83bc07` — RC entries 4+ (38 entries) + Ops-Log 2026-04-19/20 entries (18 entries)
 
 **Cut #1** — entries 4+ from `SESSION-STATE.md` Recently Completed during the
 B-121 light-hygiene compaction (clears 2-warn/1-fail health-check). Span:

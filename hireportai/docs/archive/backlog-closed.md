@@ -95,7 +95,7 @@ alongside as a date-band sweep.
 | E-017 | Verify interview date picker + add Profile-side editor (subsumed by E-042) | `b13f410` | 2026-04-29 | Closed `b13f410` on 2026-04-29 (subsumed — E-042 FE migration shipped, Profile-side editor for `users.interview_target_date` is obsolete because interview targets now live per-application on `tracker_applications_v2.interview_date`). The user-level `interview_target_date` / `interview_target_company` columns are read-deprecated; new code reads `homeState.context.next_interview` and writes via the tracker row editor. Phase-6 cleanup slice will drop the deprecated columns once the dual-write window closes. |
 
 
-## Cut 2026-05-03 from `<this-slice>` — B-121 light-hygiene compaction (8 closures, 2026-05-02)
+## Cut 2026-05-03 from `c83bc07` — B-121 light-hygiene compaction (8 closures, 2026-05-02)
 
 Cut 8 closures (B-100, B-098, B-099, B-097, B-078, B-096, B-094b, B-094a)
 from `BACKLOG.md` Closed table during the B-121 light-hygiene compaction.
