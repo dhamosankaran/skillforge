@@ -7,7 +7,7 @@
 | **Slice** | P5-S67 (BE-led + 1 FE surface extension + 1 email template extension; spec-author this slice) |
 | **Phase** | 5D (persona-aware surface) |
 | **Mode** | Mode 4 spec-author → followed by §12 amendment slice → impl slice (B-125 forward-filed) |
-| **Filed at** | `<this-slice>` (spec-author commit) |
+| **Filed at** | `d407e6e` (spec-author commit) |
 | **BACKLOG row (impl, forward-filed)** | **B-125** 🔴 — filed at status 🔴 by this slice for the future implementation slice per R15(c). R17 watermark verified at filing. |
 | **Closes** | **E-052** on impl-slice merge. |
 | **Depends on** | spec #34 (PersonaPicker + persona-aware home; shipped) ▪ spec #57 (`homeState.context.next_interview` envelope; shipped `b13f410`) — orthogonal but referenced by the persona contract ▪ spec #6/13 phase-6 (Pro digest opt-out + `email_log` dedup; shipped `email_log` table) ▪ spec #6/14 phase-6 (`pro_digest_service` composer + `pro_digest.html` template; shipped) ▪ existing `PersonaPicker.tsx` capture surface ▪ existing `email_prefs.py` route shape ▪ B-038 (full-replace `PATCH /persona` bug — DO NOT extend; mint dedicated endpoint per B-038 option (b)). |
