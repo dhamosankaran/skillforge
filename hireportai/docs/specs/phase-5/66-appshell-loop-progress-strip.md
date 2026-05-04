@@ -7,7 +7,7 @@
 | **Slice** | P5-S66 (FE-led + 1 small BE endpoint; spec-author this slice) |
 | **Phase** | 5D (persona-aware surface) |
 | **Mode** | Mode 4 spec-author → followed by §12 amendment slice → impl slice (B-122 forward-filed) |
-| **Filed at** | `<this-slice>` (spec-author commit) |
+| **Filed at** | `8dcdccd` (spec-author commit) |
 | **BACKLOG row (impl, forward-filed)** | **B-122** 🔴 — filed at status 🔴 by this slice for the future implementation slice per R15(c). R17 watermark verified at filing: B-121 highest in-use, B-122 next-free per disk. |
 | **Closes** | **E-051** on impl-slice merge. |
 | **Depends on** | spec #34 (PersonaPicker + persona-aware home; shipped) ▪ spec #57 (`homeState.context.next_interview` envelope; shipped `b13f410`) ▪ spec #63 / E-043 (`tracker_application_scores` + `useScoreHistory`; shipped `4aab0bf`) ▪ spec #64 / B-119 (`<LoopFrame>` static visual contract; shipped `b58a42d`) ▪ spec #65 / B-120 (status-hero pattern + persona gating + once-on-mount analytics; shipped `58bb9a9`) ▪ B-086a / B-086b (`tracker_application_score_service.write_score_row`; shipped) ▪ existing `AppShell.tsx` chromeless-paths convention. |
