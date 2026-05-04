@@ -13,6 +13,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from app.schemas.career_intent import AggregateStats
+
 
 class DigestPayload(BaseModel):
     """Per-user Pro digest content payload (§5.1, §6.3).
@@ -24,6 +26,11 @@ class DigestPayload(BaseModel):
     The four core fields per §12 D-3: ``cards_due`` / ``streak`` /
     ``mission_days_left`` (when ``mission_active``) / ``last_scan_score``
     + ``last_scan_delta`` (when tracker history has ≥2 rows).
+
+    Spec #67 (E-052) adds an optional ``aggregate_intent_block`` populated
+    when the user has a current Career-Climber intent AND the
+    ``(target_role, target_quarter)`` cohort meets the ≥10 threshold.
+    Backward-compatible — None when no intent or below threshold.
     """
 
     user_id: str
@@ -35,6 +42,7 @@ class DigestPayload(BaseModel):
     mission_days_left: Optional[int] = None
     last_scan_score: Optional[int] = None
     last_scan_delta: Optional[int] = None
+    aggregate_intent_block: Optional[AggregateStats] = None
 
 
 class SendSummary(BaseModel):

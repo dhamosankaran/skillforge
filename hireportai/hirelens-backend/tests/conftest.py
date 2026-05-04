@@ -106,6 +106,7 @@ async def engine():
     import app.models.quiz_item                # noqa: F401
     import app.models.quiz_item_progress       # noqa: F401
     import app.models.analytics_event          # noqa: F401
+    import app.models.user_career_intent       # noqa: F401
 
     async with eng.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

@@ -505,3 +505,128 @@ async def test_send_pro_digest_is_idempotent_across_back_to_back_calls(
     assert first.skipped_dedup == 0
     assert second.sent == 0
     assert second.skipped_dedup == 1
+
+
+# ── 4. Spec #67 (E-052) — aggregate intent block ────────────────────────────
+
+
+async def test_compose_digest_no_intent_path_unchanged(db_session):
+    """Spec #67 AC-13 — composer return shape unchanged when no intent."""
+    user = await _seed_pro_user(db_session)
+    await _seed_card_due(db_session, user.id)
+
+    payload = await pro_digest_service.compose_digest(user, db_session)
+    assert payload is not None
+    assert payload.aggregate_intent_block is None
+
+
+async def test_compose_digest_intent_below_threshold_omits_block(db_session):
+    """Spec #67 AC-14 — silent suppression when cohort < MIN_COHORT_SIZE."""
+    from app.services import career_intent_service
+    from app.schemas.career_intent import _current_quarter_tuple
+
+    user = await _seed_pro_user(db_session)
+    await _seed_card_due(db_session, user.id)
+    user.persona = "career_climber"
+    await db_session.flush()
+
+    year, q = _current_quarter_tuple()
+    quarter = f"{year}-Q{q + 1}" if q < 4 else f"{year + 1}-Q1"
+
+    # Only this user has the intent — cohort=1 < 10.
+    await career_intent_service.set_intent(
+        db_session, user.id, "staff", quarter
+    )
+
+    payload = await pro_digest_service.compose_digest(user, db_session)
+    assert payload is not None
+    assert payload.aggregate_intent_block is None
+
+
+async def test_compose_digest_intent_at_threshold_populates_block(db_session):
+    """Spec #67 AC-15 — aggregate block populated when cohort ≥ 10."""
+    import uuid
+    from datetime import datetime, timezone
+    from app.models.card import Card
+    from app.models.card_progress import CardProgress
+    from app.models.category import Category
+    from app.schemas.career_intent import _current_quarter_tuple
+    from app.services import career_intent_service
+
+    year, q = _current_quarter_tuple()
+    quarter = f"{year}-Q{q + 1}" if q < 4 else f"{year + 1}-Q1"
+
+    cat = Category(
+        id=str(uuid.uuid4()),
+        name=f"system-design-{uuid.uuid4().hex[:6]}",
+        icon="🧱",
+        color="#000000",
+        display_order=0,
+        source="seed",
+    )
+    db_session.add(cat)
+    await db_session.flush()
+    card = Card(
+        id=str(uuid.uuid4()),
+        category_id=cat.id,
+        question="Q?",
+        answer="A.",
+        difficulty="medium",
+    )
+    db_session.add(card)
+    await db_session.flush()
+
+    main_user = await _seed_pro_user(db_session)
+    main_user.persona = "career_climber"
+    await db_session.flush()
+    await _seed_card_due(db_session, main_user.id)
+    await career_intent_service.set_intent(
+        db_session, main_user.id, "distinguished", quarter
+    )
+    db_session.add(
+        CardProgress(
+            id=str(uuid.uuid4()),
+            user_id=main_user.id,
+            card_id=card.id,
+            state="review",
+            stability=1.0,
+            difficulty_fsrs=5.0,
+            due_date=datetime.now(timezone.utc),
+            reps=10,
+            lapses=0,
+        )
+    )
+    # Add 9 more cohort members (10 total) — meets threshold.
+    for _ in range(9):
+        peer = await _seed_user(db_session)
+        peer.persona = "career_climber"
+        await db_session.flush()
+        await career_intent_service.set_intent(
+            db_session, peer.id, "distinguished", quarter
+        )
+        db_session.add(
+            CardProgress(
+                id=str(uuid.uuid4()),
+                user_id=peer.id,
+                card_id=card.id,
+                state="review",
+                stability=1.0,
+                difficulty_fsrs=5.0,
+                due_date=datetime.now(timezone.utc),
+                reps=5,
+                lapses=0,
+            )
+        )
+    await db_session.flush()
+
+    payload = await pro_digest_service.compose_digest(main_user, db_session)
+    assert payload is not None
+    assert payload.aggregate_intent_block is not None
+    assert payload.aggregate_intent_block.target_role == "distinguished"
+    # Tolerate leaked rows from prior committed tests in the same session;
+    # the contract under test is "cohort >= MIN_COHORT_SIZE → block populated".
+    assert (
+        payload.aggregate_intent_block.cohort_size
+        >= career_intent_service.MIN_COHORT_SIZE
+    )
+    assert len(payload.aggregate_intent_block.top_categories) >= 1

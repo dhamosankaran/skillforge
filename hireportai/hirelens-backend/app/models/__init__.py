@@ -24,3 +24,4 @@ from app.models.quiz_item_progress import QuizItemProgress  # noqa: F401
 from app.models.analytics_event import LessonViewEvent, QuizReviewEvent  # noqa: F401
 from app.models.ingestion_job import IngestionJob  # noqa: F401
 from app.models.card_quality_signal import CardQualitySignal  # noqa: F401
+from app.models.user_career_intent import UserCareerIntent  # noqa: F401

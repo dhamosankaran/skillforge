@@ -50,7 +50,7 @@ from app.models.subscription import Subscription
 from app.models.tracker_application_score import TrackerApplicationScore
 from app.models.user import User
 from app.schemas.pro_digest import DigestPayload, SendSummary
-from app.services import email_log_service, email_service
+from app.services import career_intent_service, email_log_service, email_service
 
 logger = logging.getLogger(__name__)
 
@@ -99,15 +99,24 @@ async def compose_digest(
     """Build the per-user payload from existing tables.
 
     Returns ``None`` per §12 D-7 strict empty-rule when ALL of
-    (cards_due == 0, !mission_active, last_scan_score is None).
+    (cards_due == 0, !mission_active, last_scan_score is None,
+    aggregate_intent_block is None). Spec #67 §6.3 extends the rule
+    additively — a CC user with no cards / mission / scan but WITH a
+    current intent + ≥10 cohort still receives the digest.
     """
     cards_due = await _count_cards_due(db, user.id)
     streak = await _get_streak(db, user.id)
     mission_active, mission_days_left = await _mission_info(db, user.id)
     last_scan_score, last_scan_delta = await _last_scan_info(db, user.id)
+    aggregate_intent_block = await _aggregate_intent_block(db, user.id)
 
-    # §12 D-7 strict empty-rule.
-    if cards_due == 0 and not mission_active and last_scan_score is None:
+    # §12 D-7 strict empty-rule (extended by spec #67 §6.3).
+    if (
+        cards_due == 0
+        and not mission_active
+        and last_scan_score is None
+        and aggregate_intent_block is None
+    ):
         return None
 
     return DigestPayload(
@@ -120,7 +129,38 @@ async def compose_digest(
         mission_days_left=mission_days_left,
         last_scan_score=last_scan_score,
         last_scan_delta=last_scan_delta,
+        aggregate_intent_block=aggregate_intent_block,
     )
+
+
+async def _aggregate_intent_block(db: AsyncSession, user_id: str):
+    """Spec #67 §6.5 — wraps career_intent reads in try/except so a DB
+    timeout cannot block the digest send. Returns None on failure, fires
+    ``pro_digest_intent_aggregate_failed`` for ops visibility.
+    """
+    try:
+        intent = await career_intent_service.get_current_intent(db, user_id)
+        if intent is None:
+            return None
+        return await career_intent_service.get_aggregate_stats(
+            db, intent.target_role, intent.target_quarter
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "pro_digest aggregate_intent_block failed for user %s: %s",
+            user_id,
+            exc,
+        )
+        analytics_track(
+            user_id,
+            "pro_digest_intent_aggregate_failed",
+            {
+                "user_id": user_id,
+                "error_class": type(exc).__name__,
+                "internal": True,
+            },
+        )
+        return None
 
 
 async def _count_cards_due(db: AsyncSession, user_id: str) -> int:
@@ -230,6 +270,12 @@ def _build_html(payload: DigestPayload) -> str:
     cards_section_style = "" if payload.cards_due > 0 else "display:none;"
     mission_section_style = "" if payload.mission_active else "display:none;"
     scan_section_style = "" if payload.last_scan_score is not None else "display:none;"
+    intent_section_style = (
+        "" if payload.aggregate_intent_block is not None else "display:none;"
+    )
+    intent_role_label, intent_copy = _intent_block_copy(
+        payload.aggregate_intent_block
+    )
 
     streak_unit = "day" if payload.streak == 1 else "days"
 
@@ -257,6 +303,9 @@ def _build_html(payload: DigestPayload) -> str:
         "{{cards_section_style}}": cards_section_style,
         "{{mission_section_style}}": mission_section_style,
         "{{scan_section_style}}": scan_section_style,
+        "{{intent_section_style}}": intent_section_style,
+        "{{intent_role_label}}": intent_role_label,
+        "{{intent_copy}}": intent_copy,
         "{{study_link}}": study_link,
         "{{prefs_link}}": prefs_link,
     }
@@ -264,6 +313,47 @@ def _build_html(payload: DigestPayload) -> str:
     for key, value in replacements.items():
         out = out.replace(key, value)
     return out
+
+
+_ROLE_LABELS: dict[str, str] = {
+    "staff": "Staff",
+    "senior_staff": "Senior Staff",
+    "principal": "Principal",
+    "distinguished": "Distinguished",
+    "em": "Engineering Manager",
+    "sr_em": "Senior EM",
+    "director": "Director",
+}
+
+
+def _intent_block_copy(block) -> tuple[str, str]:
+    """Spec #67 §8.5 — aggregate-only copy for the intent block.
+
+    Privacy contract: copy uses ONLY aggregate phrasing (§8.5 ban list
+    enforced via snapshot test). Returns ``("", "")`` when no block, so
+    the template substitution leaves the section visually empty (its
+    ``display:none`` style hides the wrapper in that case).
+    """
+    if block is None:
+        return "", ""
+    role_label = _ROLE_LABELS.get(block.target_role, block.target_role)
+    parts = [
+        f"{share.percent_of_study_time:g}% on {share.category_name}"
+        for share in block.top_categories
+    ]
+    if not parts:
+        return role_label, ""
+    if len(parts) == 1:
+        joined = parts[0]
+    elif len(parts) == 2:
+        joined = f"{parts[0]} and {parts[1]}"
+    else:
+        joined = ", ".join(parts[:-1]) + f", and {parts[-1]}"
+    copy = (
+        f"Engineers targeting {role_label} this quarter spend {joined} "
+        f"of study time."
+    )
+    return role_label, copy
 
 
 # ── Orchestrator (§6.5, §12 D-8/D-10/D-11) ──────────────────────────────────
@@ -401,10 +491,33 @@ async def send_pro_digest(db: AsyncSession) -> SendSummary:
                 "streak": payload.streak,
                 "has_mission": payload.mission_active,
                 "has_recent_scan": payload.last_scan_score is not None,
+                "has_aggregate_block": payload.aggregate_intent_block
+                is not None,
                 "resend_id": resend_id,
                 "internal": True,
             },
         )
+
+        # Spec #67 §9.1 + D-13 — fire ONLY on actual send-success path,
+        # gated on aggregate block being present in the payload.
+        if payload.aggregate_intent_block is not None:
+            block = payload.aggregate_intent_block
+            top_category = (
+                block.top_categories[0].category_name
+                if block.top_categories
+                else None
+            )
+            analytics_track(
+                user.id,
+                "career_intent_email_block_rendered",
+                {
+                    "target_role": block.target_role,
+                    "target_quarter": block.target_quarter,
+                    "cohort_size": block.cohort_size,
+                    "top_category": top_category,
+                    "internal": True,
+                },
+            )
 
     # Caller owns transaction commit (mirrors slice 6.0
     # ``analytics_event_service`` / slice 6.13 ``email_log_service``

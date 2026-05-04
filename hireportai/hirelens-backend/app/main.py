@@ -31,6 +31,7 @@ from app.api.v1.routes import (
     analyze as v1_analyze,
     auth as v1_auth,
     cards as v1_cards,
+    career_intent as v1_career_intent,
     cover_letter as v1_cover_letter,
     dashboard as v1_dashboard,
     decks as v1_decks,
@@ -139,6 +140,9 @@ def create_app() -> FastAPI:
     # v1 routers — /api/v1/*
     app.include_router(v1_auth.router, prefix="/api/v1", tags=["v1 Auth"])
     app.include_router(v1_users.router, prefix="/api/v1", tags=["v1 Users"])
+    app.include_router(
+        v1_career_intent.router, prefix="/api/v1", tags=["v1 Career Intent"]
+    )
     app.include_router(v1_admin.router, prefix="/api/v1", tags=["v1 Admin"])
     app.include_router(
         v1_admin_analytics.router, prefix="/api/v1", tags=["v1 Admin Analytics"]
