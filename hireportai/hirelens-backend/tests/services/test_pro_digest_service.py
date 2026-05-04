@@ -236,10 +236,26 @@ async def test_select_candidates_includes_pro_users_with_no_email_preference_row
 
 
 async def test_compose_digest_populates_all_fields_when_present(db_session):
+    # Pin the service's "today" so mission_days_left is deterministic
+    # regardless of the runner's UTC clock position (B-124 — was off-by-one
+    # when local date and UTC date crossed midnight).
+    fixed_today = date(2026, 5, 1)
+    fixed_now = datetime(2026, 5, 1, 12, 0, 0, tzinfo=timezone.utc)
+
     user = await _seed_pro_user(db_session)
     await _seed_card_due(db_session, user.id)
     await _seed_streak(db_session, user.id, streak=7)
-    await _seed_mission(db_session, user.id, days_left=5)
+    db_session.add(
+        Mission(
+            id=str(uuid.uuid4()),
+            user_id=user.id,
+            title="Test mission",
+            target_date=fixed_today + timedelta(days=5),
+            daily_target=10,
+            status="active",
+        )
+    )
+    await db_session.flush()
     await _seed_scan(
         db_session,
         user.id,
@@ -253,7 +269,9 @@ async def test_compose_digest_populates_all_fields_when_present(db_session):
         scanned_at=datetime.now(timezone.utc),
     )
 
-    payload = await pro_digest_service.compose_digest(user, db_session)
+    with patch("app.services.pro_digest_service.datetime") as mock_dt:
+        mock_dt.now.return_value = fixed_now
+        payload = await pro_digest_service.compose_digest(user, db_session)
 
     assert payload is not None
     assert payload.user_id == user.id
