@@ -1,6 +1,6 @@
 # P5-S66 — Live loop-progress strip in AppShell (Interview-Prepper)
 
-## Status: 🔴 Drafted
+## Status: 🟡 §12 amendment landed — D-1..D-14 locked (impl-ready)
 
 | Field | Value |
 |-------|-------|
@@ -173,7 +173,7 @@ class LoopProgressResponse(BaseModel):
 - Tracker has no scans → `days_since_last_scan = None`; step 1 renders as "future" (shouldn't fire if `next_interview != null`, but defensive).
 - Tracker not owned by user → 404.
 
-**Service location:** new method `compute_loop_progress(user_id, tracker_id, db)` in `app/services/learning_progress_service.py` (new file). Mapping logic: read `skills_missing` from latest `tracker_applications_v2` row → look up cards in matching categories OR cards with matching tags (locked at §14 OQ-3) → count + intersect with `card_progress.user_id`.
+**Service location:** new method `compute_loop_progress(user_id, tracker_id, db)` in `app/services/learning_progress_service.py` (new file). Mapping logic: read `skills_missing` from latest `tracker_applications_v2` row → look up cards in matching categories (locked at §12 D-3 — category lookup only this slice; card-tag lookup is forward work) → count + intersect with `card_progress.user_id`.
 
 **Caching:** none this slice (in-process compute is cheap; ~50ms for typical 10 gap × 5 cards/gap = 50 cards). Future Redis cache mirrors `home_state_service` pattern if needed.
 
@@ -230,14 +230,14 @@ The **render gate is conservative** — partial-data states (e.g., `useScoreHist
 |------|--------|-------------|
 | 1 — **Scanned** | `useScoreHistory(next_interview.tracker_id)` | If history is empty → `'future'`. Otherwise → `'done'` with subline `"<latest_score>%"` (latest = `history[history.length - 1].overall_score`). |
 | 2 — **Studying** | `useLoopProgress(next_interview.tracker_id)` (new hook wrapping new endpoint) | If `total_gap_cards === 0` OR step 1 is `'future'` → `'future'`. Else if `percent_reviewed < 50` → `'current'` with subline `"<reviewed>/<total>"`. Else → `'done'`. |
-| 3 — **Re-scan** | derived from step 2 state + `days_since_last_scan` | If step 2 is not `'done'` OR `days_since_last_scan == null` OR `days_since_last_scan < 3` → `'locked'`. Else if a re-scan has not happened since the last lock-flip → `'current'` (clickable). Else → `'done'` (a fresh score row exists post-unlock; deciding "post-unlock" requires comparing `history[history.length - 1].scanned_at` with the slice's last unlock-time. Locked at §14 OQ-1.) |
+| 3 — **Re-scan** | derived from step 2 state + `days_since_last_scan` | If step 2 is not `'done'` OR `days_since_last_scan == null` OR `days_since_last_scan < 3` → `'locked'`. Else if a re-scan has not happened since the last lock-flip → `'current'` (clickable). Else → `'done'` (per §12 D-1: score-history-row-count heuristic — `score_history.length >= 2 AND step 2 == 'done'` ⇒ step 3 == 'done'; no persistence of unlock-time required). |
 | 4 — **Interview** | `next_interview.date` | Compute `days = ceil((targetMidnightUtc - todayMidnightUtc) / 86400000)`. If `days < 0` → `'alert'` with subline `"Overdue"`. Else if `days <= 7` → `'current'` with subline `"in <days>d"`. Else → `'future'` with subline `"in <days>d"`. (Step 4 is never `'done'` until the interview date passes; per design, a passed interview becomes `'alert'` not `'done'` because the user did not mark the interview complete — capture is forward-filed to E-052/E-053 territory.) |
 
 ### 8.3 Visual rendering (compact mode)
 
 When `compact={true}`, LoopFrame:
 - Reduces vertical padding from `p-4` to `p-2` (≈64px → ≈48px total height at md+).
-- On `<md`: hides sublines, shows icon + step label only, vertically stacked compresses to `~48px` per step total ≈ 192px on mobile (acceptable per §14 OQ-2).
+- On `<md` per §12 D-2: icon-only single-row layout (~56px viewport take); the 4-step stacked variant (~192px) was rejected as too aggressive.
 - At `md+`: keeps sublines (sublines are short — score%, gap-count, "in Nd").
 
 `alert` state (step 4 overdue): icon + label rendered with `text-danger` + `border-border-danger`. New token mapping if `border-border-danger` does not exist (verify in design-tokens.ts at impl); fallback to `border-danger`.
@@ -286,7 +286,7 @@ function handleStepClick(step: LoopFrameStep) {
 
 ### 9.2 Existing events unchanged
 
-- `loop_frame_rendered` (spec #64) — continues firing on Results.tsx mount with `surface: 'results'`. New `surface: 'appshell'` value is **available** in the union but `<LoopFrame>` will NOT fire `loop_frame_rendered` from the AppShell mount — the strip fires its own `loop_strip_rendered` event instead. To prevent double-counting, LoopProgressStrip uses LoopFrame's existing `surface` prop for layout but **suppresses** the `loop_frame_rendered` analytics fire when `surface === 'appshell'`. (Implementation note: gate the `useEffect` analytics fire on `surface !== 'appshell'`.) See §14 OQ-4 for the alternative.
+- `loop_frame_rendered` (spec #64) — continues firing on Results.tsx mount with `surface: 'results'`. New `surface: 'appshell'` value is **available** in the union but `<LoopFrame>` will NOT fire `loop_frame_rendered` from the AppShell mount — the strip fires its own `loop_strip_rendered` event instead. To prevent double-counting, LoopProgressStrip uses LoopFrame's existing `surface` prop for layout but **suppresses** the `loop_frame_rendered` analytics fire when `surface === 'appshell'`. (Implementation note: gate the `useEffect` analytics fire on `surface !== 'appshell'`.) Locked at §12 D-4.
 - `home_status_hero_rendered` (spec #65) — unchanged.
 - `home_state_evaluated` (spec #40) — unchanged.
 
@@ -357,7 +357,23 @@ function handleStepClick(step: LoopFrameStep) {
 
 ## 12. Locked Decisions
 
-*(EMPTY — placeholder for §12 amendment slice mirroring slice 6.0/6.4.5/6.5/6.6/6.7/6.14/6.15/spec-#64 precedent. The §12 amendment slice locks D-1..D-N from the §14 OQs after Dhamo disposition. Impl slice picks up post-amendment.)*
+D-1..D-14 lock the §14 OQ-1..OQ-14 author-hint defaults 1:1 (Dhamo
+single-admin disposition; zero ambiguous hints).
+
+- **D-1 — Step 3 'completed' detection:** score-history-row-count heuristic — `score_history.length >= 2 AND step 2 == 'done'` ⇒ step 3 == 'done'. No persistence of unlock-time required.
+- **D-2 — Mobile strip layout:** icon-only single-row at `<md` (~56px viewport take); full-card stacked at `md+`. The 192px stacked variant on mobile is rejected as too aggressive.
+- **D-3 — Gap-card mapping:** skill-name → category lookup only this slice (matches `MissingSkillsPanel` precedent / spec #22). Card-tag lookup is forward work; implementer verifies the live mapping at impl Step 1.
+- **D-4 — `loop_frame_rendered` suppression at appshell surface:** suppress per §9.2 — gate the `useEffect` analytics fire on `surface !== 'appshell'`. The AppShell mount fires `loop_strip_rendered` instead.
+- **D-5 — Step 3 unlock predicate constants:** hardcoded for v1 (`MIN_DAYS_SINCE_SCAN = 3`, `MIN_PERCENT_REVIEWED = 50`). Env-tunable promotion is post-launch only, gated on telemetry showing the constants are wrong.
+- **D-6 — Step 4 'alert' styling:** verify `border-border-danger` token presence at impl Step 1. If absent, use existing `border-danger`; add the new token only if other widgets need it (avoid one-callsite token bloat).
+- **D-7 — Refire on `next_interview` flip:** once per mount via `useRef` keyed on `tracker_id`. Navigation away/back is a fresh mount and DOES refire by design (mount-level idempotency, not session-level).
+- **D-8 — Strip mount placement:** sibling below `<TopNav />` (per §4.2 architecture). TopNav is ARIA-labelled `nav`; embedding a non-nav strip inside breaks semantics.
+- **D-9 — Render gate when latest scan is on a different tracker:** render with step 1 as `'future'` anyway. The strip is per-interview; a scan on another tracker doesn't help this interview. Future state funnel-pushes back to `/prep/analyze`.
+- **D-10 — `current_step` analytics property derivation:** lowest index whose state is `'current'`; fall back to `'alert'` (numeric `4`) if step 4 is alert with no other current; fall back to numeric `4` if everything else is `'done'`. Helper locked in §8.4 `deriveCurrentStep`.
+- **D-11 — `compact` prop vs implied by `surface`:** explicit `compact` prop. `surface` stays a pure analytics-marker; layout decisions are layout-driven.
+- **D-12 — `loop_strip_step_completed` Strict Mode handling:** same pattern as `home_status_hero_rendered`'s `useRef<boolean>` — per-step `useRef<boolean>` OR a single `useRef<Set<LoopFrameStep>>`. Idempotent under React Strict Mode's double-invoked effects.
+- **D-13 — New BE endpoint URL:** `GET /api/v1/learn/loop-progress?tracker_id={id}` flat with query param. Matches `/api/v1/learn/dashboard` precedent (spec #09 phase-6 dashboard).
+- **D-14 — `useLoopProgress` error → step 2 'future' → step 3 cannot unlock:** yes, by design. Without progress data the strip cannot safely unlock step 3. User can refresh to retry. Documented as a known limitation; not a bug.
 
 ---
 
@@ -379,22 +395,25 @@ function handleStepClick(step: LoopFrameStep) {
 
 ## 14. Open questions
 
-| # | Question | Author hint / default |
-|---|----------|------------------------|
-| OQ-1 | How does the strip know step 3 has been "completed" (re-scan happened post-unlock) vs "still current"? Proposal: compare `history[history.length - 1].scanned_at` with the timestamp of the step-3 unlock event. Alternative: count score-history rows; if `>= 2` AND `percent_reviewed >= 50`, step 3 is done. | Default = score-history-row-count heuristic (≥2 rows AND step 2 done = step 3 done). Cleaner; doesn't require persistence of unlock-time. |
-| OQ-2 | Mobile strip layout: 4 steps stacked vertically (~48px each = ~192px viewport take) vs single-row icon-only with truncated label (~56px take)? | Default = icon-only single-row at <md, full-card stacked at md+. 192px on mobile is too aggressive; 56px is acceptable. |
-| OQ-3 | Gap-card mapping: skill-name → category lookup OR skill-name → card-tag lookup OR both? | Default = category lookup matches the live `MissingSkillsPanel` precedent (spec #22); card-tag lookup is forward work. Implementer should verify the live mapping at impl Step 1. |
-| OQ-4 | Suppress `loop_frame_rendered` when `surface='appshell'` (§9.2) vs let both events fire vs rename `loop_frame_rendered` to `loop_strip_rendered` only on appshell surface? | Default = suppress per §9.2. Two events with overlapping semantics dilutes funnels. |
-| OQ-5 | Step 3 unlock predicate constants — `MIN_DAYS_SINCE_SCAN=3` and `MIN_PERCENT_REVIEWED=50` — env-tunable (per `d19103c` precedent) or hardcoded constants? | Default = hardcoded for v1; env-tunable post-launch if telemetry shows they're wrong. |
-| OQ-6 | Step 4 "alert" styling — does `border-border-danger` token exist? If not, add to design-tokens.ts vs use existing `border-danger`. | Verify at impl Step 1; add token only if mostly used elsewhere. |
-| OQ-7 | If the user's `next_interview` flips (different tracker becomes nearest), does the strip refire `loop_strip_rendered` for the new tracker? Or is once-per-mount enough? | Default = once per mount, `useRef` keyed on `tracker_id` so navigation away/back DOES refire (mount-level). |
-| OQ-8 | Should `LoopProgressStrip` mount inside `<TopNav>` (so it inherits z-index / sticky behavior) or as a sibling below it? | Default = sibling below (per §4.2). TopNav is ARIA-labelled `nav`; embedding a non-nav strip inside breaks semantics. |
-| OQ-9 | When step 1 is `'future'` (no scan exists for `next_interview.tracker_id`) but `homeState.context.last_scan_date` is non-null (a scan exists for a DIFFERENT tracker), should the strip render at all? | Default = render with step 1 as 'future' anyway. The strip is per-interview; a scan on another tracker doesn't help this interview. The user is funnel-pushed back to `/prep/analyze` via the future state. |
-| OQ-10 | Is `loop_strip_rendered`'s `current_step` property always the lowest non-future index, or the lowest non-locked-non-future, or the highest done+1? | Default = lowest index whose state is `'current'`, falling back to `'alert'` if step 4 alert and no other current, falling back to step 4 index `4` if everything else is `'done'`. Locked in §8.4 `deriveCurrentStep`. |
-| OQ-11 | Does `LoopFrame.compact` warrant a separate prop or could it be implied by `surface === 'appshell'`? | Default = explicit `compact` prop. Keeps surface a pure analytics-marker; layout decisions stay layout-driven. |
-| OQ-12 | `loop_strip_step_completed` per-step `useRef<Set>` — how does it interact with React Strict Mode's double-invoked effects in dev? | Default = same pattern as `home_status_hero_rendered`'s `useRef<boolean>` — per-step useRef boolean OR a single `useRef<Set<step>>`. Idempotent under double-invoke. |
-| OQ-13 | New BE endpoint URL: `GET /api/v1/learn/loop-progress` (`/learn` namespace) or `GET /api/v1/tracker/{tracker_id}/loop-progress` (RESTful nesting)? | Default = `/learn/loop-progress?tracker_id={id}` flat with query param; matches `/api/v1/learn/dashboard` precedent (spec #09 phase-6 dashboard). |
-| OQ-14 | If `useLoopProgress` errors (BE 500), step 2 falls back to `'future'`. Does that prevent step 3 from ever unlocking? | Default = yes, by design — without progress data we can't safely unlock step 3. User can refresh to retry. Documented as known limitation. |
+All 14 OQs RESOLVED at this slice's §12 amendment (single-admin
+disposition; author-hint defaults accepted 1:1).
+
+| # | Question | Status |
+|---|----------|--------|
+| OQ-1 | How does the strip know step 3 has been "completed" (re-scan happened post-unlock) vs "still current"? | → Locked at §12 D-1. |
+| OQ-2 | Mobile strip layout: 4 steps stacked vertically vs single-row icon-only? | → Locked at §12 D-2. |
+| OQ-3 | Gap-card mapping: skill-name → category lookup OR skill-name → card-tag lookup OR both? | → Locked at §12 D-3. |
+| OQ-4 | Suppress `loop_frame_rendered` when `surface='appshell'`? | → Locked at §12 D-4. |
+| OQ-5 | Step 3 unlock predicate constants — env-tunable or hardcoded? | → Locked at §12 D-5. |
+| OQ-6 | Step 4 "alert" styling — does `border-border-danger` token exist or use `border-danger`? | → Locked at §12 D-6. |
+| OQ-7 | If `next_interview` flips, does the strip refire `loop_strip_rendered` for the new tracker? | → Locked at §12 D-7. |
+| OQ-8 | Should `LoopProgressStrip` mount inside `<TopNav>` or as a sibling below it? | → Locked at §12 D-8. |
+| OQ-9 | When step 1 is `'future'` for `next_interview.tracker_id` but a scan exists on a DIFFERENT tracker, should the strip render? | → Locked at §12 D-9. |
+| OQ-10 | Is `loop_strip_rendered`'s `current_step` the lowest non-future / lowest non-locked-non-future / highest done+1? | → Locked at §12 D-10. |
+| OQ-11 | Does `LoopFrame.compact` warrant a separate prop or could it be implied by `surface === 'appshell'`? | → Locked at §12 D-11. |
+| OQ-12 | `loop_strip_step_completed` per-step `useRef<Set>` — how does it interact with React Strict Mode's double-invoked effects? | → Locked at §12 D-12. |
+| OQ-13 | New BE endpoint URL: `/api/v1/learn/loop-progress` flat or `/api/v1/tracker/{id}/loop-progress` nested? | → Locked at §12 D-13. |
+| OQ-14 | If `useLoopProgress` errors, does step 2 falling back to `'future'` prevent step 3 from ever unlocking? | → Locked at §12 D-14. |
 
 ---
 
@@ -413,4 +432,4 @@ Test files (see §10.3):
 
 ---
 
-*End of spec #66. Implementation begins after §12 amendment slice locks D-1..D-N from the §14 OQs (mirrors slice 6.0/6.4.5/6.5/6.6/6.7/6.14/6.15/spec-#64 precedent).*
+*End of spec #66. §12 amendment landed — D-1..D-14 locked. Implementation begins next slice (B-122 impl pickup).*
