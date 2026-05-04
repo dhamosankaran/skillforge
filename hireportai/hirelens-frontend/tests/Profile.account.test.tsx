@@ -64,6 +64,7 @@ vi.mock('@/components/progress/ActivityHeatmap', () => ({ ActivityHeatmap: () =>
 vi.mock('@/components/settings/EmailPreferences', () => ({ EmailPreferences: () => null }))
 vi.mock('@/components/settings/ThemePicker', () => ({ ThemePicker: () => null }))
 vi.mock('@/components/profile/XPBar', () => ({ XPBar: () => null }))
+vi.mock('@/components/profile/CareerGoalSection', () => ({ CareerGoalSection: () => null }))
 vi.mock('@/components/layout/PageWrapper', () => ({
   PageWrapper: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))

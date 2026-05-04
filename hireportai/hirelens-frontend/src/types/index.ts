@@ -171,6 +171,23 @@ export interface LoopProgressResponse {
   days_since_last_scan: number | null
 }
 
+// ─── Spec #67 — Career-Climber role-intent capture ──────────────────────────
+
+/** Mirrors `app/schemas/career_intent.CareerIntentResponse` (BE / spec §5.3). */
+export interface CareerIntent {
+  id: string
+  user_id: string
+  target_role: string
+  target_quarter: string
+  created_at: string
+  superseded_at: string | null
+}
+
+export interface CareerIntentCreateRequest {
+  target_role: string
+  target_quarter: string
+}
+
 // ─── Study / Cards ────────────────────────────────────────────────────────────
 
 export interface Category {

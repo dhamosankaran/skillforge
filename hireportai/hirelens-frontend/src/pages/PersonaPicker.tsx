@@ -1,10 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import toast from 'react-hot-toast'
 import { Target, Flame, Users } from 'lucide-react'
 import { useAuth, type Persona } from '@/context/AuthContext'
-import { updatePersona } from '@/services/api'
+import { setCareerIntent, updatePersona } from '@/services/api'
 import { capture } from '@/utils/posthog'
+import {
+  CAREER_ROLES,
+  CAREER_ROLE_LABELS,
+  quarterOptions,
+} from '@/utils/careerIntent'
 import { FIRST_ACTION_SEEN_KEY } from '@/pages/FirstAction'
 
 // Spec #53 OD-3: inline whitelist for the `?return_to=` URL param. Any path
@@ -68,8 +74,11 @@ export default function PersonaPicker() {
   )
   const [targetDate, setTargetDate] = useState('')
   const [targetCompany, setTargetCompany] = useState('')
+  const [ccTargetRole, setCcTargetRole] = useState('')
+  const [ccTargetQuarter, setCcTargetQuarter] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const ccQuarters = useMemo(() => quarterOptions(new Date()), [])
 
   useEffect(() => {
     capture('persona_picker_shown', { is_new_user: user?.persona == null })
@@ -111,6 +120,28 @@ export default function PersonaPicker() {
         capture('interview_target_date_added', {
           source: returnTo ? 'persona_edit' : 'onboarding',
         })
+      }
+      // Spec #67 §8.1 — CC career-intent capture. Optional both fields;
+      // post only when both are filled (BE requires both). Failure does
+      // NOT block navigation — user can re-set from Profile (AC-21).
+      if (
+        selected === 'career_climber' &&
+        ccTargetRole &&
+        ccTargetQuarter
+      ) {
+        try {
+          await setCareerIntent(
+            { target_role: ccTargetRole, target_quarter: ccTargetQuarter },
+            'persona_picker',
+          )
+          capture('career_intent_captured', {
+            target_role: ccTargetRole,
+            target_quarter: ccTargetQuarter,
+            source: 'persona_picker',
+          })
+        } catch {
+          toast.error('Goal not saved — set it from Profile.')
+        }
       }
       updateUser(updated)
       if (returnTo) {
@@ -244,6 +275,66 @@ export default function PersonaPicker() {
                   <div className="mt-1 flex items-center justify-between text-xs text-text-muted">
                     <span>Optional — e.g. Google in 14 days.</span>
                     <span>{targetCompany.length}/100</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+          {selected === 'career_climber' && (
+            <motion.div
+              key="cc-extras"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.25 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-4 p-4 rounded-xl border border-border bg-bg-surface flex flex-col gap-3">
+                <div>
+                  <label
+                    htmlFor="cc-target-role"
+                    className="block text-xs font-medium text-text-secondary mb-1"
+                  >
+                    Target role
+                  </label>
+                  <select
+                    id="cc-target-role"
+                    data-testid="cc-target-role-input"
+                    value={ccTargetRole}
+                    onChange={(e) => setCcTargetRole(e.target.value)}
+                    className="w-full px-3 py-2 rounded-md border border-border bg-bg-base text-text-primary text-sm outline-none focus:border-border-accent"
+                  >
+                    <option value="">Optional — pick later from Profile</option>
+                    {CAREER_ROLES.map((role) => (
+                      <option key={role} value={role}>
+                        {CAREER_ROLE_LABELS[role]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label
+                    htmlFor="cc-target-quarter"
+                    className="block text-xs font-medium text-text-secondary mb-1"
+                  >
+                    Target quarter
+                  </label>
+                  <select
+                    id="cc-target-quarter"
+                    data-testid="cc-target-quarter-input"
+                    value={ccTargetQuarter}
+                    onChange={(e) => setCcTargetQuarter(e.target.value)}
+                    className="w-full px-3 py-2 rounded-md border border-border bg-bg-base text-text-primary text-sm outline-none focus:border-border-accent"
+                  >
+                    <option value="">Optional — pick later from Profile</option>
+                    {ccQuarters.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="mt-1 text-xs text-text-muted">
+                    We'll use this for peer-aspirational copy in your daily digest.
                   </div>
                 </div>
               </div>

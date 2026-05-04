@@ -10,6 +10,8 @@ import type {
   AdminLessonStatusFilter,
   AdminQuizItemStatusFilter,
   AnalysisResponse,
+  CareerIntent,
+  CareerIntentCreateRequest,
   LoopProgressResponse,
   ScoreHistoryResponse,
   Card,
@@ -1033,6 +1035,35 @@ export async function triggerRescan(
     },
   )
   return response.data
+}
+
+// ─── Spec #67 — Career-Climber role-intent capture ──────────────────────────
+
+export async function setCareerIntent(
+  body: CareerIntentCreateRequest,
+  source?: 'persona_picker' | 'profile_edit',
+): Promise<CareerIntent> {
+  const response = await api.post<CareerIntent>(
+    '/api/v1/users/me/career-intent',
+    body,
+    source ? { headers: { 'X-Capture-Source': source } } : undefined,
+  )
+  return response.data
+}
+
+/** Returns the user's current intent, or null when none exists (404). */
+export async function getCareerIntent(): Promise<CareerIntent | null> {
+  // 404 is the expected "no intent" path; treat as success so the response
+  // interceptor doesn't toast a "No current career intent" error.
+  const response = await api.get<CareerIntent>('/api/v1/users/me/career-intent', {
+    validateStatus: (status) => (status >= 200 && status < 300) || status === 404,
+  })
+  if (response.status === 404) return null
+  return response.data
+}
+
+export async function clearCareerIntent(): Promise<void> {
+  await api.delete('/api/v1/users/me/career-intent')
 }
 
 export default api

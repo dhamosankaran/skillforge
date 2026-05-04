@@ -21,6 +21,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Flame, Lock, Trophy, BookOpen, Sparkles, Radar, CalendarDays, Settings, FileText, Copy, Check, Loader2, CreditCard, LogOut } from 'lucide-react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
+import { CareerGoalSection } from '@/components/profile/CareerGoalSection'
 import { XPBar } from '@/components/profile/XPBar'
 import { useGamification } from '@/context/GamificationContext'
 import { useAuth } from '@/context/AuthContext'
@@ -356,6 +357,9 @@ export default function Profile() {
         <section>
           <ThemePicker />
         </section>
+
+        {/* ── Career goal (CC personas only — spec #67 §8.2) ────── */}
+        {user?.persona === 'career_climber' && <CareerGoalSection />}
 
         {/* ── Subscription ──────────────────────────────────────── */}
         <section data-testid="subscription-section">
