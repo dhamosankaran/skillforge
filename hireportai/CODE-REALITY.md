@@ -9,38 +9,56 @@
 
 | Field | Value |
 |-------|-------|
-| Commit sha (short) | `ac0466c` (B-110 — full regen at this HEAD; closes B-110). **Scope:** all 13 sections regenerated against on-disk filesystem enumeration. **Prior anchor:** `246b4ec` (targeted regen 2026-05-02, B-096 absorption). **Raw gap:** 27 commits. **Code-touching slice closes in window:** 2 — `bcd89ce` (B-098 slice 6.14 — daily Pro digest cron impl: Railway cron + composer + CLI script + email template + 4 PostHog events; first scheduled job in codebase per LD G2), `e36902c` (B-102 slice 6.15 — legacy retirement easy-wins refactor: `DailyStatus` lifted to `app/schemas/daily_status.py` w/ back-compat re-export + `_next_local_midnight` deduped to `app/utils/local_time.py` w/ public rename + `study_dashboard_viewed` analytics catalog row hard-deleted). Process commits in window: B-097 + B-099 (slice 6.14 spec-author + §12 amendment), B-101 + B-103 (slice 6.15 spec-author + §12 amendment), B-100 (Phase 6 cleanup triage audit), B-105..B-109 (chat-sync sentinel + R14 spec-length governance + R16 scout-first amendment + process-tax health-check metric + RC archive cut bundle), 10 SHA-backfill commits. |
-| Branch | `main` — pushed to `origin/main` at `ac0466c` (this slice's predecessor). 57-commit local-vs-origin gap closed at `9f48cfd..ac0466c` push. |
-| Generated | 2026-05-02 (full regen at HEAD `ac0466c`). 27-commit raw gap with 2 code-touching slice closes; **full-scope regen** per prompt — all 13 sections re-anchored. Cleared §11 verification anchor from `1ca046f` to `ac0466c`. |
-| Backend model files | **28** (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models`). **29** ORM model classes — `analytics_event.py` declares 2 (`QuizReviewEvent` + `LessonViewEvent`) + 27 single-class files. **Unchanged since `246b4ec`** — no new model files this window. |
-| Backend service files | **54** top-level (`app/services/*.py`, excl. `__init__.py`). **+1 since `246b4ec`**: `pro_digest_service.py` (B-098, `bcd89ce` — 451-line orchestrator: `select_candidates` Pro-tier+opt-out filter / `compose_digest` returning `DigestPayload | None` w/ strict empty-rule per §12 D-7 / `send_pro_digest` orchestrator w/ `was_sent_today` short-circuit + `IntegrityError` concurrent-tick handling + 4-event telemetry + sequential per-user loop). Plus `services/llm/` 3 files + `app/jobs/` 1 file unchanged. **Modified this window** (no new files): `study_service.py` + `quiz_item_study_service.py` (B-102 — `_next_local_midnight` helper deleted from both; 3 callsites flipped to import `next_local_midnight` from `app/utils/local_time.py`; unused `time`/`timedelta` imports cleaned). |
-| Backend schema files | **23** (`app/schemas/*.py`, excl. `__init__.py`). **+2 since `246b4ec`**: `pro_digest.py` (B-098 — 57-line `DigestPayload` + `SendSummary` Pydantic v2) + `daily_status.py` (B-102 — 28-line `DailyStatus` lifted byte-identically from `study.py` per spec #15 D-1; `study.py` keeps a thin back-compat re-export for slice-16 retirement gating). |
-| Backend router files | **36** total = **30** v1 + 6 legacy — **unchanged**. B-098 adds NO new HTTP route (Railway cron → CLI script `python -m app.scripts.send_pro_digest` → composer service); B-102 is internal refactor with zero route surface. |
-| Backend endpoints | **~92 unique decorators** — unchanged. The new daily Pro digest tick fires from a CLI entry point, not an authenticated route. |
-| Alembic revisions | **31** (Head = `c2b8a4d9e6f1`). **Unchanged since `246b4ec`** — zero new migrations this window. B-098 was deliberately migration-free (consumes B-087's `email_log` table + `daily_digest_opt_out` column). B-102 is application-layer refactor only. |
-| Frontend pages | **28** — unchanged. Zero FE files touched this window. |
-| Frontend components | **84** — unchanged. |
-| Frontend utils | **7** utility .ts files in `src/utils/` — unchanged. `services/api.ts` unchanged. |
-| Shared TS types | `src/types/index.ts` — unchanged. |
-| Frontend hooks | **21** (`src/hooks/*.ts`, excl. `__tests__`) — unchanged. |
-| Frontend context providers | 5 — unchanged. |
-| Skills (tracked) | **22** in `.agent/skills/*.md`. Unchanged count. **Content delta this window:** `analytics.md` +4 rows (`pro_digest_sent` / `pro_digest_skipped_dedup` / `pro_digest_skipped_empty` / `pro_digest_failed` per B-098 spec #14 §9.1) and `analytics.md` -1 row (`study_dashboard_viewed` hard-deleted per B-102 spec #15 D-5; zero code emitters confirmed pre-removal). |
+| Commit sha (short) | `192e97d` (B-128 — full regen at this HEAD; closes B-128). **Scope:** all 13 sections regenerated against on-disk filesystem enumeration. **Prior anchor:** `ac0466c` (full regen 2026-05-02, B-110 absorption). **Raw gap:** 57 commits. **Code-touching slice closes in window: 14** — `686a624` E-037 (Pro-tier auth + LLM rate limits hardening), `49aee35` B-008 (deprecated_route_hit telemetry — new `DeprecatedRedirect.tsx`), `0cb10ad` B-009 + B-013 (AGENTS.md — docs, no code), `c4132fb` B-006 + E-015 (settings audit verdict — no code), `ace4584` B-118 (AuthContext `refreshUser()` post-Stripe), `2ae9a69` B-117 (cancel-pending UI bundle — Profile + Pricing), `06ea5f6` B-116 (`customer.subscription.updated` webhook + alembic `c2ba25f1d9a7` adds `Subscription.cancel_at_period_end`), `3fbc252` B-115 (LastScanWidget Rules-of-Hooks crash fix), `7b09116` B-114 + E-033 + E-039 (Stripe SDK v14+ `.get()` → bracket-access hotfix), `5ee327e` B-113 (F-1 Pro short-circuit on /payments/checkout + F-5 STRIPE_* env vars), `b58a42d` B-119 + E-049 (static `<LoopFrame>` on Results), `58bb9a9` B-120 + E-050 (`<HomeStatusHero>` on /home), `261dc66` B-122 + E-051 (live `<LoopProgressStrip>` in AppShell + new `loop_progress_service` + new `GET /api/v1/learn/loop-progress`), `9082a7b` B-125a (career-intent BE half — new `user_career_intents` table + alembic `e052b125a4f1` + service + 3 routes + `pro_digest_service` extension), `e3fdf01` B-125 + E-052 (career-intent FE half — `<CareerGoalSection>` + PersonaPicker CC expansion + `careerIntent.ts` util + 3 api helpers). Process commits in window: B-006/008/009/011/012/013 (audit + docs), B-111/112 (Phase 6 + Stripe audit docs), B-119/120/121/122/123/124/125/126/127 spec-author + §12 amendment + hygiene clusters, 19 SHA-backfill commits. |
+| Branch | `main` — at `192e97d`. Local-vs-origin gap: 0 (push state was reconciled mid-session per `git status`). |
+| Generated | 2026-05-04 (full regen at HEAD `192e97d`). 57-commit raw gap with 14 code-touching slice closes; **full-scope regen** per prompt — all 13 sections re-anchored. Cleared §11 verification anchor from `ac0466c` to `192e97d`. |
+| Backend model files | **29** (`app/models/*.py`, excl. `__init__`, `request_models`, `response_models`). **30** ORM model classes — `analytics_event.py` declares 2 (`QuizReviewEvent` + `LessonViewEvent`) + 28 single-class files. **+1 since `ac0466c`**: `user_career_intent.py` (B-125a — append-only history table per spec #67 §5.1; `UserCareerIntent` UUID PK + user_id FK CASCADE + `target_role`/`target_quarter`/`created_at`/nullable `superseded_at` + 3 composite indexes). |
+| Backend service files | **56** top-level (`app/services/*.py`, excl. `__init__.py`). **+2 since `ac0466c`**: `loop_progress_service.py` (B-122 — `get_loop_progress(tracker_id, user_id, db)` per spec #66 §6.1 D-3 skill→category lookup; backs the AppShell loop-progress strip), `career_intent_service.py` (B-125a — `set_intent` append-only supersede + `get_current_intent` + `clear_intent` + `get_aggregate_stats` w/ `MIN_COHORT_SIZE=10` privacy-contract enforcement at the single entry point per spec #67 §4.4). Plus `services/llm/` 3 files + `app/jobs/` 1 file unchanged. **Modified this window:** `pro_digest_service.py` extended by B-125a (composer reads intent + aggregate; `_aggregate_intent_block` try/except → fires `pro_digest_intent_aggregate_failed`; `_build_html` adds `intent_section_style` + `intent_role_label` + `intent_copy` substitutions; send-success path fires `career_intent_email_block_rendered`). |
+| Backend schema files | **25** (`app/schemas/*.py`, excl. `__init__.py`). **+2 since `ac0466c`**: `loop_progress.py` (B-122 — `LoopProgressResponse`) + `career_intent.py` (B-125a — `CareerIntentCreate` w/ `ALLOWED_ROLES` frozenset validator + current-or-future quarter validator + `AggregateStats` + `CategoryShare` per spec §5.3/5.4 + D-11). |
+| Backend router files | **38** total = **32** v1 + 6 legacy — **+2 since `ac0466c`**: `loop_progress.py` (B-122 — 1 endpoint) + `career_intent.py` (B-125a — 3 endpoints; persona guard 422). |
+| Backend endpoints | **~99 unique decorators** (was ~95). +4 this window: `GET /api/v1/learn/loop-progress` (B-122) + `POST/GET/DELETE /api/v1/users/me/career-intent` (B-125a). |
+| Alembic revisions | **33** (Head = `e052b125a4f1`). **+2 since `ac0466c`**: `c2ba25f1d9a7` (B-116 — `Subscription.cancel_at_period_end Boolean NOT NULL server_default false`; backfill of 0 rows safe per nullable=False+default) + `e052b125a4f1` (B-125a — new `user_career_intents` table; down_revision `c2ba25f1d9a7` re-confirmed at impl Step 0 per disk truth, NOT spec §7's stale `f1a2b3c4d5e6` placeholder). |
+| Frontend pages | **28** (21 top-level + 7 under `pages/admin/`). **Unchanged file count** — slices this window mounted new components inside existing pages (PersonaPicker, Profile, Results, HomeDashboard, AppShell). |
+| Frontend components | **89** (excludes `*.test.tsx`). **+5 since `ac0466c`**: `dashboard/LoopFrame.tsx` (B-119 — 4-step "Scanned/Studying/Re-scan/Interview" strip), `home/HomeStatusHero.tsx` (B-120 — one-line persona-aware status sentence), `layout/LoopProgressStrip.tsx` (B-122 — live IP-only AppShell strip), `profile/CareerGoalSection.tsx` (B-125 — CC-gated Profile section), `DeprecatedRedirect.tsx` (B-008 — wraps `<Navigate replace>` + fires `deprecated_route_hit` once-on-mount; consumed by all 10 transitional redirects in `App.tsx`). |
+| Frontend utils | **8** utility .ts files in `src/utils/`. **+1 since `ac0466c`**: `careerIntent.ts` (B-125 — `CAREER_ROLES` frozen list + `CAREER_ROLE_LABELS` record + `quarterOptions(now, futureCount=7)` per D-4 + `quarterLabel(value)` formatter). `services/api.ts` extended (+3 helpers): `setCareerIntent` (POST + `X-Capture-Source` header per D-13) / `getCareerIntent` (404 → null via `validateStatus` so the response interceptor does NOT toast on the expected no-intent path) / `clearCareerIntent` (DELETE 204). |
+| Shared TS types | `src/types/index.ts` — **+3 exports**: `LoopProgressResponse` (mirrors BE `app/schemas/loop_progress.py` per spec #66 §5) + `CareerIntent` + `CareerIntentCreateRequest` (mirror `app/schemas/career_intent.py` per spec #67 §5.3). |
+| Frontend hooks | **22** (`src/hooks/*.ts`). **+1 since `ac0466c`**: `useLoopProgress.ts` (B-122 — fetches `LoopProgressResponse` for the AppShell strip; mirrors `useScoreHistory` shape). |
+| Frontend context providers | 5 — unchanged. `AuthContext.tsx` extended by B-118 (`refreshUser()` deduplicated re-fetch of `/auth/me` post-Stripe redirects; concurrent calls coalesce via `inflightRefresh.current`). |
+| Skills (tracked) | **22** in `.agent/skills/*.md`. Unchanged count. **Content delta this window:** `analytics.md` +9 rows across slices: `deprecated_route_hit` (B-008), `loop_frame_rendered` (B-119), `home_status_hero_rendered` (B-120), `loop_strip_rendered` + `loop_strip_step_clicked` + `loop_strip_rescan_unlocked` + `loop_strip_step_completed` (B-122), `career_intent_captured` + `career_intent_updated` + `career_intent_email_block_rendered` (B-125a/125), `pro_digest_sent.has_aggregate_block` property (B-125a §9.2), `pro_digest_intent_aggregate_failed` (B-125a §6.5). |
 | Skills (untracked) | 3 directory-style — unchanged (see §10 + §12 Q8). |
-| Prompts | `app/prompts/` 2 Markdown templates — unchanged. New email template `app/templates/pro_digest.html` (B-098, 43 lines, inline-style HTML w/ CSS-driven `display:none` for empty sections per §6.4) — separate from `app/prompts/`. |
-| Specs | **98 across 8 directories** (phase-0=6, phase-1=13, phase-2=8, phase-3=11, phase-4=6, phase-5=**37**, phase-6=**16**, process=**1**). **+2 since `246b4ec`**: `phase-6/14-daily-digest-cron.md` (B-097 spec-author `86bc442` + B-099 §12 amendment `b5bec37`) + `phase-6/15-legacy-retirement-easy-wins.md` (B-101 spec-author `b50a592` + B-103 §12 amendment `174e479`). **Prior CR's "process=2" claim corrected:** disk only ever held one file (`01-light-mode-reporting.md`); the slot-02 reservation was a forward-looking note, not an on-disk file. |
-| Tests | **BE 824** / **FE 466** (B-098 final report; B-102 closed at BE 849 in spec env, but CI-canonical baseline carries forward at 824 per prod-default env). +22 BE / +0 FE since `246b4ec` baseline (802 / 466). Marker-gated integration unchanged. **D-027** still tracking 5 env-var-cache-sensitive failures (carry-forward; see §11 #27). **D-028** alembic-roundtrip cascade unchanged at 15 (no chain extension this window). R14 exception (a) — regenerated audit artifact, no test runs this slice. |
+| Prompts | `app/prompts/` 2 Markdown templates — unchanged. `app/templates/pro_digest.html` extended by B-125a (4th conditional `<div data-section="intent">` block per spec #67 §8.5 D-7 — extends, does NOT fork). |
+| Specs | **102 across 8 directories** (phase-0=6, phase-1=13, phase-2=8, phase-3=11, phase-4=6, phase-5=**41**, phase-6=**16**, process=**1**). **+4 since `ac0466c`**, all phase-5: `64-results-loop-frame.md` (B-119 spec-author `8b70037` + §12 amended same impl commit `b58a42d`), `65-home-status-hero.md` (B-120 combined Mode-2 spec+impl `58bb9a9`), `66-appshell-loop-progress-strip.md` (B-122 spec-author `8dcdccd` + §12 amendment `042f92c`), `67-career-climber-role-intent.md` (B-125 spec-author `d407e6e` + §12 amendment `b2248d2`). |
+| Tests | **BE 823 passing / 64 failed** (B-127 hygiene measurement under prod-default env vars at HEAD `de226b9`; the 64 failures are D-027/D-028/D-032 cascade carry-forward — full-suite local runs surface the cascade pattern that B-125a's clean-env 877 measurement didn't reproduce). **FE 543 passing** (B-127 hygiene measurement; +77 since `ac0466c`'s 466 baseline: +6 deprecated-route, +10 LoopFrame, +12 HomeStatusHero, +22 LoopProgressStrip + AppShell, +13 career-intent FE half, +2 LastScanWidget regression, +14 misc B-117/118 + B-006 audit). R14 exception (a) — regenerated audit artifact, no test runs this slice. |
 
-**Slice absorption (this regen):** B-098 (slice 6.14 impl), B-102 (slice 6.15 refactor). Process slices in window: B-096 (the prior CR regen itself), B-097 + B-099 (slice 6.14 spec-author + §12 amendment), B-100 (Phase 6 cleanup triage audit producing the slice-15 + slice-16 split recommendation), B-101 + B-103 (slice 6.15 spec-author + §12 amendment), B-105 (chat-sync sentinel `scripts/chat-sync-check.sh`), B-106 (R14 spec-length governance amendment ≤800 target / 1200 JC trigger), B-107 (R16 scout-first amendment — live `rg`/`grep` over CR for precision queries), B-108 (`process-health-check.sh` 6th metric: process-tax ratio), B-109 (RC archive cut §8 — entries 6+ → `docs/archive/session-state-history.md`).
+**Slice absorption (this regen — code-touching, 14):** Stripe-launch cluster (B-113 + B-114 + B-115 + B-116 + B-117 + B-118 + E-033 + E-039 — 7 fixes spanning webhook handler hardening, Stripe SDK v14+ compatibility, LastScanWidget hook-order crash, `customer.subscription.updated` plumbing, cancel-pending UI surface, AuthContext post-Stripe staleness), security cluster (E-037 — Pro-tier auth + LLM rate limit hardening), nav-cleanup (B-008 — `deprecated_route_hit` telemetry + `<DeprecatedRedirect>` wrapper), Phase-5 design-review impl batch (B-119 + E-049 static `<LoopFrame>`, B-120 + E-050 `<HomeStatusHero>`, B-122 + E-051 live `<LoopProgressStrip>` + new BE `loop_progress_service`), Phase-5 career-climber capture (B-125a BE half — `user_career_intents` table + service + 3 routes + alembic + `pro_digest_service` extension; B-125 + E-052 FE half — `<CareerGoalSection>` + PersonaPicker CC expansion). **Process slices in window:** B-110 prior CR full regen at `ac0466c` (this regen's anchor); B-111 Phase-6 completion assessment audit; B-112 + E-035 Stripe integration audit; B-006 + E-015 zero-gap settings audit verdict; B-009 + B-013 + B-011 + B-012 docs sweeps (AGENTS.md alignment, v2.1 historical-artifact verdict); spec-author + §12 amendment slices for specs #64/#65/#66/#67 (B-119/B-120/B-122/B-123/B-125/B-126); B-121 + B-127 hygiene compactions; B-124 date-bomb test fix.
 
-**Milestone callout — Phase 6 cron infrastructure shipped.** With B-098 (`bcd89ce`), the codebase carries its first scheduled job per LD G2: Railway cron `[[cron]]` block in `hirelens-backend/railway.toml` (`schedule = "0 14 * * *"` per §12 D-1, `command = "python -m app.scripts.send_pro_digest"` per D-2) → CLI entry `app/scripts/send_pro_digest.py` (43-line CLI mirroring `seed_phase6.py` boot pattern; commits the session post-`send_pro_digest` so `email_log` rows persist past the tick) → orchestrator `pro_digest_service.send_pro_digest` (sequential per-user loop per D-11; INFO `SendSummary` log per D-12; idempotency via `was_sent_today` short-circuit + `IntegrityError` concurrent-tick handling). Consumes B-087's slice 6.13 `email_log` dedup table + `daily_digest_opt_out` column + Phase-2's `email_service` Resend wrapper. **B-078 (cron architecture decision) ✅ resolved at spec ship** — Railway cron locked.
+**Milestone callout — Phase 5 retention-loop infrastructure landed.** With B-119 + B-120 + B-122 (Results loop frame → Home status hero → AppShell live strip), the persona-aware Interview-Prepper home → results → study → re-scan → interview loop is now visible end-to-end across three surfaces. With B-125 + E-052 (career-intent capture + aggregate-only daily digest framing), the Career-Climber persona — previously the silent half of the B2C product — gets target-role + target-quarter capture at PersonaPicker + Profile and peer-aspirational copy in the daily digest (≥10 cohort minimum cell size; ban-list snapshot AC-X enforces aggregate-only privacy contract). E-052 cascade-closed at `e3fdf01`.
 
-**Milestone callout — slice 6.15 schema/util cleanups (no behavior change).** B-102 lifts `DailyStatus` from `app/schemas/study.py` to `app/schemas/daily_status.py` byte-identically (3 import-flip sites: `schemas/quiz_item.py:14` + `services/study_service.py` + `services/quiz_item_study_service.py`); `study.py` retains a thin back-compat re-export shielding spec-16 cards-schema retirement. Dedupes `_next_local_midnight` to a public `next_local_midnight` in `app/utils/local_time.py` (3 callsites flipped; helpers deleted from both services + unused `time`/`timedelta` imports cleaned). Pure refactor — zero new feature surface, zero test contracts changed.
+**Milestone callout — Stripe production launch readiness.** B-112's audit deliverable (`docs/audits/stripe-integration-audit-2026-05.md`) surfaced 11 findings; F-1 + F-5 (B-113), F-2 + F-4 (B-116), the SDK v14+ webhook hotfix (B-114, also flips E-033 + E-039 ✅), the cancel-pending UI bundle (B-117), and the AuthContext staleness fix (B-118) collectively closed the launch-blocker cluster. Live-mode Stripe Dashboard config + upgrade-flow validation owned by Dhamo per B-111 phase-6 completion-assessment recommendation.
 
 ---
 
 ## Section 2 — Backend models
 
-All **28** model files under `app/models/` (excl. `__init__`, `request_models`, `response_models`). **29** ORM model classes total — `analytics_event.py` declares 2 (`QuizReviewEvent` + `LessonViewEvent`); other 27 files declare 1 each. Mixins-only file `base.py` excluded from class count. **Unchanged since `246b4ec`** — no new model files this window. Cumulative additions tracked in prior regens: `tracker_application_score.py` (B-086a `210dcb2`), `email_log.py` (B-087 `d020f4d`), `card_quality_signal.py` (B-094a `91be54f`).
+All **29** model files under `app/models/` (excl. `__init__`, `request_models`, `response_models`). **30** ORM model classes total — `analytics_event.py` declares 2 (`QuizReviewEvent` + `LessonViewEvent`); other 28 files declare 1 each. Mixins-only file `base.py` excluded from class count. **+1 since `ac0466c`**: `user_career_intent.py` (B-125a `9082a7b`). Cumulative additions tracked in prior regens: `tracker_application_score.py` (B-086a `210dcb2`), `email_log.py` (B-087 `d020f4d`), `card_quality_signal.py` (B-094a `91be54f`).
+
+### `user_career_intent.py` (NEW B-125a, `9082a7b`)
+**Class:** `UserCareerIntent` (`app/models/user_career_intent.py:11`)  **Table:** `user_career_intents`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | String(36) PK | UUIDPrimaryKeyMixin |
+| user_id | String(36) FK `users.id` ON DELETE CASCADE, indexed | NOT NULL — append-only history (one user → many rows) |
+| target_role | String(30) | NOT NULL; validated against frozen 7-value list in `app/schemas/career_intent.py::ALLOWED_ROLES` (D-11) |
+| target_quarter | String(7) | NOT NULL; regex `^\d{4}-Q[1-4]$` enforced by Pydantic + current-or-future quarter validator |
+| created_at | DateTime(tz) | NOT NULL, server default `now()` |
+| superseded_at | DateTime(tz) | NULLABLE — NULL = current row; non-NULL = stamped at the moment a newer row was inserted OR explicit `clear_intent` was called (D-6) |
+
+**Indexes:** `ix_user_career_intents_user_id` `(user_id)`; `ix_user_career_intents_user_current` `(user_id, superseded_at)` — drives current-intent lookup `WHERE user_id=? AND superseded_at IS NULL`; `ix_user_career_intents_bucket_current` `(target_role, target_quarter, superseded_at)` — drives aggregate cohort query. **No `back_populates`** on User per spec §5.2 (avoids N+1 risk in the digest composer's per-user loop). Spec: `docs/specs/phase-5/67-career-climber-role-intent.md` §5.1/§5.2.
+
+### `subscription.py` (modified by B-116, `06ea5f6`)
+
+`Subscription` ORM gains `cancel_at_period_end: Boolean NOT NULL server_default false` via alembic `c2ba25f1d9a7` per spec audit-2026-05 F-2 + F-4 fixes. The `_handle_subscription_updated` webhook dispatcher reads `cancel_at_period_end` / `current_period_end` (unix→naive UTC) / `status` and writes via the B-114 `_field()` helper; plan stays `pro` until `customer.subscription.deleted` fires.
 
 ### `admin_audit_log.py`
 **Class:** `AdminAuditLog` (`app/models/admin_audit_log.py:11`)  **Table:** `admin_audit_log`
@@ -289,6 +307,8 @@ Append-only event-shape table — no UPDATE/DELETE from application code. One ro
 | `app/api/v1/routes/interview.py` | `/api/v1` | (re-export) | Re-export. |
 | `app/api/v1/routes/lesson_view_events.py` | `/api/v1` | 1 (POST `/lessons/{id}/view-event`) | Phase 6 slice 6.0 dual-write. 204 fire-and-forget. |
 | `app/api/v1/routes/lessons.py` | `/api/v1` | 1 (GET by-id with quizzes) | Slice 6.3. |
+| **`app/api/v1/routes/loop_progress.py`** **NEW B-122 (`261dc66`)** | `/api/v1` | 1 (GET `/learn/loop-progress?tracker_id={id}`) | Phase 5 spec #66 §6.1 D-13. Returns `LoopProgressResponse{total_gap_cards, reviewed_gap_cards, percent_reviewed, days_since_last_scan}`. Backs the AppShell live IP-only loop-progress strip. Auth required + ownership-enforced. |
+| **`app/api/v1/routes/career_intent.py`** **NEW B-125a (`9082a7b`)** | `/api/v1` | 3 (POST/GET/DELETE `/users/me/career-intent`) | Phase 5 spec #67 §6.2. POST 201 returns `CareerIntentResponse`; first-vs-subsequent decided by `prior is None` → fires `career_intent_captured` or `career_intent_updated`; reads optional `X-Capture-Source` header per D-13. Persona guard: 422 if `user.persona != 'career_climber'`. GET 200 with current intent or 404 `{detail: "No current career intent"}`. DELETE 204; idempotent no-op when nothing to clear. |
 | `app/api/v1/routes/mission.py` | `/api/v1` | 4 | Mission CRUD + active + daily. AGENTS.md says singular `/mission`; actual decorators are plural `/missions/*` (§11 #4). |
 | `app/api/v1/routes/progress.py` | `/api/v1` | 2 (radar, heatmap) | Skill radar + activity heatmap. |
 | `app/api/v1/routes/quiz_items.py` | `/api/v1` | 3 (daily, review, progress) | Slice 6.2. FSRS quiz-item study. |
@@ -299,7 +319,7 @@ Append-only event-shape table — no UPDATE/DELETE from application code. One ro
 | `app/api/v1/routes/tracker.py` | `/api/v1` | **5 endpoints** (was 4): list, create, patch, delete, **GET `/tracker/{app_id}/scores` NEW B-086b** | Application tracker CRUD + score history read. New endpoint at `tracker.py:79`. |
 | `app/api/v1/routes/users.py` | `/api/v1` | 2 (PATCH persona, POST home-first-visit) | User profile mutations. |
 
-### Flat endpoint table (mount-point convention; **95** appearances)
+### Flat endpoint table (mount-point convention; **99** appearances)
 
 Listed in router-file order. Re-export double-mounts marked with `[2x]`. Files with explicit decorators in `app/api/routes/` are listed once at `/api/...` and once at `/api/v1/...` per `main.py:135-170` mount.
 
@@ -384,6 +404,7 @@ v1 `/api/v1/*` (alphabetical by file):
 | GET `/api/v1/quiz-items/progress` | `quiz_items.py:111` |
 | GET `/api/v1/learn/dashboard` | `dashboard.py:28` |
 | GET `/api/v1/learn/ranked-decks` | `ranker.py:27` |
+| **GET `/api/v1/learn/loop-progress`** **NEW B-122** | `loop_progress.py` |
 | POST `/api/v1/resume/upload` | `resume.py:21` |
 | POST `/api/v1/resume/{resume_id}/optimize` | `resume.py:66` |
 | GET `/api/v1/resume/{resume_id}` | `resume.py:119` |
@@ -397,6 +418,9 @@ v1 `/api/v1/*` (alphabetical by file):
 | **GET `/api/v1/tracker/{app_id}/scores`** **NEW B-086b** | `tracker.py:79` |
 | PATCH `/api/v1/users/me/persona` | `users.py:74` |
 | POST `/api/v1/users/me/home-first-visit` | `users.py:108` |
+| **POST `/api/v1/users/me/career-intent`** **NEW B-125a** | `career_intent.py:53` |
+| **GET `/api/v1/users/me/career-intent`** **NEW B-125a** | `career_intent.py:100` |
+| **DELETE `/api/v1/users/me/career-intent`** **NEW B-125a** | `career_intent.py:118` |
 
 App factory at `app/main.py:62` — middleware stack: Sentry init (line 66), CORS (line 87), request-size limit (line 95), slowapi rate limit (line 82). Health check at `/health` (line 123).
 
@@ -424,7 +448,7 @@ Flow (handler lines `:213–367`):
 
 ## Section 4 — Backend services
 
-### Top-level `app/services/` (54 files)
+### Top-level `app/services/` (56 files)
 
 | File | Public surface | Notes |
 |------|----------------|-------|
@@ -456,6 +480,8 @@ Flow (handler lines `:213–367`):
 | `keywords.py` | `match_keywords`, `get_keyword_chart_data` | TF-IDF / RAKE keyword extraction. |
 | `lesson_admin_service.py` | Lesson CRUD + publish + archive | Slice 6.4b. |
 | `lesson_service.py` | `get_lesson_with_quizzes`, `get_deck_with_meta`, `list_lessons_in_deck`, `get_deck_lessons_bundle` | Phase 6 lesson reads. Slice 6.5 (B-072) added persona-narrowing filters per spec #06 §6.2. |
+| **`loop_progress_service.py`** **NEW B-122 (`261dc66`)** | `get_loop_progress(tracker_application_id, user_id, db) -> LoopProgressResponse` | Phase 5 spec #66 §6.1 — backs the AppShell live IP-only loop-progress strip. Skill→category lookup per D-3 (no card-tag traversal v1). Returns `{total_gap_cards, reviewed_gap_cards, percent_reviewed, days_since_last_scan}`. Ownership-enforced via `tracker_service_v2.get_application_model_by_id`. |
+| **`career_intent_service.py`** **NEW B-125a (`9082a7b`)** | `set_intent` / `get_current_intent` / `clear_intent` / `get_aggregate_stats` | Phase 5 spec #67 §6.1. `set_intent` is append-only with explicit supersede — stamps prior current row's `superseded_at=now()` then INSERTs new row. `get_current_intent` queries `WHERE user_id=? AND superseded_at IS NULL`. `clear_intent` stamps `superseded_at=now()` without INSERT (D-6 explicit clear semantics). **`get_aggregate_stats(target_role, target_quarter)` is the single privacy-contract enforcement point** per §4.4 — counts distinct cohort users with current intent in bucket; if `cohort_size < MIN_COHORT_SIZE` (=10), returns `None` (composer omits the digest block silently per D-8); otherwise returns `AggregateStats{cohort_size, top_categories: [CategoryShare(name, percent_of_study_time)]}`. Aggregate query: `CardProgress.reps × Category` join (D-033 — spec §6.1's `quiz_review_events JOIN cards` was structurally inconsistent on disk; legacy FSRS surface is where CC users have data today). |
 | `mission_service.py` | Mission CRUD + active + daily card pull. |  |
 | `nlp.py` | `extract_skills`, `extract_job_requirements` | spaCy wrapper utilities. |
 | `object_storage_service.py` (slice 6.10a) | `ObjectStorageService:40` class, `ObjectStorageError:31`, `get_storage:87` factory | R2 (Cloudflare) artifacts adapter. |
@@ -463,7 +489,7 @@ Flow (handler lines `:213–367`):
 | `parser.py` | `parse_pdf`, `parse_docx` | PDF/DOCX → text extraction (returns dict with `full_text`, `formatting_hints`, `bullet_points`). |
 | `payment_service.py` | Stripe checkout/portal/webhook handling. |  |
 | `paywall_service.py` | Paywall dismissal grace logic. Spec #42. |  |
-| **`pro_digest_service.py`** **NEW B-098 (`bcd89ce`)** | `select_candidates(db) -> list[User]:51`, `compose_digest(user, db) -> DigestPayload \| None:114`, `send_pro_digest(db, *, dry_run=False) -> SendSummary:281` | Phase 6 slice 6.14 — first scheduled job in codebase (Railway cron). Selector filters Pro/enterprise + active sub + opt-in only per §12 D-6 (active-only sub filter; trialing excluded v1). Composer applies strict empty-rule per D-7 — returns None when `cards_due == 0 AND !mission_active AND last_scan_score is None` (zero noise to dormant Pro users). Orchestrator: `was_sent_today` short-circuit (idempotency contract — re-running same UTC day produces all `skipped_dedup` for already-sent users); `IntegrityError` concurrent-tick handling (re-fires `skipped_dedup` not `failed`); 4-event PostHog telemetry per D-10 (`pro_digest_sent` / `_skipped_dedup` / `_skipped_empty` / `_failed`); sequential per-user loop per D-11 (no `asyncio.gather` v1). **Service is flush-only** per slice 6.0 / 6.13 convention; CLI commits post-orchestrator so `email_log` rows persist past the tick (JC #1 carry from impl — moved commit from service to CLI for test-fixture rollback isolation). Consumes `email_log_service.was_sent_today` + `email_log_service.record_send` (B-087 dedup primitive). |
+| **`pro_digest_service.py`** **NEW B-098 (`bcd89ce`); EXTENDED by B-125a (`9082a7b`)** | `select_candidates`, `compose_digest`, `send_pro_digest` (+ B-125a internals: `_aggregate_intent_block`, `_intent_block_copy`, `_build_html` substitutions) | Phase 6 slice 6.14 base + Phase 5 spec #67 §6.3 extension. Composer extension reads current intent + aggregate via `career_intent_service.get_current_intent` + `get_aggregate_stats` (try/except → fires `pro_digest_intent_aggregate_failed` on errors with graceful None fallback per spec §6.5). Strict empty-rule extended additively per §6.3 — a CC user with intent + cohort still gets a digest even if cards/mission/scan are empty (additive carve-out vs spec #6/14 D-7). `_build_html` adds `intent_section_style` + `intent_role_label` + `intent_copy` substitutions; `_intent_block_copy` formats aggregate copy with the §8.5 ban-list-safe phrasing ("Engineers targeting {role} this quarter spend X% on {cat}…"). Send-success path fires `career_intent_email_block_rendered` per D-13 (gated on `payload.aggregate_intent_block is not None` — only fires on actual `email_service.send_email` success path, not test-render). `pro_digest_sent` event payload gains `has_aggregate_block: bool` per §9.2. **Service is flush-only**; CLI commits post-orchestrator so `email_log` rows persist past the tick (B-098 JC #1 carry — moved commit from service to CLI for test-fixture rollback isolation). |
 | `progress_service.py` | Radar + heatmap aggregation. |  |
 | `prompt_template_service.py` (slice 6.10b) | `load_prompt(name) → str` | Reads `app/prompts/{name}.md` via `Path.read_text()` + `@functools.cache`. |
 | `quiz_item_admin_service.py` | Quiz-item CRUD + retire | Slice 6.4b. |
@@ -520,7 +546,7 @@ The B-086b orchestrator forced three convention crystallizations worth surfacing
 
 ## Section 5 — Alembic revisions
 
-**31 revisions** in `hirelens-backend/alembic/versions/`. Linear chain. **Head: `c2b8a4d9e6f1`** — **unchanged since `246b4ec`** (zero new migrations this window). B-098 deliberately migration-free per §12 D-14 (consumes B-087's `email_log` table + `daily_digest_opt_out` column; no new schema). B-102 is application-layer refactor only.
+**33 revisions** in `hirelens-backend/alembic/versions/`. Linear chain. **Head: `e052b125a4f1`** — **+2 since `ac0466c`**: `c2ba25f1d9a7` (B-116 — `Subscription.cancel_at_period_end Boolean NOT NULL server_default false` per audit-2026-05 F-2 + F-4 fixes) + `e052b125a4f1` (B-125a — new `user_career_intents` table + 3 composite indexes per spec #67 §5.1/5.2). Both additive; both round-trip clean (`upgrade head → downgrade -1 → upgrade head` integration-marked tests).
 
 | Revision | Summary | Down-revision |
 |---|---|---|
@@ -540,9 +566,11 @@ The B-086b orchestrator forced three convention crystallizations worth surfacing
 | `c4e21d8a7f12` | Phase 6 slice 6.10a — `ingestion_jobs` table | `b8a9d4f3e2c1` |
 | `e043a1b2c3d4` | Phase 5 E-043 / B-086a — `jd_text` + `jd_hash` columns on `tracker_applications_v2` + `ix_tracker_apps_jd_hash` (Q1 LOCK; closes drift D-020) AND `tracker_application_scores` table + 3 indexes (Q2 LOCK) | `c4e21d8a7f12` |
 | `f1a2b3c4d5e6` | Phase 6 slice 6.13 / B-087 — additive `email_preferences.daily_digest_opt_out` (server-default false) + new `email_log` table (UUID PK + UNIQUE `(user_id, email_type, sent_date)` + composite index `(user_id, sent_date)` + CASCADE FK to `users.id`); precondition for slice 6.14 cron daily Pro digest | `e043a1b2c3d4` |
-| **`c2b8a4d9e6f1`** | **Phase 6 slice 6.13.5a / B-094a — new `card_quality_signals` table per LD J2 (5-tuple UNIQUE on `(lesson_id, quiz_item_id, signal_source, dimension, recorded_by_user_id)` with `NULLS NOT DISTINCT` via raw-DDL `ALTER TABLE ADD CONSTRAINT` per Postgres 15+; 1 partial-index `quiz_item_source` WHERE quiz_item_id IS NOT NULL + 1 partial-index `user` WHERE recorded_by_user_id IS NOT NULL + 1 full-index `lesson_source`; CASCADE on lesson_id + quiz_item_id, SET NULL on recorded_by_user_id) (HEAD)** | `f1a2b3c4d5e6` |
+| `c2b8a4d9e6f1` | Phase 6 slice 6.13.5a / B-094a — new `card_quality_signals` table per LD J2 (5-tuple UNIQUE on `(lesson_id, quiz_item_id, signal_source, dimension, recorded_by_user_id)` with `NULLS NOT DISTINCT` via raw-DDL `ALTER TABLE ADD CONSTRAINT`; 1 partial `quiz_item_source` WHERE quiz_item_id IS NOT NULL + 1 partial `user` WHERE recorded_by_user_id IS NOT NULL + 1 full `lesson_source`; CASCADE on lesson_id + quiz_item_id, SET NULL on recorded_by_user_id) | `f1a2b3c4d5e6` |
+| `c2ba25f1d9a7` | **NEW B-116** — Phase 5 audit-2026-05 F-2/F-4 — additive `subscriptions.cancel_at_period_end Boolean NOT NULL server_default false`. Backfill is no-op (column NOT NULL with default; existing rows get false). | `c2b8a4d9e6f1` |
+| **`e052b125a4f1`** | **NEW B-125a (HEAD)** — Phase 5 spec #67 §5.1 — new `user_career_intents` table (UUID PK + `user_id` FK CASCADE + `target_role`/`target_quarter` String + `created_at` server-default + nullable `superseded_at`) + 3 composite indexes (`user_id`, `(user_id, superseded_at)` for current-intent lookup, `(target_role, target_quarter, superseded_at)` for cohort aggregate). Down_revision `c2ba25f1d9a7` re-confirmed at impl Step 0 — spec §7's `f1a2b3c4d5e6` placeholder was stale by 1 head when B-125a impl ran (stale by 2 heads at this regen since B-116 also intervened). | `c2ba25f1d9a7` |
 
-(Other 14 revisions are middle-of-chain Phase 1–5 migrations. Full enumeration via `ls hirelens-backend/alembic/versions/*.py`.)
+(Other 16 revisions are middle-of-chain Phase 1–5 migrations. Full enumeration via `ls hirelens-backend/alembic/versions/*.py`.)
 
 The `e043a1b2c3d4` migration bundles two locked decisions per spec #63 §1.3 + §7. Both nullable per D-10 (no backfill of pre-migration rows; the `/rescan` route returns 422 with explicit copy when `jd_text=NULL` per D-9). FK shapes per spec §5.3:
 
@@ -558,7 +586,7 @@ CI migration-rollback job at `.github/workflows/ci.yml:101-149` runs `alembic up
 
 ## Section 6 — Frontend routes (live component graph)
 
-Routes declared in `src/App.tsx:78-138`. Public + protected, with namespace migration (`/learn/*` study + `/prep/*` interview prep) and transitional `<Navigate replace>` shims. Unchanged this window — B-086b mounts new widgets inside existing pages (`Tracker.tsx` + `HomeDashboard.tsx`), not new routes.
+Routes declared in `src/App.tsx`. Public + protected, with namespace migration (`/learn/*` study + `/prep/*` interview prep) and transitional `<Navigate replace>` shims. **B-008 (`49aee35`) wraps all 10 transitional shims in `<DeprecatedRedirect from="/x" to="/y" />`** — fires `deprecated_route_hit{from_path, to_path}` once-on-mount via `useRef` guard; legacy `RedirectWithParam` helper deleted. Route table itself unchanged (B-119/B-120/B-122/B-125 mount new components inside existing pages, not new routes).
 
 | Path | Element | File:Line | Access |
 |---|---|---|---|
@@ -596,30 +624,33 @@ Routes declared in `src/App.tsx:78-138`. Public + protected, with namespace migr
 
 `<ProtectedRoute>` (`App.tsx:48`) redirects unauthenticated users to `/`; `<PersonaGate>` handles persona-null routing inside it. `<AdminGate>` (`components/auth/AdminGate.tsx:10`) returns 403 view if `user?.role !== 'admin'`, preventing AdminLayout lazy-chunk download.
 
-### Component graph (80 components, organized by directory)
+### Component graph (89 components, organized by directory)
 
 | Directory | Files | Notes |
 |---|---|---|
 | `components/admin/` | `AdminLayout.tsx`, `ConfirmCascadeModal.tsx`, `ConfirmPersonaNarrowingModal.tsx`, `MarkdownEditor.tsx` | Slice 6.4a + 6.4b. |
 | `components/auth/` | `AdminGate.tsx` | E-040 frontend admin guard. |
-| `components/dashboard/` | 15 components — 10 ATS-analysis panels (consumed by `pages/Results.tsx`) + 5 slice 6.8 FSRS-dashboard sections (consumed by `pages/Dashboard.tsx`). Directory hosts both surfaces; consumers do not cross. |
-| `components/home/` | `DashboardWidget`, `StateAwareWidgets` + `widgets/` (16 widgets — was 15) | Spec #40 / #61 / #62 home composition. |
-| `components/home/widgets/` | `CountdownWidget`, `FirstSessionDoneWidget`, **`HomeScoreDeltaWidget` NEW B-086b**, `InactiveReturnerWidget`, `InterviewPrepperChecklist`, `InterviewTargetWidget`, `LastScanWidget`, `MissionActiveWidget`, `MissionOverdueWidget`, `ResumeStaleWidget`, `StreakAtRiskWidget`, `StreakWidget`, `StudyGapsPromptWidget`, `TeamComingSoonWidget`, `TodaysReviewWidget`, `WeeklyProgressWidget` | **16 files** (+1 since `691934a`). |
-| `components/layout/` | `AppShell`, `MobileNav`, `Navbar` *(unused — §9)*, `PageWrapper`, `TopNav`, `UserMenu` | AppShell mounts TopNav (md:+) and MobileNav. |
+| `components/dashboard/` | 16 components — 10 ATS-analysis panels (consumed by `pages/Results.tsx`) + 5 slice 6.8 FSRS-dashboard sections (consumed by `pages/Dashboard.tsx`) + **`LoopFrame.tsx` NEW B-119** (4-step horizontal-at-md+/vertical-stack-<md strip with `surface: 'results' \| 'appshell'`, `compact?` prop, `stepStates?: Partial<Record<step, state>>`, `onStepClick?` — backward-compatible extension per §4.1 hybrid a+c lock; `loop_frame_rendered` analytics suppressed when `surface === 'appshell'` per D-4 to avoid double-counting). |
+| `components/home/` | `DashboardWidget`, `StateAwareWidgets` + `HomeStatusHero.tsx` (NEW B-120) + `widgets/` (16 widgets) | Spec #40 / #61 / #62 / #65 / #66 home composition. |
+| `components/home/HomeStatusHero.tsx` (**NEW B-120**) | One-line `<p>` mounted in `HomeDashboard.tsx` between greeting `<h1>` and `<StateAwareWidgets>` per spec #65 D-1. IP copy `${company} interview in ${days}d. ${dueCount} cards due today. Last scan was ${score}%.`; CC copy `${streak}-day streak. ${dueCount} cards due today.`; clauses omit gracefully on null/zero/error. team_lead returns null. Reads `useAuth` + `useHomeState` + `fetchDailyQueue` + `fetchUserApplications` (IP only). Fires `home_status_hero_rendered{persona, plan, clauses_shown[]}` once-on-mount via `useRef`. R12 token-only styling. |
+| `components/home/widgets/` | `CountdownWidget`, `FirstSessionDoneWidget`, `HomeScoreDeltaWidget` (B-086b), `InactiveReturnerWidget`, `InterviewPrepperChecklist`, `InterviewTargetWidget`, `LastScanWidget`, `MissionActiveWidget`, `MissionOverdueWidget`, `ResumeStaleWidget`, `StreakAtRiskWidget`, `StreakWidget`, `StudyGapsPromptWidget`, `TeamComingSoonWidget`, `TodaysReviewWidget`, `WeeklyProgressWidget` | **16 files**. `LastScanWidget.tsx` modified by B-115 (`3fbc252`): early-return moved AFTER all hooks (Rules-of-Hooks compliance — prior `if (suppressed) return null` BEFORE `useCallback`/`useEffect` crashed the ErrorBoundary subtree). |
+| `components/layout/` | `AppShell`, `MobileNav`, `Navbar` *(unused — §9)*, `PageWrapper`, `TopNav`, `UserMenu`, **`LoopProgressStrip.tsx` NEW B-122** | AppShell mounts TopNav (md:+) and MobileNav + new `<LoopProgressStrip>` as sibling below TopNav (D-8 placement). |
+| `components/layout/LoopProgressStrip.tsx` (**NEW B-122**) | Live IP-only AppShell loop strip. Render gate `persona === 'interview_prepper' && next_interview != null` (chromeless gated by parent `showChrome`). Hook composition: `useAuth` + `useHomeState` + `useScoreHistory(tracker_id)` + `useLoopProgress(tracker_id)`. Step-state derivation per spec #66 §8.2 (D-1 heuristic for step 3 'done'; INTERVIEW_ALERT_WINDOW_DAYS=7; MIN_DAYS_SINCE_SCAN=3; MIN_PERCENT_REVIEWED=50). Step 3 click → `/prep/tracker?focus={id}&action=rescan`. 4 PostHog events: `loop_strip_rendered` (once-per-mount keyed on tracker_id), `loop_strip_step_clicked` (step 3 only), `loop_strip_rescan_unlocked` (locked→current via `useRef<boolean>`), `loop_strip_step_completed` (per-step via `useRef<Set<step>>` Strict-Mode idempotent per D-12). |
 | `components/learn/` | `RankedDeckList.tsx` | Slice 6.7. |
-| `components/lesson/` | `LessonRenderer`, `QuizItemPanel` | Slice 6.3. |
+| `components/lesson/` | `LessonRenderer`, `QuizItemPanel`, `ThumbsControl` | Slice 6.3 + 6.13.5b. |
 | `components/mission/` | `Countdown`, `DailyTarget`, `MissionDateGate`, `MissionSetup` | Mission-mode chrome. |
 | `components/onboarding/` | `GuidedTour` *(unused — §9)* | — |
-| `components/profile/` | `StreakBadge`, `XPBar` | — |
+| `components/profile/` | `StreakBadge`, `XPBar`, **`CareerGoalSection.tsx` NEW B-125** | CC-gated section in `Profile.tsx` between Theme and Subscription. Inline-form modality per spec #67 D-2; `[Clear]` button via `window.confirm` per D-6. Self-loads via `getCareerIntent()` on mount; renders 2 states (no-intent CTA / has-intent display + Edit + Clear). Submit fires `career_intent_captured` (first) / `career_intent_updated` (subsequent + cleared semantics) with `source: 'profile_edit'`. |
 | `components/progress/` | `ActivityHeatmap`, `SkillRadar` | Spec #13. |
 | `components/rewrite/` | `CoverLetterViewer`, `ResumeEditor`, `ResumePDFTemplate` *(unused — §9)* | — |
 | `components/settings/` | `EmailPreferences`, `ThemePicker` | — |
 | `components/study/` | `CategoryCard`, `DailyReviewWalledView`, `FlipCard`, `QuizPanel`, `WallInlineNudge` | — |
-| `components/tracker/` | `ApplicationCard`, `KanbanBoard`, **`ScoreDeltaWidget` NEW B-086b** | **3 files** (+1 since `691934a`). |
-| `components/ui/` | `AnimatedCard`, `GlowButton`, `ProgressBar`, `ScoreBadge`, `SkeletonLoader`, `Tooltip`, `UpgradeModal` | App-root `<UpgradeModal>` mounted in `main.tsx:81`. |
+| `components/tracker/` | `ApplicationCard`, `KanbanBoard`, `ScoreDeltaWidget` (B-086b) | 3 files. |
+| `components/ui/` | `AnimatedCard`, `GlowButton`, `ProgressBar`, `ScoreBadge`, `SkeletonLoader`, `Tooltip`, `UpgradeModal`, `SentryFallback` (B-115 dev-mode diagnostic) | App-root `<UpgradeModal>` mounted in `main.tsx`. |
 | `components/upload/` | `JDInput`, `ResumeDropzone` | — |
 | `components/PaywallModal.tsx` | (top-level, not in a subdir) | Modal triggered by paywall events. |
 | `components/PersonaGate.tsx` | (top-level) | Persona-null routing guard. |
+| **`components/DeprecatedRedirect.tsx`** **NEW B-008 (`49aee35`)** | (top-level) | Wraps `<Navigate replace>` and fires `deprecated_route_hit{from_path, to_path}` once-on-mount via `useRef` guard. Consumed by all 10 transitional redirects in `App.tsx`; legacy `RedirectWithParam` helper deleted. |
 
 ### B-086b mount-point absorption
 
@@ -637,7 +668,7 @@ Loading + error states surfaced via `data-testid="score-delta-widget-loading"` /
 
 ## Section 7 — Frontend pages
 
-27 files (21 top-level in `src/pages/` + 6 under `pages/admin/`). **Unchanged file count this window** — B-086b modifies `Tracker.tsx` + `HomeDashboard.tsx` to mount the new widgets, but adds no new pages.
+**28 files** (21 top-level in `src/pages/` + 7 under `pages/admin/`). **Unchanged file count this window** — slices this window mounted new components inside existing pages (PersonaPicker CC expansion, Profile CareerGoalSection mount, Results LoopFrame mount, HomeDashboard HomeStatusHero mount, AppShell LoopProgressStrip mount).
 
 | File | Mounted at | Notes |
 |------|-----------|-------|
@@ -648,7 +679,11 @@ Loading + error states surfaced via `data-testid="score-delta-widget-loading"` /
 | `pages/DailyReview.tsx` | `/learn/daily` | FSRS daily review flow. |
 | `pages/Dashboard.tsx` | `/learn/dashboard` | Slice 6.8 user-self FSRS dashboard. |
 | `pages/FirstAction.tsx` | `/first-action` | Spec #46 one-CTA interstitial. |
-| `pages/HomeDashboard.tsx` | `/home` | Spec #34/#40 persona-aware home. 3 inline render modes (career_climber / interview_prepper / team_lead). **Modified by B-086b (`4aab0bf`)** — `interview_prepper` mode mounts `<HomeScoreDeltaWidget persona={...} trackerId={nextInterview?.tracker_id ?? null} company={nextInterview?.company ?? null} />` directly below `<CountdownWidget>` inside the GRID flex (line 54). Import added at line 12. |
+| `pages/HomeDashboard.tsx` | `/home` | Spec #34/#40 persona-aware home. 3 inline render modes (career_climber / interview_prepper / team_lead). **Modified by B-086b** (HomeScoreDeltaWidget mount) and **B-120** (`<HomeStatusHero>` mounted between greeting `<h1>` and `<StateAwareWidgets>` per spec #65 D-1, sibling-of-persona-mode JSX). |
+| `pages/PersonaPicker.tsx` | `/onboarding/persona` | Persona selection (spec #34 / #67). **Modified by B-125** — CC card auto-expands on select (D-1) showing optional `target_role` + `target_quarter` selects mirroring IP precedent. Submit fires `setCareerIntent(...)` after `updatePersona` only when both fields filled (AC-19/20/21 per §8.1; failure toasts "Goal not saved — set it from Profile." + nav still proceeds). |
+| `pages/Profile.tsx` | `/profile` (lazy) | User settings. **Modified by B-117** (Reactivate Pro button when `cancelAtPeriodEnd===true` — opens Stripe portal), **B-118** (`refreshUser()` on mount per Stripe portal return), **B-125** (`<CareerGoalSection>` mount between Theme and Subscription, CC-gated). |
+| `pages/Pricing.tsx` | `/pricing` | Stripe pricing card. Geo-routed via IP (Phase 3). **Modified by B-117** (cancel-pending Pro tile swaps "Current Plan" → "Cancels {date}"; `handleCta` opens portal in cancel-pending state, sidestepping B-113 `AlreadyProError`) + **B-118** (`refreshUser()` on `?upgrade=success` post-checkout branch). |
+| `pages/Results.tsx` | `/prep/results` | ATS scan results detail. **Modified by B-119** — `<LoopFrame>` mounted ABOVE the dashboard grid container as sibling element (NOT 12th grid child — JC #1 to avoid 11-row-shift cascade). `useHomeState` newly imported for D-8 `next_interview` source. Render-gated on `result.ats_score != null`. |
 | `pages/Interview.tsx` | `/prep/interview` | Interview Q generator + persistence. |
 | `pages/LandingPage.tsx` | `/` (guests) | Public marketing landing. |
 | `pages/Learn.tsx` | `/learn` | Slice 6.7 — three inline persona-mode functions. |
@@ -656,10 +691,6 @@ Loading + error states surfaced via `data-testid="score-delta-widget-loading"` /
 | `pages/LoginPage.tsx` | `/login` | Google OAuth flow. |
 | `pages/MissionMode.tsx` | `/learn/mission` (lazy) | Interview sprint mode. |
 | `pages/Onboarding.tsx` | `/onboarding` | Welcome flow before persona. |
-| `pages/PersonaPicker.tsx` | `/onboarding/persona` | Persona selection (spec #34). |
-| `pages/Pricing.tsx` | `/pricing` | Stripe pricing card. Geo-routed via IP (Phase 3). |
-| `pages/Profile.tsx` | `/profile` (lazy) | User settings. |
-| `pages/Results.tsx` | `/prep/results` | ATS scan results detail. |
 | `pages/Rewrite.tsx` | `/prep/rewrite` | Resume + cover-letter rewrite. PDF export inline via jsPDF. |
 | `pages/Tracker.tsx` | `/prep/tracker` | Application tracker (Kanban + list). **Modified by B-086b (`4aab0bf`)** — focused-row block now mounts `<ScoreDeltaWidget trackerApplicationId={focusedRow.id} />` (line 205) inside the expanded panel (after interview-date editor). Import added at line 8. |
 | `pages/admin/AdminCards.tsx` | `/admin/cards` (nested, lazy) | Card CRUD UI. |
@@ -675,7 +706,7 @@ Loading + error states surfaced via `data-testid="score-delta-widget-loading"` /
 
 ## Section 8 — Frontend shared types
 
-### `src/types/index.ts` (~720 lines, 60 exports)
+### `src/types/index.ts` (~830 lines, 63 exports)
 
 Top-of-file domain types: `ATSScoreBreakdown:3`, `SkillGap:10`, `BulletAnalysis:16`, `FormattingIssue:23`, `KeywordChartData:29`, `SkillOverlapData:36`, `AnalysisResponse:42`, `RewriteEntry:60`, `RewriteSection:69`, `RewriteHeader:75`, `RewriteResponse:80`, `CoverLetterRecipient:87`, `CoverLetterResponse:92`, `InterviewQuestion:103`, `InterviewPrepResponse:108`.
 
@@ -696,6 +727,26 @@ ScoreHistoryResponse:155  // tracker_application_id, history[], delta | null
 ```
 
 Consumed by `useScoreHistory.ts:3`, `<ScoreDeltaWidget>` (`tracker/ScoreDeltaWidget.tsx:2`), `<HomeScoreDeltaWidget>` (`home/widgets/HomeScoreDeltaWidget.tsx` via `useScoreHistory`). FE never re-does the delta math — `ScoreDelta` is read straight from the BE `ScoreHistoryResponse.delta` field per §12 D-6.
+
+### Phase 5 spec #66 loop-progress types (NEW B-122, `261dc66`)
+
+```ts
+LoopProgressResponse:166  // tracker_application_id, total_gap_cards,
+                           // reviewed_gap_cards, percent_reviewed,
+                           // days_since_last_scan
+```
+
+Mirrors BE `app/schemas/loop_progress.py::LoopProgressResponse`. Consumed by `useLoopProgress.ts` + `<LoopProgressStrip>`.
+
+### Phase 5 spec #67 career-intent types (NEW B-125, `e3fdf01`)
+
+```ts
+CareerIntent:177            // id, user_id, target_role, target_quarter,
+                             // created_at, superseded_at | null
+CareerIntentCreateRequest:186 // target_role, target_quarter
+```
+
+Mirrors BE `app/schemas/career_intent.py`. Consumed by `<CareerGoalSection>` + 3 api helpers in `services/api.ts` (`setCareerIntent` POST + `X-Capture-Source` header per D-13; `getCareerIntent` 404 → null via `validateStatus` so the response interceptor does NOT toast on the expected no-intent path; `clearCareerIntent` DELETE 204).
 
 Cards/categories + Mission + Onboarding/gamification + Email + Admin (cards) + Analysis state machine: unchanged from prior regens.
 
@@ -769,7 +820,7 @@ No components found behind `{false && …}` guards or dormant feature flags at H
 | File | Description |
 |------|-------------|
 | admin-panel.md | Card CRUD, bulk import, AI-assisted card generation (Phase 3) |
-| analytics.md | PostHog event catalog (frontend + backend), funnels, conventions. **Modified this window** by B-098 (`bcd89ce`, +4 daily-digest event rows at lines 165–168: `pro_digest_sent` (cards_due / streak / has_mission / has_recent_scan / resend_id payload; `internal: true`) / `pro_digest_skipped_dedup` (idempotency contract — re-running the same UTC day produces all skip events) / `pro_digest_skipped_empty` (strict empty-rule per spec #14 §12 D-7) / `pro_digest_failed{error_class: 'send_error'\|'compose_error'\|'record_error'}`). Modified by B-102 (`e36902c`, -1 row: `study_dashboard_viewed` hard-deleted from line 46 per spec #15 §12 D-5; zero code emitters confirmed pre-removal). Net catalog delta: +3 rows. Content-only delta — file count unchanged. |
+| analytics.md | PostHog event catalog (frontend + backend), funnels, conventions. **Modified this window** by B-008 (+1 `deprecated_route_hit{from_path, to_path}`), B-117 (+1 `subscription_portal_opened` w/ `source: 'pricing_reactivate'`), B-119 (+1 `loop_frame_rendered{surface, current_step, has_interview_date, plan}`), B-120 (+1 `home_status_hero_rendered{persona, plan, clauses_shown[]}`), B-122 (+4 `loop_strip_rendered` / `_step_clicked` / `_rescan_unlocked` / `_step_completed`; existing `loop_frame_rendered` row note updated for surface widening + appshell suppression), B-125a (+3 `career_intent_captured` / `_updated` / `_email_block_rendered` + `pro_digest_sent.has_aggregate_block: bool` property + 1 failure event `pro_digest_intent_aggregate_failed`). Net delta: +12 rows + 1 property + 1 row note update. Content-only delta — file count unchanged. |
 | ats-card-bridge.md | Maps ATS scan skill gaps to study cards |
 | ats-scanner.md | ATS resume scanning, scoring, keyword extraction, bullet rewriting, auto-tracker |
 | backend.md | Service-layer conventions, route mounting, audit dependency chains, dual-write best-effort wrapper, CI invocation pattern. (B-073 cohort item 1, `84060b3`.) |
@@ -809,7 +860,7 @@ Three directory-style skills on disk but not in git (each shows `??` in `git sta
 
 ## Section 11 — Drift flags (AGENTS.md / master-doc vs code)
 
-Re-verified at HEAD `ac0466c`. **No new drift items this window** — B-098 + B-102 shipped clean (B-098 surfaced 3 info-only test-fixture JCs that were resolved at impl, not promoted to drift; B-102 surfaced 1 info-only spec callsite-count JC, also resolved at impl). All carry-forward drift items below re-verified against current HEAD; status lines reflect `ac0466c` reality. Items #9, #18, #19, #20, #22, #23 carry forward as RESOLVED (kept for traceability per existing CR convention).
+Re-verified at HEAD `192e97d`. **One new drift item this window** — D-033 (spec #67 §6.1 `quiz_review_events JOIN cards` structurally inconsistent with on-disk `QuizReviewEvent` keyed on `quiz_items`; resolved at B-125a impl by aggregating `CardProgress.reps × Category` instead, runtime correct). Five carry-forward ✅ RESOLVED rows (D-016, D-019, D-020, D-022, D-029) cut to `docs/archive/session-state-history.md` §10 by B-127 hygiene compaction (this regen window). All remaining drift items re-verified against current HEAD; status lines reflect `192e97d` reality. Items #9, #18, #19, #20, #22, #23 carry forward as RESOLVED (kept for traceability per existing CR convention).
 
 1. **AGENTS.md legacy-routes paths use underscores; decorators use hyphens.** `app/api/routes/cover_letter.py:22` decorates `/cover-letter`; AGENTS.md row says `/api/cover_letter`. Same for `/api/interview` → `/api/interview-prep`. **Status: still drifted.**
 
@@ -871,9 +922,12 @@ Re-verified at HEAD `ac0466c`. **No new drift items this window** — B-098 + B-
 
 30. **D-032 — spec `(NULLS-distinct)` parenthetical vs `NULLS NOT DISTINCT` migration intent.** Surface: `docs/specs/phase-6/12-quality-signals.md` §5.1 parenthetical after the UNIQUE constraint description. Disk: alembic `c2b8a4d9e6f1` applies UNIQUE with `NULLS NOT DISTINCT` (Postgres 15+) via raw-DDL `ALTER TABLE ADD CONSTRAINT` since SQLAlchemy 2.0.49's `UniqueConstraint(postgresql_nulls_not_distinct=True)` covers `create_all` only — default Postgres semantics (NULLS DISTINCT) would re-INSERT critique rows where `quiz_item_id` + `recorded_by_user_id` are both NULL instead of UPSERT-conflicting. Surfaced as JC #2 during B-094a impl (resolved correctly; runtime unaffected). Close shape: one-character correction in §5.1 from "NULLS-distinct" to "NULLS NOT DISTINCT" — surgical doc edit. Filed at `3981560` (2026-05-02). **Status: open (carry-forward) — cosmetic / documentation, non-blocking.**
 
+31. **D-033 — spec #67 §6.1 sketch references `quiz_review_events JOIN cards` but `QuizReviewEvent` keys on `quiz_items` not `cards`.** Surface: `docs/specs/phase-5/67-career-climber-role-intent.md` §6.1 inline comment. Disk: `app/models/analytics_event.py::QuizReviewEvent` FKs `quiz_items.id`, NOT `cards.id`; the two surfaces don't share a join column (no `quiz_item.card_id` exists). Spec comment as written would not type-check. Surfaced as JC #1 during B-125a impl (`9082a7b`); resolved at impl time by aggregating `CardProgress.reps × Category` instead (legacy FSRS surface where CC users currently have study data). Tests pass; aggregate-block populates correctly. **Close shape:** spec §6.1 amendment to either (a) replace the comment with the on-disk reality (`CardProgress.reps × Category` join — pragmatic v1, cheaper close) or (b) gate impl on a future Phase-6 generalization that promotes CC users onto `quiz_items` content. Filed at SESSION-STATE drift table at B-125a impl. **Status: open (carry-forward) — cosmetic / spec-comment, runtime unaffected, non-blocking.**
+
 ### Recently closed in this regen window
 
-- **#9 (D-020 closure)** — see item #9 above. Closed at `210dcb2` (B-086a). Migration `e043a1b2c3d4`; ORM model `tracker.py` extended with `jd_text` + `jd_hash`; tracker-write hook in `analyze.py` populates both for new rows. AC-15 verified.
+- **D-016, D-019, D-020, D-022, D-029** — 5 ✅ RESOLVED rows cut to `docs/archive/session-state-history.md` §10 by B-127 hygiene compaction (`401b95d`, 2026-05-04). The drift items themselves were resolved in earlier slices; this regen window saw the archive migration only.
+- **D-033 (NEW this window)** — spec #67 §6.1 / on-disk `QuizReviewEvent` FK shape mismatch. See item #31. Filed at B-125a impl; runtime unaffected.
 
 ---
 
@@ -895,7 +949,7 @@ The four Phase 6 product decisions chat sometimes references (cron arch G2, file
 
 ## Section 13 — Specs inventory
 
-Walked `docs/specs/**/*.md` — **98 spec files across 8 directories** (phase-0..phase-6 + `process/`). **+2 since `246b4ec`** — both phase-6: `14-daily-digest-cron.md` (B-097 spec-author `86bc442` + B-099 §12 amendment `b5bec37`; D-1..D-14 locked from §14 OQ-A..OQ-N; closes B-078 cron architecture decision in same commit) + `15-legacy-retirement-easy-wins.md` (B-101 spec-author `b50a592` + B-103 §12 amendment `174e479`; D-1..D-7 locked from §14 OQ-A..OQ-G; scope = Option C from B-100 triage — 3 mechanical cleanups). **Process directory correction:** prior CR's "process=2" claim corrected to **process=1** — disk only ever held `01-light-mode-reporting.md`; the slot-02 reservation was a forward-looking note, not a file.
+Walked `docs/specs/**/*.md` — **102 spec files across 8 directories** (phase-0..phase-6 + `process/`). **+4 since `ac0466c`**, all phase-5: `64-results-loop-frame.md` (B-119 spec-author `8b70037` + §12 amended same impl commit `b58a42d` per combined-slice precedent), `65-home-status-hero.md` (B-120 combined Mode-2 spec+impl `58bb9a9`; §12 D-1..D-10 pre-locked at spec-author), `66-appshell-loop-progress-strip.md` (B-122 spec-author `8dcdccd` + §12 amendment `042f92c` D-1..D-14 from §14 OQ-1..OQ-14), `67-career-climber-role-intent.md` (B-125 spec-author `d407e6e` + §12 amendment `b2248d2` D-1..D-14 from §14 OQ-1..OQ-14).
 
 ### Per-phase counts
 | Phase | Files | With explicit Status line | No status field |
@@ -905,19 +959,49 @@ Walked `docs/specs/**/*.md` — **98 spec files across 8 directories** (phase-0.
 | phase-2 | 8 | 7 | 1 |
 | phase-3 | 11 | 8 | 3 |
 | phase-4 | 6 | 6 | 0 |
-| phase-5 | **37** | 15 | 22 |
+| phase-5 | **41** | 19 | 22 |
 | phase-6 | **16** | 16 | 0 |
 | process | **1** | 1 | 0 |
-| **Total** | **98** | **65** | **33** |
+| **Total** | **102** | **69** | **33** |
 
 ### Status legend
 `Done` · `Complete` · `Implemented — Spec Backfill Pending (P5-S###)` · `Draft` · `Drafted, not shipped` · `Shipped (spec + impl)` · `Done — Shipped in <sha>` · `Partially Done` · `Planned — Known-Broken` · `Deferred` · `Complete — Spec Backfill Pending`
 
-### Slice absorption log (this regen — full-scope at `ac0466c`)
+### Slice absorption log (this regen — full-scope at `192e97d`)
 
 | Slice | Spec | BACKLOG | Closing commit | Notes |
 |---|---|---|---|---|
-| B-098 | `phase-6/14-daily-digest-cron.md` | B-098 ✅ | `bcd89ce` | **Phase 6 slice 6.14 — daily Pro digest cron impl.** First scheduled job in codebase per LD G2. New `[[cron]]` in `railway.toml` (`0 14 * * *` UTC) + new CLI `app/scripts/send_pro_digest.py` (43-line, mirrors `seed_phase6.py` boot pattern; commits the session post-orchestrator) + new orchestrator `app/services/pro_digest_service.py` (451-line: selector + composer + send loop with idempotency via `was_sent_today` short-circuit + `IntegrityError` concurrent-tick handling + 4-event telemetry + sequential per-user loop) + new schemas `app/schemas/pro_digest.py` (`DigestPayload` + `SendSummary` Pydantic v2) + new email template `app/templates/pro_digest.html` (45-line inline-style HTML w/ CSS-driven `display:none` empty sections). +4 PostHog events. **Zero new migrations** (consumes B-087's `email_log` + `daily_digest_opt_out`). Tests BE 802 → 824 (+22, 14 service + 5 template + 3 script). FE 466 unchanged (zero FE surface). 20/20 ACs. 3 info-only JCs at impl (commit moved from service to CLI for fixture rollback isolation; `tracker.date_applied` String(20) not Date; `TrackerApplicationScore.*_score` suffix + jd_hash/resume_hash NOT-NULL — both fixed at test-fixture layer). **B-078 cron architecture decision ✅ resolved at spec ship** (Railway cron locked). |
+| B-128 | (this regen) | B-128 ✅ | `<this-slice>` | **CR full regen at HEAD `192e97d`.** All 13 sections re-anchored. R14 exception (a) — regenerated audit artifact, no test runs. Two-commit pattern (regen + SHA backfill replacing `<this-slice>` placeholders). |
+| B-125 + E-052 | `phase-5/67-career-climber-role-intent.md` | B-125 ✅ + E-052 ✅ (cascade) | `e3fdf01` | **Phase 5 spec #67 FE half — CC career-intent capture surfaces.** New `<CareerGoalSection>` mounted in `Profile.tsx` between Theme + Subscription (CC-gated per §8.2 D-2 inline-form + D-6 explicit `[Clear]` via `window.confirm`); PersonaPicker CC card auto-expand (D-1) carrying optional `target_role` + `target_quarter` selects mirroring IP precedent (submit fires `setCareerIntent` after `updatePersona` only when both filled — AC-19/20/21); new `src/utils/careerIntent.ts` (CAREER_ROLES + labels + `quarterOptions(now, 7)` per D-4 + `quarterLabel`); `services/api.ts` adds 3 helpers (POST + GET 404→null via `validateStatus` + DELETE); `types/index.ts` gains `CareerIntent` + `CareerIntentCreateRequest`. PostHog `career_intent_captured` (first) / `career_intent_updated` (subsequent + cleared semantics). Tests +13 FE (5 PersonaPicker + 5 Profile + 3 api). FE 530 → 543. |
+| B-125a | `phase-5/67-career-climber-role-intent.md` | B-125a ✅ | `9082a7b` | **Phase 5 spec #67 BE half — append-only `user_career_intents` + privacy-safe aggregate digest framing.** New `app/models/user_career_intent.py` (UUID PK + user_id FK CASCADE + 3 composite indexes per §5.1/5.2), `app/schemas/career_intent.py` (`CareerIntentCreate` w/ `ALLOWED_ROLES` frozenset validator + current-or-future quarter validator + `AggregateStats` + `CategoryShare` per §5.3/5.4 D-11), alembic `e052b125a4f1` (down_revision `c2ba25f1d9a7` per actual head, NOT spec §7's stale `f1a2b3c4d5e6`), `app/services/career_intent_service.py` (set/get/clear/get_aggregate_stats with `MIN_COHORT_SIZE=10` privacy-contract single entry point per §4.4), 3 routes at `app/api/v1/routes/career_intent.py` (POST 201 / GET 200/404 / DELETE 204; persona guard 422 with `X-Capture-Source` header per D-13). **Composer extension:** `pro_digest_service` reads intent + aggregate (try/except → `pro_digest_intent_aggregate_failed` per §6.5; strict-empty-rule extended additively per §6.3); `_build_html` adds intent_section_style + intent_role_label + intent_copy substitutions; send-success path fires `career_intent_email_block_rendered` per D-13. **Template:** `pro_digest.html` adds 4th `<div data-section="intent">` block per D-7. **Analytics:** 3 new event rows + `pro_digest_sent.has_aggregate_block` property + 1 failure event. Tests +30 BE. **JC #1:** spec §6.1 said `quiz_review_events JOIN cards` but `QuizReviewEvent` keys on `quiz_items` — used `CardProgress.reps × Category` (drift D-033). |
+| B-126 | `phase-5/67-career-climber-role-intent.md` | B-126 ✅ | `b2248d2` | Spec #67 §12 amendment locking D-1..D-14 from §14 OQ-1..OQ-14. R14 exception (b) — pure rule refinement. |
+| B-122 + E-051 | `phase-5/66-appshell-loop-progress-strip.md` | B-122 ✅ + E-051 ✅ (cascade) | `261dc66` | **Phase 5 spec #66 — live AppShell loop-progress strip for IP persona.** New `app/schemas/loop_progress.py` (LoopProgressResponse) + `app/services/loop_progress_service.py` (`get_loop_progress` per D-3 skill→category lookup) + `app/api/v1/routes/loop_progress.py` (`GET /api/v1/learn/loop-progress?tracker_id={id}` per D-13) + `main.py` router mount. New `src/components/layout/LoopProgressStrip.tsx` mounted as sibling below `<TopNav />` (D-8); render gate `persona === 'interview_prepper' && next_interview != null`. Hook composition: `useAuth` + `useHomeState` + `useScoreHistory(tracker_id)` + new `useLoopProgress(tracker_id)`. **LoopFrame extension** (§4.1 hybrid a+c): backward-compatible `stepStates?` + `onStepClick?` + `compact?` + `surface` widened `'results' \| 'appshell'`; Results.tsx call site byte-untouched. `loop_frame_rendered` suppressed when `surface === 'appshell'` per D-4. **4 new PostHog events** (`loop_strip_rendered/_step_clicked/_rescan_unlocked/_step_completed`). Hardcoded constants per D-5; existing `border-danger`/`text-danger` reused per D-6. Tests +10 BE / +22 FE. |
+| B-123 | `phase-5/66-appshell-loop-progress-strip.md` | B-123 ✅ | `042f92c` | Spec #66 §12 amendment locking D-1..D-14. R14 exception (b). |
+| B-120 + E-050 | `phase-5/65-home-status-hero.md` | B-120 ✅ + E-050 ✅ (cascade) | `58bb9a9` | **Phase 5 spec #65 — status-sentence hero on `/home` (combined Mode-2 spec+impl).** Authors spec #65 + ships impl same commit per single-slice precedent. New `<HomeStatusHero>` (one-line `<p>`, R12 token-only) mounted in `HomeDashboard.tsx` between greeting `<h1>` and `<StateAwareWidgets>` per D-1 — sibling of persona modes. IP/CC copy templates with graceful clause omission. team_lead returns null (D-8). New `home_status_hero_rendered` event. Tests +12 FE. |
+| B-119 + E-049 | `phase-5/64-results-loop-frame.md` | B-119 ✅ + E-049 ✅ (cascade) | `b58a42d` | **Phase 5 spec #64 — static loop frame on Results.** New `<LoopFrame>` (4-step "Scanned/Studying/Re-scan/Interview" per §14 OQ-2; horizontal at md+, vertical stack <md). Mounted in `Results.tsx` ABOVE the grid container (sibling, NOT 12th grid child — JC #1 to avoid 11-row-shift cascade). `useHomeState` newly imported. New `loop_frame_rendered` event. Tests +10 FE. §12 amended same commit — D-1..D-14 from §14 OQs. |
+| B-125 + B-126 + B-119 + B-120 + B-122 + B-123 (spec author) | (specs 64/65/66/67) | (cluster) | `8b70037` + `8dcdccd` + `d407e6e` | Spec-author slices for #64 + #66 + #67. Each forward-files an impl row that closes at the corresponding impl slice. R14 exception (b). |
+| B-117 | (no spec — single-slice fix bundle) | B-117 ✅ | `2ae9a69` | Stripe cancel-pending UI bundle — Profile Reactivate CTA (cancel_at_period_end===true → portal); Pricing Pro tile swaps "Current Plan" → "Cancels {date}" + handleCta opens portal sidestepping B-113 `AlreadyProError`. New `subscription_portal_opened{source: 'pricing_reactivate'}`. Tests +5 FE. |
+| B-118 | (no spec — single-slice fix) | B-118 ✅ | `ace4584` | AuthContext `refreshUser()` re-fetches `/auth/me` post-Stripe redirects (concurrent calls dedupe via `useRef<Promise>` inflight flag). Wired into `Pricing.tsx` (`?upgrade=success` post-checkout) + `Profile.tsx` mount (portal return_url). Tests +7 FE. |
+| B-116 | (no spec — audit-2026-05 F-2/F-4 fix) | B-116 ✅ | `06ea5f6` | `customer.subscription.updated` webhook handler + alembic `c2ba25f1d9a7` adds `Subscription.cancel_at_period_end Boolean NOT NULL`. FE: `/auth/me` exposes new flag; `AuthUser` gains optional `subscription`; Profile renders "Cancels {date}". Tests +6 (BE +4 / FE +2). |
+| B-115 | (no spec — P0 hotfix) | B-115 ✅ | `3fbc252` | LastScanWidget Rules-of-Hooks crash — `if (suppressed) return null` was BEFORE `useCallback`/`useEffect` causing hook-count mismatch + ErrorBoundary crash mid-mount. Fix: moved early return AFTER all hooks. Bundled `SentryFallback` dev-mode improvement (renders error message + stack inline). |
+| B-114 + E-033 + E-039 | (no spec — P0 hotfix) | B-114 ✅ + E-033 ✅ + E-039 ✅ (cascade) | `7b09116` | **Stripe SDK v14+ hotfix.** Webhook 500'd with `AttributeError: get` because Stripe SDK v14+ stopped subclassing `dict` for `StripeObject`. Fix: `_field(obj, key, default)` helper unifies `dict.get` + `getattr` paths; `event["id"]` replaces `event.get("id", "")`; all 5 `.get()` callsites in `_handle_*` migrated. Test parity: 2 new regression tests use `stripe.Event.construct_from()` (catches next SDK rename). E-033 + E-039 cascade-close. |
+| B-113 | (no spec — audit-2026-05 F-1/F-5 fix) | B-113 ✅ | `5ee327e` | F-1 P0 — `AlreadyProError` raised when `sub.plan=="pro" AND status=="active" AND stripe_subscription_id`; route maps to 409 "Already subscribed to Pro plan" (double-subscription guard on `/payments/checkout`). F-5 P1 — `.env.example` gains `STRIPE_PRO_PRICE_ID_INR` + `STRIPE_ENTERPRISE_PRICE_ID`. Tests +3 BE. Unblocks E-039. |
+| B-112 + E-035 | (Mode-3 audit deliverable) | B-112 ✅ + E-035 ✅ (cascade) | `999acc2` | Stripe integration audit — `docs/audits/stripe-integration-audit-2026-05.md`. 11 findings — F-1 P0 (no Pro short-circuit on checkout — addressed by B-113), F-2/F-3/F-4 P1 (subscription.updated unhandled — addressed by B-116), F-5 P1 (env.example missing 2 STRIPE_* vars — addressed by B-113), F-6..F-11 P2/P3. |
+| B-111 | (Mode-3 audit deliverable) | B-111 ✅ | `31b983e` | Phase 6 completion assessment — `docs/audits/phase-6-completion-assessment.md` verdict YES-WITH-CAVEATS. 16/16 Phase-6 specs (00..15) shipped; user-facing surface live. Slice 6.16 (cards-schema retirement umbrella) deferred — non-launch-blocking. |
+| E-037 | (no spec — security hardening) | E-037 ✅ | `686a624` | Pro-tier auth + LLM rate limit hardening on `interview_prep` + Pro-tier Lens endpoints (rewrite, rewrite/section, cover_letter). |
+| B-008 | `phase-5/12-navigation-restructure.md` §Analytics | B-008 ✅ | `49aee35` | `deprecated_route_hit{from_path, to_path}` telemetry wired in 10 `<Navigate>` redirect nodes via new `<DeprecatedRedirect>` wrapper component. Legacy `RedirectWithParam` helper deleted. Tests +6 FE. |
+| B-006 + E-015 | (no spec — audit verdict) | B-006 ✅ + E-015 ✅ (cascade) | `c4132fb` | Settings persistence audit verdict — zero gaps. All 9 User columns + 4 per-user settings tables (EmailPreference / GamificationStats / Subscription / paywall_dismissals) verified to ship with `server_default` or signup-payload values; nullable columns have explicit None-handling. |
+| B-009 + B-013 | (docs sync) | B-009 ✅ + B-013 ✅ | `0cb10ad` | AGENTS.md alignment — replaced AGENTS.md drifted "80%+ coverage target" line with pointer to CLAUDE.md R13; added "Repository layout" section clarifying git root vs working dir + cross-ref to CLAUDE.md C1 footgun. |
+| B-011 + B-012 | (docs verdict) | B-011 ✅ + B-012 ✅ | `9db9b9f` | v2.1 historical-artifact verdict — periodic doc-audit pattern locked at spec #48; no v2.3 patch needed. |
+| B-127 | (no spec — hygiene) | B-127 ✅ | `401b95d` | SS + BACKLOG light-hygiene compaction. RC archive cut (9 entries 4+ to §10), Drift archive cut (5 ✅ RESOLVED rows: D-016/D-019/D-020/D-022/D-029), BACKLOG closed-row archive cut (136 rows ≤2026-05-02), worst-RC trim (B-125a entry 298→245 words per R15(d) hard ceiling). Test Suite Status refreshed BE 823/64-fail / FE 543. |
+| (rolled up) | (process slices) | B-119/B-120/B-121/B-122/B-123/B-124/B-125/B-126 | (per-row commits) | Spec-author + §12 amendment + hygiene clusters for the Phase 5 design-review batch. R14 exception (b). |
+
+
+### Slice absorption log (carry-forward, prior regen at `ac0466c` — B-110 window)
+
+| Slice | Spec | BACKLOG | Closing commit | Notes |
+|---|---|---|---|---|
+| B-098 | `phase-6/14-daily-digest-cron.md` | B-098 ✅ | `bcd89ce` | **Phase 6 slice 6.14 — daily Pro digest cron impl.** First scheduled job in codebase per LD G2. New `[[cron]]` in `railway.toml` + new CLI `app/scripts/send_pro_digest.py` + new orchestrator `app/services/pro_digest_service.py` + new schemas `app/schemas/pro_digest.py` + new email template `app/templates/pro_digest.html`. +4 PostHog events. **Zero new migrations** (consumes B-087's `email_log`). Tests BE 802 → 824. **B-078 cron architecture decision ✅ resolved at spec ship.** |
 | B-102 | `phase-6/15-legacy-retirement-easy-wins.md` | B-102 ✅ | `e36902c` | **Phase 6 slice 6.15 — legacy retirement easy-wins refactor.** Pure refactor — zero new feature surface. New `app/schemas/daily_status.py` (`DailyStatus` lifted byte-identically per §12 D-1) + `schemas/study.py` back-compat re-export (until spec-16 cards-schema retirement) + 3 import-flip sites; new `app/utils/local_time.py` (`next_local_midnight` public per D-2 + D-3) + helper deletions in both services + 3 callsite renames + unused `time`/`timedelta` imports cleaned; `study_dashboard_viewed` analytics catalog row hard-deleted per D-5. Tests BE 842 → 849 (+7, in spec env). FE 466 unchanged. AC-1..AC-10 all green. Zero alembic. 1 info-only JC (spec said 4 callsites; disk had 3 — spec-author double-counted). |
 | B-096 | (no spec — process slice) | B-096 ✅ | `d6fab75` | Prior CR targeted regen at HEAD `246b4ec` + RC compaction. §1 fully refreshed; §2 / §5 / §11 / §13 patched. Carry-forward anchor for this regen. |
 | B-097 + B-099 | `phase-6/14-daily-digest-cron.md` | B-097 ✅ + B-099 ✅ + B-078 ✅ | `86bc442` + `b5bec37` | Slice 6.14 spec-author + §12 amendment locking D-1..D-14 from §14 OQ-A..OQ-N. Spec body 992 lines. R14 exception (b). |
@@ -930,7 +1014,7 @@ Walked `docs/specs/**/*.md` — **98 spec files across 8 directories** (phase-0.
 | B-109 | (no spec — doc compaction) | B-109 ✅ | `84f906b` | Doc compaction bundle. Task 1 no-op (all 7 CLAUDE.md revision entries within 30-day window). Task 2: cut RC entries 6-16 (11 entries B-093..B-103) to `docs/archive/session-state-history.md` §8; SESSION-STATE.md 605 → 472 lines (cleared 600 fail); archive 1489 → 1629. Footer note updated. R14 exception (b). |
 | B-110 | (no spec — this regen) | B-110 ✅ | `3f05a80` | This CR full regen at HEAD `ac0466c`. All 13 sections re-anchored. R14 exception (a) — regenerated audit artifact, no test runs. Two-commit pattern (regen `3f05a80` + SHA backfill replacing `<this-slice>` placeholders in BACKLOG.md + SESSION-STATE.md + this row). |
 
-### Slice absorption log (carry-forward, prior regen at `246b4ec`)
+### Slice absorption log (carry-forward, prior regen at `246b4ec` — B-096 window)
 
 | Slice | Spec | BACKLOG | Closing commit | Notes |
 |---|---|---|---|---|
@@ -1051,8 +1135,12 @@ Walked `docs/specs/**/*.md` — **98 spec files across 8 directories** (phase-0.
 | 60-analyze-page-preflight-gate.md | (no status field — B-045 closed) |
 | 61-home-dashboard-composition-rules.md | Drafted, not shipped *(impl `ecef895` closes B-051)* |
 | 62-study-dashboard-source-hint.md | Drafted, not shipped *(impl `df035e1` closes B-052 + B-053)* |
-| 63-ats-rescan-loop.md | **Done — Shipped (spec + impl). Spec authored `da14c01` 2026-04-30; §12 amendment `71a77e3` (D-1..D-12 locked from §14 OQ-A..OQ-L); §5.3 + §6.1 disk-truth corrections `1b86bf0`; foundation `210dcb2` (B-086a); orchestrator + admin route + UI `4aab0bf` (B-086b). Cascade-closes B-086 umbrella + E-043. Closes drift D-020.** |
+| 63-ats-rescan-loop.md | **Done — Shipped (spec + impl). Cascade-closes B-086 umbrella + E-043.** |
 | 63-daily-review-preflight-gate.md | Draft *(impl `20562ea` closes B-059)* — **shares slot 63 with `63-ats-rescan-loop.md`; see numbering anomalies below.** |
+| **64-results-loop-frame.md** | **NEW B-119 — Done — Shipped (spec + impl). Spec authored + §12 amended `8b70037`; impl `b58a42d`. Cascade-closes E-049 part (b).** |
+| **65-home-status-hero.md** | **NEW B-120 — Done — Shipped (combined spec+impl) `58bb9a9`. Cascade-closes E-050.** |
+| **66-appshell-loop-progress-strip.md** | **NEW B-122 — Done — Shipped (spec + impl). Spec authored `8dcdccd`; §12 amendment `042f92c`; impl `261dc66`. Cascade-closes E-051.** |
+| **67-career-climber-role-intent.md** | **NEW B-125 — Done — Shipped (spec + impl). Spec authored `d407e6e`; §12 amendment `b2248d2`; BE half `9082a7b` (B-125a); FE half `e3fdf01`. Cascade-closes E-052.** |
 
 ### phase-6 (Curriculum Platform)
 | File | Status |
@@ -1086,4 +1174,4 @@ Walked `docs/specs/**/*.md` — **98 spec files across 8 directories** (phase-0.
 
 ---
 
-*End of snapshot. Generated 2026-05-02 at HEAD `ac0466c` — **full regen** (closes B-110). All 13 sections re-anchored from on-disk filesystem enumeration. Lineage extends `246b4ec` → 27 raw commits (2 code-touching: B-098 `bcd89ce` + B-102 `e36902c`; 25 doc/process/SHA-backfill) → THIS commit. **Slice absorption (code-touching):** B-098 (slice 6.14 daily Pro digest cron, first scheduled job in codebase per LD G2) + B-102 (slice 6.15 refactor — `DailyStatus` relocation + `_next_local_midnight` dedupe + `study_dashboard_viewed` catalog removal). **Process absorption:** B-096 prior regen + B-097/B-099 + B-100/B-101/B-103 (slice 6.14 + 6.15 spec authoring + amendments + Phase 6 cleanup triage) + B-105..B-109 (chat-sync sentinel + R14 spec-length governance + R16 scout-first amendment + process-tax health-check metric + RC archive cut). **Closed in this regen:** none (drift table unchanged at items #1..#30; no new drift items surfaced from B-098/B-102 — all impl JCs were info-only test-fixture issues, not drift). **Process correction:** prior CR's "process=2" claim corrected to **process=1** (slot-02 was a forward-looking note, not an on-disk file). **Milestone:** Phase 6 cron infrastructure now real surface (Railway cron → CLI → composer service); B-078 cron architecture decision ✅ resolved. Phase 6 progress per spec inventory: slices 6.0..6.15 all shipped (16 phase-6 specs, all flipped to `Shipped (spec + impl)` post-this regen); slice 6.16 (cards-schema retirement umbrella) the next forward-looking work per B-100 triage. Drift table active+resolved count 30 (at 30-row archive cut threshold per CLAUDE.md drift-archive rule — chat-Claude / Dhamo own the cut decision). Next regen recommended once another ~10-commit code-touching delta accumulates (LD-1 sharpened threshold).*
+*End of snapshot. Generated 2026-05-04 at HEAD `192e97d` — **full regen** (closes B-128). All 13 sections re-anchored from on-disk filesystem enumeration. Lineage extends `ac0466c` → 57 raw commits (14 code-touching, 43 process/spec-author/SHA-backfill) → THIS commit. **Slice absorption (code-touching, 14):** Stripe-launch cluster (B-113 + B-114 + B-115 + B-116 + B-117 + B-118 + E-033 + E-039), security cluster (E-037), nav telemetry (B-008), Phase-5 design-review impl batch (B-119/E-049 LoopFrame, B-120/E-050 HomeStatusHero, B-122/E-051 LoopProgressStrip), Phase-5 career-climber capture (B-125a BE half + B-125/E-052 FE half). **Process absorption:** B-110 prior CR full regen (this regen's anchor) + B-111/B-112+E-035 audit deliverables + B-006+E-015/B-009+B-013/B-011+B-012 docs sweeps + spec-author/§12 amendment slices for #64/#65/#66/#67 (B-119/B-120/B-122/B-123/B-125/B-126) + B-121+B-127 hygiene compactions + B-124 date-bomb test fix. **New drift item:** D-033 (spec #67 §6.1 `quiz_review_events JOIN cards` vs disk `QuizReviewEvent`-on-`quiz_items`; runtime resolved at impl via `CardProgress × Category` join). **Drift archive cut by B-127 hygiene:** 5 ✅ RESOLVED rows (D-016, D-019, D-020, D-022, D-029) cut to `docs/archive/session-state-history.md` §10. **Milestones:** Phase 5 retention-loop infrastructure end-to-end (Results frame → Home status hero → AppShell live strip); Career-Climber capture surfaces + privacy-safe aggregate digest framing live; Stripe production-launch readiness cluster closed (F-1 + F-2 + F-4 + F-5 + SDK v14+ hotfix + cancel-pending UI + AuthContext staleness). E-052 cascade-closed at `e3fdf01`. Drift table active count 25 (post-cut); active+resolved 31. Next regen recommended once another ~10-commit code-touching delta accumulates (LD-1 sharpened threshold) or before any heavy multi-file slice (per R16 scout-first preference).*
