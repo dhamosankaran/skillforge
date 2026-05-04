@@ -160,6 +160,17 @@ export interface ScoreHistoryResponse {
   delta: ScoreDelta | null
 }
 
+// ─── Spec #66 — AppShell loop-progress strip ─────────────────────────────────
+
+/** Mirrors `app/schemas/loop_progress.LoopProgressResponse` (BE / spec §5). */
+export interface LoopProgressResponse {
+  tracker_application_id: string
+  total_gap_cards: number
+  reviewed_gap_cards: number
+  percent_reviewed: number
+  days_since_last_scan: number | null
+}
+
 // ─── Study / Cards ────────────────────────────────────────────────────────────
 
 export interface Category {

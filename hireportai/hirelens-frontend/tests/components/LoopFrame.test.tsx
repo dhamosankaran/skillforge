@@ -128,4 +128,35 @@ describe('LoopFrame — spec #64', () => {
     })
     expect(inlineStyled).toHaveLength(0)
   })
+
+  // ── Spec #66 §4.1 extensions — stepStates / onStepClick / compact ──────────
+
+  it('§66: stepStates overrides linear currentStep derivation', () => {
+    renderFrame({
+      currentStep: 1,
+      stepStates: { 1: 'done', 2: 'current', 3: 'locked', 4: 'alert' },
+    })
+    expect(screen.getByTestId('loop-step-1')).toHaveAttribute('data-state', 'done')
+    expect(screen.getByTestId('loop-step-2')).toHaveAttribute('data-state', 'current')
+    expect(screen.getByTestId('loop-step-3')).toHaveAttribute('data-state', 'locked')
+    expect(screen.getByTestId('loop-step-4')).toHaveAttribute('data-state', 'alert')
+  })
+
+  it('§66: onStepClick renders current step as button + fires handler', async () => {
+    const onClick = vi.fn()
+    renderFrame({
+      stepStates: { 3: 'current' },
+      onStepClick: onClick,
+    })
+    const step3 = screen.getByTestId('loop-step-3')
+    expect(step3.tagName).toBe('BUTTON')
+    step3.click()
+    expect(onClick).toHaveBeenCalledWith(3)
+  })
+
+  it('§66: surface=appshell suppresses loop_frame_rendered (D-4)', () => {
+    renderFrame({ surface: 'appshell' })
+    const matching = capture.mock.calls.filter(([name]) => name === 'loop_frame_rendered')
+    expect(matching).toHaveLength(0)
+  })
 })

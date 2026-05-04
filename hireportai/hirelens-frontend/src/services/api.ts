@@ -10,6 +10,7 @@ import type {
   AdminLessonStatusFilter,
   AdminQuizItemStatusFilter,
   AnalysisResponse,
+  LoopProgressResponse,
   ScoreHistoryResponse,
   Card,
   CardDraft,
@@ -1004,6 +1005,18 @@ export async function fetchScoreHistory(
 ): Promise<ScoreHistoryResponse> {
   const response = await api.get<ScoreHistoryResponse>(
     `/api/v1/tracker/${encodeURIComponent(trackerApplicationId)}/scores`,
+  )
+  return response.data
+}
+
+// ─── Spec #66 — AppShell loop-progress strip ─────────────────────────────────
+
+export async function fetchLoopProgress(
+  trackerApplicationId: string,
+): Promise<LoopProgressResponse> {
+  const response = await api.get<LoopProgressResponse>(
+    `/api/v1/learn/loop-progress`,
+    { params: { tracker_id: trackerApplicationId } },
   )
   return response.data
 }
