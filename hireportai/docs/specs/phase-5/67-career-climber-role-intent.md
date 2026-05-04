@@ -1,6 +1,6 @@
 # P5-S67 — Career-Climber role-intent capture (target_role + target_quarter + aggregate email framing)
 
-## Status: 🔴 Drafted — §12 EMPTY (pending §12 amendment slice before impl pickup)
+## Status: 🟡 §12 amendment landed — D-1..D-14 locked (impl-ready)
 
 | Field | Value |
 |-------|-------|
@@ -229,7 +229,7 @@ class CategoryShare(BaseModel):
 
 Past quarters are forbidden because the value of intent is forward-looking; a user setting `'2024-Q1'` in 2026-Q3 is signalling history, not aspiration.
 
-**Edge case:** intents written in 2026-Q3 with `target_quarter='2026-Q3'` (current) remain valid through Q3 — they do NOT auto-supersede on quarter rollover. Whether to auto-archive `target_quarter < current_quarter` rows on quarter rollover is §14 OQ-9 (author hint: NO auto-archive — explicit user action required).
+**Edge case:** intents written in 2026-Q3 with `target_quarter='2026-Q3'` (current) remain valid through Q3 — they do NOT auto-supersede on quarter rollover. Whether to auto-archive `target_quarter < current_quarter` rows on quarter rollover is locked at §12 D-9 (NO auto-archive — explicit user action required).
 
 ### 5.5 Persona-switch supersession semantics
 
@@ -239,7 +239,7 @@ The current-intent row is superseded **only** by:
 1. A new `POST /api/v1/users/me/career-intent` write (auto-supersedes prior current row).
 2. An explicit "Clear my goal" affordance (writes a sentinel: stamp `superseded_at` on prior current row, do NOT insert a replacement).
 
-§14 OQ-5 surfaces this for §12 amendment lock.
+Locked at §12 D-5.
 
 ---
 
@@ -532,7 +532,7 @@ Inline form: same `target_role` + `target_quarter` selects as PersonaPicker (§8
 
 Clear: confirm modal `"Clear your career goal? You can set a new one anytime."` → `DELETE /api/v1/users/me/career-intent` → toast `"Goal cleared."` → re-render in no-intent state.
 
-§14 OQ-2 surfaces the inline-form-vs-modal modality choice for §12 amendment lock; author hint = inline form.
+Inline-form-vs-modal modality locked at §12 D-2 (inline form).
 
 ### 8.3 Quarter picker labels
 
@@ -696,9 +696,23 @@ AC-X (forbidden-phrases ban) is intentionally out-of-numeric-sequence to flag it
 
 ## 12. Locked Decisions
 
-`(empty — pending §12 amendment slice)`
+D-1..D-14 lock the §14 OQ-1..OQ-14 author-hint defaults 1:1 (Dhamo
+single-admin disposition; zero ambiguous hints).
 
-§12 amendment slice will lock D-1..D-N from §14 OQ-1..OQ-14 (14 OQs surfaced) following slice 6.0 / 6.4.5 / 6.5 / 6.6 / 6.7 / 6.14 / 6.15 / spec-#64 / spec-#66 precedent at `e8eecdd` / `df58eaf` / `acba7ed` / `fb92396` / `0c21223` / `174e479` / `042f92c`.
+- **D-1 — PersonaPicker capture timing:** auto-expand on CC select to surface the optional intent fields. Mirrors IP card precedent at `PersonaPicker.tsx:198-251`. Both fields stay optional; auto-expand is a discoverability win, not a forcing function.
+- **D-2 — Profile edit modality:** inline form (in place). Mirrors existing Profile section affordances; modal would be heavier weight than warranted for a 2-field write.
+- **D-3 — `get_aggregate_stats` query timing:** live per-digest-tick v1. Cache only if telemetry shows latency hit on bulk-send. Cron is sequential per §6.14 D-11; per-user latency budget is generous.
+- **D-4 — Quarter selection ceiling:** current + 7 future (~2 years). Career-climb horizons typically 12-18 months; 2 years is generous.
+- **D-5 — Persona-switch supersession semantics:** `PATCH /persona` does NOT auto-supersede the current intent. Preserve through CC → IP → CC churn. A returning CC user shouldn't lose their goal.
+- **D-6 — Intent-clear affordance:** explicit `[Clear]` button writing `superseded_at` only (no replacement insert). Clearer affordance + distinct telemetry signal vs edit-as-clear which conflates revise vs abandon.
+- **D-7 — Email template injection:** extend `pro_digest.html` with a 4th conditional section. Forking into `pro_digest_with_intent.html` would double template-maintenance surface; 4 conditional sections is well within precedent.
+- **D-8 — Below-threshold (<10 cohort) email behavior:** silent suppression of the aggregate block. Explicit "Your goal is rare" copy reveals cohort sparsity and is bad for early-CC adoption.
+- **D-9 — Quarter rollover behavior:** leave past-quarter current rows current; no auto-archive. User reaching a target quarter without explicit action is informative — they may be on track. Auto-archive is forward work in §13.
+- **D-10 — Bucket grouping granularity:** `(target_role, target_quarter)` exact match only v1. No fall-back to `target_role` alone. Fallback complicates the cohort definition and dilutes the "this quarter" framing.
+- **D-11 — `target_role` enum source-of-truth:** frozenset constant in `app/schemas/career_intent.py` + `@field_validator` in Pydantic schema. Easier to extend than DB CHECK; mirrors existing enum patterns at `app/schemas/study.py`.
+- **D-12 — Re-onboarding flow when CC user without intent:** passive (Profile section only). No `/home` banner, no auto-prompt. Banner risks pestering; user discovers via Profile, or a future telemetry-driven nudge picks up the gap.
+- **D-13 — `career_intent_email_block_rendered` event:** fire only on actual `email_service.send_email` success path. Test-run template renders MUST NOT pollute telemetry. Implementation gates the `analytics_track` call inside the orchestrator's post-send branch (§6 / spec #6/14 §6.5 precedent).
+- **D-14 — Below-threshold telemetry:** silent (no event). Surfacing cohort sparsity in PostHog is an admin-dashboard concern, not a user-tied event-stream concern. Reconsider only if admin-side cohort-growth telemetry becomes a need.
 
 ---
 
@@ -710,7 +724,7 @@ AC-X (forbidden-phrases ban) is intentionally out-of-numeric-sequence to flag it
 - **In-app aggregate stats surface** — value is in email; no `<CareerIntentInsights>` component this slice.
 - **Team Lead persona variants** — TL hits the endpoint, gets 422.
 - **Interview-Prepper persona variants** — IP hits the endpoint, gets 422.
-- **Auto-archive of past `target_quarter` rows on quarter rollover** — explicit user action only (§14 OQ-9).
+- **Auto-archive of past `target_quarter` rows on quarter rollover** — explicit user action only (§12 D-9).
 - **Per-aggregate-block opt-out** — coarse `daily_digest_opt_out` covers it.
 - **Backfill of historical implied intents** — none.
 - **`PATCH /persona` extension** — endpoint stays untouched (B-038 isolation).
@@ -723,24 +737,25 @@ AC-X (forbidden-phrases ban) is intentionally out-of-numeric-sequence to flag it
 
 ## 14. Open questions
 
-| # | Question | Author hint (default if unanswered) | Notes |
-|---|----------|-------------------------------------|-------|
-| OQ-1 | PersonaPicker capture timing — should the CC card auto-expand on select to surface the optional intent fields, or stay collapsed with a "Set later" affordance? | **Auto-expand on select** (mirrors IP card precedent at `PersonaPicker.tsx:198-251`). | Both fields stay optional; auto-expand is a discoverability win, not a forcing function. |
-| OQ-2 | Profile edit modality — inline form (in place) or modal overlay? | **Inline form** (mirrors existing Profile section affordances). | Modal would be heavier weight than warranted for a 2-field write. |
-| OQ-3 | `get_aggregate_stats` query timing — live per-digest-tick or cached (e.g., daily-precomputed)? | **Live per-tick v1**. Cache only if telemetry shows latency hit on bulk-send. | Cron is sequential per §6.14 D-11; per-user latency budget is generous. |
-| OQ-4 | Quarter selection ceiling — current + 7 future (~2 years) or current + 11 future (~3 years)? | **Current + 7 future** (~2 years). | Career-climb horizons typically 12-18 months; 2 years is generous. |
-| OQ-5 | Persona-switch supersession semantics — should `PATCH /persona` from `career_climber` to another persona auto-supersede the current intent? | **No auto-supersede** (preserve through CC → IP → CC churn). | A returning CC user shouldn't lose their goal. |
-| OQ-6 | Intent-clear affordance — explicit `[Clear]` button writing `superseded_at` only, or "Edit form with empty fields → submit-as-clear"? | **Explicit `[Clear]` button** (clearer affordance + telemetry signal). | Edit-as-clear conflates two distinct intents (revise vs abandon). |
-| OQ-7 | Email template injection — extend `pro_digest.html` with a 4th conditional section, or fork into `pro_digest_with_intent.html`? | **Extend `pro_digest.html`**. | Forking doubles template-maintenance surface; 4 conditional sections is well within precedent. |
-| OQ-8 | Below-threshold (<10 cohort) email behavior — silent suppression of the block, OR explicit "Your goal is rare — we're growing your peer cohort" copy? | **Silent suppression** (no awkward acknowledgement of small cohorts). | Explicit copy reveals cohort sparsity; bad for early-CC adoption. |
-| OQ-9 | Quarter rollover behavior — auto-archive `target_quarter < current_quarter` rows on rollover, or leave them current until user-explicit clear/edit? | **Leave them current** (no auto-archive). | User reaching a target quarter without action is informative — they may be on track. |
-| OQ-10 | Bucket grouping granularity — `(target_role, target_quarter)` exact match only, OR fall back to `target_role` alone if exact <10? | **Exact match only v1**. | Fallback complicates the cohort definition + dilutes the "this quarter" framing. |
-| OQ-11 | `target_role` enum source-of-truth — Pydantic `Literal[...]` type, frozenset constant in schemas module, or DB CHECK constraint? | **Frozenset constant + `@field_validator` in Pydantic schema**. | Easier to extend than DB CHECK; mirrors existing enum patterns at `app/schemas/study.py`. |
-| OQ-12 | Re-onboarding flow when CC user without intent — auto-prompt them to set one (e.g., banner on `/home`), or passive (Profile section only)? | **Passive (Profile section only)**. | Banner risks pestering; user discovers via Profile or aggregates work toward telemetry-driven nudge in a follow-up. |
-| OQ-13 | `career_intent_email_block_rendered` event — fire once per send or also on template-render-only-test runs? | **Fire only on actual `email_service.send_email` success path**. | Test-run renders should not pollute telemetry. |
-| OQ-14 | Below-threshold telemetry — fire `pro_digest_intent_below_threshold {target_role, target_quarter, cohort_size}` when block is suppressed, or stay silent? | **Silent (no event)**. | Surfacing cohort sparsity in PostHog is admin-dashboard concern; doesn't belong in user-tied event stream. Reconsider if admin-side cohort-growth telemetry becomes a need. |
+All 14 OQs RESOLVED at this slice's §12 amendment (single-admin
+disposition; author-hint defaults accepted 1:1).
 
-These are author-side notes, not blockers. The author hint applies if the §12 amendment slice accepts the default; otherwise the §12 amendment locks an alternative.
+| # | Question | Status |
+|---|----------|--------|
+| OQ-1 | PersonaPicker capture timing — should the CC card auto-expand on select to surface the optional intent fields? | → Locked at §12 D-1. |
+| OQ-2 | Profile edit modality — inline form or modal overlay? | → Locked at §12 D-2. |
+| OQ-3 | `get_aggregate_stats` query timing — live per-digest-tick or cached? | → Locked at §12 D-3. |
+| OQ-4 | Quarter selection ceiling — current + 7 future or current + 11 future? | → Locked at §12 D-4. |
+| OQ-5 | Persona-switch supersession semantics — should `PATCH /persona` auto-supersede the current intent? | → Locked at §12 D-5. |
+| OQ-6 | Intent-clear affordance — explicit `[Clear]` button or edit-as-clear? | → Locked at §12 D-6. |
+| OQ-7 | Email template injection — extend `pro_digest.html` or fork? | → Locked at §12 D-7. |
+| OQ-8 | Below-threshold (<10 cohort) email behavior — silent suppression or explicit copy? | → Locked at §12 D-8. |
+| OQ-9 | Quarter rollover behavior — auto-archive past-quarter rows or leave current? | → Locked at §12 D-9. |
+| OQ-10 | Bucket grouping granularity — exact match only or fall back to role-alone? | → Locked at §12 D-10. |
+| OQ-11 | `target_role` enum source-of-truth — Pydantic `Literal`, frozenset, or DB CHECK? | → Locked at §12 D-11. |
+| OQ-12 | Re-onboarding flow when CC user without intent — auto-prompt or passive? | → Locked at §12 D-12. |
+| OQ-13 | `career_intent_email_block_rendered` event — fire on send-success only or also on render-only? | → Locked at §12 D-13. |
+| OQ-14 | Below-threshold telemetry — fire suppression event or stay silent? | → Locked at §12 D-14. |
 
 ---
 
@@ -768,4 +783,4 @@ Test files (see §10.3):
 
 ---
 
-*End of spec #67. §12 EMPTY pending amendment slice that locks D-1..D-14 from §14 OQ-1..OQ-14 (mirroring spec #66 precedent at `042f92c`). Implementation begins next-next slice (B-125 impl pickup).*
+*End of spec #67. §12 amendment landed — D-1..D-14 locked. Implementation begins next slice (B-125 impl pickup).*
